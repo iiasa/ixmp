@@ -23,6 +23,10 @@ Documentation and further information is available at [www.iiasa.ac.at/message_i
 The framework is available for download at [www.github.com/iiasa/message_ix](http://www.github.com/iiasa/message_ix).
 Please refer to the website and repository for the most up-to-date version of the code base.
 
+The community mailing list for questions and discussions on new features is hosted using Googlegroups.
+Please join the community at [https://groups.google.com/d/forum/message_ix](https://groups.google.com/d/forum/message_ix) 
+and use <message_ix@googlegroups.com> to send an email to all MESSAGEix users.
+
 
 User Guidelines
 ===============
@@ -50,7 +54,7 @@ where 'xxx' is replaced by the name of the country/region, institutional affilia
 For example, the national model for South Africa developed by Orthofer et al. [1] is called "MESSAGEix South Africa".
 
 Furthermore, please ensure that there is no naming conflict with existing versions of the MESSAGEix model family.
-When in doubt, please contact the IIASA Energy Program at "message_ix@iiasa.ac.at".
+When in doubt, please contact the IIASA Energy Program at <message_ix@iiasa.ac.at>.
 
 C) Notice of new publications
 -----------------------------

@@ -1,0 +1,26 @@
+
+python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())" > .foo
+set /p RPTH=<.foo
+del .foo
+echo %RPTH%
+
+@echo off
+
+python setup.py install --user
+
+if %errorlevel% neq 1 GOTO InstallError
+
+setx IXMP_R_PATH "%RPTH%/ixmp"
+
+chdir tests/
+py.test
+chdir ..
+
+@rem install error
+:InstallError
+echo =====================================================
+echo  There was an error during the install process!
+echo  Make sure that there is no instance of ixmp running
+echo =====================================================
+pause
+exit

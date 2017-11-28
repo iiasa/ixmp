@@ -44,8 +44,8 @@ def test_run_gams_api():
     scen.init_par("b", idx_sets="j")
     b_data = [
         {'j': "new-york", 'value': 325, 'unit': "cases"},
-        {'j': "chicago",  'value': 300, 'unit': "cases"},
-        {'j': "topeka",   'value': 275, 'unit': "cases"}
+        {'j': "chicago", 'value': 300, 'unit': "cases"},
+        {'j': "topeka", 'value': 275, 'unit': "cases"}
     ]
     b = pd.DataFrame(b_data)
     scen.add_par("b", b)
@@ -85,7 +85,9 @@ def test_run_gams_api():
     scen.commit(comment)
 
     # solve model
-    scen.solve(model='transport_ixmp', case='transport_standard')
+    here = os.path.dirname(os.path.abspath(__file__))
+    fname = os.path.join(here, 'transport_ixmp.gms')
+    scen.solve(model=fname, case='transport_standard')
 
     # test it
     obs = scen.var('z')['lvl']

@@ -8,7 +8,7 @@ echo %RPTH%
 
 python setup.py install --user
 
-if %errorlevel% neq 1 GOTO InstallError
+if %errorlevel% neq 0 GOTO InstallError
 
 setx IXMP_R_PATH "%RPTH%/ixmp"
 

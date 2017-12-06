@@ -24,8 +24,8 @@ The framework is available for download at [www.github.com/iiasa/message_ix](htt
 Please refer to the website and repository for the most up-to-date version of the code base.
 
 The community mailing list for questions and discussions on new features is hosted using Googlegroups.
-Please join the community at [https://groups.google.com/d/forum/message_ix](https://groups.google.com/d/forum/message_ix) 
-and use <message_ix@googlegroups.com> to send an email to all MESSAGEix users.
+Please join at [https://groups.google.com/d/forum/message_ix](https://groups.google.com/d/forum/message_ix) 
+and use <message_ix@googlegroups.com> to send an email to the MESSAGEix user community.
 
 
 User Guidelines
@@ -40,7 +40,7 @@ for scientific publications or technical reports:
   Daniel Huppmann, Matthew Gidden, Oliver Fricko, Peter Kolp, 
   Clara Orthofer, Michael Pimmer, Keywan Riahi, and Volker Krey. 
   "The MESSAGEix Integrated Assessment Model and the ix modeling platform". 
-  2017, in preparation. 
+  In preparation. 
 
 Also, please include a hyperlink to the online resource "https://www.iiasa.ac.at/message_ix" 
 in any publication/report, or on a website describing your model or scientific analysis using the MESSAGEix framework.

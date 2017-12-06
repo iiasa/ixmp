@@ -6,15 +6,16 @@ echo %RPTH%
 
 @echo off
 
-python setup.py install --user
+python setup.py install
 
 if %errorlevel% neq 0 GOTO InstallError
 
 setx IXMP_R_PATH "%RPTH%/ixmp"
 
-chdir tests/
-py.test
-chdir ..
+py.test tests/
+
+pause
+exit
 
 @rem install error
 :InstallError

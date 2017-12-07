@@ -1,6 +1,6 @@
 # 
 #' Classes and functions for the R interface
-#' of the IX modeling platform (IXMP)
+#' of the ix modeling platform (ixmp)
 #
 
 ## import rJava library, assign 2g of RAM, start the VM and get the entrypoint
@@ -15,7 +15,7 @@ java.pars <- paste0("-Djava.ext.dirs=", file.path(ixmp_r_path, "lib"))
 options(java.parameters = java.pars)
 
 ## Launch the java virtual machine, add ixmp_r_path (in addition to jar file)
-.jinit(file.path(ixmp_r_path, "ixToolbox.jar")) 
+.jinit(file.path(ixmp_r_path, "ixmp.jar")) 
 .jaddClassPath(ixmp_r_path)
 
 # define auxiliary references to Java classes
@@ -25,57 +25,115 @@ java.Double   <- J("java.lang.Double")
 java.LinkedList <- J("java.util.LinkedList")
 java.HashMap  <- J("java.util.HashMap")
 java.LinkedHashMap <- J("java.util.LinkedHashMap")
-
-#' The class 'Platform' is the central access point to
-#' and accessing dataobjects (timeseries and reference data) 
-#' and datastructures (structured model input data and results).
-Platform <- setRefClass("Platform",
+            
+#' The class 'ixmp.Platform' is the central access point to
+#' and accessing ix.TimeSeries (IAMC-style model results and reference data) 
+#' and ixmp.Scenarios (structured model input data and results).
+ixmp.Platform <- setRefClass("ixmp.Platform",
   fields = c(.jobj = "jobjRef"),
 
   methods = list(
 
-    # launch the Platform 
+    # launch the platform instance
     initialize = function(dbprops=NULL, dbtype=NULL) {
       
         if (is.null(dbtype)) { 
-            .jobj <<- new(java.Platform, "R", dbprops) 
+          if (is.null(dbprops)) dbprops = 'default.properties'
+          if (!file.exists(dbprops)) {
+              dbprops = paste(message_ix_path, "/config/",dbprops, sep = '')
+              if (!file.exists(dbprops)) {
+                 stop('no properties file ', dbprops , '!')
+              }
+          }
+          print(paste0("launching ixmp.Platform using config file at ", dbprops))
+          .jobj <<- new(java.Platform, "R", dbprops) 
         } else {
-            .jobj <<- new(java.Platform, "R", dbprops, dbtype)
+          if (is.null(dbprops)) stop('Please specify a local database file!')
+          print(paste0("launching ixmp.Platform with local ",dbtype," database at "
+                , dbprops))
+          .jobj <<- new(java.Platform, "R", dbprops, dbtype)
         }
         
         return(.self)      
     },
     
-    # initialize a new datastructure (structured model input data and solution)
-    # or get an existing datastructure from the ix database
-    DataStructure = function(model, scen, version=NULL,
+    # initialize a new ixmp.Scenario (structured model input data and solution)
+    # or get an existing scenario from the ix database
+    Scenario = function(model, scen, version=NULL,
                              scheme=NULL, annotation=NULL) {
         if (!is.null(version) && version=='new') {
-            j_ds = .jobj$newDataStructure(model, scen, scheme, annotation)  
+            jScen = .jobj$newScenario(model, scen, scheme, annotation)  
         } else if (!is.null(version)) {
-            j_ds = .jobj$getDataStructure(model, scen, as.integer(version))
+            jScen = .jobj$getScenario(model, scen, as.integer(version))
         } else {
-            j_ds = .jobj$getDataStructure(model, scen)
+            jScen = .jobj$getScenario(model, scen)
         } 
       
-        return(ixDataStructure(.jobj, model, scen, j_ds))     
+        return(ixmp.Scenario(.jobj, model, scen, jScen))     
     },     
     
     units = function() {
         return(.jobj$getUnitList())     
-    }                   
+    },
+    
+    open_db = function(){
+        #(re-)open the database connection of the platform instance,
+        # e.g., to continue working after using 'close_db()
+        .jobj$openDB()
+    },
+    
+    close_db = function(){
+        #close the database connection of the platform instance
+        #this is important when working with local database files ('HSQLDB')
+        .jobj$closeDB()
+    },
+    
+    scenario_list = function(default=TRUE, model=NULL, scenario=NULL){
+        # Get a list of all ixmp.Scenarios initialized in the ixmp database instance
+        # 
+        # Parameters
+        # ----------
+        # default : boolean, default True
+        # include only default model/scenario version (true) or all versions
+        # model : string
+        # the model name (optional)
+        # scen : string
+        # the scenario name (optional)
+    
+        mod_scen_list = .jobj$getScenarioList(default, model, scenario)
+        ##----- TO BE CONVERTED IN R
+        #p mod_range = range(mod_scen_list.size())
+        # mod_range = seq(1,length(mod_scen_list),1)
+        #  cols = c('model_name', 'scen_name', 'scheme', 'is_default', 'is_locked',
+        #          'cre_user', 'cre_date', 'upd_user', 'upd_date',
+        #          'lock_user', 'lock_date', 'annotation')
+        # 
+        #p data = {}
+        #p for i in cols:
+        #p   data[i] = [str(mod_scen_list.get(j).get(i)) for j in mod_range]
+        # 
+        #p data['version'] = [int(str(mod_scen_list.get(j).get('version')))
+        #                    for j in mod_range]
+        #p cols.append("version")
+        #p df = pd.DataFrame 
+        #df = data.frame()
+        #p df = df$from_dict(data, orient='columns', dtype=NULL)
+        #p    df = df[cols]
+        return(mod_scen_list)
+    }
+    
   )
 )
 
-#' The class 'Datastructure' is a generic collection
+#' The class 'ixmp.Scenario' is a generic collection
 #' of all data for a model instance (sets and parameters), as well as
 #' the solution of a model run (levels/marginals of variables and equations).
 
 #' The class includes functions to make changes to the data,
 #' export all data to and import a solution from GAMS gdx,
-#' and save the datastructure to the IXMP database.
+#' and save the scenario to the ixmp database instance.
 #' All changes are logged to facilitate version control.
-ixDataStructure <- setRefClass("ixDataStructure",
+ixmp.Scenario <- setRefClass("ixmp.Scenario",
   fields = c(.jobj = "jobjRef",
              .platform = "jobjRef",                           
              # if the platform class were referenced directly,
@@ -86,7 +144,8 @@ ixDataStructure <- setRefClass("ixDataStructure",
 
   methods = list(
 
-  ## initialize a new R-class datastructure object (via the Platform class) 
+  ## initialize a new R-RefClass `ixmp.Scenario` instance 
+  # (via the `ixmp.Platform` class) 
     initialize = function(platform, model, scen, javaobj) {
         model    <<- model                
         scenario <<- scen
@@ -98,47 +157,47 @@ ixDataStructure <- setRefClass("ixDataStructure",
 
   ## functions for platform management
 
-    # check out the dataobject/datastructure from the database for making changes
+    # check out the scenario from the database for making changes
     check_out = function(timeseries_only = FALSE) {
         .jobj$checkOut(timeseries_only)
     },
 
-    # commit all changes made to the dataobject/datastructure to the database
+    # commit all changes made to the scenario to the database
     commit = function(annotation) {
         .jobj$commit(annotation)
     },
 
-    # discard all changes, reload all items of the datastructure from database
+    # discard all changes, reload all items of the scenario from database
     discard_changes = function() {
         .jobj$discardChanges()
     },
 
-    # set this instance of a model/scenario dataobject as default version
+    # set this instance of a model/scenario as default version
     set_as_default = function() {
         .jobj$setAsDefaultVersion()
     },
 
-    # check whether this dataobject is set as default in the database
+    # check whether this scenario is set as default in the database
     is_default = function() {
         return(.jobj$isDefault())
     },
 
-    # get the timestamp of the last update/edit of this dataobject  
+    # get the timestamp of the last update/edit of this scenario  
     last_update = function() {
       return(.jobj$getLastUpdateTimestamp()$toString())
     },  
   
-    # get the run id of this dataobject
+    # get the run id of this scenario
     run_id = function() {
         return(.jobj$getRunId())
     },
   
-    # get the version number of this dataobject
+    # get the version number of this scenario
     version = function() {
         return(.jobj$getVersion())
     },
 
-    # clone the datastructure (with new model and scenario name)
+    # clone the scenario (with new model and scenario name)
     #Parameters
     #----------
     #model : string
@@ -150,15 +209,15 @@ ixDataStructure <- setRefClass("ixDataStructure",
     #keep_sol : boolean
     #indicator whether to include an existing solution
     #shift_fyear
-    #in the cloned datastructure (default: True)
+    #in the cloned scenario (default: True)
     clone = function(new_model = model, new_scen = scenario, 
                      annotation, keep_sol = TRUE, shift_fyear=0) {
     
-        return(ixDataStructure(.platform, new_model, new_scen,
-                               .jobj$clone(new_model, new_scen, annotation, keep_sol, as.integer(shift_fyear))))
+        return(ixmp.Scenario(.platform, new_model, new_scen,
+                             .jobj$clone(new_model, new_scen, annotation, keep_sol, as.integer(shift_fyear))))
     },
 
-    # write the datastructure to GAMS gdx
+    # export the scenario to GAMS gdx
     #Parameters
     #----------
     #path : string
@@ -226,7 +285,7 @@ ixDataStructure <- setRefClass("ixDataStructure",
 
         # execute GAMS
         if (msg) {
-          mpth = paste(message_ix_path, "/model", sep = '')
+          mpath = paste(message_ix_path, "/model", sep = '')
           model_run = paste(model, "_run.gms", sep = '')
           run_gams(model_run, inp, out, mpath)
         } else {
@@ -253,7 +312,7 @@ ixDataStructure <- setRefClass("ixDataStructure",
     
   ## data processing functions
   
-    # get an item from the datastructure
+    # get an item from the scenario
     item = function(ix_type, name) {
         switch(ix_type,
             "item" = return(.jobj$getItem(name)),
@@ -399,17 +458,17 @@ ixDataStructure <- setRefClass("ixDataStructure",
         return(.jobj$getCatEle(name, cat))
     },
 
-    # get list of all sets in the datastructure
+    # get list of all sets in the scenario
     set_list = function() {
       return(.getRList(.jobj$getSetList()))
     },
   
-    # check whether the datastructure has a set with that name
+    # check whether the scenario has a set with that name
     has_set = function(name) {
       return(.jobj$hasSet(name))
     },
 
-    # initialize a new set in the datastructure
+    # initialize a new set in the scenario
     #Parameters
     #----------
     #name : string
@@ -467,12 +526,12 @@ ixDataStructure <- setRefClass("ixDataStructure",
         }
     },
 
-    # return list of all parameters initialized in the datastructure
+    # return list of all parameters initialized in the scenario
     par_list = function() {
         return(.getRList(.jobj$getParList()))
     },
 
-    # check whether the datastructure has a parameter with that name
+    # check whether the scenario has a parameter with that name
     has_par = function(name) {
         return(.jobj$hasPar(name))
     },
@@ -524,7 +583,7 @@ ixDataStructure <- setRefClass("ixDataStructure",
         }
     }, 
   
-    # delete a parameter from the datastructure or remove an element from a parameter (if key is specified)
+    # delete a parameter from the scenario or remove an element from a parameter (if key is specified)
     #Parameters
     #----------
     #name : string
@@ -580,17 +639,17 @@ ixDataStructure <- setRefClass("ixDataStructure",
       scalar$addElement(new(java.Double, val), unit, comment)
     },
 
-    # return a list of variables initialized in the datastructure
+    # return a list of variables initialized in the scenario
     var_list = function() {
       return(.getRList(.jobj$getVarList()))
     },
     
-    # check whether the datastructure has a variable with that name
+    # check whether the scenario has a variable with that name
     has_var = function(name) {
       return(.jobj$hasVar(name))
     },
   
-    # initialize a new variable in the datastrucutre
+    # initialize a new variable in the scenario
     #Parameters
     #----------
     #name : string
@@ -615,17 +674,17 @@ ixDataStructure <- setRefClass("ixDataStructure",
         return(element("var", name, filters))
     },
   
-    # check whether the datastructure has a equation with that name
+    # check whether the scenario has a equation with that name
     has_equ = function(name) {
         return(.jobj$hasEqu(name))
     },
   
-    # return a list of equations initialized in the datastructure
+    # return a list of equations initialized in the scenario
     equ_list = function() {
       return(.getRList(.jobj$getEquList()))
     },
     
-    # initialize a new equation in the datastructure
+    # initialize a new equation in the scenario
     #Parameters
     #----------
     #name : string
@@ -671,7 +730,6 @@ ixDataStructure <- setRefClass("ixDataStructure",
   }
 	return(jList)
 }
-
 
 # a function to convert an R list to a Java LinkedList
 .getCleanDims <- function(rList, rListDefault=NULL) {

@@ -22,13 +22,16 @@ You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-
 Please refer to the [NOTICE](NOTICE.md) for details and the user guidelines.
 
 
-## Documentation
+## Documentation and tutorial
 
 A [documentation the ix modeling platform and the MESSAGEix framework](http://www.iiasa.ac.at/message_ix) 
 is automatically created from the documentation of the Python and R API packages. 
 The online documentation is synchronyzed with the contents of the master branch 
 of the repositories [www.github.com/iiasa/ixmp](http://www.github.com/iiasa/ixmp)
 and [www.github.com/iiasa/message_ix](http://www.github.com/iiasa/message_ix).
+
+There are a number of tutorials to get started with ixmp.
+You may want to try the [tutorial/transport](tutorial/transport/README.md)...
 
 Follow the instructions in [doc/README](doc/README.md)
 for building the ixmp documentation including the

@@ -26,127 +26,122 @@ os.remove(os.path.join(db_dir, 'ixmptest.script'))
 
 mp = ix.Platform(dbprops=test_db, dbtype='HSQLDB')
 
-# %% initialize a timeseries dataobject
+# %% initialize a new timeseries instance
 
-ia = mp.IamScenario('Douglas Adams', 'Hitchhiker',
-                    version='new', annotation='testing')
+ts = mp.TimeSeries('Douglas Adams', 'Hitchhiker',
+                   version='new', annotation='testing')
 df = {'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
       'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
 df = pd.DataFrame.from_dict(df)
-ia.add_timeseries(df)
-ia.commit('importing a testing timeseries')
-ia.set_as_default()
+ts.add_timeseries(df)
+ts.commit('importing a testing timeseries')
+ts.set_as_default()
 
 # %% initialize the standard canning problem
 
 model = "canning problem"
-scen = "standard"
+scenario = "standard"
 annot = "Dantzig's transportation problem for illustration and testing"
 
 # initialize an empty version (for timeseries import testing - version 1)
-ds = mp.DataStructure(model, scen, version='new', annotation=annot)
-ds.commit('this is an empty datastructure')
+scen = mp.Scenario(model, scenario, version='new', annotation=annot)
+scen.commit('this is an empty scenario')
 
-# %%
+# %% initialize another version (for more testing - version 2 - default)
 
-# initialize another version (for comprehensive testing - version 2 - default)
-ds = mp.DataStructure(model, scen, version='new', annotation=annot)
+scen = mp.Scenario(model, scenario, version='new', annotation=annot)
 
 # define the sets of locations of canning plants and markets
-ds.init_set("i")
-ds.add_set("i", ["seattle", "san-diego"])
-ds.init_set("j")
-ds.add_set("j", ["new-york", "chicago", "topeka"])
+scen.init_set("i")
+scen.add_set("i", ["seattle", "san-diego"])
+scen.init_set("j")
+scen.add_set("j", ["new-york", "chicago", "topeka"])
 
 # capacity of plant i in cases
 # add parameter elements one-by-one (string and value)
-ds.init_par("a", idx_sets="i")
-ds.add_par("a", "seattle", 350, "cases")
-ds.add_par("a", "san-diego", 600, "cases")
+scen.init_par("a", idx_sets="i")
+scen.add_par("a", "seattle", 350, "cases")
+scen.add_par("a", "san-diego", 600, "cases")
 
 # demand at market j in cases
 # add parameter elements as dataframe (with index names)
-ds.init_par("b", idx_sets="j")
+scen.init_par("b", idx_sets="j")
 b_data = [
     {'j': "new-york", 'value': 325, 'unit': "cases"},
     {'j': "chicago",  'value': 300, 'unit': "cases"},
     {'j': "topeka",   'value': 275, 'unit': "cases"}
 ]
 b = pd.DataFrame(b_data)
-ds.add_par("b", b)
+scen.add_par("b", b)
 
 # distance in thousands of miles
-# add parameter elements as dataframe (with columns 'key' and 'value')
-ds.init_par("d", idx_sets=["i", "j"])
+# add parameter elements as dataframe (with index names)
+scen.init_par("d", idx_sets=["i", "j"])
 d_data = [
-    {'key': "seattle.new-york", 'value': 2.5, 'unit': "km"},
-    {'key': "seattle.chicago", 'value': 1.7, 'unit': "km"},
-]
-d = pd.DataFrame(d_data)
-
-ds.add_par("d", d)
-
-# add more parameter elements as dataframe by index names
-d_data = [
+    {'i': "seattle", 'j': "new-york", 'value': 2.5, 'unit': "km"},
+    {'i': "seattle", 'j': "chicago", 'value': 1.7, 'unit': "km"},
     {'i': "seattle", 'j': "topeka", 'value': 1.8, 'unit': "km"},
     {'i': "san-diego", 'j': "new-york", 'value': 2.5, 'unit': "km"},
+    {'i': "san-diego", 'j': "chicago", 'value': 1.8, 'unit': "km"},
+    {'i': "san-diego", 'j': "topeka", 'value': 1.4, 'unit': "km"}
 ]
 d = pd.DataFrame(d_data)
-
-ds.add_par("d", d)
-
-# add another parameter element as concatenated key string, value, unit
-ds.add_par("d", "san-diego.chicago", 1.8, "km")
-
-# add another parameter element as key list, value, unit
-ds.add_par("d", ["san-diego", "topeka"], 1.4, "km")
+scen.add_par("d", d)
 
 # cost per case per 1000 miles
 # initialize scalar with a value and a unit (and optionally a comment)
-ds.init_scalar("f", 90.0, "USD/km")
+scen.init_scalar("f", 90.0, "USD/km")
 
 # add some timeseries for testing purposes
 df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
       'year': [2010], 'value': [23.7]}
 df = pd.DataFrame.from_dict(df)
-ds.add_timeseries(df)
+scen.add_timeseries(df)
 
-# commiting to the database automatically performs a check-in to the database
-# no changes can be made to the datastructure until a check-out is performed
+# initialize the decision variables and equations
+scen.init_var("z", None, None)
+scen.init_var("x", idx_sets=["i", "j"])
+scen.init_equ("demand", idx_sets=["j"])
+
 comment = "importing Dantzig's transport problem for illustration"
-comment += " and testing of the Python interface using a generic datastructure"
-ds.commit(comment)
+comment += " and testing of the Python interface using a generic ixmp.Scenario"
+scen.commit(comment)
 
-# set this new datastructure as the default version for the model/scenario name
-ds.set_as_default()
+# set this new scenario as the default version for the model/scenario name
+scen.set_as_default()
+
+# solve the model using the GAMS code provided in the `tests` folder
+fname = os.path.join(ix.default_paths.TEST_DIR, 'transport_ixmp.gms')
+scen.solve(model=fname, case='transport_standard')
+
 
 # %% initialize the Austria example
 
 model = "Austrian energy model"
-scen = "baseline"
+scenario = "baseline"
 annot = "developing a stylized energy system model for Austria"
 
-ds = mp.DataStructure(model, scen, version='new', annotation=annot,
-                      scheme="MESSAGE")
+scen = mp.Scenario(model, scenario, version='new', annotation=annot,
+                   scheme="MESSAGE")
 
 horizon = range(2010, 2070, 10)
 firstyear = horizon[0]
 
-ds.add_set("year", horizon)
-ds.add_set("cat_year", ["firstmodelyear", firstyear])
+scen.add_set("year", horizon)
+scen.add_set("cat_year", ["firstmodelyear", firstyear])
 
 country = "Austria"
-ds.add_set("node", country)
-ds.add_set("lvl_spatial", "country")
-ds.add_set("map_spatial_hierarchy", ["country", country, "World"])
-ds.add_set("mode", "standard")
+scen.add_set("node", country)
+scen.add_set("lvl_spatial", "country")
+scen.add_set("map_spatial_hierarchy", ["country", country, "World"])
+scen.add_set("mode", "standard")
 
-ds.add_set("commodity", ["electricity", "light", "other_electricity"])
-ds.add_set("level", ["secondary", "final", "useful"])
+scen.add_set("commodity", ["electricity", "light", "other_electricity"])
+scen.add_set("level", ["secondary", "final", "useful"])
 
 rate = [0.05] * len(horizon)
 unit = ['%'] * len(horizon)
-ds.add_par("interestrate", key=horizon, val=rate, unit=unit)
+scen.add_par("interestrate", key=horizon, val=rate, unit=unit)
 
 beta = 0.7
 gdp = pd.Series([1., 1.2163, 1.4108, 1.63746, 1.89083, 2.1447], index=horizon)
@@ -172,7 +167,7 @@ lights = [
 useful_energy_tecs = lights + ['appliances']
 
 technologies = secondary_energy_tecs + final_energy_tecs + useful_energy_tecs
-ds.add_set("technology", technologies)
+scen.add_set("technology", technologies)
 
 demand_per_year = 55209. / 8760  # from IEA statistics
 elec_demand = pd.DataFrame({
@@ -184,7 +179,7 @@ elec_demand = pd.DataFrame({
         'value': demand_per_year * demand,
         'unit': 'GWa',
     })
-ds.add_par("demand", elec_demand)
+scen.add_par("demand", elec_demand)
 
 demand_per_year = 6134. / 8760  # from IEA statistics
 light_demand = pd.DataFrame({
@@ -196,7 +191,7 @@ light_demand = pd.DataFrame({
         'value': demand_per_year * demand,
         'unit': 'GWa',
     })
-ds.add_par("demand", light_demand)
+scen.add_par("demand", light_demand)
 
 year_pairs = [(y_v, y_a) for y_v, y_a in
               itertools.product(horizon, horizon) if y_v <= y_a]
@@ -220,7 +215,7 @@ grid = pd.DataFrame(dict(
         unit='%',
         **base_input
         ))
-ds.add_par("input", grid)
+scen.add_par("input", grid)
 
 
 bulb = pd.DataFrame(dict(
@@ -230,7 +225,7 @@ bulb = pd.DataFrame(dict(
         unit='%',
         **base_input
         ))
-ds.add_par("input", bulb)
+scen.add_par("input", bulb)
 
 cfl = pd.DataFrame(dict(
         technology='cfl',
@@ -239,7 +234,7 @@ cfl = pd.DataFrame(dict(
         unit='%',
         **base_input
         ))
-ds.add_par("input", cfl)
+scen.add_par("input", cfl)
 
 app = pd.DataFrame(dict(
         technology='appliances',
@@ -248,7 +243,7 @@ app = pd.DataFrame(dict(
         unit='%',
         **base_input
         ))
-ds.add_par("input", app)
+scen.add_par("input", app)
 
 
 def make_df(base, **kwargs):
@@ -269,51 +264,51 @@ base_output = {
 
 imports = make_df(base_output, technology='import', commodity='electricity',
                   level='secondary', value=1.)
-ds.add_par('output', imports)
+scen.add_par('output', imports)
 
 grid = make_df(base_output, technology='electricity_grid',
                commodity='electricity', level='final', value=0.873)
-ds.add_par('output', grid)
+scen.add_par('output', grid)
 
 bulb = make_df(base_output, technology='bulb', commodity='light',
                level='useful', value=1.)
-ds.add_par('output', bulb)
+scen.add_par('output', bulb)
 
 cfl = make_df(base_output, technology='cfl', commodity='light',
               level='useful', value=1.)
-ds.add_par('output', cfl)
+scen.add_par('output', cfl)
 
 app = make_df(base_output, technology='appliances',
               commodity='other_electricity', level='useful', value=1.)
-ds.add_par('output', app)
+scen.add_par('output', app)
 
 coal = make_df(base_output, technology='coal_ppl', commodity='electricity',
                level='secondary', value=1.)
-ds.add_par('output', coal)
+scen.add_par('output', coal)
 
 gas = make_df(base_output, technology='gas_ppl', commodity='electricity',
               level='secondary', value=1.)
-ds.add_par('output', gas)
+scen.add_par('output', gas)
 
 oil = make_df(base_output, technology='oil_ppl', commodity='electricity',
               level='secondary', value=1.)
-ds.add_par('output', oil)
+scen.add_par('output', oil)
 
 bio = make_df(base_output, technology='bio_ppl', commodity='electricity',
               level='secondary', value=1.)
-ds.add_par('output', bio)
+scen.add_par('output', bio)
 
 hydro = make_df(base_output, technology='hydro_ppl', commodity='electricity',
                 level='secondary', value=1.)
-ds.add_par('output', hydro)
+scen.add_par('output', hydro)
 
 wind = make_df(base_output, technology='wind_ppl',
                commodity='electricity', level='secondary', value=1.)
-ds.add_par('output', wind)
+scen.add_par('output', wind)
 
 solar_pv = make_df(base_output, technology='solar_pv_ppl',
                    commodity='electricity', level='final', value=1.)
-ds.add_par('output', solar_pv)
+scen.add_par('output', solar_pv)
 
 base_technical_lifetime = {
     'node_loc': country,
@@ -335,7 +330,7 @@ lifetimes = {
 
 for tec, val in lifetimes.items():
     df = make_df(base_technical_lifetime, technology=tec, value=val)
-    ds.add_par('technical_lifetime', df)
+    scen.add_par('technical_lifetime', df)
 
 base_capacity_factor = {
     'node_loc': country,
@@ -359,7 +354,7 @@ capacity_factor = {
 
 for tec, val in capacity_factor.items():
     df = make_df(base_capacity_factor, technology=tec, value=val)
-    ds.add_par('capacity_factor', df)
+    scen.add_par('capacity_factor', df)
 
 base_inv_cost = {
     'node_loc': country,
@@ -382,7 +377,7 @@ costs = {
 
 for tec, val in costs.items():
     df = make_df(base_inv_cost, technology=tec, value=val * 1e6)
-    ds.add_par('inv_cost', df)
+    scen.add_par('inv_cost', df)
 
 base_fix_cost = {
     'node_loc': country,
@@ -404,7 +399,7 @@ costs = {
 
 for tec, val in costs.items():
     df = make_df(base_fix_cost, technology=tec, value=val * 1e6)
-    ds.add_par('fix_cost', df)
+    scen.add_par('fix_cost', df)
 
 base_var_cost = {
     'node_loc': country,
@@ -426,7 +421,7 @@ costs = {
 
 for tec, val in costs.items():
     df = make_df(base_var_cost, technology=tec, value=val * 8760. * 1e3)
-    ds.add_par('var_cost', df)
+    scen.add_par('var_cost', df)
 
 base_growth = {
     'node_loc': country,
@@ -450,7 +445,7 @@ growth_technologies = [
 
 for tec in growth_technologies:
     df = make_df(base_growth, technology=tec)
-    ds.add_par('growth_activity_up', df)
+    scen.add_par('growth_activity_up', df)
 
 base_initial = {
     'node_loc': country,
@@ -462,7 +457,7 @@ base_initial = {
 for tec in lights:
     df = make_df(base_initial, technology=tec,
                  value=0.01 * light_demand['value'].loc[horizon[1:]])
-    ds.add_par('initial_activity_up', df)
+    scen.add_par('initial_activity_up', df)
 
 base_activity = {
     'node_loc': country,
@@ -487,8 +482,8 @@ activity = {
 
 for tec, val in activity.items():
     df = make_df(base_activity, technology=tec, value=val / 8760.)
-    ds.add_par('bound_activity_up', df)
-    ds.add_par('bound_activity_lo', df)
+    scen.add_par('bound_activity_up', df)
+    scen.add_par('bound_activity_lo', df)
 
 base_activity = {
     'node_loc': country,
@@ -507,7 +502,7 @@ keep_activity = {
 
 for tec, val in keep_activity.items():
     df = make_df(base_activity, technology=tec, value=val / 8760.)
-    ds.add_par('bound_activity_up', df)
+    scen.add_par('bound_activity_up', df)
 
 base_capacity = {
     'node_loc': country,
@@ -521,10 +516,10 @@ capacity = (act / 8760 / cf).dropna().to_dict()
 
 for tec, val in capacity.items():
     df = make_df(base_capacity, technology=tec, value=val)
-    ds.add_par('bound_new_capacity_up', df)
+    scen.add_par('bound_new_capacity_up', df)
 
-ds.add_set("emission", "CO2")
-ds.add_cat('emission', 'GHGs', 'CO2')
+scen.add_set("emission", "CO2")
+scen.add_cat('emission', 'GHGs', 'CO2')
 
 base_emissions = {
     'node_loc': country,
@@ -544,67 +539,66 @@ emissions = {
 for tec, (species, val) in emissions.items():
     df = make_df(base_emissions, technology=tec, emission=species,
                  value=val * 8760. * 1000)
-    ds.add_par('emission_factor', df)
+    scen.add_par('emission_factor', df)
 
 comment = 'initial commit for Austria model'
-ds.commit(comment)
-ds.set_as_default()
+scen.commit(comment)
+scen.set_as_default()
 
-ds.check_out()
+scen.check_out()
 # add timeseries data for GDP as meta-data (will not be dropped during cloning)
 data = {'variable': 'GDP', 'year': horizon, 'value': gdp,
         'unit': 'million USD', 'region': 'Austria'}
 df = pd.DataFrame.from_dict(data)
-ds.add_timeseries(df, meta=True)
+scen.add_timeseries(df, meta=True)
 
 # add timeseries data for GDP as meta-data (will not be dropped during cloning)
 data = {'variable': 'Demand', 'year': horizon, 'value': demand,
         'unit': 'GWa/y', 'region': 'Austria'}
 df = pd.DataFrame.from_dict(data)
-ds.add_timeseries(df)
-ds.commit('add timeseries meta data (gdp) and demand')
+scen.add_timeseries(df)
+scen.commit('add timeseries meta data (gdp) and demand')
 
-ds.solve(case='testdb_setup_MSG_austria')
 
-# %% initialize a new datastructure using the canning problem
+# %% initialize a new scenario using the canning problem
 # based on the scheme "MESSAGE"
 
 model = "canning problem (MESSAGE scheme)"
-scen = "standard"
-annot = "Dantzig's canning problem as a MESSAGE scheme datastructure"
+scenario = "standard"
+annot = "Dantzig's canning problem as a MESSAGE-scheme ixmp.Scenario"
 
-ds = mp.DataStructure(model, scen, version='new',
-                      scheme="MESSAGE", annotation=annot)
+scen = mp.Scenario(model, scenario, version='new',
+                   scheme="MESSAGE", annotation=annot)
 
 # year set and (sub-annual) time set
 year = [2010]
-ds.add_set("year", year)
-ds.add_set("cat_year", ["firstmodelyear", 2010])
+scen.add_set("year", year)
+scen.add_set("cat_year", ["firstmodelyear", 2010])
 
 city = ["seattle", "san-diego", "new-york", "chicago", "topeka"]
-ds.add_set("node", city)
-ds.add_set("lvl_spatial", "location")
+scen.add_set("node", city)
+scen.add_set("lvl_spatial", "location")
 
 for item in city:
-    ds.add_set("map_spatial_hierarchy", ["location", item, "World"])
+    scen.add_set("map_spatial_hierarchy", ["location", item, "World"])
 
-ds.add_set("commodity", "cases")
-ds.add_set("level", ["supply", "consumption"])
+scen.add_set("commodity", "cases")
+scen.add_set("level", ["supply", "consumption"])
 
-ds.add_set("technology", "canning_plant")
+scen.add_set("technology", "canning_plant")
 
-ds.add_set(
+scen.add_set(
     "technology", ["transport_from_seattle", "transport_from_san-diego"])
 
-ds.add_set(
+scen.add_set(
     "mode", ["production", "to_new-york", "to_chicago", "to_topeka"])
 
-ds.add_par("demand", ['new-york', 'cases', 'consumption', '2010', 'year'],
-           325.0, "cases")
-ds.add_par("demand", ['chicago', 'cases', 'consumption', '2010', 'year'],
-           300.0, "cases")
-ds.add_par("demand", ['topeka', 'cases', 'consumption', '2010', 'year'],
-           275.0, "cases")
+scen.add_par("demand", ['new-york', 'cases', 'consumption', '2010', 'year'],
+             325.0, "cases")
+scen.add_par("demand", ['chicago', 'cases', 'consumption', '2010', 'year'],
+             300.0, "cases")
+scen.add_par("demand", ['topeka', 'cases', 'consumption', '2010', 'year'],
+             275.0, "cases")
 bda_data = [
     {'node_loc': "seattle",   'value': 350.0},
     {'node_loc': "san-diego", 'value': 600}
@@ -617,7 +611,7 @@ bda['mode'] = 'production'
 bda['time'] = 'year'
 bda['unit'] = 'cases'
 
-ds.add_par("bound_activity_up", bda)
+scen.add_par("bound_activity_up", bda)
 
 outp_data = [
     {'node_loc': "seattle"},
@@ -637,7 +631,7 @@ outp['time_dest'] = 'year'
 outp['value'] = 1
 outp['unit'] = '%'
 
-ds.add_par("output", outp)
+scen.add_par("output", outp)
 
 
 inp_data = [
@@ -659,13 +653,13 @@ inp['time_origin'] = 'year'
 inp['value'] = 1
 inp['unit'] = '%'
 
-ds.add_par("input", inp)
+scen.add_par("input", inp)
 
 inp['node_loc'] = 'san-diego'
 inp['technology'] = 'transport_from_san-diego'
 inp['node_origin'] = 'san-diego'
 
-ds.add_par("input", inp)
+scen.add_par("input", inp)
 
 outp_data = [
     {'mode': "to_new-york", 'node_dest': "new-york"},
@@ -685,12 +679,12 @@ outp['time_dest'] = 'year'
 outp['value'] = 1
 outp['unit'] = '%'
 
-ds.add_par("output", outp)
+scen.add_par("output", outp)
 
 outp['node_loc'] = 'san-diego'
 outp['technology'] = 'transport_from_san-diego'
 
-ds.add_par("output", outp)
+scen.add_par("output", outp)
 
 
 var_cost_data = [
@@ -714,18 +708,17 @@ var_cost['year_act'] = '2010'
 var_cost['time'] = 'year'
 var_cost['unit'] = 'USD'
 
-ds.add_par("var_cost", var_cost)
+scen.add_par("var_cost", var_cost)
 
-ds.add_par("ref_activity",
-           "seattle.canning_plant.2010.production.year", 350, "cases")
-ds.add_par("ref_activity",
-           "san-diego.canning_plant.2010.production.year", 600, "cases")
+scen.add_par("ref_activity",
+             "seattle.canning_plant.2010.production.year", 350, "cases")
+scen.add_par("ref_activity",
+             "san-diego.canning_plant.2010.production.year", 600, "cases")
 
 comment = "importing a MESSAGE-scheme version of the transport problem"
-ds.commit(comment)
-ds.set_as_default()
+scen.commit(comment)
+scen.set_as_default()
 
-ds.solve(case='testdb_setup_MSG_canning')
 
 # %% close the test database, remove the test database properties file
 

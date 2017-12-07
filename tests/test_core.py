@@ -1,12 +1,8 @@
 import os
-
 import pandas as pd
-
 from numpy import testing as npt
 import pandas.util.testing as pdt
-
 import ixmp
-
 import pytest
 
 from testing_utils import test_mp, test_mp_props
@@ -18,6 +14,11 @@ aut_args = ('Austrian energy model', 'baseline')
 
 # string columns for timeseries checks
 cols_str = ['region', 'variable', 'unit', 'year']
+
+
+def test_scen_list(test_mp):
+    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
 
 
 def test_new_scen(test_mp):
@@ -47,7 +48,7 @@ def test_init_scalar(test_mp):
 
 # make sure that changes to a scenario are copied over during clone
 def test_add_clone(test_mp):
-    scen = test_mp.Scenario(*can_args)
+    scen = test_mp.Scenario(*can_args, version=1)
     scen.check_out()
     scen.init_set('h')
     scen.add_set('h', 'test')
@@ -79,14 +80,6 @@ def test_idx_name(test_mp):
     npt.assert_array_equal(df, ['i', 'j'])
 
 
-def test_remote_unit_export(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.par('input', filters={'technology': ['transport_from_seattle']})
-    obs = df.loc[0, 'unit']
-    exp = '%'
-    assert obs == exp
-
-
 def test_remote_unit_can(test_mp):
     scen = test_mp.Scenario(*msg_args)
     df = scen.par('bound_activity_up',
@@ -97,28 +90,22 @@ def test_remote_unit_can(test_mp):
 
 
 def test_remote_marginal(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.var('ACT', filters={'technology': ['transport_from_seattle']})
+    scen = test_mp.Scenario(*can_args)
+    df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_almost_equal(df['mrg'], [0, 0, 0.036])
 
 
 def test_remote_level(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.var('ACT', filters={'technology': ['transport_from_seattle']})
+    scen = test_mp.Scenario(*can_args)
+    df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_almost_equal(df['lvl'], [50, 300, 0])
 
 
-def test_remote_general_int(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.var('ACT', filters={'technology': ['transport_from_seattle']})
-    npt.assert_array_almost_equal(df['year_vtg'], [2010, 2010, 2010])
-
-
 def test_remote_general_str(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.var('ACT', filters={'technology': ['transport_from_seattle']})
+    scen = test_mp.Scenario(*can_args)
+    df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_equal(
-        df['mode'], ['to_new-york', 'to_chicago', 'to_topeka'])
+        df['j'], ['new-york', 'chicago', 'topeka'])
 
 
 def test_cat_all(test_mp):
@@ -222,56 +209,3 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
-
-
-def test_clone_slice(test_mp):
-    scen = test_mp.Scenario(*aut_args)
-    scen2 = scen.clone(keep_sol=True, first_model_year=2030)
-
-    # check that the solution was not dropped
-    assert (scen2.var('ACT').empty) is False
-
-    # other checks for cloning and slicing
-    clone_slice_test(scen2)
-
-
-def test_clone_slice_drop(test_mp):
-    scen = test_mp.Scenario(*aut_args)
-    scen2 = scen.clone(keep_sol=False, first_model_year=2030)
-
-    # check that the solution was removed
-    assert (scen2.var('ACT').empty) is True
-
-    # other checks for cloning and slicing
-    clone_slice_test(scen2)
-
-
-def clone_slice_test(scen2):
-        # check that historical activity is correctly assigned during slicing
-    obs = scen2.par('historical_activity',
-                    filters={'technology': 'coal_ppl', 'year_act': 2020}).value
-    exp = 1.335842
-    npt.assert_array_almost_equal(obs, exp)
-
-    # check that the first model year identifier was correctly shifted
-    fy = scen2.cat('year', 'firstmodelyear')
-    assert fy == '2030'
-
-    # check that the timeseries data was correctly copied
-    # (entire horizon for meta-timeseries, up to new firstmodelyear for others)
-    ts = scen2.timeseries()
-    horizon = range(2010, 2070, 10)
-    gdp = pd.Series([1., 1.2163, 1.4108, 1.63746, 1.89083, 2.1447],
-                    index=horizon)
-    data = {'variable': 'GDP', 'year': horizon, 'value': gdp,
-            'unit': 'million USD', 'region': 'Austria'}
-    df = pd.DataFrame.from_dict(data)
-    npt.assert_array_almost_equal(ts[ts.variable == 'GDP'].value, df.value)
-
-    history = [2010, 2020]
-    beta = 0.7
-    demand = gdp ** beta
-    data = {'variable': 'Demand', 'year': history, 'value': demand[history],
-            'unit': 'GWa/y', 'region': 'Austria'}
-    df = pd.DataFrame.from_dict(data)
-    npt.assert_array_almost_equal(ts[ts.variable == 'Demand'].value, df.value)

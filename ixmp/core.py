@@ -10,8 +10,6 @@ from subprocess import check_call
 import numpy as np
 import pandas as pd
 
-from datetime import datetime
-
 import jpype
 from jpype import JPackage as java
 
@@ -49,7 +47,7 @@ def start_jvm():
 
 class Platform(object):
     """ The class 'Platform' is the central access point to
-    the IX modeling platform (IXMP). It includes functions for managing
+    the ix modeling platform (ixmp). It includes functions for managing
     and accessing TimeSeries instances (timeseries  and reference data)
     and Scenario instances (structured model input data and results).
 
@@ -103,9 +101,9 @@ class Platform(object):
         this is important when working with local database files ('HSQLDB')"""
         self._jobj.closeDB()
 
-    def model_scenario_list(self, default=True, model=None, scen=None):
+    def scenario_list(self, default=True, model=None, scen=None):
         """Get a list of all TimeSeries and Scenario instances
-        initialized in the IX Modeling Platform
+        initialized in the ixmp database instance
 
         Parameters
         ----------
@@ -116,10 +114,10 @@ class Platform(object):
         scen : string
             the scenario name (optional)
         """
-        mod_scen_list = self._jobj.getModelScenarioList(default, model, scen)
+        mod_scen_list = self._jobj.getScenarioList(default, model, scen)
 
         mod_range = range(mod_scen_list.size())
-        cols = ['model_name', 'scen_name', 'scheme', 'is_default', 'is_locked',
+        cols = ['model', 'scenario', 'scheme', 'is_default', 'is_locked',
                 'cre_user', 'cre_date', 'upd_user', 'upd_date',
                 'lock_user', 'lock_date', 'annotation']
 
@@ -138,7 +136,7 @@ class Platform(object):
 
     def TimeSeries(self, model, scen, version=None, annotation=None):
         """Initialize a new TimeSeries (timeseries or reference data)
-        or get an existing TimeSeries instance from the IXMP database.
+        or get an existing TimeSeries instance from the ixmp database.
 
         Parameters
         ----------
@@ -152,14 +150,14 @@ class Platform(object):
         annotation : string
             a short annotation/comment (when initializing a new TimeSeries)
         """
-        if version is 'new':
-            _jscen = self._jobj.newTimeSeries(model, scen, annotation)
+        if version == 'new':
+            _jts = self._jobj.newTimeSeries(model, scen, annotation)
         elif isinstance(version, int):
-            _jscen = self._jobj.getTimeSeries(model, scen, version)
+            _jts = self._jobj.getTimeSeries(model, scen, version)
         else:
-            _jscen = self._jobj.getTimeSeries(model, scen)
+            _jts = self._jobj.getTimeSeries(model, scen)
 
-        return TimeSeries(self, model, scen, _jscen)
+        return TimeSeries(self, model, scen, _jts)
 
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
@@ -183,14 +181,14 @@ class Platform(object):
         memcache : boolean
             keep all dataframes in memory after first query (default: False)
         """
-        if version is 'new':
-            _jds = self._jobj.newScenario(model, scen, scheme, annotation)
+        if version == 'new':
+            _jscen = self._jobj.newScenario(model, scen, scheme, annotation)
         elif isinstance(version, int):
-            _jds = self._jobj.getScenario(model, scen, version)
+            _jscen = self._jobj.getScenario(model, scen, version)
         else:
-            _jds = self._jobj.getScenario(model, scen)
+            _jscen = self._jobj.getScenario(model, scen)
 
-        return Scenario(self, model, scen, _jds, cache=cache)
+        return Scenario(self, model, scen, _jscen, cache=cache)
 
     def units(self):
         """returns a list of all units initialized
@@ -919,7 +917,8 @@ class Scenario(TimeSeries):
         # define case name for MSG gdx export/import, replace spaces by '_'
         if msg and case is None:
             case = '{}_{}'.format(self.model, self.scenario)
-        case = case.replace(" ", "_")
+        if case is not None:
+            case = case.replace(" ", "_")
 
         # define paths for writing to gdx, running GAMS, and reading a solution
         if msg:

@@ -86,8 +86,10 @@ def test_run_gams_api():
 
     # solve model
     here = os.path.dirname(os.path.abspath(__file__))
-    fname = os.path.join(here, 'transport_ixmp.gms')
-    scen.solve(model=fname, case='transport_standard')
+    modelp = os.path.join(here, 'transport_ixmp.gms')
+    inp = os.path.join(here, 'test_in.gdx')
+    outp = os.path.join(here, 'test_out.gdx')
+    scen.solve(modelp, inp, outp)
 
     # test it
     obs = scen.var('z')['lvl']
@@ -95,5 +97,7 @@ def test_run_gams_api():
     assert np.isclose(obs, exp)
 
     # remove log and lst file
+    os.remove(inp)
+    os.remove(outp)
     os.remove('transport_ixmp.log')
     os.remove('transport_ixmp.lst')

@@ -891,14 +891,20 @@ class Scenario(TimeSeries):
         self.clear_cache()
         self._jobj.removeSolution()
 
-    def solve(self, model='MESSAGE', case=None, comment=None,
+    def solve(self, modelp, inp, outp, iterp=None, comment=None,
               var_list=None, equ_list=None, check_sol=True):
         """solve the model (export to gdx, execute GAMS, import the solution)
 
         Parameters
         ----------
-        model : string
-            model (e.g., MESSAGE) or GAMS code located in current working dir
+        modelp : string
+            name of gams launching point (model equation entry)
+        inp : string
+            input gams file
+        outp : string
+            output gams file
+        iterp : string, optional
+            iteration gams file
         case : string
             identifier of the gdx file name (for MESSAGE model instances),
             defaults to 'model_name_scen_name'
@@ -912,37 +918,15 @@ class Scenario(TimeSeries):
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         """
-        msg = model == 'MESSAGE' or model == 'MESSAGE-MACRO'
-
-        # define case name for MSG gdx export/import, replace spaces by '_'
-        if msg and case is None:
-            case = '{}_{}'.format(self.model, self.scenario)
-        if case is not None:
-            case = case.replace(" ", "_")
-
-        # define paths for writing to gdx, running GAMS, and reading a solution
-        if msg:
-            ipth = ix.default_paths.DATA_DIR
-            ingdx = 'MsgData_{}.gdx'.format(case)
-            opth = ix.default_paths.OUTPUT_DIR
-            outgdx = 'MsgOutput_{}.gdx'.format(case)
-            iterpth = os.path.join(ix.default_paths.OUTPUT_DIR,
-                                   'MsgIterationReport_{}.gdx'.format(case))
-            model = os.path.join(ix.default_paths.MODEL_DIR,
-                                 '{}_run.gms'.format(model))
-        else:
-            ipth = '.'
-            ingdx = model + '_in.gdx'
-            opth = '.'
-            outgdx = model + '_out.gdx'
-            iterpth = None
-
-        inp = os.path.join(ipth, ingdx)
-        out = os.path.join(opth, outgdx)
+        # separate directories and files
+        ipth = os.path.dirname(inp)
+        ingdx = os.path.basename(inp)
+        opth = os.path.dirname(outp)
+        outgdx = os.path.basename(outp)
 
         # write to gdx, execture GAMS, read solution from gdx
         self.to_gdx(ipth, ingdx)
-        run_gams(model, inp, out, iterpth)
+        run_gams(modelp, inp, outp, iterp)
         self.read_sol_from_gdx(opth, outgdx, comment,
                                var_list, equ_list, check_sol)
 

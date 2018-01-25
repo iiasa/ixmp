@@ -7,7 +7,8 @@ of working with ``ixmp`` package. You will learn how to create an
 and the numerical solution to the associated optimization problem.
 
 We use Dantzig's transport problem, which is also used as the standard GAMS tutorial.
-This problem finds a least cost shipping schedule that meets requirements at markets and supplies at factories.
+This problem finds a least cost shipping schedule that meets demand requirements at markets
+and supply capacity constraints at multiple factories.
 
 If you are not familiar with GAMS, please take a minute to look at the [transport.gms](transport.gms) code.
 

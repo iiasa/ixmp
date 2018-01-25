@@ -16,6 +16,7 @@ from jpype import JPackage as java
 import sys
 
 import ixmp as ix
+import ixmp.model_settings as model_settings
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
@@ -891,17 +892,25 @@ class Scenario(TimeSeries):
         self.clear_cache()
         self._jobj.removeSolution()
 
-    def solve(self, model='MESSAGE', case=None, comment=None,
+    def solve(self, model, case=None, model_file=None,
+              in_file=None, out_file=None, solve_args=None, comment=None,
               var_list=None, equ_list=None, check_sol=True):
         """solve the model (export to gdx, execute GAMS, import the solution)
 
         Parameters
         ----------
         model : string
-            model (e.g., MESSAGE) or GAMS code located in current working dir
+            model (e.g., MESSAGE) or GAMS file name (excluding '.gms')
         case : string
-            identifier of the gdx file name (for MESSAGE model instances),
-            defaults to 'model_name_scen_name'
+            identifier of gdx file names, defaults to 'model_name_scen_name'
+        model_file : string, optional
+            path to GAMS file (including '.gms' extension)
+        in_file : string, optional
+            path to GAMS gdx input file (including '.gdx' extension)
+        out_file : string, optional
+            path to GAMS gdx output file (including '.gdx' extension)
+        solve_args : string, optional
+            arguments to be passed to GAMS (input/output file names, etc.)
         comment : string, default None
             additional comment added to changelog when importing the solution
         var_list : list of strings (optional)
@@ -912,37 +921,30 @@ class Scenario(TimeSeries):
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         """
-        msg = model == 'MESSAGE' or model == 'MESSAGE-MACRO'
+        config = model_settings.model_config(model) \
+            if model_settings.model_registered(model) \
+            else model_settings.model_config('default')
 
-        # define case name for MSG gdx export/import, replace spaces by '_'
-        if msg and case is None:
-            case = '{}_{}'.format(self.model, self.scenario)
-        if case is not None:
-            case = case.replace(" ", "_")
+        # define case name for gdx export/import, replace spaces by '_'
+        case = case or '{}_{}'.format(self.model, self.scenario)
+        case = case.replace(" ", "_")
+
+        model_file = model_file or config.model_file.format(model=model)
 
         # define paths for writing to gdx, running GAMS, and reading a solution
-        if msg:
-            ipth = ix.default_paths.DATA_DIR
-            ingdx = 'MsgData_{}.gdx'.format(case)
-            opth = ix.default_paths.OUTPUT_DIR
-            outgdx = 'MsgOutput_{}.gdx'.format(case)
-            iterpth = os.path.join(ix.default_paths.OUTPUT_DIR,
-                                   'MsgIterationReport_{}.gdx'.format(case))
-            model = os.path.join(ix.default_paths.MODEL_DIR,
-                                 '{}_run.gms'.format(model))
-        else:
-            ipth = '.'
-            ingdx = model + '_in.gdx'
-            opth = '.'
-            outgdx = model + '_out.gdx'
-            iterpth = None
+        inp = in_file or config.inp.format(model=model, case=case)
+        outp = out_file or config.outp.format(model=model, case=case)
+        args = solve_args or config.args.format(model=model, case=case,
+                                                inp=inp, outp=outp)
 
-        inp = os.path.join(ipth, ingdx)
-        out = os.path.join(opth, outgdx)
+        ipth = os.path.dirname(inp)
+        ingdx = os.path.basename(inp)
+        opth = os.path.dirname(outp)
+        outgdx = os.path.basename(outp)
 
         # write to gdx, execture GAMS, read solution from gdx
         self.to_gdx(ipth, ingdx)
-        run_gams(model, inp, out, iterpth)
+        run_gams(model_file, args)
         self.read_sol_from_gdx(opth, outgdx, comment,
                                var_list, equ_list, check_sol)
 
@@ -1076,7 +1078,6 @@ def _getElementList(jItem, filters=None, has_value=False, has_level=False):
         return df
 
     else:
-
         #  for index sets
         if not (has_value or has_level):
             return pd.Series(jItem.getCol(0, jList)[:])
@@ -1097,7 +1098,7 @@ def _getElementList(jItem, filters=None, has_value=False, has_level=False):
 
 
 def _removeElement(jItem, key):
-
+    """auxiliary """
     if jItem.getDim() > 0:
         if isinstance(key, list) or isinstance(key, pd.Series):
             jItem.removeElement(to_jlist(key))
@@ -1117,23 +1118,18 @@ def _removeElement(jItem, key):
             jItem.removeElement(str(key))
 
 
-def run_gams(model, ingdx, outgdx, itergdx=None, args=['LogOption=4']):
+def run_gams(model_file, args, gams_args=['LogOption=4']):
     """Parameters
     ----------
     model : str
         the path to the gams file
-    ingdx : str
-        the path to the input gdx file
-    outgdx : str
-        the path to the output gdx file
-    args : list of str
+    args : str
+        arguments related to the GAMS code (input/output gdx paths, etc.)
+    gams_args : list of str
         additional arguments for the CLI call to gams
         - `LogOption=4` prints output to stdout (not console) and the log file
     """
-    cmd = 'gams {} --in={} --out={}'.format(model, ingdx, outgdx)
-    modelpth = os.path.abspath(os.path.dirname(model))
-    if itergdx is not None:
-        cmd = '{} --iter={}'.format(cmd, itergdx)
-    cmd = '{} Inputdir={}'.format(cmd, modelpth)
-    cmd = cmd.split() + args
+    cmd = 'gams {} {}'.format(model_file, args)
+    cmd = '{} Inputdir={}'.format(cmd, os.path.dirname(model_file))
+    cmd = cmd.split() + gams_args
     check_call(cmd, shell=os.name == 'nt')

@@ -85,5 +85,6 @@ Reference
 ---------
 
 This Contributor License Agreement and the introductory text is adapted from 
-the [GitHub Contributor License Agreement](https://cla.github.com/agreement),
-Version 298f3afd updated August 9, 2017
+the `GitHub Contributor License Agreement`_, Version 298f3afd updated August 9, 2017
+
+.. _`GitHub Contributor License Agreement` : https://cla.github.com/agreement

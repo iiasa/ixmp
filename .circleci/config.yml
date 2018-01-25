@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/ixmp_dev
+    working_directory: ~/ixmp
     docker:
       - image: docker:17.05.0-ce-git
     steps:
@@ -12,11 +12,11 @@ jobs:
           command: pwd && ls
       - run:
           name: Build App Docker Image
-          command: docker build -t message_ix/message_ix:latest .
+          command: docker build -t ixmp/ixmp:latest .
       - run:
           name: Python2 Tests
-          command: docker run message_ix/message_ix:latest python2 -m pytest /message_ix/tests
+          command: docker run ixmp/ixmp:latest python2 -m pytest /ixmp/tests
       - run:
           name: Python3 Tests
-          command: docker run message_ix/message_ix:latest python3 -m pytest /message_ix/tests
+          command: docker run ixmp/ixmp:latest python3 -m pytest /ixmp/tests
       

@@ -1,8 +1,8 @@
 FROM gidden/messageix-base
 
-COPY . /message_ix
+COPY . /ixmp
 WORKDIR /
-ENV MESSAGE_IX_PATH /message_ix
-ENV IXMP_R_PATH /message_ix/ixmp
-RUN cd /message_ix && python2 setup.py install 
-RUN cd /message_ix && python3 setup.py install
+ENV MESSAGE_IX_PATH /ixmp
+ENV IXMP_R_PATH /ixmp/ixmp
+RUN cd /ixmp && python2 setup.py install 
+RUN cd /ixmp && python3 setup.py install

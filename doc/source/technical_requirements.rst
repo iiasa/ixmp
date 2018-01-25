@@ -19,7 +19,7 @@ using the |ixmp|.
     we recommend to install Anaconda and Spyder (`anaconda.org`_), version 3.6 or higher.
   | *No advanced knowledge of Python is required for getting started with the ix modeling platform.*
 
-- For using `GAMS`_ solve numerical optimisation problems,
+- For using `GAMS`_ to solve numerical optimisation problems,
   you need to install the latest version of GAMS (in particular 24.8 or higher).
   If you do only have a license for an older version,
   install both the older and the latest version of GAMS.

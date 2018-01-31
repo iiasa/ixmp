@@ -7,7 +7,6 @@ Created on Fri Mar 24 14:58:52 2017
 
 import os
 import pandas as pd
-import itertools
 import ixmp as ix
 
 db_dir = os.path.join(ix.default_paths.TEST_DIR, 'testdb')
@@ -111,457 +110,14 @@ scen.commit(comment)
 scen.set_as_default()
 
 # solve the model using the GAMS code provided in the `tests` folder
-fname = os.path.join(ix.default_paths.TEST_DIR, 'transport_ixmp.gms')
+fname = os.path.join(ix.default_paths.TEST_DIR, 'transport_ixmp')
 scen.solve(model=fname, case='transport_standard')
-
-
-# %% initialize the Austria example
-
-model = "Austrian energy model"
-scenario = "baseline"
-annot = "developing a stylized energy system model for Austria"
-
-scen = mp.Scenario(model, scenario, version='new', annotation=annot,
-                   scheme="MESSAGE")
-
-horizon = range(2010, 2070, 10)
-firstyear = horizon[0]
-
-scen.add_set("year", horizon)
-scen.add_set("cat_year", ["firstmodelyear", firstyear])
-
-country = "Austria"
-scen.add_set("node", country)
-scen.add_set("lvl_spatial", "country")
-scen.add_set("map_spatial_hierarchy", ["country", country, "World"])
-scen.add_set("mode", "standard")
-
-scen.add_set("commodity", ["electricity", "light", "other_electricity"])
-scen.add_set("level", ["secondary", "final", "useful"])
-
-rate = [0.05] * len(horizon)
-unit = ['%'] * len(horizon)
-scen.add_par("interestrate", key=horizon, val=rate, unit=unit)
-
-beta = 0.7
-gdp = pd.Series([1., 1.2163, 1.4108, 1.63746, 1.89083, 2.1447], index=horizon)
-demand = gdp ** beta
-
-plants = [
-    "coal_ppl",
-    "gas_ppl",
-    "oil_ppl",
-    "bio_ppl",
-    "hydro_ppl",
-    "wind_ppl",
-    "solar_pv_ppl"  # actually primary -> final
-]
-secondary_energy_tecs = plants + ['import']
-
-final_energy_tecs = ['electricity_grid']
-
-lights = [
-    "bulb",
-    "cfl"
-]
-useful_energy_tecs = lights + ['appliances']
-
-technologies = secondary_energy_tecs + final_energy_tecs + useful_energy_tecs
-scen.add_set("technology", technologies)
-
-demand_per_year = 55209. / 8760  # from IEA statistics
-elec_demand = pd.DataFrame({
-        'node': country,
-        'commodity': 'other_electricity',
-        'level': 'useful',
-        'year': horizon,
-        'time': 'year',
-        'value': demand_per_year * demand,
-        'unit': 'GWa',
-    })
-scen.add_par("demand", elec_demand)
-
-demand_per_year = 6134. / 8760  # from IEA statistics
-light_demand = pd.DataFrame({
-        'node': country,
-        'commodity': 'light',
-        'level': 'useful',
-        'year': horizon,
-        'time': 'year',
-        'value': demand_per_year * demand,
-        'unit': 'GWa',
-    })
-scen.add_par("demand", light_demand)
-
-year_pairs = [(y_v, y_a) for y_v, y_a in
-              itertools.product(horizon, horizon) if y_v <= y_a]
-vintage_years, act_years = zip(*year_pairs)
-
-base_input = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'mode': 'standard',
-    'node_origin': country,
-    'commodity': 'electricity',
-    'time': 'year',
-    'time_origin': 'year',
-}
-
-grid = pd.DataFrame(dict(
-        technology='electricity_grid',
-        level='secondary',
-        value=1.0,
-        unit='%',
-        **base_input
-        ))
-scen.add_par("input", grid)
-
-
-bulb = pd.DataFrame(dict(
-        technology='bulb',
-        level='final',
-        value=1.0,
-        unit='%',
-        **base_input
-        ))
-scen.add_par("input", bulb)
-
-cfl = pd.DataFrame(dict(
-        technology='cfl',
-        level='final',
-        value=0.3,
-        unit='%',
-        **base_input
-        ))
-scen.add_par("input", cfl)
-
-app = pd.DataFrame(dict(
-        technology='appliances',
-        level='final',
-        value=1.0,
-        unit='%',
-        **base_input
-        ))
-scen.add_par("input", app)
-
-
-def make_df(base, **kwargs):
-    base.update(kwargs)
-    return pd.DataFrame(base)
-
-
-base_output = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'mode': 'standard',
-    'node_dest': country,
-    'time': 'year',
-    'time_dest': 'year',
-    'unit': '%',
-}
-
-imports = make_df(base_output, technology='import', commodity='electricity',
-                  level='secondary', value=1.)
-scen.add_par('output', imports)
-
-grid = make_df(base_output, technology='electricity_grid',
-               commodity='electricity', level='final', value=0.873)
-scen.add_par('output', grid)
-
-bulb = make_df(base_output, technology='bulb', commodity='light',
-               level='useful', value=1.)
-scen.add_par('output', bulb)
-
-cfl = make_df(base_output, technology='cfl', commodity='light',
-              level='useful', value=1.)
-scen.add_par('output', cfl)
-
-app = make_df(base_output, technology='appliances',
-              commodity='other_electricity', level='useful', value=1.)
-scen.add_par('output', app)
-
-coal = make_df(base_output, technology='coal_ppl', commodity='electricity',
-               level='secondary', value=1.)
-scen.add_par('output', coal)
-
-gas = make_df(base_output, technology='gas_ppl', commodity='electricity',
-              level='secondary', value=1.)
-scen.add_par('output', gas)
-
-oil = make_df(base_output, technology='oil_ppl', commodity='electricity',
-              level='secondary', value=1.)
-scen.add_par('output', oil)
-
-bio = make_df(base_output, technology='bio_ppl', commodity='electricity',
-              level='secondary', value=1.)
-scen.add_par('output', bio)
-
-hydro = make_df(base_output, technology='hydro_ppl', commodity='electricity',
-                level='secondary', value=1.)
-scen.add_par('output', hydro)
-
-wind = make_df(base_output, technology='wind_ppl',
-               commodity='electricity', level='secondary', value=1.)
-scen.add_par('output', wind)
-
-solar_pv = make_df(base_output, technology='solar_pv_ppl',
-                   commodity='electricity', level='final', value=1.)
-scen.add_par('output', solar_pv)
-
-base_technical_lifetime = {
-    'node_loc': country,
-    'year_vtg': horizon,
-    'unit': 'y',
-}
-
-lifetimes = {
-    'coal_ppl': 40,
-    'gas_ppl': 30,
-    'oil_ppl': 30,
-    'bio_ppl': 30,
-    'hydro_ppl': 60,
-    'wind_ppl': 20,
-    'solar_pv_ppl': 20,
-    'bulb': 1,
-    'cfl': 10,
-}
-
-for tec, val in lifetimes.items():
-    df = make_df(base_technical_lifetime, technology=tec, value=val)
-    scen.add_par('technical_lifetime', df)
-
-base_capacity_factor = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'time': 'year',
-    'unit': '%',
-}
-
-capacity_factor = {
-    'coal_ppl': 0.85,
-    'gas_ppl': 0.75,
-    'oil_ppl': 0.75,
-    'bio_ppl': 0.75,
-    'hydro_ppl': 0.5,
-    'wind_ppl': 0.2,
-    'solar_pv_ppl': 0.15,
-    'bulb': 0.1,
-    'cfl':  0.1,
-}
-
-for tec, val in capacity_factor.items():
-    df = make_df(base_capacity_factor, technology=tec, value=val)
-    scen.add_par('capacity_factor', df)
-
-base_inv_cost = {
-    'node_loc': country,
-    'year_vtg': horizon,
-    'unit': 'USD/GWa',
-}
-
-# in $ / kW
-costs = {
-    'coal_ppl': 1500,
-    'gas_ppl':  870,
-    'oil_ppl':  950,
-    'hydro_ppl': 3000,
-    'bio_ppl':  1600,
-    'wind_ppl': 1100,
-    'solar_pv_ppl': 4000,
-    'bulb': 5,
-    'cfl':  900,
-}
-
-for tec, val in costs.items():
-    df = make_df(base_inv_cost, technology=tec, value=val * 1e6)
-    scen.add_par('inv_cost', df)
-
-base_fix_cost = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'unit': 'USD/GWa',
-}
-
-# in $ / kW
-costs = {
-    'coal_ppl': 40,
-    'gas_ppl':  25,
-    'oil_ppl':  25,
-    'hydro_ppl': 60,
-    'bio_ppl':  30,
-    'wind_ppl': 40,
-    'solar_pv_ppl': 25,
-}
-
-for tec, val in costs.items():
-    df = make_df(base_fix_cost, technology=tec, value=val * 1e6)
-    scen.add_par('fix_cost', df)
-
-base_var_cost = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'mode': 'standard',
-    'time': 'year',
-    'unit': 'USD/GWa',
-}
-
-# in $ / MWh
-costs = {
-    'coal_ppl': 24.4,
-    'gas_ppl':  42.4,
-    'oil_ppl':  77.8,
-    'bio_ppl':  48.2,
-    'electricity_grid': 47.8,
-}
-
-for tec, val in costs.items():
-    df = make_df(base_var_cost, technology=tec, value=val * 8760. * 1e3)
-    scen.add_par('var_cost', df)
-
-base_growth = {
-    'node_loc': country,
-    'year_act': horizon[1:],
-    'value': 0.05,
-    'time': 'year',
-    'unit': '%',
-}
-
-growth_technologies = [
-    "coal_ppl",
-    "gas_ppl",
-    "oil_ppl",
-    "bio_ppl",
-    "hydro_ppl",
-    "wind_ppl",
-    "solar_pv_ppl",
-    "cfl",
-    "bulb",
-]
-
-for tec in growth_technologies:
-    df = make_df(base_growth, technology=tec)
-    scen.add_par('growth_activity_up', df)
-
-base_initial = {
-    'node_loc': country,
-    'year_act': horizon[1:],
-    'time': 'year',
-    'unit': '%',
-}
-
-for tec in lights:
-    df = make_df(base_initial, technology=tec,
-                 value=0.01 * light_demand['value'].loc[horizon[1:]])
-    scen.add_par('initial_activity_up', df)
-
-base_activity = {
-    'node_loc': country,
-    'year_act': [2010],
-    'mode': 'standard',
-    'time': 'year',
-    'unit': 'GWa',
-}
-
-# in GWh - from IEA Electricity Output
-activity = {
-    'coal_ppl': 7184,
-    'gas_ppl':  14346,
-    'oil_ppl':  1275,
-    'hydro_ppl': 38406,
-    'bio_ppl':  4554,
-    'wind_ppl': 2064,
-    'solar_pv_ppl': 89,
-    'import': 2340,
-    'cfl': 0,
-}
-
-for tec, val in activity.items():
-    df = make_df(base_activity, technology=tec, value=val / 8760.)
-    scen.add_par('bound_activity_up', df)
-    scen.add_par('bound_activity_lo', df)
-
-base_activity = {
-    'node_loc': country,
-    'year_act': horizon[1:],
-    'mode': 'standard',
-    'time': 'year',
-    'unit': 'GWa',
-}
-
-# in GWh - base value from IEA Electricity Output
-keep_activity = {
-    'hydro_ppl': 38406,
-    'bio_ppl':  4554,
-    'import': 2340,
-}
-
-for tec, val in keep_activity.items():
-    df = make_df(base_activity, technology=tec, value=val / 8760.)
-    scen.add_par('bound_activity_up', df)
-
-base_capacity = {
-    'node_loc': country,
-    'year_vtg': [2010],
-    'unit': 'GWa',
-}
-
-cf = pd.Series(capacity_factor)
-act = pd.Series(activity)
-capacity = (act / 8760 / cf).dropna().to_dict()
-
-for tec, val in capacity.items():
-    df = make_df(base_capacity, technology=tec, value=val)
-    scen.add_par('bound_new_capacity_up', df)
-
-scen.add_set("emission", "CO2")
-scen.add_cat('emission', 'GHGs', 'CO2')
-
-base_emissions = {
-    'node_loc': country,
-    'year_vtg': vintage_years,
-    'year_act': act_years,
-    'mode': 'standard',
-    'unit': 'kg/kWa'  # actually is tCO2/GWa
-}
-
-# units: tCO2/MWh
-emissions = {
-    'coal_ppl': ('CO2', 0.854),
-    'gas_ppl':  ('CO2', 0.339),
-    'oil_ppl':  ('CO2', 0.57),
-}
-
-for tec, (species, val) in emissions.items():
-    df = make_df(base_emissions, technology=tec, emission=species,
-                 value=val * 8760. * 1000)
-    scen.add_par('emission_factor', df)
-
-comment = 'initial commit for Austria model'
-scen.commit(comment)
-scen.set_as_default()
-
-scen.check_out()
-# add timeseries data for GDP as meta-data (will not be dropped during cloning)
-data = {'variable': 'GDP', 'year': horizon, 'value': gdp,
-        'unit': 'million USD', 'region': 'Austria'}
-df = pd.DataFrame.from_dict(data)
-scen.add_timeseries(df, meta=True)
-
-# add timeseries data for GDP as meta-data (will not be dropped during cloning)
-data = {'variable': 'Demand', 'year': horizon, 'value': demand,
-        'unit': 'GWa/y', 'region': 'Austria'}
-df = pd.DataFrame.from_dict(data)
-scen.add_timeseries(df)
-scen.commit('add timeseries meta data (gdp) and demand')
 
 
 # %% initialize a new scenario using the canning problem
 # based on the scheme "MESSAGE"
+# this allows to test that all MESSAGE-specific functions in the Java core
+# work as expected
 
 model = "canning problem (MESSAGE scheme)"
 scenario = "standard"
@@ -633,7 +189,6 @@ outp['unit'] = '%'
 
 scen.add_par("output", outp)
 
-
 inp_data = [
     {'mode': "to_new-york"},
     {'mode': "to_chicago"},
@@ -686,7 +241,6 @@ outp['technology'] = 'transport_from_san-diego'
 
 scen.add_par("output", outp)
 
-
 var_cost_data = [
     {'node_loc': "seattle", 'technology': "transport_from_seattle",
      'mode': "to_new-york", 'value': 0.225},
@@ -718,6 +272,19 @@ scen.add_par("ref_activity",
 comment = "importing a MESSAGE-scheme version of the transport problem"
 scen.commit(comment)
 scen.set_as_default()
+
+
+# %%  duplicate the MESSAGE-scheme transport scenario for additional unit tests
+
+scen = mp.Scenario(model, scenario)
+scen = scen.clone(scen='multi-year',
+                  annotation='adding additional years for unit-testing')
+
+scen.check_out()
+scen.add_set('year', [2020, 2030])
+scen.add_par('technical_lifetime', ['seattle', 'canning_plant', '2020'],
+             30, 'y')
+scen.commit('adding years and technical lifetime to one technology')
 
 
 # %% close the test database, remove the test database properties file

@@ -28,10 +28,11 @@ def start_jvm():
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
     jarfile = os.path.join(module_root, 'ixmp.jar')
-    lib_dir = os.path.join(module_root, 'lib')
-    ix_classpath = os.pathsep.join([jarfile, module_root])
-    ext_dir_arg = "-Djava.ext.dirs=%s" % lib_dir
-    jvm_args = ["-Djava.class.path=%s" % ix_classpath, "-Xmx4G", ext_dir_arg]
+    module_lib = os.path.join(module_root, 'lib')
+    module_jars = [os.path.join(module_lib, f) for f in os.listdir(module_lib)]
+    sep = ';' if os.name == 'nt' else ':'
+    ix_classpath = sep.join([module_root, jarfile] + module_jars)
+    jvm_args = ["-Djava.class.path=" + ix_classpath, "-Xmx4G"]
     jpype.startJVM(jpype.getDefaultJVMPath(), *jvm_args)
 
     # define auxiliary references to Java classes

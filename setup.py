@@ -62,7 +62,7 @@ def main():
     }
     lib_files = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/lib/*')]
     db_files = [x.split('ixmp/')[-1]
-                for x in glob.glob('ixmp/db/migration/hsql/*')]
+                for x in glob.glob('ixmp/db/migration/*/*')]
     pack_data = {
         'ixmp': [
             'ixmp.R',

@@ -10,7 +10,7 @@ from testing_utils import test_mp, test_mp_props
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 msg_args = ('canning problem (MESSAGE scheme)', 'standard')
-aut_args = ('Austrian energy model', 'baseline')
+msg_multiyear_args = ('canning problem (MESSAGE scheme)', 'multi-year')
 
 # string columns for timeseries checks
 cols_str = ['region', 'variable', 'unit', 'year']
@@ -80,32 +80,40 @@ def test_idx_name(test_mp):
     npt.assert_array_equal(df, ['i', 'j'])
 
 
-def test_remote_unit_can(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.par('bound_activity_up',
-                filters={'technology': ['canning_plant']})
-    obs = df.loc[0, 'unit']
-    exp = 'cases'
-    assert obs == exp
-
-
-def test_remote_marginal(test_mp):
+def test_var_marginal(test_mp):
     scen = test_mp.Scenario(*can_args)
     df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_almost_equal(df['mrg'], [0, 0, 0.036])
 
 
-def test_remote_level(test_mp):
+def test_var_level(test_mp):
     scen = test_mp.Scenario(*can_args)
     df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_almost_equal(df['lvl'], [50, 300, 0])
 
 
-def test_remote_general_str(test_mp):
+def test_var_general_str(test_mp):
     scen = test_mp.Scenario(*can_args)
     df = scen.var('x', filters={'i': ['seattle']})
     npt.assert_array_equal(
         df['j'], ['new-york', 'chicago', 'topeka'])
+
+
+def test_unit_list(test_mp):
+    units = test_mp.units()
+    assert ('cases' in units) is True
+
+
+def test_add_unit(test_mp):
+    test_mp.add_unit('test', 'just testing')
+
+
+def test_par_filters_unit(test_mp):
+    scen = test_mp.Scenario(*can_args)
+    df = scen.par('d', filters={'i': ['seattle']})
+    obs = df.loc[0, 'unit']
+    exp = 'km'
+    assert obs == exp
 
 
 def test_cat_all(test_mp):
@@ -123,12 +131,12 @@ def test_add_cat(test_mp):
                 ['transport_from_san-diego', 'transport_from_seattle'])
     df = scen2.cat('technology', 'trade')
     npt.assert_array_equal(
-        df, ['transport_from_san-diego', 'transport_from_seattle', ])
+        df, ['transport_from_san-diego', 'transport_from_seattle'])
     scen2.discard_changes()
 
 
 def test_add_cat_unique(test_mp):
-    scen = test_mp.Scenario(*aut_args)
+    scen = test_mp.Scenario(*msg_multiyear_args)
     scen2 = scen.clone(keep_sol=False)
     scen2.check_out()
     scen2.add_cat('year', 'firstmodelyear', 2020, True)
@@ -139,29 +147,21 @@ def test_add_cat_unique(test_mp):
 
 
 def test_years_active(test_mp):
-    scen = test_mp.Scenario(*aut_args)
-    df = scen.years_active('Austria', 'gas_ppl', '2020')
-    npt.assert_array_equal(df, [2020, 2030, 2040])
+    scen = test_mp.Scenario(*msg_multiyear_args)
+    df = scen.years_active('seattle', 'canning_plant', '2020')
+    npt.assert_array_equal(df, [2020, 2030])
 
 
 def test_years_active_extend(test_mp):
-    scen = test_mp.Scenario(*aut_args)
+    scen = test_mp.Scenario(*msg_multiyear_args)
     scen = scen.clone(keep_sol=False)
     scen.check_out()
-    scen.add_set('year', '2070')
-    scen.add_par('duration_period', '2070', 10, 'y')
-    df = scen.years_active('Austria', 'gas_ppl', '2050')
-    npt.assert_array_equal(df, [2050, 2060, 2070])
+    scen.add_set('year', ['2040', '2050'])
+    scen.add_par('duration_period', '2040', 10, 'y')
+    scen.add_par('duration_period', '2050', 10, 'y')
+    df = scen.years_active('seattle', 'canning_plant', '2020')
+    npt.assert_array_equal(df, [2020, 2030, 2040])
     scen.discard_changes()
-
-
-def test_unit_list(test_mp):
-    units = test_mp.units()
-    assert ('cases' in units) is True
-
-
-def test_add_unit(test_mp):
-    test_mp.add_unit('test', 'just testing')
 
 
 def test_new_timeseries(test_mp):

@@ -32,6 +32,11 @@
 ixmp/default_paths.py
 build
 
+# rixmp build folder and rhistory
+rixmp/rixmp*.zip
+rixmp/.Rhistory
+rixmp/source/.Rproj.user
+
 # credentials
 config/*.properties
 

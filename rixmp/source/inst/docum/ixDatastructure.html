@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>R: Class DataStructure</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+
+<table width="100%" summary="page for ixDataStructure {rixmp}"><tr><td>ixDataStructure {rixmp}</td><td style="text-align: right;">R Documentation</td></tr></table>
+
+<h2>Class DataStructure</h2>
+
+<h3>Description</h3>
+
+<p>The class 'ixDataStructure' is a generic collection
+of all data for a model instance (sets and parameters), as well as
+the solution of a model run (levels/marginals of variables and equations).
+</p>
+<p>The class includes functions to make changes to the data,
+export all data to and import a solution from GAMS gdx,
+and save the datastructure to the IXMP database.
+All changes are logged to facilitate version control.
+</p>
+
+
+<h3>Fields</h3>
+
+
+<dl>
+<dt><code>.jobj</code></dt><dd><p>&quot;jobjRef&quot;</p>
+</dd>
+<dt><code>.platform</code></dt><dd><p>&quot;jobjRef&quot;</p>
+</dd>
+<dt><code>model</code></dt><dd><p>A character string.</p>
+</dd>
+<dt><code>scenario</code></dt><dd><p>A character string.</p>
+</dd>
+<dt><code>scheme</code></dt><dd><p>A character string.</p>
+</dd>
+</dl>
+
+
+<h3>Methods</h3>
+
+
+<dl>
+<dt><code>add_cat(name, cat, keys, is_unique = FALSE)</code></dt><dd><p>add a set element key to the respective category mapping</p>
+</dd>
+<dt><code>add_par(name, key, val, unit, comment = NULL)</code></dt><dd><p>add set elements</p>
+</dd>
+<dt><code>add_set(name, key, comment = NULL)</code></dt><dd><p>add set elements</p>
+</dd>
+<dt><code>cat(name, cat)</code></dt><dd><p>return a list of all set elements mapped to a category</p>
+</dd>
+<dt><code>cat_list(name)</code></dt><dd><p>return a list of all categories for a set</p>
+</dd>
+<dt><code>change_scalar(name, val = NULL, unit = NULL, comment = NULL)</code></dt><dd><p>change the value or unit of a scalar</p>
+</dd>
+<dt><code>check_out(timeseries_only = FALSE)</code></dt><dd><p>check out the dataobject/datastructure from the database for making changes</p>
+</dd>
+<dt><code>clone(new_model = model, new_scen = scenario, annotation, keep_sol = TRUE)</code></dt><dd><p>clone the the given datastructure and return the new datastructure</p>
+</dd>
+<dt><code>commit(annotation)</code></dt><dd><p>commit all changes made to the dataobject/datastructure to the database</p>
+</dd>
+<dt><code>discard_changes()</code></dt><dd><p>discard all changes, reload all items of the datastructure from database</p>
+</dd>
+<dt><code>element(ix_type, name, filters)</code></dt><dd><p>internal function to retrieve a dataframe of item elements</p>
+</dd>
+<dt><code>equ(name, filters = NULL)</code></dt><dd><p>return a dataframe with equation elements (optional: filtered by index names)</p>
+</dd>
+<dt><code>equ_list()</code></dt><dd><p>return a list of equations initialized in the datastructure</p>
+</dd>
+<dt><code>has_equ(name)</code></dt><dd><p>check whether the datastructure has a equation with that name</p>
+</dd>
+<dt><code>has_par(name)</code></dt><dd><p>check whether the datastructure has a parameter with that name</p>
+</dd>
+<dt><code>has_set(name)</code></dt><dd><p>check whether the datastructure has a set with that name</p>
+</dd>
+<dt><code>has_var(name)</code></dt><dd><p>check whether the datastructure has a variable with that name</p>
+</dd>
+<dt><code>idx_names(name)</code></dt><dd><p>return the list of index names for an item (set, par, var, equ)</p>
+</dd>
+<dt><code>idx_sets(name)</code></dt><dd><p>return the list of index sets for an item (set, par, var, equ)</p>
+</dd>
+<dt><code>init_equ(name, idx_sets = NULL, idx_names = NULL)</code></dt><dd><p>initialize a new equation in the datastructure</p>
+</dd>
+<dt><code>init_par(name, idx_sets, idx_names = NULL)</code></dt><dd><p>initialize a new parameter or scalar</p>
+</dd>
+<dt><code>init_scalar(name, val, unit, comment = NULL)</code></dt><dd><p>initialize a new scalar and assign the value/unit</p>
+</dd>
+<dt><code>init_set(name, idx_sets = NULL, idx_names = NULL)</code></dt><dd><p>initialize a new set in the datastructure</p>
+</dd>
+<dt><code>init_var(name, idx_sets = NULL, idx_names = NULL)</code></dt><dd><p>initialize a new variable in the datastrucutre</p>
+</dd>
+<dt><code>initialize(platform, model, scen, javaobj)</code></dt><dd><p>initialize a new R-class datastructure object (via the ixPlatform class)</p>
+</dd>
+<dt><code>is_default()</code></dt><dd><p>check whether this dataobject is set as default in the database</p>
+</dd>
+<dt><code>item(ix_type, name)</code></dt><dd><p>get an item from the datastructure</p>
+</dd>
+<dt><code>last_update()</code></dt><dd><p>get the timestamp of the last update/edit of this dataobject</p>
+</dd>
+<dt><code>par(name, filters = NULL)</code></dt><dd><p>return a dataframe of (optionally filtered by index name) elements for a specific parameter</p>
+</dd>
+<dt><code>par_list()</code></dt><dd><p>return list of all parameters initialized in the datastructure</p>
+</dd>
+<dt><code>read_sol_from_gdx(path, filename, comment = NULL, var_list = NULL,
+  equ_list = NULL, check_sol = TRUE)</code></dt><dd><p>read solution from GAMS gdx</p>
+</dd>
+<dt><code>remove_par(name, key = NULL)</code></dt><dd><p>delete a parameter from the datastructure or remove an element from a parameter (if key is specified)</p>
+</dd>
+<dt><code>remove_set(name, key = NULL)</code></dt><dd><p>remove set or remove a specific element (or list of elements) from a set (if key is specified)</p>
+</dd>
+<dt><code>remove_sol()</code></dt><dd><p>remove solution from run</p>
+</dd>
+<dt><code>run_id()</code></dt><dd><p>get the run id of this dataobject</p>
+</dd>
+<dt><code>scalar(name)</code></dt><dd><p>return a dictionary of the value and unit for a scalar</p>
+</dd>
+<dt><code>set(name, filters = NULL)</code></dt><dd><p>initialize a new set in the datastructure</p>
+</dd>
+<dt><code>set_as_default()</code></dt><dd><p>set this instance of a model/scenario dataobject as default version</p>
+</dd>
+<dt><code>set_list()</code></dt><dd><p>get list of all sets in the datastructure</p>
+</dd>
+<dt><code>solve(model = "MESSAGE", case = NULL, comment = NULL, check_sol = TRUE)</code></dt><dd><p>solve the model (export to gdx, execute GAMS, import the solution)</p>
+</dd>
+<dt><code>to_gdx(path, filename, include_var_equ = FALSE)</code></dt><dd><p>write the datastructure to GAMS gdx</p>
+</dd>
+<dt><code>var(name, filters = NULL)</code></dt><dd><p>return a dataframe with variable elements (optional: filtered by index names)</p>
+</dd>
+<dt><code>var_list()</code></dt><dd><p>return a list of variables initialized in the datastructure</p>
+</dd>
+<dt><code>version()</code></dt><dd><p>get the version number of this dataobject</p>
+</dd>
+<dt><code>years_active(node, tec, yr_vtg)</code></dt><dd><p>return a list of years in which a technology of certain vintage at a specific node can be active</p>
+</dd>
+</dl>
+
+<hr /><div style="text-align: center;">[Package <em>rixmp</em> version 0.0.0.9000 <a href="00Index.html">Index</a>]</div>
+</body></html>

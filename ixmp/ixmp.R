@@ -14,6 +14,9 @@ ixmp_r_path = Sys.getenv("IXMP_R_PATH")
 java.pars <- paste0("-Djava.ext.dirs=", file.path(ixmp_r_path, "lib"))
 options(java.parameters = java.pars)
 
+# path to access the local db
+local_path <- file.path(paste0(gsub("Documents.*","",path.expand("~")),".local/ixmp"))
+
 ## Launch the java virtual machine, add ixmp_r_path (in addition to jar file)
 .jinit(file.path(ixmp_r_path, "ixmp.jar")) 
 .jaddClassPath(ixmp_r_path)
@@ -40,7 +43,7 @@ ixmp.Platform <- setRefClass("ixmp.Platform",
         if (is.null(dbtype)) { 
           if (is.null(dbprops)) dbprops = 'default.properties'
           if (!file.exists(dbprops)) {
-              dbprops = paste(message_ix_path, "/config/",dbprops, sep = '')
+              dbprops = paste(message_ix_path, "/ixmp/config/",dbprops, sep = '')
               if (!file.exists(dbprops)) {
                  stop('no properties file ', dbprops , '!')
               }
@@ -48,7 +51,7 @@ ixmp.Platform <- setRefClass("ixmp.Platform",
           print(paste0("launching ixmp.Platform using config file at ", dbprops))
           .jobj <<- new(java.Platform, "R", dbprops) 
         } else {
-          if (is.null(dbprops)) stop('Please specify a local database file!')
+          if (is.null(dbprops)) dbprops = paste(local_path, "/localdb/default", sep = '')
           print(paste0("launching ixmp.Platform with local ",dbtype," database at "
                 , dbprops))
           .jobj <<- new(java.Platform, "R", dbprops, dbtype)

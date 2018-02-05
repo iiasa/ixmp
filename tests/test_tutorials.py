@@ -2,7 +2,6 @@ import io
 import os
 import subprocess
 import sys
-import tempfile
 import nbformat
 import pytest
 
@@ -24,21 +23,23 @@ def _notebook_run(path, kernel=None):
     kernel = kernel or 'python{}'.format(major_version)
     dirname, __ = os.path.split(path)
     os.chdir(dirname)
-    with tempfile.NamedTemporaryFile(suffix=".ipynb") as fout:
-        args = [
-            "jupyter", "nbconvert", "--to", "notebook", "--execute",
-            "--ExecutePreprocessor.timeout=60",
-            "--ExecutePreprocessor.kernel_name={}".format(kernel),
-            "--output", fout.name, path]
-        subprocess.check_call(args)
+    fname = os.path.join(here, 'test.ipynb')
+    args = [
+        "jupyter", "nbconvert", "--to", "notebook", "--execute",
+        "--ExecutePreprocessor.timeout=60",
+        "--ExecutePreprocessor.kernel_name={}".format(kernel),
+        "--output", fname, path]
+    subprocess.check_call(args)
 
-        nb = nbformat.read(io.open(fout.name, encoding='utf-8'),
-                           nbformat.current_nbformat)
+    nb = nbformat.read(io.open(fname, encoding='utf-8'),
+                       nbformat.current_nbformat)
 
     errors = [
         output for cell in nb.cells if "outputs" in cell
         for output in cell["outputs"] if output.output_type == "error"
     ]
+
+    os.remove(fname)
 
     return nb, errors
 

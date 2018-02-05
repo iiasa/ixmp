@@ -34,7 +34,7 @@ build
 
 # rixmp build folder and rhistory
 rixmp/rixmp*.zip
-rixmp/.Rhistory
+rixmp/source/.Rhistory
 rixmp/source/.Rproj.user
 
 # credentials
@@ -45,3 +45,4 @@ config/*.properties
 tests/testdb/test.properties
 tests/testdb/ixmptest.properties
 tests/testdb/ixmptest.lck
+.Rproj.user

@@ -5,6 +5,8 @@ import sys
 import nbformat
 import pytest
 
+import numpy as np
+
 from testing_utils import here
 
 from test_r import r_installed
@@ -49,11 +51,23 @@ def test_py_transport():
     nb, errors = _notebook_run(fname)
     assert errors == []
 
+    obs = eval(nb.cells[-5]['outputs'][0]['data']['text/plain'])['lvl']
+    exp = 153.6750030517578
+    assert np.isclose(obs, exp)
+
 
 def test_py_transport_scenario():
     fname = os.path.join(xport_path, 'py_transport_scenario.ipynb')
     nb, errors = _notebook_run(fname)
     assert errors == []
+
+    obs = eval(nb.cells[-9]['outputs'][0]['data']['text/plain'])['lvl']
+    exp = 153.6750030517578
+    assert np.isclose(obs, exp)
+
+    obs = eval(nb.cells[-8]['outputs'][0]['data']['text/plain'])['lvl']
+    exp = 161.3249969482422
+    assert np.isclose(obs, exp)
 
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')

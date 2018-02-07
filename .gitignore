@@ -34,6 +34,7 @@ build
 
 # rixmp build folder and rhistory
 rixmp/rixmp*.zip
+rixmp/source/inst/docum/*.html
 rixmp/source/.Rhistory
 rixmp/source/.Rproj.user
 

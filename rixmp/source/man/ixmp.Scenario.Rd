@@ -43,12 +43,12 @@ All changes are logged to facilitate version control.
 
 \item{\code{change_scalar(name, val = NULL, unit = NULL, comment = NULL)}}{change the value or unit of a scalar}
 
-\item{\code{check_out(timeseries_only = FALSE)}}{check out the dataobject/scenario from the database for making changes}
+\item{\code{check_out(timeseries_only = FALSE)}}{check out the scenario from the database for making changes}
 
 \item{\code{clone(new_model = model, new_scen = scenario, annotation, keep_sol = TRUE,
   shift_fyear = 0)}}{clone the the given scenario and return the new scenario}
 
-\item{\code{commit(annotation)}}{commit all changes made to the dataobject/scenario to the database}
+\item{\code{commit(annotation)}}{commit all changes made to the scenario to the database}
 
 \item{\code{discard_changes()}}{discard all changes, reload all items of the scenario from database}
 
@@ -80,13 +80,13 @@ All changes are logged to facilitate version control.
 
 \item{\code{init_var(name, idx_sets = NULL, idx_names = NULL)}}{initialize a new variable in the datastrucutre}
 
-\item{\code{initialize(platform, model, scen, javaobj)}}{initialize a new R-class Scenario object (via the ixPlatform class)}
+\item{\code{initialize(platform, model, scen, javaobj)}}{initialize a new R-class Scenario object (via the ixmp.Platform class)}
 
-\item{\code{is_default()}}{check whether this dataobject is set as default in the database}
+\item{\code{is_default()}}{check whether this scenario is set as default in the database}
 
 \item{\code{item(ix_type, name)}}{get an item from the scenario}
 
-\item{\code{last_update()}}{get the timestamp of the last update/edit of this dataobject}
+\item{\code{last_update()}}{get the timestamp of the last update/edit of this scenario}
 
 \item{\code{par(name, filters = NULL)}}{return a dataframe of (optionally filtered by index name) elements for a specific parameter}
 
@@ -101,13 +101,13 @@ All changes are logged to facilitate version control.
 
 \item{\code{remove_sol()}}{remove solution from run}
 
-\item{\code{run_id()}}{get the run id of this dataobject}
+\item{\code{run_id()}}{get the run id of this scenario}
 
 \item{\code{scalar(name)}}{return a dictionary of the value and unit for a scalar}
 
-\item{\code{set(name, filters = NULL)}}{initialize a new set in the scenario}
+\item{\code{set(name, filters = NULL)}}{return a dataframe of (filtered) elements for a specific set}
 
-\item{\code{set_as_default()}}{set this instance of a model/scenario dataobject as default version}
+\item{\code{set_as_default()}}{set this instance of a model scenario as default version}
 
 \item{\code{set_list()}}{get list of all sets in the scenario}
 
@@ -119,7 +119,7 @@ All changes are logged to facilitate version control.
 
 \item{\code{var_list()}}{return a list of variables initialized in the scenario}
 
-\item{\code{version()}}{get the version number of this dataobject}
+\item{\code{version()}}{get the version number of this scenario}
 
 \item{\code{years_active(node, tec, yr_vtg)}}{return a list of years in which a technology of certain vintage at a specific node can be active}
 }}

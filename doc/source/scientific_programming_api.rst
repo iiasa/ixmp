@@ -16,6 +16,11 @@ Python API
 R API
 -----
 
+.. toctree::
+   :maxdepth: 2
+
+   api/r_core
+   
 The full documentation of the ixmp-R interface will be available shortly.
 
 

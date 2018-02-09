@@ -10,16 +10,16 @@ python setup.py install
 
 if %errorlevel% neq 0 GOTO InstallError
 
-setx IXMP_R_PATH "%RPTH%/ixmp"
-
-py.test tests/
-
 where /q r
 IF ERRORLEVEL 1 (
-    ECHO Error: R is missing. Ensure it is installed and placed in your PATH to build the r package.
+    ECHO No valid installation of R found, skipped build and installation of R package.
 ) ELSE (
     rscript rixmp/build_rixmp.R [--verbose]
 )
+
+setx IXMP_R_PATH "%RPTH%/ixmp"
+
+py.test tests/
 
 pause
 exit

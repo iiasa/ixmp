@@ -4,5 +4,13 @@
 \alias{rixmp}
 \title{ixmp core}
 \description{
-This page provides documentation for the ixmp-R implementation.
+This page provides documentation for the ixmp-R implementation
+}
+\details{
+Main features:
+
+- a platform core linked to a database instance,
+
+- integration with the |MESSAGEix| Integrated Assessment model
+   and other numerical models
 }

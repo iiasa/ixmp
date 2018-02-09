@@ -1,6 +1,13 @@
 #' ixmp core
 #'
-#' This page provides documentation for the ixmp-R implementation.
+#' This page provides documentation for the ixmp-R implementation
+#'
+#' Main features:
+#'
+#'  - a platform core linked to a database instance,
+#'
+#'  - integration with the |MESSAGEix| Integrated Assessment model
+#'    and other numerical models
 #' @name rixmp
 NULL
 
@@ -45,7 +52,7 @@ utils::globalVariables(c("message_ix_path"))
   rJava::.jinit(java_path_1)
   rJava::.jaddClassPath(java_path_2)
   rJava::.jaddClassPath(ixmp_r_path)
-  
+
 }
 
 #' @description a function to convert a Java LinkedList into an R list

@@ -93,7 +93,3 @@ def test_run_gams_api():
     obs = scen.var('z')['lvl']
     exp = 153.675
     assert np.isclose(obs, exp)
-
-    # remove log and lst file
-    os.remove('transport_ixmp.log')
-    os.remove('transport_ixmp.lst')

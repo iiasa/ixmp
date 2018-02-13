@@ -20,6 +20,12 @@ import ixmp.model_settings as model_settings
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
+# %% common definitions
+
+iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
+
+
+# %% Java Virtual Machine start-up
 
 def start_jvm():
     if jpype.isJVMStarted():

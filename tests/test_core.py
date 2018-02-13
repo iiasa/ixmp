@@ -13,6 +13,7 @@ msg_args = ('canning problem (MESSAGE scheme)', 'standard')
 msg_multiyear_args = ('canning problem (MESSAGE scheme)', 'multi-year')
 
 # string columns for timeseries checks
+iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 cols_str = ['region', 'variable', 'unit', 'year']
 
 
@@ -166,21 +167,42 @@ def test_years_active_extend(test_mp):
 
 def test_new_timeseries(test_mp):
     scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
-    df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
-          'year': [2020], 'value': [23.6]}
+    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
     df = pd.DataFrame.from_dict(df)
+    df['region'] = 'World'
+    df['variable'] = 'Testing'
+    df['unit'] = '???'
     scen.add_timeseries(df)
     scen.commit('importing a testing timeseries')
 
 
 def test_get_timeseries(test_mp):
     scen = test_mp.TimeSeries(*test_args, version=2)
-    obs = scen.timeseries()
+    obs = scen.timeseries(regions='World', variables='Testing', units='???',
+                          years=2020)
     df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
           'year': [2020], 'value': [23.6]}
     exp = pd.DataFrame.from_dict(df)
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
+
+
+def test_get_timeseries_iamc(test_mp):
+    scen = test_mp.TimeSeries(*test_args, version=2)
+    obs = scen.timeseries(iamc=True, regions='World', variables='Testing')
+    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
+    df = pd.DataFrame.from_dict(df)
+    df['model'] = 'Douglas Adams'
+    df['scenario'] = 'Hitchhiker'
+    df['region'] = 'World'
+    df['variable'] = 'Testing'
+    df['unit'] = '???'
+    df = df.pivot_table(index=iamc_idx_cols, columns='year')['value']
+    df.reset_index(inplace=True)
+    
+    exp = pd.DataFrame.from_dict(df)
+    npt.assert_array_equal(exp[iamc_idx_cols], obs[iamc_idx_cols])
+    npt.assert_array_almost_equal(exp[2010], obs[2010])
 
 
 def test_timeseries_edit(test_mp_props):

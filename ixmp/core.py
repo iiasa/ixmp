@@ -345,11 +345,11 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        IAMC : boolean, default True
+        iamc : boolean, default True
             returns a pandas.DataFrame either
             - 'IAMC-style' format (cols: region, variable unit, <years>)
             - in tabular form (cols: region, variable, unit, year)
-        region : list of strings
+        regions : list of strings
             filter by regions
         variables : list of strings
             filter by variables

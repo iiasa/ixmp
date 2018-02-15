@@ -20,6 +20,12 @@ import ixmp.model_settings as model_settings
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
+# %% common definitions
+
+iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
+
+
+# %% Java Virtual Machine start-up
 
 def start_jvm():
     if jpype.isJVMStarted():
@@ -333,41 +339,63 @@ class TimeSeries(object):
                 self._jobj.addTimeseries(df.region[i], df.variable[i], time,
                                          jData, df.unit[i], meta)
 
-    def timeseries(self, IAMC=False, node=None, variable=None):
-        """retrieve data from this TimeSeries instance as a pandas dataframe
+    def timeseries(self, iamc=False, regions=None, variables=None, units=None,
+                   years=None):
+        """retrieve timeseries data as a pandas.DataFrame
 
         Parameters
         ----------
-        IAMC : returns a Pandas dataframe either
-              - in tabular form (cols: node, key, unit, year) if false
-              - 'IAMC-style' format (cols: node, key, unit, [years]) if true
-        node : list of nodes (for filtering - not yet operational)
-        variable  : list of variable (for filtering - not yet operational)
+        iamc : boolean, default True
+            returns a pandas.DataFrame either
+            - 'IAMC-style' format (cols: region, variable unit, <years>)
+            - in tabular form (cols: region, variable, unit, year)
+        regions : list of strings
+            filter by regions
+        variables : list of strings
+            filter by variables
+        units : list of strings
+            filter by units
+        years : list of integers
+            filter by years
         """
-        jData = self._jobj.getTimeseries()
+
+        # convert filter lists to Java objects
+        regions = ix.to_jlist(regions)
+        variables = ix.to_jlist(variables)
+        units = ix.to_jlist(units)
+        years = ix.to_jlist(years)
+
+        # retrieve data, convert to pandas.DataFrame
+        data = self._jobj.getTimeseries(regions, variables, units, None, years)
         dictionary = {}
 
         # if in tabular format
-        if IAMC:
-            raise("IAMC-style output not yet support by the Python interface!")
-        else:
-            ts_range = range(jData.size())
-            cols = ['region', 'variable', 'unit']
+        ts_range = range(data.size())
 
-            for i in cols:
-                dictionary[i] = [str(jData.get(j).get(i)) for j in ts_range]
+        cols = ['region', 'variable', 'unit']
+        for i in cols:
+            dictionary[i] = [str(data.get(j).get(i)) for j in ts_range]
 
-            dictionary['year'] = [jData.get(j).get('year').intValue()
-                                  for j in ts_range]
-            cols.append("year")
+        dictionary['year'] = [data.get(j).get('year').intValue()
+                              for j in ts_range]
+        cols.append("year")
 
-            dictionary['value'] = [jData.get(j).get('value').floatValue()
-                                   for j in ts_range]
-            cols.append("value")
+        dictionary['value'] = [data.get(j).get('value').floatValue()
+                               for j in ts_range]
+        cols.append("value")
 
         df = pd.DataFrame
         df = df.from_dict(dictionary, orient='columns', dtype=None)
-        df = df[cols]
+
+        df['model'] = self.model
+        df['scenario'] = self.scenario
+
+        df = df[['model', 'scenario'] + cols]
+
+        if iamc:
+            df = df.pivot_table(index=iamc_idx_cols, columns='year')['value']
+            df.reset_index(inplace=True)
+
         return df
 
 

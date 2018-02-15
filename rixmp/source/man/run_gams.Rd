@@ -7,15 +7,12 @@
 run_gams(model_file, args, gams_args = "LogOption=4")
 }
 \arguments{
-\item{args}{additional arguments for the CLI call to gams}
+\item{model_file}{the path to the gams file}
 
-\item{model}{model name}
+\item{args}{arguments related to the GAMS code (input/output gdx paths, etc.)}
 
-\item{ingdx}{input gdx file}
-
-\item{outgdx}{output gdx file}
-
-\item{model_pth}{the path to the gams file}
+\item{gams_args}{additional arguments for the CLI call to gams
+`LogOption=4` prints output to stdout (not console) and the log file}
 }
 \description{
 Auxiliary functions for executing GAMS

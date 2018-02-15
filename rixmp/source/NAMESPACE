@@ -2,8 +2,8 @@
 
 export(ixmp.Platform)
 export(ixmp.Scenario)
-export(model_config)
 export(run_gams)
 import(rJava)
+import(rprintf)
 importFrom(methods,setRefClass)
 importFrom(utils,globalVariables)

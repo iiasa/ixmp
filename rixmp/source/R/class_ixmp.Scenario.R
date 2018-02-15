@@ -158,11 +158,14 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
                                               case = gsub(' ', '_', paste(.self$model, .self$scenario, sep = "_")) # self.model and self.scenario
                                             }
 
-                                            ModelConfig = model_config(model,case)
-                                            if (model %in% names(ModelConfig)){select_conf = model} else { select_conf = "default"}
+                                            #ModelConfig = model_config(model,case)
+                                            if (model %in% names(ModelConfig0)){select_conf = model} else { select_conf = "default"}
+
+                                            ModelConfig <- list(select_conf = rprintf(ModelConfig0[[select_conf]],model,case) )
+                                            names(ModelConfig) <- select_conf
 
                                             #remember if conditions
-                                            inp = ModelConfig[[select_conf]]$inp
+                                            inp = ModelConfig0[[select_conf]]$inp
                                             outp = ModelConfig[[select_conf]]$outp
 
                                             ingdx = basename(inp)

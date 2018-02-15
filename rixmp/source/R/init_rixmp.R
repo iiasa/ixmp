@@ -12,6 +12,7 @@
 NULL
 
 #' @import rJava
+#' @import rprintf
 #' @importFrom methods setRefClass
 #' @importFrom utils globalVariables
 NULL
@@ -52,6 +53,11 @@ utils::globalVariables(c("message_ix_path"))
   rJava::.jinit(java_path_1)
   rJava::.jaddClassPath(java_path_2)
   rJava::.jaddClassPath(ixmp_r_path)
+
+  ModelConfig0 <<- list(default = list(model_file = gsub("/","\\\\" , file.path( "." , "{1}.gms") ),
+                                      inp = gsub("/","\\\\" , file.path( ".", "{1}_in.gdx") ),
+                                      outp = gsub("/","\\\\" , file.path(".", "{1}_out.gdx") ),
+                                      args = gsub("/","\\\\" , paste('--in=',file.path( ".", "{1}_in.gdx"),' --out=',file.path(".", "{1}_out.gdx")))))
 }
 
 #' @description a function to convert a Java LinkedList into an R list

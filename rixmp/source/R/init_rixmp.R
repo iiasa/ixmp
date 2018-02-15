@@ -52,7 +52,6 @@ utils::globalVariables(c("message_ix_path"))
   rJava::.jinit(java_path_1)
   rJava::.jaddClassPath(java_path_2)
   rJava::.jaddClassPath(ixmp_r_path)
-
 }
 
 #' @description a function to convert a Java LinkedList into an R list
@@ -122,3 +121,7 @@ utils::globalVariables(c("message_ix_path"))
 }
 
 
+# ModelConfig <<- list(default = list(model_file = paste('model', '.gms', sep = ''),
+#                                                   inp = paste('model', '_in.gdx', sep = ''),
+#                                                   outp = paste('model', '_out.gdx', sep = ''),
+#                                                   args = paste('--in=',paste('model', '_in.gdx', sep = ''),' --out=',paste('model', '_out.gdx', sep = ''), sep = '')))

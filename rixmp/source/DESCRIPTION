@@ -31,5 +31,6 @@ Collate:
     'init_rixmp.R'
     'class_ixmp.Platform.R'
     'class_ixmp.Scenario.R'
+    'model_config.R'
     'run_gams.R'
 VignetteBuilder: knitr

@@ -4,9 +4,11 @@
 \alias{run_gams}
 \title{Auxiliary functions for executing GAMS}
 \usage{
-run_gams(model, ingdx, outgdx, model_pth = NULL, args = "LogOption=4")
+run_gams(model_file, args, gams_args = "LogOption=4")
 }
 \arguments{
+\item{args}{additional arguments for the CLI call to gams}
+
 \item{model}{model name}
 
 \item{ingdx}{input gdx file}
@@ -14,8 +16,6 @@ run_gams(model, ingdx, outgdx, model_pth = NULL, args = "LogOption=4")
 \item{outgdx}{output gdx file}
 
 \item{model_pth}{the path to the gams file}
-
-\item{args}{additional arguments for the CLI call to gams}
 }
 \description{
 Auxiliary functions for executing GAMS

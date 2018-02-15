@@ -9,10 +9,9 @@
 #' @param args additional arguments for the CLI call to gams
 #'
 #' @export
-run_gams = function(model, ingdx, outgdx, model_pth=NULL, args='LogOption=4') {
-  cmd = paste("gams ", model, " --in=", ingdx, " --out=", outgdx, " ",
-              args, sep = '')
-  if (!is.null(model_pth))
-    cmd = paste(cmd, " Inputdir=", model_pth, sep='')
+run_gams = function(model_file, args, gams_args='LogOption=4') {
+  cmd = paste("gams ", model_file," ", args, sep = '')
+  cmd = paste(cmd, " Inputdir=", dirname(model_file), sep='')
+  cmd = paste(cmd, gams_args, sep=' ')
   system(cmd)
 }

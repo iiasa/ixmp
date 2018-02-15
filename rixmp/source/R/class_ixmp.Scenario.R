@@ -152,38 +152,31 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
                                           #(default = True)
                                           solve = function(model='MESSAGE', case=NULL, comment=NULL, check_sol=TRUE) {
                                             "solve the model (export to gdx, execute GAMS, import the solution)"
-                                            msg = ((model == 'MESSAGE') | (model == 'MESSAGE-MACRO'))
 
                                             # define case name for MSG gdx export/import, replace spaces by '_'
-                                            if (msg & is.null(case)) {
+                                            if (is.null(case)) {
                                               case = gsub(' ', '_', paste(.self$model, .self$scenario, sep = "_")) # self.model and self.scenario
                                             }
-                                            # define variables for writing to gdx and reading the solution
-                                            if (msg) {
-                                              ingdx = paste("MsgData_", case, ".gdx", sep = '')
-                                              outgdx = paste("MsgOutput_", case, ".gdx", sep = '')
-                                              ipth = paste(message_ix_path, "/model/data", sep = '')
-                                              opth = paste(message_ix_path, "/model/output", sep = '')
-                                            } else {
-                                              ingdx = paste(model, "_in.gdx", sep = '')
-                                              outgdx = paste(model, "_out.gdx", sep = '')
-                                              ipth = "."
-                                              opth = "."
-                                            }
-                                            inp = file.path(ipth, ingdx)
-                                            out = file.path(opth, outgdx)
 
+                                            ModelConfig = model_config(model,case)
+                                            if (model %in% names(ModelConfig)){select_conf = model} else { select_conf = "default"}
+
+                                            #remember if conditions
+                                            inp = ModelConfig[[select_conf]]$inp
+                                            outp = ModelConfig[[select_conf]]$outp
+
+                                            ingdx = basename(inp)
+                                            outgdx = basename(outp)
+                                            ipth = dirname(inp)
+                                            opth = dirname(outp)
+
+                                            model_file = ModelConfig[[select_conf]]$model_file
+                                            args = ModelConfig[[select_conf]]$args
                                             # write to gdx
                                             .self$to_gdx(ipth, ingdx)
 
                                             # execute GAMS
-                                            if (msg) {
-                                              mpath = paste(message_ix_path, "/model", sep = '')
-                                              model_run = paste(model, "_run.gms", sep = '')
-                                              run_gams(model_run, inp, out, mpath)
-                                            } else {
-                                              run_gams(paste(model, '.gms', sep = ''), inp, out)
-                                            }
+                                            run_gams(model_file, args)
 
                                             # read solution from gdx
                                             .self$read_sol_from_gdx(opth, outgdx, comment=comment, check_sol=check_sol)

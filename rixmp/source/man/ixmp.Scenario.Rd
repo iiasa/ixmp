@@ -111,7 +111,8 @@ All changes are logged to facilitate version control.
 
 \item{\code{set_list()}}{get list of all sets in the scenario}
 
-\item{\code{solve(model = "MESSAGE", case = NULL, comment = NULL, check_sol = TRUE)}}{solve the model (export to gdx, execute GAMS, import the solution)}
+\item{\code{solve(model = "MESSAGE", case = NULL, model_file = NULL, in_file = NULL,
+  out_file = NULL, solve_args = NULL, comment = NULL, check_sol = TRUE)}}{solve the model (export to gdx, execute GAMS, import the solution)}
 
 \item{\code{to_gdx(path, filename, include_var_equ = FALSE)}}{write the scenario to GAMS gdx}
 

@@ -150,7 +150,8 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
                                           #check_sol : boolean
                                           #flag whether a non-optimal solution raises an exception
                                           #(default = True)
-                                          solve = function(model='MESSAGE', case=NULL, comment=NULL, check_sol=TRUE) {
+                                          solve = function(model='MESSAGE', case=NULL, model_file=NULL, in_file=NULL, out_file=NULL,
+                                                           solve_args=NULL, comment=NULL, check_sol=TRUE) {
                                             "solve the model (export to gdx, execute GAMS, import the solution)"
 
                                             # define case name for MSG gdx export/import, replace spaces by '_'
@@ -158,28 +159,28 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
                                               case = gsub(' ', '_', paste(.self$model, .self$scenario, sep = "_")) # self.model and self.scenario
                                             }
 
-                                            #ModelConfig = model_config(model,case)
-                                            if (model %in% names(ModelConfig0)){select_conf = model} else { select_conf = "default"}
+                                            if (model %in% names(ModelConfig)){select_conf = model} else { select_conf = "default"}
 
-                                            ModelConfig <- list(select_conf = rprintf(ModelConfig0[[select_conf]],model,case) )
-                                            names(ModelConfig) <- select_conf
+                                            format_args <- function(x, model = NULL, case=NULL) {
+                                              x <- gsub("\\{model\\}", model, x)
+                                              x<- gsub("\\{case\\}", case, x)
+                                            }
 
-                                            #remember if conditions
-                                            inp = ModelConfig0[[select_conf]]$inp
-                                            outp = ModelConfig[[select_conf]]$outp
+                                            if (is.null(model_file)) { model_file = format_args(ModelConfig[[select_conf]]$model_file, model, case) }
+                                            if (is.null(solve_args)) { solve_args = format_args(ModelConfig[[select_conf]]$args, model, case) }
+                                            if (is.null(in_file)) { in_file = format_args(ModelConfig[[select_conf]]$inp, model, case) }
+                                            if (is.null(out_file)) { out_file = format_args(ModelConfig[[select_conf]]$outp, model, case) }
 
-                                            ingdx = basename(inp)
-                                            outgdx = basename(outp)
-                                            ipth = dirname(inp)
-                                            opth = dirname(outp)
+                                            ingdx = basename(in_file)
+                                            outgdx = basename(out_file)
+                                            ipth = dirname(in_file)
+                                            opth = dirname(out_file)
 
-                                            model_file = ModelConfig[[select_conf]]$model_file
-                                            args = ModelConfig[[select_conf]]$args
                                             # write to gdx
                                             .self$to_gdx(ipth, ingdx)
 
                                             # execute GAMS
-                                            run_gams(model_file, args)
+                                            run_gams(model_file, solve_args)
 
                                             # read solution from gdx
                                             .self$read_sol_from_gdx(opth, outgdx, comment=comment, check_sol=check_sol)

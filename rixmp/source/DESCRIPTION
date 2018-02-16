@@ -16,8 +16,7 @@ Description: The ix modeling platform (ixmp) is a data warehouse for high-powere
  post-processing, and a structured database backend for version-controlled data management.
 Depends:
     R (>= 3.3.0),
-    rJava,
-    rprintf
+    rJava
 Imports:
     methods
 Suggests:

@@ -12,7 +12,6 @@
 NULL
 
 #' @import rJava
-#' @import rprintf
 #' @importFrom methods setRefClass
 #' @importFrom utils globalVariables
 NULL
@@ -54,10 +53,10 @@ utils::globalVariables(c("message_ix_path"))
   rJava::.jaddClassPath(java_path_2)
   rJava::.jaddClassPath(ixmp_r_path)
 
-  ModelConfig0 <<- list(default = list(model_file = gsub("/","\\\\" , file.path( "." , "{1}.gms") ),
-                                      inp = gsub("/","\\\\" , file.path( ".", "{1}_in.gdx") ),
-                                      outp = gsub("/","\\\\" , file.path(".", "{1}_out.gdx") ),
-                                      args = gsub("/","\\\\" , paste('--in=',file.path( ".", "{1}_in.gdx"),' --out=',file.path(".", "{1}_out.gdx")))))
+  ModelConfig <<- list(default = list(model_file = gsub("/","\\\\" , file.path( "." , "{model}.gms") ),
+                                      inp = gsub("/","\\\\" , file.path( ".", "{model}_in.gdx") ),
+                                      outp = gsub("/","\\\\" , file.path(".", "{model}_out.gdx") ),
+                                      args = gsub("/","\\\\" , paste('--in=',file.path( ".", "{model}_in.gdx"),' --out=',file.path(".", "{model}_out.gdx")))))
 }
 
 #' @description a function to convert a Java LinkedList into an R list
@@ -126,8 +125,3 @@ utils::globalVariables(c("message_ix_path"))
   }
 }
 
-
-# ModelConfig <<- list(default = list(model_file = paste('model', '.gms', sep = ''),
-#                                                   inp = paste('model', '_in.gdx', sep = ''),
-#                                                   outp = paste('model', '_out.gdx', sep = ''),
-#                                                   args = paste('--in=',paste('model', '_in.gdx', sep = ''),' --out=',paste('model', '_out.gdx', sep = ''), sep = '')))

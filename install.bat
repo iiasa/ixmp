@@ -1,3 +1,7 @@
+cd > .foo
+set /p IXMP=<.foo
+del .foo
+echo %IXMP%
 
 python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())" > .foo
 set /p RPTH=<.foo
@@ -17,6 +21,7 @@ IF ERRORLEVEL 1 (
     rscript rixmp/build_rixmp.R [--verbose]
 )
 
+setx IXMP_PATH "%IXMP%"
 setx IXMP_R_PATH "%RPTH%/ixmp"
 
 py.test tests/

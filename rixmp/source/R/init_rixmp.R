@@ -22,23 +22,24 @@ NULL
             utils::packageDescription(pkgname)$Version) )
 }
 
-utils::globalVariables(c("message_ix_path"))
+utils::globalVariables(c("ixmp_path"))
 
 .onLoad <- function(libname, pkgname) {
 
   if (Sys.getenv("JAVA_HOME")!="")
     Sys.setenv(JAVA_HOME="")
 
+  ## Set path where jar files are stored
   ixmp_r_path <<- Sys.getenv("IXMP_R_PATH")
 
-  ## Set path ixmp folder in message_ix working copy
-  message_ix_path <<- Sys.getenv("MESSAGE_IX_PATH")
+  ## Set path ixmp folder
+  ixmp_path <<- Sys.getenv("IXMP_PATH")
 
-  if(message_ix_path == "")
-    warning("Check MESSAGE model installation XXXXX ")
+  if(ixmp_path == "")
+    warning("Check IXMP installation")
 
   if(ixmp_r_path == "")
-    stop("Check IXMP installation XXXXX")
+    stop("Check IXMP installation")
 
   # path to access the local db
   local_path <<- file.path(paste0(gsub("Documents.*","",path.expand("~")),".local/ixmp"))

@@ -1,14 +1,4 @@
 #Build a developed R package to binary and display help
-
-# check_load_pkg <- function(x){
-#   if (!require(x,character.only = TRUE) == TRUE) {
-#     install.packages(x,dep=TRUE, repos='http://cran.r-project.org')
-#     if (!require(x,character.only = TRUE) == TRUE) stop("Package not found")
-#   }
-#   library(x,character.only = TRUE)
-# }
-# lapply(c("devtools","rJava"),check_load_pkg)
-
 require(devtools)
 
 # set in Github/local folder

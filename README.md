@@ -105,9 +105,7 @@ scientific programming API manuals on your local machine.
 ### Windows Users
 
 0. Double click on `install.bat` in the local folder in which you saved your branch.
-
-0. *To install the R interface*, double click on `install_rixmp.bat` as an 
-   additional step 
+   This will also install the *R interface*.
 
 ### *nix Users
 
@@ -119,7 +117,7 @@ scientific programming API manuals on your local machine.
    py.test tests
    ```
 0. *To install the R interface*, as an additional step , in a command prompt:
-   locate in the `ixmp` folder where the file `install_rixmp.bat` is;
+   locate in the `ixmp` folder where the file `install.bat` is;
    type:
 
    ```

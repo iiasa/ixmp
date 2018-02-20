@@ -300,8 +300,8 @@ class TimeSeries(object):
         Parameters
         ----------
         df : a Pandas dataframe either
-             - in tabular form (cols: region, variable, unit, year)
-             - in 'IAMC-style' format (cols: region, variable, unit, [years])
+             - in tabular form (cols: region[/node], variable, unit, year)
+             - in IAMC format (cols: region[/node], variable, unit, <years>)
         meta : boolean
             indicator whether this timeseries is 'meta-data'
             (special treatment during cloning for MESSAGE-scheme scenarios)
@@ -310,6 +310,14 @@ class TimeSeries(object):
 
         if "time" in df.columns:
             raise("sub-annual time slices not supported by Python interface!")
+
+        # rename columns to standard notation
+        cols = {c: str(c).lower() for c in df.columns}
+        cols.update(node='region')
+        df = df.rename(columns=cols)
+        if not set(iamc_idx_cols).issubset(set(df.columns)):
+            missing = list(set(iamc_idx_cols) - set(df.columns))
+            raise ValueError("missing required columns {}!".format(missing))
 
         # if in tabular format
         if ("value" in df.columns):

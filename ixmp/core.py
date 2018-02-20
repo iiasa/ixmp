@@ -22,7 +22,7 @@ import ixmp.model_settings as model_settings
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
-# %% common definitions
+# %% default settings for column headers
 
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 

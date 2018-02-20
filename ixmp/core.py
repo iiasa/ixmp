@@ -315,8 +315,9 @@ class TimeSeries(object):
         cols = {c: str(c).lower() for c in df.columns}
         cols.update(node='region')
         df = df.rename(columns=cols)
-        if not set(iamc_idx_cols).issubset(set(df.columns)):
-            missing = list(set(iamc_idx_cols) - set(df.columns))
+        required_cols = ['region', 'variable', 'unit']
+        if not set(required_cols).issubset(set(df.columns)):
+            missing = list(set(required_cols) - set(df.columns))
             raise ValueError("missing required columns {}!".format(missing))
 
         # if in tabular format

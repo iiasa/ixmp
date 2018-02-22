@@ -82,7 +82,7 @@ ixmp.Platform <- methods::setRefClass("ixmp.Platform",
         # scen : string
         # the scenario name (optional)
 
-        mod_scen_list = .jobj$getModelScenarioList(default, model, scenario)
+        mod_scen_list = .jobj$getScenarioList(default, model, scenario)
         ##----- TO BE CONVERTED IN R
         #p mod_range = range(mod_scen_list.size())
         # mod_range = seq(1,length(mod_scen_list),1)

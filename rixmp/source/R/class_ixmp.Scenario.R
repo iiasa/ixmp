@@ -223,7 +223,7 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
         if (!is.null(filters)) {
           jFilter <- rJava::new(rJava::J("java.util.HashMap"))
           for (idx_name in names(filters)) {
-            jFilter$put(idx_name, .getEleAsList(as.character(filters[[idx_name]])))
+            jFilter$put(idx_name, .getJList(as.character(filters[[idx_name]])))
           }
           eleList = item$getElements(jFilter)
         } else {
@@ -410,7 +410,7 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
         if (length(key)==1) {
           invisible(set$addElement(key, comment))
         } else {
-          invisible(set$addElement(.getEleAsList(key), comment))
+          invisible(set$addElement(.getJList(key), comment))
         }
       },
 
@@ -488,7 +488,7 @@ ixmp.Scenario <- methods::setRefClass("ixmp.Scenario",
         if (length(key)==1) {
           invisible(par$addElement(key, rJava::new(rJava::J("java.lang.Double"), val), unit, comment))
         } else {
-          invisible(par$addElement(.getEleAsList(key), rJava::new(rJava::J("java.lang.Double"), val), unit, comment))
+          invisible(par$addElement(.getJList(key), rJava::new(rJava::J("java.lang.Double"), val), unit, comment))
         }
       },
 

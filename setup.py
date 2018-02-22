@@ -65,7 +65,6 @@ def main():
                 for x in glob.glob('ixmp/db/migration/*/*')]
     pack_data = {
         'ixmp': [
-            'ixmp.R',
             'ixmp.jar',
         ] + lib_files + db_files,
     }

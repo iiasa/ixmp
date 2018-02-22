@@ -16,7 +16,13 @@ Python API
 R API
 -----
 
-The full documentation of the ixmp-R interface will be available shortly.
+The documentation can be built only if R is installed.
+
+.. toctree::
+   :maxdepth: 2
+
+   api/r_core
+   
 
 
 The Java interface

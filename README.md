@@ -87,7 +87,8 @@ scientific programming API manuals on your local machine.
 
 ### Additional dependencies for R users
 
-0. Install packages `rJava` and `optparse` via the R package manager
+
+0. Install packages `rJava` , `devtools` and `optparse` via the R package manager
 
 0. For working with Jupyter notebooks using R, install the [IRkernel](https://irkernel.github.io)
 
@@ -105,6 +106,7 @@ scientific programming API manuals on your local machine.
 ### Windows Users
 
 0. Double click on `install.bat` in the local folder in which you saved your branch.
+   This will also install the *R interface*.
 
 ### *nix Users
 
@@ -114,6 +116,14 @@ scientific programming API manuals on your local machine.
    ```
    python setup.py install
    py.test tests
+   ```
+
+0. *To install the R interface*, as an additional step , in a command prompt:
+   locate in the `ixmp` folder where the file `install.bat` is;
+   type:
+
+   ```
+   rscript rixmp/build_rixmp.R [--verbose]
    ```
 
 ### Connecting to an ixmp database instance

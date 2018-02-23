@@ -963,8 +963,8 @@ class Scenario(TimeSeries):
         # define paths for writing to gdx, running GAMS, and reading a solution
         inp = in_file or config.inp.format(model=model, case=case)
         outp = out_file or config.outp.format(model=model, case=case)
-        args = solve_args or config.args.format(model=model, case=case,
-                                                inp=inp, outp=outp)
+        args = solve_args or [arg.format(model=model, case=case,
+                                         inp=inp, outp=outp) for arg in config.args]
 
         ipth = os.path.dirname(inp)
         ingdx = os.path.basename(inp)
@@ -1152,14 +1152,13 @@ def run_gams(model_file, args, gams_args=['LogOption=4']):
     ----------
     model : str
         the path to the gams file
-    args : str
+    args : list
         arguments related to the GAMS code (input/output gdx paths, etc.)
     gams_args : list of str
         additional arguments for the CLI call to gams
         - `LogOption=4` prints output to stdout (not console) and the log file
     """
-    cmd = 'gams {} {}'.format(model_file, args)
-    cmd = cmd.split() + gams_args
-    file_path = os.path.dirname(model_file)
+    cmd = ['gams', model_file] + args + gams_args
+    file_path = os.path.dirname(model_file).strip('"')
     file_path = None if file_path == '' else file_path
     check_call(cmd, shell=os.name == 'nt', cwd=file_path)

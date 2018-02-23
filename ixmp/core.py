@@ -1159,6 +1159,7 @@ def run_gams(model_file, args, gams_args=['LogOption=4']):
         - `LogOption=4` prints output to stdout (not console) and the log file
     """
     cmd = ['gams', model_file] + args + gams_args
+    cmd = cmd if os.name != 'nt' else ' '.join(cmd)
     file_path = os.path.dirname(model_file).strip('"')
     file_path = None if file_path == '' else file_path
     check_call(cmd, shell=os.name == 'nt', cwd=file_path)

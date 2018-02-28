@@ -81,10 +81,13 @@ clearly identified the source of the contribution and any license or other
 restriction (like related patents, trademarks, and license agreements) 
 of which you are personally aware.
 
-Reference
----------
+Reference and License
+---------------------
 
 This Contributor License Agreement and the introductory text is adapted from 
-the `GitHub Contributor License Agreement`_, Version 298f3afd updated August 9, 2017
+the `GitHub Contributor License Agreement`_, Version 298f3afd updated August 9, 2017.
+GitHub granted a `CC-BY-4.0 License`_ to IIASA to use and modify the text of the CLA.
 
 .. _`GitHub Contributor License Agreement` : https://cla.github.com/agreement
+
+.. _`CC-BY-4.0 License` : https://creativecommons.org/licenses/by/4.0/

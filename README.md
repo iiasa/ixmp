@@ -13,18 +13,18 @@ for a generic model instance based on Dantzig's transport problem.
 
 ## License
 
-Copyright 2017 IIASA Energy Program
+Copyright 2017-18 IIASA Energy Program
 
 The platform package is licensed under the Apache License, Version 2.0 (the "License");
 you may not use the files in this repository except in compliance with the License.
 You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-2.0>.
 
-Please refer to the [NOTICE](NOTICE.md) for details and the user guidelines.
+Please refer to the [NOTICE](NOTICE.rst) for details and the user guidelines.
 
 
 ## Documentation and tutorial
 
-A [documentation the ix modeling platform and the MESSAGEix framework](http://www.iiasa.ac.at/message_ix) 
+A [documentation the ix modeling platform and the MESSAGEix framework](http://MESSAGEix.iiasa.ac.at/) 
 is automatically created from the documentation of the Python and R API packages. 
 The online documentation is synchronyzed with the contents of the master branch 
 of the repositories [www.github.com/iiasa/ixmp](http://www.github.com/iiasa/ixmp)
@@ -36,6 +36,17 @@ You may want to try the [tutorial/transport](tutorial/transport/README.md)...
 Follow the instructions in [doc/README](doc/README.md)
 for building the ixmp documentation including the
 scientific programming API manuals on your local machine.
+
+
+## Scientific reference
+
+Please cite the following manuscript when using the MESSAGEix framework and/or the ix modeling platform 
+for scientific publications or technical reports:
+
+  Daniel Huppmann, Matthew Gidden, Oliver Fricko, Peter Kolp, 
+  Clara Orthofer, Michael Pimmer, Adriano Vinca, Alessio Mastrucci, Keywan Riahi, and Volker Krey. 
+  "The |MESSAGEix| Integrated Assessment Model and the ix modeling platform". 2018, submitted. 
+  Electronic pre-print available at [pure.iiasa.ac.at/15157/](https://pure.iiasa.ac.at/15157/).
 
 
 ## Dependency Installation

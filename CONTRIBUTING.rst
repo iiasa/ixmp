@@ -7,7 +7,7 @@ but search for resolved/closed topics on similar subjects before raising a new i
 
 For contributions to the code base of the platform, please use GitHub "Pull Requests", 
 including a detailed description of the new feature and unit tests to illustrate the intended functionality.
-All pull requests will be reviewed by the message_ix maintainers and/or contributors.
+All pull requests will be reviewed by the `message_ix` and `ixmp` maintainers and/or contributors.
 
 Contributors are required to sign the `Contributor License Agreement`_
 before any pull request can be reviewed. This ensures that all future users can benefit

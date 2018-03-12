@@ -1,7 +1,7 @@
 User Guidelines and Notice
 ==========================
 
-   Copyright 2017 IIASA Energy Program
+   Copyright 2017-18 IIASA Energy Program
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,17 +22,13 @@ Introduction
 This document specifies the guidelines for using the |MESSAGEix| framework and the ix modeling platform.
 The aim of these guidelines is to ensure best scientific practice and collaborative development of the platform.
 
-Documentation and further information is available at `www.iiasa.ac.at/message_ix`_.
-The framework is available for download at `github.com/iiasa/message_ix`_.
+Documentation and further information is available at http://ene.software.iiasa.ac.at/ixmp/.
+The framework is available for download at http://github.com/iiasa/ixmp.
 Please refer to the website and repository for the most up-to-date version of the code base.
 
 The community mailing list for questions and discussions on new features is hosted using Googlegroups.
 Please join at `groups.google.com/d/forum/message_ix`_
-and use <message_ix@googlegroups.com> to send an email to the MESSAGEix user community.
-
-.. _`www.iiasa.ac.at/message_ix` : https://www.iiasa.ac.at/message_ix
-
-.. _`github.com/iiasa/message_ix`: http://www.github.com/iiasa/message_ix
+and use <message_ix@googlegroups.com> to send an email to the MESSAGEix and ixmp user community.
 
 .. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix
 
@@ -49,11 +45,15 @@ for scientific publications or technical reports:
   Daniel Huppmann, Matthew Gidden, Oliver Fricko, Peter Kolp, 
   Clara Orthofer, Michael Pimmer, Keywan Riahi, and Volker Krey. 
   "The MESSAGEix Integrated Assessment Model and the ix modeling platform". 
-  2017, in preparation. 
+  Electronic pre-print available at `pure.iiasa.ac.at/15157/`_.
 
-Also, please include a hyperlink to the online resource `www.iiasa.ac.at/message_ix`_
+Also, please include a hyperlink to the online resource `MESSAGEix.iiasa.ac.at`_
 in any publication/report, or on a website describing your model
 or scientific analysis using the MESSAGEix framework.
+
+.. _`pure.iiasa.ac.at/15157/` : https://pure.iiasa.ac.at/15157/
+
+.. _`MESSAGEix.iiasa.ac.at` : http://MESSAGEix.iiasa.ac.at
 
 B) Developing new model instances
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -86,4 +86,6 @@ References
 ----------
 
 [1] Clara Orthofer, Daniel Huppmann, and Volker Krey. "South Africa's shale gas resources - chance or challenge?"
-2017, in preparation.
+2018, submitted. Electronic pre-print available at `pure.iiasa.ac.at/15085/`_.
+
+.. _`pure.iiasa.ac.at/15085/` : https://pure.iiasa.ac.at/15085/

@@ -29,7 +29,7 @@ iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 
 # %% Java Virtual Machine start-up
 
-def start_jvm(jvmargs):
+def start_jvm(jvmargs=None):
     if jpype.isJVMStarted():
         return
 

@@ -36,8 +36,8 @@ def start_jvm(jvmargs=None):
     if jvmargs is None:
         try:
             import psutil
-            jvmsize = psutil.virtual_memory().available / 10**9 / 2        
-            jvmargs = "-Xmx{}G".format(jvmsize)        
+            jvmsize = psutil.virtual_memory().available / 10**9 / 2
+            jvmargs = "-Xmx{}G".format(int(jvmsize))
         except ImportError:
             jvmargs = "-Xmx4G"              
 

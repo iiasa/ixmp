@@ -33,15 +33,13 @@ def start_jvm(jvmargs=None):
     if jpype.isJVMStarted():
         return
 
-    try:
-        import psutil
-        if jvmargs is None:
+    if jvmargs is None:
+        try:
+            import psutil
             jvmsize = psutil.virtual_memory().available / 10**9 / 2        
             jvmargs = "-Xmx{}G".format(jvmsize)        
-    except ImportError:
-        if jvmargs is None:
+        except ImportError:
             jvmargs = "-Xmx4G"              
-        pass    
 
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
@@ -81,7 +79,6 @@ class Platform(object):
         the type of the local database (e.g., 'HSQLDB')
         if no 'dbprops' is specified, the local database is
         created/accessed at '~/.local/ixmp/localdb/default'
-        
     jvmargs : string
         the allocated max heap space for the java virtual machine
         eg.: "-Xmx4G"

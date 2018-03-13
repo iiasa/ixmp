@@ -81,7 +81,8 @@ class Platform(object):
         created/accessed at '~/.local/ixmp/localdb/default'
     jvmargs : string
         the allocated max heap space for the java virtual machine
-        eg.: "-Xmx4G"
+        eg.: "-Xmx4G" (for more options see: 
+        https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
 
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):

@@ -18,7 +18,7 @@ import sys
 import ixmp as ix
 import ixmp.model_settings as model_settings
 
-import psutil
+
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
@@ -33,9 +33,16 @@ def start_jvm(jvmargs):
     if jpype.isJVMStarted():
         return
 
-    if jvmargs is None:
-        jvmargs = psutil.virtual_memory().available / 10**9 / 2
-        
+    try:
+        import psutil
+        if jvmargs is None:
+            jvmsize = psutil.virtual_memory().available / 10**9 / 2        
+            jvmargs = "-Xmx{}G".format(jvmsize)        
+    except ImportError:
+        if jvmargs is None:
+            jvmargs = "-Xmx4G"              
+        pass    
+
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
     jarfile = os.path.join(module_root, 'ixmp.jar')
@@ -43,7 +50,7 @@ def start_jvm(jvmargs):
     module_jars = [os.path.join(module_lib, f) for f in os.listdir(module_lib)]
     sep = ';' if os.name == 'nt' else ':'
     ix_classpath = sep.join([module_root, jarfile] + module_jars)
-    jvm_args = ["-Djava.class.path=" + ix_classpath, "-Xmx{}G".format(jvmargs)]
+    jvm_args = ["-Djava.class.path=" + ix_classpath, jvmargs]
     jpype.startJVM(jpype.getDefaultJVMPath(), *jvm_args)
 
     # define auxiliary references to Java classes
@@ -75,8 +82,9 @@ class Platform(object):
         if no 'dbprops' is specified, the local database is
         created/accessed at '~/.local/ixmp/localdb/default'
         
-    jvmargs : string or int
-        the allocated max heap space for the java virtual machine in Gbyte
+    jvmargs : string
+        the allocated max heap space for the java virtual machine
+        eg.: "-Xmx4G"
     """
 
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):

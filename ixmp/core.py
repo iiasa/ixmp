@@ -18,6 +18,8 @@ import sys
 import ixmp as ix
 import ixmp.model_settings as model_settings
 
+import psutil
+
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
 # %% common definitions
@@ -27,10 +29,13 @@ iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 
 # %% Java Virtual Machine start-up
 
-def start_jvm():
+def start_jvm(jvmargs):
     if jpype.isJVMStarted():
         return
 
+    if jvmargs is None:
+        jvmargs = psutil.virtual_memory().available / 10**9 / 2
+        
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
     jarfile = os.path.join(module_root, 'ixmp.jar')
@@ -38,7 +43,7 @@ def start_jvm():
     module_jars = [os.path.join(module_lib, f) for f in os.listdir(module_lib)]
     sep = ';' if os.name == 'nt' else ':'
     ix_classpath = sep.join([module_root, jarfile] + module_jars)
-    jvm_args = ["-Djava.class.path=" + ix_classpath, "-Xmx4G"]
+    jvm_args = ["-Djava.class.path=" + ix_classpath, "-Xmx{}G".format(jvmargs)]
     jpype.startJVM(jpype.getDefaultJVMPath(), *jvm_args)
 
     # define auxiliary references to Java classes
@@ -69,10 +74,13 @@ class Platform(object):
         the type of the local database (e.g., 'HSQLDB')
         if no 'dbprops' is specified, the local database is
         created/accessed at '~/.local/ixmp/localdb/default'
+        
+    jvmargs : string or int
+        the allocated max heap space for the java virtual machine in Gbyte
     """
 
-    def __init__(self, dbprops=None, dbtype=None):
-        start_jvm()
+    def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
+        start_jvm(jvmargs)
         self.dbtype = dbtype
 
         try:

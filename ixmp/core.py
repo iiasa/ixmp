@@ -22,7 +22,7 @@ import ixmp.model_settings as model_settings
 
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
-# %% common definitions
+# %% default settings for column headers
 
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 
@@ -36,8 +36,8 @@ def start_jvm(jvmargs=None):
     if jvmargs is None:
         try:
             import psutil
-            jvmsize = psutil.virtual_memory().available / 10**9 / 2        
-            jvmargs = "-Xmx{}G".format(jvmsize)        
+            jvmsize = psutil.virtual_memory().available / 10**9 / 2
+            jvmargs = "-Xmx{}G".format(int(jvmsize))
         except ImportError:
             jvmargs = "-Xmx4G"              
 
@@ -300,8 +300,8 @@ class TimeSeries(object):
         Parameters
         ----------
         df : a Pandas dataframe either
-             - in tabular form (cols: region, variable, unit, year)
-             - in 'IAMC-style' format (cols: region, variable, unit, [years])
+             - in tabular form (cols: region[/node], variable, unit, year)
+             - in IAMC format (cols: region[/node], variable, unit, <years>)
         meta : boolean
             indicator whether this timeseries is 'meta-data'
             (special treatment during cloning for MESSAGE-scheme scenarios)
@@ -310,6 +310,15 @@ class TimeSeries(object):
 
         if "time" in df.columns:
             raise("sub-annual time slices not supported by Python interface!")
+
+        # rename columns to standard notation
+        cols = {c: str(c).lower() for c in df.columns}
+        cols.update(node='region')
+        df = df.rename(columns=cols)
+        required_cols = ['region', 'variable', 'unit']
+        if not set(required_cols).issubset(set(df.columns)):
+            missing = list(set(required_cols) - set(df.columns))
+            raise ValueError("missing required columns {}!".format(missing))
 
         # if in tabular format
         if ("value" in df.columns):

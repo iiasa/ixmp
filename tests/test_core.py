@@ -176,6 +176,15 @@ def test_new_timeseries(test_mp):
     scen.commit('importing a testing timeseries')
 
 
+def test_new_timeseries_error(test_mp):
+    scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
+    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
+    df = pd.DataFrame.from_dict(df)
+    df['region'] = 'World'
+    df['variable'] = 'Testing'
+    pytest.raises(ValueError, scen.add_timeseries, df)
+
+
 def test_get_timeseries(test_mp):
     scen = test_mp.TimeSeries(*test_args, version=2)
     obs = scen.timeseries(regions='World', variables='Testing', units='???',

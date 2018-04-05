@@ -176,6 +176,34 @@ def test_new_timeseries(test_mp):
     scen.commit('importing a testing timeseries')
 
 
+def test_new_timeseries_long_name64(test_mp):
+    scen = test_mp.Scenario(*msg_multiyear_args)
+    scen = scen.clone(keep_sol=False)
+    scen.check_out(timeseries_only=True)
+    df = pd.DataFrame({
+    'region': ['India', ],
+    'variable': ['Emissions|CO2|Energy|Demand|Transportation|Aviation|Domestic|Fre',],
+    'unit': [ 'Mt CO2/yr', ],
+    '2012': [ 0.257009, ]
+    })
+    scen.add_timeseries(df)
+    scen.commit('importing a testing timeseries')
+
+
+def test_new_timeseries_long_name64plus(test_mp):
+    scen = test_mp.Scenario(*msg_multiyear_args)
+    scen = scen.clone(keep_sol=False)
+    scen.check_out(timeseries_only=True)
+    df = pd.DataFrame({
+    'region': ['India', ],
+    'variable': ['Emissions|CO2|Energy|Demand|Transportation|Aviation|Domestic|Freight|Oil',],
+    'unit': [ 'Mt CO2/yr', ],
+    '2012': [ 0.257009, ]
+    })
+    scen.add_timeseries(df)
+    scen.commit('importing a testing timeseries')
+
+
 def test_new_timeseries_error(test_mp):
     scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
     df = {'year': [2010, 2020], 'value': [23.5, 23.6]}

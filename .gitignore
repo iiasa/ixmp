@@ -40,6 +40,7 @@ config/*.properties
 tests/testdb/test.properties
 tests/testdb/ixmptest.properties
 tests/testdb/ixmptest.lck
+.pytest_cache/
 
 # rixmp build folder and rhistory
 rixmp/rixmp*.zip
@@ -47,3 +48,9 @@ rixmp/source/inst/docum/*.html
 rixmp/source/.Rhistory
 !rixmp/source/*.Rproj
 .Rproj.user
+
+# IDEA
+.idea/
+
+# Python virtualenv
+.env*/

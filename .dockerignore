@@ -1,5 +1,7 @@
 .idea/
 .env/
+.env3/
 .circleci/
 doc/
 .pytest_cache/
+**/__pycache__/

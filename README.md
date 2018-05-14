@@ -8,7 +8,7 @@ virtualenv --python=python3.6 .env3 && source .env3/bin/activate
 # install dependencies
 pip install -r requirements.txt
 # run tests
-python setup.py install && python -m pytest /ixmp/tests
+python setup.py install && python -m pytest tests
 ```
 
 ## Overview

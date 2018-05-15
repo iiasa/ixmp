@@ -1,16 +1,5 @@
 # The ix modeling platform (ixmp)
 
-## TLDR
-
-```bash
-# setup python2/3 virtual environment
-virtualenv --python=python3.6 .env3 && source .env3/bin/activate
-# install dependencies
-pip install -r requirements.txt
-# run tests
-python setup.py install && python -m pytest tests
-```
-
 ## Overview
 
 The ix modeling platform (ixmp) is a data warehouse for high-powered scenario analysis,
@@ -61,6 +50,17 @@ for scientific publications or technical reports:
 
 
 ## Dependency Installation
+
+### TLDR
+
+```bash
+# setup python virtual environment
+virtualenv --python=python3.6 .env && source .env/bin/activate
+# install dependencies
+pip install -r requirements.txt
+# run tests
+python setup.py install && python -m pytest tests
+```
 
 ### General
 

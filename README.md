@@ -59,7 +59,7 @@ virtualenv --python=python3.6 .env && source .env/bin/activate
 # install dependencies
 pip install -r requirements.txt
 # run tests
-python setup.py install && python -m pytest tests
+python setup.py install && cd tests && python -m pytest .
 ```
 
 ### General

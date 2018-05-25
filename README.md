@@ -102,6 +102,8 @@ for scientific publications or technical reports:
 
 0. Install packages `rJava` , `devtools` and `optparse` via the R package manager
 
+0. Install Rtools and add the path to the environment variables
+
 0. For working with Jupyter notebooks using R, install the [IRkernel](https://irkernel.github.io)
 
 

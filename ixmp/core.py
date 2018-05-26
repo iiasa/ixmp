@@ -592,8 +592,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this set from the cache
 
         jSet = self.item('set', name)
 
@@ -644,9 +643,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this set from the cache
 
         if key is None:
             self._jobj.removeSet(name)
@@ -700,8 +697,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this parameter from the cache
 
         jPar = self.item('par', name)
 
@@ -801,8 +797,7 @@ class Scenario(TimeSeries):
         comment : string
             explanatory comment (optional)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this scalar from the cache
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
@@ -816,9 +811,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this parameter from the cache
 
         if key is None:
             self._jobj.removePar(name)
@@ -1020,8 +1013,8 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
-            item name (default: None, clears entire Python cache)
+        name : string, default None
+            item name (`None` clears entire Python cache)
         """
         # if no name is given, clean the entire cache
         if name is None:

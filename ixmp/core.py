@@ -931,15 +931,32 @@ class Scenario(TimeSeries):
 
     def read_sol_from_gdx(self, path, filename, comment=None,
                           var_list=None, equ_list=None, check_sol=True):
-        # reset Python data cache
-        self.clear_cache()
+        """read solution from GAMS gdx and import it to the scenario
+
+        Parameters
+        ----------
+        path : string
+            path to the folder
+        filename : string
+            name of the gdx file
+        comment : string
+            comment to be added to the changelog
+        var_list : list of strings
+            variables (levels and marginals) to be imported from gdx
+        equ_list : list of strings
+            equations (levels and marginals) to be imported from gdx
+        check_sol : boolean, default True
+            raise an error if GAMS did not solve to optimality
+            (only applicable for a MESSAGE-scheme scenario)
+        """
+        self.clear_cache()  # reset Python data cache
         self._jobj.readSolutionFromGDX(path, filename, comment,
                                        to_jlist(var_list), to_jlist(equ_list),
                                        check_sol)
 
     def remove_sol(self):
-        # reset Python data cache
-        self.clear_cache()
+        """delete the solution (variables and equations) from the sceanario"""
+        self.clear_cache()  # reset Python data cache
         self._jobj.removeSolution()
 
     def solve(self, model, case=None, model_file=None,

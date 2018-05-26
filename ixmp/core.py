@@ -19,7 +19,6 @@ import ixmp as ix
 import ixmp.model_settings as model_settings
 
 
-
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
 # %% default settings for column headers
@@ -39,7 +38,7 @@ def start_jvm(jvmargs=None):
             jvmsize = psutil.virtual_memory().available / 10**9 / 2
             jvmargs = "-Xmx{}G".format(int(jvmsize))
         except ImportError:
-            jvmargs = "-Xmx4G"              
+            jvmargs = "-Xmx4G"
 
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
@@ -81,7 +80,7 @@ class Platform(object):
         created/accessed at '~/.local/ixmp/localdb/default'
     jvmargs : string
         the allocated max heap space for the java virtual machine
-        eg.: "-Xmx4G" (for more options see: 
+        eg.: "-Xmx4G" (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
 
@@ -986,8 +985,8 @@ class Scenario(TimeSeries):
         # define paths for writing to gdx, running GAMS, and reading a solution
         inp = in_file or config.inp.format(model=model, case=case)
         outp = out_file or config.outp.format(model=model, case=case)
-        args = solve_args or [arg.format(model=model, case=case,
-                                         inp=inp, outp=outp) for arg in config.args]
+        args = solve_args or [arg.format(model=model, case=case, inp=inp,
+                                         outp=outp) for arg in config.args]
 
         ipth = os.path.dirname(inp)
         ingdx = os.path.basename(inp)

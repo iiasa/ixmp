@@ -916,7 +916,7 @@ class Scenario(TimeSeries):
                         cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
-        """write the scenario to GAMS gdx
+        """export the scenario data to GAMS gdx
 
         Parameters
         ----------
@@ -924,9 +924,8 @@ class Scenario(TimeSeries):
             path to the folder
         filename : string
             name of the gdx file
-        include_var_equ : boolean
-            indicator whether to include variables/equations
-            in gdx (default: False)
+        include_var_equ : boolean, default False
+            indicator whether to include variables/equations in gdx
         """
         self._jobj.toGDX(path, filename, include_var_equ)
 

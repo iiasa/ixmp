@@ -4,11 +4,11 @@ from ixmp import config
 
 
 def default_dbprops_file():
-    config.get('DEFAULT_DBPROPS_FILE')
+    return config.get('DEFAULT_DBPROPS_FILE')
 
 
 def db_config_path():
-    config.get('DB_CONFIG_PATH')
+    return config.get('DB_CONFIG_PATH')
 
 
 def find_dbprops(fname):

@@ -42,7 +42,7 @@ def test_mp():
     ixmp.start_jvm()
 
     # launch Platform and connect to testdb (reconnect if closed)
-    mp = ixmp.Platform(test_props, dbtype='HSQLDB')
+    mp = ixmp.Platform(test_props)
     mp.open_db()
 
     yield mp
@@ -91,7 +91,7 @@ def test_mp_use_default_dbprops_file():
 
     # launch Platform and connect to testdb (reconnect if closed)
     try:
-        mp = ixmp.Platform(dbtype='HSQLDB')
+        mp = ixmp.Platform()
         mp.open_db()
     except:
         os.remove(CONFIG_PATH)

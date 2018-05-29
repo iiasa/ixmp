@@ -1,10 +1,5 @@
 import os
 
-LOCAL_PATH = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
-CONFIG_PATH = os.path.join(LOCAL_PATH, 'config.json')
-DEFAULT_LOCAL_DB_PATH = os.path.join(LOCAL_PATH, 'localdb', 'default')
-
-
 from ixmp import config
 
 

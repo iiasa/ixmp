@@ -2,10 +2,11 @@ import json
 import os
 
 from ixmp.utils import logger
-from ixmp.default_paths import CONFIG_PATH
+from ixmp.default_path_constants import CONFIG_PATH
 
 
 def get(key):
+    """Return key from configuration file"""
     if not os.path.exists(CONFIG_PATH):
         raise RuntimeError(
             'ixmp has not been configured, do so with `$ ixmp-config -h`')
@@ -20,12 +21,13 @@ def get(key):
     return data[key]
 
 
-def config(db_config_dir=None, default_dbprops_file=None):
+def config(db_config_path=None, default_dbprops_file=None):
+    """Update configuration file with new values"""
     config = {}
 
-    if db_config_dir:
-        db_config_dir = os.path.abspath(os.path.expanduser(db_config_dir))
-        config['DB_CONFIG_DIR'] = db_config_dir
+    if db_config_path:
+        db_config_path = os.path.abspath(os.path.expanduser(db_config_path))
+        config['DB_CONFIG_PATH'] = db_config_path
 
     if default_dbprops_file:
         default_dbprops_file = os.path.abspath(

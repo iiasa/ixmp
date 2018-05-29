@@ -10,11 +10,8 @@ from subprocess import check_call
 
 import ixmp as ix
 from ixmp import model_settings
-from ixmp.default_paths import (
-    DEFAULT_LOCAL_DB_PATH,
-    default_dbprops_file,
-    find_dbprops,
-)
+from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
+from ixmp.default_paths import default_dbprops_file, find_dbprops
 from ixmp.utils import logger
 
 

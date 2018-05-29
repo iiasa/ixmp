@@ -48,7 +48,7 @@ def test_mp():
     yield mp
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_mp_use_db_config_path():
     assert not os.path.exists(CONFIG_PATH)
 
@@ -76,7 +76,7 @@ def test_mp_use_db_config_path():
     os.remove(CONFIG_PATH)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_mp_use_default_dbprops_file():
     assert not os.path.exists(CONFIG_PATH)
 

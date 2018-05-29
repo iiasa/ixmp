@@ -32,23 +32,17 @@ def start_jvm(jvmargs=None):
     if jpype.isJVMStarted():
         return
 
-    if jvmargs is None:
-        try:
-            import psutil
-            jvmsize = psutil.virtual_memory().available / 10**9 / 2
-            jvmargs = "-Xmx{}G".format(int(jvmsize))
-        except ImportError:
-            jvmargs = "-Xmx4G"
-
-    # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
     jarfile = os.path.join(module_root, 'ixmp.jar')
     module_lib = os.path.join(module_root, 'lib')
     module_jars = [os.path.join(module_lib, f) for f in os.listdir(module_lib)]
     sep = ';' if os.name == 'nt' else ':'
-    ix_classpath = sep.join([module_root, jarfile] + module_jars)
-    jvm_args = ["-Djava.class.path=" + ix_classpath, jvmargs]
-    jpype.startJVM(jpype.getDefaultJVMPath(), *jvm_args)
+    classpath = sep.join([module_root, jarfile] + module_jars)
+    args = ["-Djava.class.path={}".format(classpath)]
+    if jvmargs is not None:
+        args += jvmargs if isinstance(jvmargs, list) else [jvmargs]
+    print(*args)
+    jpype.startJVM(jpype.getDefaultJVMPath(), *args)
 
     # define auxiliary references to Java classes
     java.ixmp = java("at.ac.iiasa.ixmp")

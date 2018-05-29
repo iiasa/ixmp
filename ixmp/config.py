@@ -1,8 +1,8 @@
 import json
 import os
 
-from ixmp.utils import logger
 from ixmp.default_path_constants import CONFIG_PATH
+from ixmp.utils import logger
 
 
 def get(key):

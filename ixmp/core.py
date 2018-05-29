@@ -536,7 +536,7 @@ class Scenario(TimeSeries):
         keys : list of strings
             element keys to be added to the category mapping
         """
-        self._jobj.addCatEle(name, cat, to_jlist(keys), is_unique)
+        self._jobj.addCatEle(name, str(cat), to_jlist(keys), is_unique)
 
     def cat(self, name, cat):
         """return a list of all set elements mapped to a category

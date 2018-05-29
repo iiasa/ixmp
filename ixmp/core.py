@@ -1,29 +1,26 @@
-# -*- coding: utf-8 -*-
-"""
-Main classes for the Python API for the ix modeling platform (ixmp)
-
-"""
-
+import jpype
 import os
-from subprocess import check_call
+import sys
 
 import numpy as np
 import pandas as pd
 
-import jpype
 from jpype import JPackage as java
-
-import sys
+from subprocess import check_call
 
 import ixmp as ix
-import ixmp.model_settings as model_settings
+from ixmp import model_settings
+from ixmp.default_paths import (
+    DEFAULT_LOCAL_DB_PATH,
+    default_dbprops_file,
+    find_dbprops,
+)
+from ixmp.utils import logger
 
-
-local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
 # %% default settings for column headers
 
-iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
+IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
 
 
 # %% Java Virtual Machine start-up
@@ -50,9 +47,6 @@ def start_jvm(jvmargs=None):
     java.LinkedList = java("java.util").LinkedList
     java.HashMap = java("java.util").HashMap
     java.LinkedHashMap = java("java.util").LinkedHashMap
-
-
-# %% class ixmp.Platform
 
 
 class Platform(object):
@@ -83,26 +77,25 @@ class Platform(object):
 
         try:
             # if no dbtype is specified, launch Platform with properties file
-            # or use 'config/default.properties' file
             if dbtype is None:
-                dbprops = dbprops or 'default.properties'
-                dbprops = dbprops if os.path.isfile(dbprops) \
-                    else os.path.join(ix.default_paths.CONFIG_DIR, dbprops)
-                print("launching ixmp.Platform using config file at '{}'"
-                      .format(dbprops))
+                dbprops = default_dbprops_file() if dbprops is None \
+                    else find_dbprops(dbprops)
+                logger().info("launching ixmp.Platform using config file at '{}'"
+                              .format(dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops)
             # if dbtype is specified, launch Platform with local database
-            else:
-                dbprops = dbprops or os.path.join(local_path,
-                                                  'localdb', 'default')
-                print("launching ixmp.Platform with local {} database at '{}'"
-                      .format(dbtype, dbprops))
+            elif dbtype == 'HSQLDB':
+                dbprops = dbprops or DEFAULT_LOCAL_DB_PATH
+                logger().info("launching ixmp.Platform with local {} database at '{}'"
+                              .format(dbtype, dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops, dbtype)
+            else:
+                raise ValueError('Unknown dbtype: {}'.format(dbtype))
         except TypeError:
             msg = ("Could not launch the JVM for the ixmp.Platform."
                    "Make sure that all dependencies of ixmp.jar"
                    "are included in the 'ixmp/lib' folder.")
-            print(msg)
+            logger().info(msg)
             raise
 
     def open_db(self):
@@ -408,7 +401,7 @@ class TimeSeries(object):
         df = df[['model', 'scenario'] + cols]
 
         if iamc:
-            df = df.pivot_table(index=iamc_idx_cols, columns='year')['value']
+            df = df.pivot_table(index=IAMC_IDX, columns='year')['value']
             df.reset_index(inplace=True)
 
         return df

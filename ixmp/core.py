@@ -1040,6 +1040,7 @@ class Scenario(TimeSeries):
 
 
 def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
     if filters is None:
         return df
 
@@ -1056,10 +1057,12 @@ def isstr(x):
 
 
 def _jdouble(val):
+    """Returns a Java.Double"""
     return java.Double(float(val))
 
 
 def to_pylist(jlist):
+    """Transforms a Java.Array or Java.List to a python list"""
     # handling string array
     try:
         return np.array(jlist[:])
@@ -1068,12 +1071,13 @@ def to_pylist(jlist):
         return np.array(jlist.toArray()[:])
 
 
-def to_jlist(pylist, idxName=None):
+def to_jlist(pylist, idx_names=None):
+    """Transforms a python list to a Java.LinkedList"""
     if pylist is None:
         return None
 
     jList = java.LinkedList()
-    if idxName is None:
+    if idx_names is None:
         if type(pylist) is list:
             for key in pylist:
                 jList.add(str(key))
@@ -1083,7 +1087,7 @@ def to_jlist(pylist, idxName=None):
         else:
             jList.add(str(pylist))
     else:
-        for idx in idxName:
+        for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
 

@@ -15,8 +15,8 @@ def config():
     args = parser.parse_args()
 
     # do the config
-    ixmp.config(
-        db_config_dir=args.db_config_dir,
+    ixmp.config.config(
+        db_config_path=args.db_config_path,
         default_dbprops_file=args.default_dbprops_file,
     )
 

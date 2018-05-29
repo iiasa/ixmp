@@ -41,7 +41,6 @@ def start_jvm(jvmargs=None):
     args = ["-Djava.class.path={}".format(classpath)]
     if jvmargs is not None:
         args += jvmargs if isinstance(jvmargs, list) else [jvmargs]
-    print(*args)
     jpype.startJVM(jpype.getDefaultJVMPath(), *args)
 
     # define auxiliary references to Java classes
@@ -73,8 +72,8 @@ class Platform(object):
         if no 'dbprops' is specified, the local database is
         created/accessed at '~/.local/ixmp/localdb/default'
     jvmargs : string
-        the allocated max heap space for the java virtual machine
-        eg.: "-Xmx4G" (for more options see:
+        options for launching the JVM, e.g., the maximum heap space: "-Xmx4G"
+        (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
 
@@ -101,7 +100,7 @@ class Platform(object):
                 self._jobj = java.ixmp.Platform("Python", dbprops, dbtype)
         except TypeError:
             msg = ("Could not launch the JVM for the ixmp.Platform."
-                   "Make sure that all dependencies of ixToolbox.jar"
+                   "Make sure that all dependencies of ixmp.jar"
                    "are included in the 'ixmp/lib' folder.")
             print(msg)
             raise

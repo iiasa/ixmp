@@ -9,6 +9,7 @@ from subprocess import check_call
 
 import numpy as np
 import pandas as pd
+import six
 
 import jpype
 from jpype import JPackage as java
@@ -1064,6 +1065,9 @@ def _getCleanDims(dims, dimsDefault=None):
             cleanDims.add(aDim)
 
     return cleanDims
+def isstr(x):
+    """Returns True if x is a string"""
+    return isinstance(x, six.string_types)
 
 
 def _jdouble(val):

@@ -566,8 +566,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeSet(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeSet(name, make_dims(idx_sets, idx_names))
 
     def set(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific set
@@ -667,8 +666,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializePar(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializePar(name, make_dims(idx_sets, idx_names))
 
     def par(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific parameter
@@ -835,8 +833,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeVar(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeVar(name, make_dims(idx_sets, idx_names))
 
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
@@ -866,8 +863,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeEqu(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeEqu(name, make_dims(idx_sets, idx_names))
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation
@@ -1054,17 +1050,6 @@ def filtered(df, filters):
     return df[mask]
 
 
-def _getCleanDims(dims, dimsDefault=None):
-    cleanDims = java.LinkedList()
-
-    if dims is not None:
-        for aDim in dims:
-            cleanDims.add(aDim)
-    elif dimsDefault is not None:
-        for aDim in dimsDefault:
-            cleanDims.add(aDim)
-
-    return cleanDims
 def isstr(x):
     """Returns True if x is a string"""
     return isinstance(x, six.string_types)
@@ -1101,6 +1086,11 @@ def to_jlist(pylist, idxName=None):
         for idx in idxName:
             jList.add(str(pylist[idx]))
     return jList
+
+
+def make_dims(idx_sets, idx_names):
+    """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
+    return to_jlist(idx_sets), to_jlist(idx_names or idx_sets)
 
 
 def _getElementList(jItem, filters=None, has_value=False, has_level=False):

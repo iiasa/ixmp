@@ -9,7 +9,6 @@ from subprocess import check_call
 
 import numpy as np
 import pandas as pd
-import six
 
 import jpype
 from jpype import JPackage as java
@@ -1049,11 +1048,6 @@ def filtered(df, filters):
         isin = df[k].isin(v)
         mask = mask & isin
     return df[mask]
-
-
-def isstr(x):
-    """Returns True if x is a string"""
-    return isinstance(x, six.string_types)
 
 
 def _jdouble(val):

@@ -19,7 +19,6 @@ import ixmp as ix
 import ixmp.model_settings as model_settings
 
 
-
 local_path = os.path.expanduser(os.path.join('~', '.local', 'ixmp'))
 
 # %% default settings for column headers
@@ -39,7 +38,7 @@ def start_jvm(jvmargs=None):
             jvmsize = psutil.virtual_memory().available / 10**9 / 2
             jvmargs = "-Xmx{}G".format(int(jvmsize))
         except ImportError:
-            jvmargs = "-Xmx4G"              
+            jvmargs = "-Xmx4G"
 
     # must add dir and jarfile to support finding ixmp.properties
     module_root = os.path.dirname(__file__)
@@ -81,7 +80,7 @@ class Platform(object):
         created/accessed at '~/.local/ixmp/localdb/default'
     jvmargs : string
         the allocated max heap space for the java virtual machine
-        eg.: "-Xmx4G" (for more options see: 
+        eg.: "-Xmx4G" (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
 
@@ -593,8 +592,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this set from the cache
 
         jSet = self.item('set', name)
 
@@ -645,9 +643,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this set from the cache
 
         if key is None:
             self._jobj.removeSet(name)
@@ -701,8 +697,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this parameter from the cache
 
         jPar = self.item('par', name)
 
@@ -802,8 +797,7 @@ class Scenario(TimeSeries):
         comment : string
             explanatory comment (optional)
         """
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this scalar from the cache
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
@@ -817,9 +811,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-
-        # delete data from the Python cache
-        self.clear_cache(name)
+        self.clear_cache(name)  # delete data for this parameter from the cache
 
         if key is None:
             self._jobj.removePar(name)
@@ -917,7 +909,7 @@ class Scenario(TimeSeries):
                         cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
-        """write the scenario to GAMS gdx
+        """export the scenario data to GAMS gdx
 
         Parameters
         ----------
@@ -925,23 +917,39 @@ class Scenario(TimeSeries):
             path to the folder
         filename : string
             name of the gdx file
-        include_var_equ : boolean
-            indicator whether to include variables/equations
-            in gdx (default: False)
+        include_var_equ : boolean, default False
+            indicator whether to include variables/equations in gdx
         """
         self._jobj.toGDX(path, filename, include_var_equ)
 
     def read_sol_from_gdx(self, path, filename, comment=None,
                           var_list=None, equ_list=None, check_sol=True):
-        # reset Python data cache
-        self.clear_cache()
+        """read solution from GAMS gdx and import it to the scenario
+
+        Parameters
+        ----------
+        path : string
+            path to the folder
+        filename : string
+            name of the gdx file
+        comment : string
+            comment to be added to the changelog
+        var_list : list of strings
+            variables (levels and marginals) to be imported from gdx
+        equ_list : list of strings
+            equations (levels and marginals) to be imported from gdx
+        check_sol : boolean, default True
+            raise an error if GAMS did not solve to optimality
+            (only applicable for a MESSAGE-scheme scenario)
+        """
+        self.clear_cache()  # reset Python data cache
         self._jobj.readSolutionFromGDX(path, filename, comment,
                                        to_jlist(var_list), to_jlist(equ_list),
                                        check_sol)
 
     def remove_sol(self):
-        # reset Python data cache
-        self.clear_cache()
+        """delete the solution (variables and equations) from the sceanario"""
+        self.clear_cache()  # reset Python data cache
         self._jobj.removeSolution()
 
     def solve(self, model, case=None, model_file=None,
@@ -986,8 +994,8 @@ class Scenario(TimeSeries):
         # define paths for writing to gdx, running GAMS, and reading a solution
         inp = in_file or config.inp.format(model=model, case=case)
         outp = out_file or config.outp.format(model=model, case=case)
-        args = solve_args or [arg.format(model=model, case=case,
-                                         inp=inp, outp=outp) for arg in config.args]
+        args = solve_args or [arg.format(model=model, case=case, inp=inp,
+                                         outp=outp) for arg in config.args]
 
         ipth = os.path.dirname(inp)
         ingdx = os.path.basename(inp)
@@ -1005,8 +1013,8 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
-            item name (default: None, clears entire Python cache)
+        name : string, default None
+            item name (`None` clears entire Python cache)
         """
         # if no name is given, clean the entire cache
         if name is None:

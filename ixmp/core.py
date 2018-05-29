@@ -566,7 +566,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeSet(name, make_dims(idx_sets, idx_names))
+        self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
 
     def set(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific set
@@ -666,7 +666,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializePar(name, make_dims(idx_sets, idx_names))
+        self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
 
     def par(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific parameter
@@ -833,7 +833,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeVar(name, make_dims(idx_sets, idx_names))
+        self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
 
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
@@ -863,7 +863,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeEqu(name, make_dims(idx_sets, idx_names))
+        self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation

@@ -41,6 +41,9 @@ def config(db_config_path=None, default_dbprops_file=None):
         config = data
 
     if config:
+        dirname = os.path.dirname(CONFIG_PATH)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         with open(CONFIG_PATH, mode='w') as f:
             logger().info('Updating configuration file: {}'.format(CONFIG_PATH))
             json.dump(config, f)

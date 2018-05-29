@@ -32,6 +32,12 @@ def test_default_version(test_mp):
     assert scen.version == 2
 
 
+def test_add_set_par(test_mp):
+    scen = test_mp.Scenario(*can_args, version='new')
+    scen.init_set('ii')
+    scen.init_par('new_par', idx_sets='ii')
+    scen.discard_changes()
+
 def test_get_scalar(test_mp):
     scen = test_mp.Scenario(*can_args)
     obs = scen.scalar('f')

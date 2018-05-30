@@ -475,10 +475,10 @@ class Scenario(TimeSeries):
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
-            return _getElementList(item, filters, **self._java_kwargs[ix_type])
+            return _get_ele_list(item, filters, **self._java_kwargs[ix_type])
 
         # otherwise, retrieve from Java and keep in python cache
-        df = _getElementList(item, None, **self._java_kwargs[ix_type])
+        df = _get_ele_list(item, None, **self._java_kwargs[ix_type])
 
         # save if using memcache
         if self._cache:
@@ -528,7 +528,7 @@ class Scenario(TimeSeries):
         keys : list of strings
             element keys to be added to the category mapping
         """
-        self._jobj.addCatEle(name, cat, to_jlist(keys), is_unique)
+        self._jobj.addCatEle(name, str(cat), to_jlist(keys), is_unique)
 
     def cat(self, name, cat):
         """return a list of all set elements mapped to a category
@@ -558,8 +558,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeSet(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
 
     def set(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific set
@@ -641,7 +640,7 @@ class Scenario(TimeSeries):
         if key is None:
             self._jobj.removeSet(name)
         else:
-            _removeElement(self._jobj.getSet(name), key)
+            _remove_ele(self._jobj.getSet(name), key)
 
     def par_list(self):
         """return a list of parameters initialized in the scenario"""
@@ -659,8 +658,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializePar(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
 
     def par(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific parameter
@@ -774,7 +772,7 @@ class Scenario(TimeSeries):
         name : string
             name of the scalar
         """
-        return _getElementList(self._jobj.getPar(name), None, has_value=True)
+        return _get_ele_list(self._jobj.getPar(name), None, has_value=True)
 
     def change_scalar(self, name, val, unit, comment=None):
         """change the value or unit of a scalar
@@ -809,7 +807,7 @@ class Scenario(TimeSeries):
         if key is None:
             self._jobj.removePar(name)
         else:
-            _removeElement(self._jobj.getPar(name), key)
+            _remove_ele(self._jobj.getPar(name), key)
 
     def var_list(self):
         """return a list of variables initialized in the scenario"""
@@ -827,8 +825,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeVar(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
 
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
@@ -858,8 +855,7 @@ class Scenario(TimeSeries):
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
         """
-        self._jobj.initializeEqu(name, _getCleanDims(idx_sets),
-                                 _getCleanDims(idx_names, idx_sets))
+        self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation
@@ -1036,6 +1032,7 @@ class Scenario(TimeSeries):
 
 
 def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
     if filters is None:
         return df
 
@@ -1046,24 +1043,13 @@ def filtered(df, filters):
     return df[mask]
 
 
-def _getCleanDims(dims, dimsDefault=None):
-    cleanDims = java.LinkedList()
-
-    if dims is not None:
-        for aDim in dims:
-            cleanDims.add(aDim)
-    elif dimsDefault is not None:
-        for aDim in dimsDefault:
-            cleanDims.add(aDim)
-
-    return cleanDims
-
-
 def _jdouble(val):
+    """Returns a Java.Double"""
     return java.Double(float(val))
 
 
 def to_pylist(jlist):
+    """Transforms a Java.Array or Java.List to a python list"""
     # handling string array
     try:
         return np.array(jlist[:])
@@ -1072,12 +1058,13 @@ def to_pylist(jlist):
         return np.array(jlist.toArray()[:])
 
 
-def to_jlist(pylist, idxName=None):
+def to_jlist(pylist, idx_names=None):
+    """Transforms a python list to a Java.LinkedList"""
     if pylist is None:
         return None
 
     jList = java.LinkedList()
-    if idxName is None:
+    if idx_names is None:
         if type(pylist) is list:
             for key in pylist:
                 jList.add(str(key))
@@ -1087,31 +1074,36 @@ def to_jlist(pylist, idxName=None):
         else:
             jList.add(str(pylist))
     else:
-        for idx in idxName:
+        for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
 
 
-def _getElementList(jItem, filters=None, has_value=False, has_level=False):
+def make_dims(idx_sets, idx_names):
+    """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
+    return to_jlist(idx_sets), to_jlist(idx_names or idx_sets)
+
+
+def _get_ele_list(item, filters=None, has_value=False, has_level=False):
 
     # get list of elements, with filter HashMap if provided
     if filters is not None:
         jFilter = java.HashMap()
         for idx_name in filters.keys():
             jFilter.put(idx_name, to_jlist(filters[idx_name]))
-        jList = jItem.getElements(jFilter)
+        jList = item.getElements(jFilter)
     else:
-        jList = jItem.getElements()
+        jList = item.getElements()
 
     # return a dataframe if this is a mapping or multi-dimensional parameter
-    dim = jItem.getDim()
+    dim = item.getDim()
     if dim > 0:
-        idx_names = np.array(jItem.getIdxNames().toArray()[:])
-        idx_sets = np.array(jItem.getIdxSets().toArray()[:])
+        idx_names = np.array(item.getIdxNames().toArray()[:])
+        idx_sets = np.array(item.getIdxSets().toArray()[:])
 
         data = {}
         for d in range(dim):
-            ary = np.array(jItem.getCol(d, jList)[:])
+            ary = np.array(item.getCol(d, jList)[:])
             if idx_sets[d] == "year":
                 # numpy tricks to avoid extra copy
                 # _ary = ary.view('int')
@@ -1120,12 +1112,12 @@ def _getElementList(jItem, filters=None, has_value=False, has_level=False):
             data[idx_names[d]] = ary
 
         if has_value:
-            data['value'] = np.array(jItem.getValues(jList)[:])
-            data['unit'] = np.array(jItem.getUnits(jList)[:])
+            data['value'] = np.array(item.getValues(jList)[:])
+            data['unit'] = np.array(item.getUnits(jList)[:])
 
         if has_level:
-            data['lvl'] = np.array(jItem.getLevels(jList)[:])
-            data['mrg'] = np.array(jItem.getMarginals(jList)[:])
+            data['lvl'] = np.array(item.getLevels(jList)[:])
+            data['mrg'] = np.array(item.getMarginals(jList)[:])
 
         df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
         return df
@@ -1133,42 +1125,42 @@ def _getElementList(jItem, filters=None, has_value=False, has_level=False):
     else:
         #  for index sets
         if not (has_value or has_level):
-            return pd.Series(jItem.getCol(0, jList)[:])
+            return pd.Series(item.getCol(0, jList)[:])
 
         data = {}
 
         # for parameters as scalars
         if has_value:
-            data['value'] = jItem.getScalarValue().floatValue()
-            data['unit'] = str(jItem.getScalarUnit())
+            data['value'] = item.getScalarValue().floatValue()
+            data['unit'] = str(item.getScalarUnit())
 
         # for variables as scalars
         elif has_level:
-            data['lvl'] = jItem.getScalarLevel().floatValue()
-            data['mrg'] = jItem.getScalarMarginal().floatValue()
+            data['lvl'] = item.getScalarLevel().floatValue()
+            data['mrg'] = item.getScalarMarginal().floatValue()
 
         return data
 
 
-def _removeElement(jItem, key):
+def _remove_ele(item, key):
     """auxiliary """
-    if jItem.getDim() > 0:
+    if item.getDim() > 0:
         if isinstance(key, list) or isinstance(key, pd.Series):
-            jItem.removeElement(to_jlist(key))
+            item.removeElement(to_jlist(key))
         elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
             if isinstance(key, dict):
                 key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = to_pylist(jItem.getIdxNames())
+            idx_names = to_pylist(item.getIdxNames())
             for i in key.index:
-                jItem.removeElement(to_jlist(key.ix[i], idx_names))
+                item.removeElement(to_jlist(key.ix[i], idx_names))
         else:
-            jItem.removeElement(str(key))
+            item.removeElement(str(key))
 
     else:
         if isinstance(key, list) or isinstance(key, pd.Series):
-            jItem.removeElement(to_jlist(key))
+            item.removeElement(to_jlist(key))
         else:
-            jItem.removeElement(str(key))
+            item.removeElement(str(key))
 
 
 def run_gams(model_file, args, gams_args=['LogOption=4']):

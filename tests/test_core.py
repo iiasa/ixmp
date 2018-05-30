@@ -28,11 +28,6 @@ def local_config_exists():
     return os.path.exists(CONFIG_PATH)
 
 
-def test_scen_list(test_mp):
-    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
 @pytest.mark.skipif(local_config_exists(),
                     reason='will not overwrite local config files')
 def test_default_dbprops_file(test_mp_use_default_dbprops_file):
@@ -45,6 +40,15 @@ def test_default_dbprops_file(test_mp_use_default_dbprops_file):
                     reason='will not overwrite local config files')
 def test_db_config_path(test_mp_use_db_config_path):
     test_mp = test_mp_use_db_config_path
+    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
+
+
+def test_platform_init_raises():
+    pytest.raises(ValueError, ixmp.Platform, dbtype='foo', dbprops='bar')
+
+
+def test_scen_list(test_mp):
     scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
     assert scenario[0] == 'Hitchhiker'
 

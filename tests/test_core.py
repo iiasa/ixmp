@@ -45,7 +45,7 @@ def test_db_config_path(test_mp_use_db_config_path):
 
 
 def test_platform_init_raises():
-    pytest.raises(ValueError, ixmp.Platform, dbtype='foo', dbprops='bar')
+    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
 
 
 def test_scen_list(test_mp):

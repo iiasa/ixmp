@@ -69,10 +69,6 @@ class Platform(object):
     """
 
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
-        if dbprops is not None and dbtype is not None:
-            raise ValueError(
-                'Must provide either dbprops or dbtype as argument, not both')
-
         start_jvm(jvmargs)
         self.dbtype = dbtype
 

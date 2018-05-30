@@ -98,8 +98,11 @@ for scientific publications or technical reports:
 
 ### Additional dependencies for R users
 
+0. Make sure the R version installed is either 32 OR 64 bit (and >= 3.3.0), consistently with GAMS and Java. Having both 32 and 64 bit generates error.
 
 0. Install packages `rJava` , `devtools` and `optparse` via the R package manager
+
+0. Install Rtools and add the path to the environment variables
 
 0. For working with Jupyter notebooks using R, install the [IRkernel](https://irkernel.github.io)
 

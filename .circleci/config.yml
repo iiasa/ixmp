@@ -19,4 +19,7 @@ jobs:
       - run:
           name: Python3 Tests
           command: docker run ixmp/ixmp:latest python3 -m pytest /ixmp/tests
+      - run:
+          name: Build Docs
+          command: docker run ixmp/ixmp:latest cd /ixmp/doc && make html
       

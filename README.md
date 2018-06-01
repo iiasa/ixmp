@@ -69,7 +69,7 @@ the ix modeling platform for scientific publications or technical reports:
     conda install ixmp
     ```
 
-## Install from Conda (Advanced Users)
+## Install from Source (Advanced Users)
 
 ### Dependencies
 
@@ -144,8 +144,7 @@ the ix modeling platform for scientific publications or technical reports:
 
    ```
    pip install -r requirements.txt
-   python setup.py install
-   py.test tests
+   python setup.py install && py.test tests
    ```
 
 ### Notes and Warnings 

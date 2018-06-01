@@ -21,5 +21,5 @@ jobs:
           command: docker run ixmp/ixmp:latest python3 -m pytest /ixmp/tests
       - run:
           name: Build Docs
-          command: docker run ixmp/ixmp:latest /bin/bash -c 'cd /ixmp/doc && make html'
+          command: docker run ixmp/ixmp:latest /bin/bash -c 'cd /ixmp && pip install -r requirements.txt && cd doc && make html'
       

@@ -51,6 +51,23 @@ for scientific publications or technical reports:
 
 ## Dependency Installation
 
+### TLDR
+
+```bash
+# setup python virtual environment
+virtualenv --python=python3.6 .env && source .env/bin/activate
+# install dependencies
+pip install -r requirements.txt
+# add GAMS libs folder to PATH
+export PATH=$PATH:<path-to-gams-libs>
+# install ixmp
+python setup.py install
+# run tests
+pytest tests
+```
+
+* On OSX path to GAMS libraries will be `/Applications/GAMS25.0/sysdir` for GAMS 25.0
+
 ### General
 
 0. Install the Java Development Kit (Java SE 8)

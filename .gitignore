@@ -29,7 +29,6 @@
 /doc/source/model/**
 
 # files generated during install
-ixmp/default_paths.py
 build
 
 # credentials

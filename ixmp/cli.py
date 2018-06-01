@@ -1,25 +1,28 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug  8 13:06:09 2017
-
-@author: huppmann
-"""
-
 import argparse
-import ixmp as ix
+
+import ixmp
+
+
+def config():
+    # construct cli
+    parser = argparse.ArgumentParser()
+    db_config_path = 'Set default directory for database connection ' + \
+        'and configuration files.'
+    parser.add_argument('--db_config_path', help=db_config_path, default=None)
+    default_dbprops_file = 'Set default properties file for database connection.'
+    parser.add_argument('--default_dbprops_file',
+                        help=default_dbprops_file, default=None)
+    args = parser.parse_args()
+
+    # do the config
+    ixmp.config.config(
+        db_config_path=args.db_config_path,
+        default_dbprops_file=args.default_dbprops_file,
+    )
 
 
 def import_timeseries():
-    args = read_args()
-    mp = ix.Platform(args.dbprops)
-    ix.utils.import_timeseries(mp, args.data, args.model, args.scenario,
-                               args.version, args.firstyear, args.lastyear)
-    mp.close_db()
-
-
-# %%
-
-def read_args():
+    # construct cli
     parser = argparse.ArgumentParser()
     dbprops = 'dbprops'
     parser.add_argument('--dbprops', help=dbprops, default=None)
@@ -35,6 +38,10 @@ def read_args():
     parser.add_argument('--firstyear', help=firstyear, type=str, default=None)
     lastyear = 'lastyear'
     parser.add_argument('--lastyear', help=lastyear, type=str, default=None)
-    # parse cli
     args = parser.parse_args()
-    return args
+
+    # do the import
+    mp = ixmp.Platform(args.dbprops)
+    ixmp.utils.import_timeseries(mp, args.data, args.model, args.scenario,
+                                 args.version, args.firstyear, args.lastyear)
+    mp.close_db()

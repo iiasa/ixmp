@@ -1,21 +1,18 @@
-"""
-
-"""
-
 import os
 import subprocess
 import pandas as pd
 import ixmp as ix
 from numpy import testing as npt
 
-from testing_utils import test_mp_props
+from testing_utils import here, test_mp_props
 
 
 def test_import_timeseries(test_mp_props):
-    file = os.path.join(ix.default_paths.TEST_DIR, 'timeseries_canning.csv')
+    fname = os.path.join(here, 'timeseries_canning.csv')
 
     cmd = 'import-timeseries --dbprops="{}" --data="{}" --model="{}" --scenario="{}" --version="{}" --firstyear="{}"'
-    cmd = cmd.format(test_mp_props, file, 'canning problem', 'standard', 1, 2020)
+    cmd = cmd.format(test_mp_props, fname,
+                     'canning problem', 'standard', 1, 2020)
 
     win = os.name == 'nt'
     subprocess.check_call(cmd, shell=not win)

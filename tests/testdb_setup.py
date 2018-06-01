@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 24 14:58:52 2017
-
-@author: huppmann
-"""
-
 import os
 import pandas as pd
 import ixmp as ix
 
-db_dir = os.path.join(ix.default_paths.TEST_DIR, 'testdb')
+from testing_utils import here
+
+db_dir = os.path.join(here, 'testdb')
 test_db = os.path.join(db_dir, 'ixmptest')
 
 # %% remove existing database files
@@ -67,8 +62,8 @@ scen.add_par("a", "san-diego", 600, "cases")
 scen.init_par("b", idx_sets="j")
 b_data = [
     {'j': "new-york", 'value': 325, 'unit': "cases"},
-    {'j': "chicago",  'value': 300, 'unit': "cases"},
-    {'j': "topeka",   'value': 275, 'unit': "cases"}
+    {'j': "chicago", 'value': 300, 'unit': "cases"},
+    {'j': "topeka", 'value': 275, 'unit': "cases"}
 ]
 b = pd.DataFrame(b_data)
 scen.add_par("b", b)
@@ -110,7 +105,7 @@ scen.commit(comment)
 scen.set_as_default()
 
 # solve the model using the GAMS code provided in the `tests` folder
-fname = os.path.join(ix.default_paths.TEST_DIR, 'transport_ixmp')
+fname = os.path.join(here, 'transport_ixmp')
 scen.solve(model=fname, case='transport_standard')
 
 
@@ -156,7 +151,7 @@ scen.add_par("demand", ['chicago', 'cases', 'consumption', '2010', 'year'],
 scen.add_par("demand", ['topeka', 'cases', 'consumption', '2010', 'year'],
              275.0, "cases")
 bda_data = [
-    {'node_loc': "seattle",   'value': 350.0},
+    {'node_loc': "seattle", 'value': 350.0},
     {'node_loc': "san-diego", 'value': 600}
 ]
 bda = pd.DataFrame(bda_data)

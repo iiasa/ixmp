@@ -10,19 +10,8 @@ from setuptools import setup, Command, find_packages
 from setuptools.command.install import install
 
 INFO = {
-    'version': '0.1.0',
+    'version': '0.1.1',
 }
-
-paths = """
-import os
-
-fullpath = lambda *x: os.path.abspath(os.path.join(*x))
-
-ROOT_DIR = fullpath(r'{here}')
-TEST_DIR = fullpath(r'{here}', 'tests')
-CONFIG_DIR = fullpath(r'{here}', 'config')
-
-""".format(here=os.path.dirname(os.path.realpath(__file__)))
 
 
 class Cmd(install):
@@ -34,8 +23,7 @@ class Cmd(install):
     def finalize_options(self):
         install.finalize_options(self)
 
-    def run(self):
-        install.run(self)
+    def _clean_dirs(self):
         dirs = [
             'ixmp.egg-info',
             'build',
@@ -43,6 +31,10 @@ class Cmd(install):
         for d in dirs:
             print('removing {}'.format(d))
             shutil.rmtree(d)
+
+    def run(self):
+        install.run(self)
+        self._clean_dirs()
 
 
 def main():
@@ -55,6 +47,7 @@ def main():
     entry_points = {
         'console_scripts': [
             'import-timeseries=ixmp.cli:import_timeseries',
+            'ixmp-config=ixmp.cli:config',
         ],
     }
     cmdclass = {
@@ -82,13 +75,8 @@ def main():
         "entry_points": entry_points,
         "cmdclass": cmdclass,
     }
-    print('Writing default_paths.py')
-    pth = os.path.join('ixmp', 'default_paths.py')
-    with open(pth, 'w') as f:
-        f.write(paths)
     rtn = setup(**setup_kwargs)
-    print('Removing default_paths.py')
-    os.remove(pth)
+
 
 if __name__ == "__main__":
     main()

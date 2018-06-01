@@ -5,7 +5,14 @@ import pandas.util.testing as pdt
 import ixmp
 import pytest
 
-from testing_utils import test_mp, test_mp_props
+from ixmp.default_path_constants import CONFIG_PATH
+
+from testing_utils import (
+    test_mp,
+    test_mp_props,
+    test_mp_use_default_dbprops_file,
+    test_mp_use_db_config_path,
+)
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
@@ -15,6 +22,30 @@ msg_multiyear_args = ('canning problem (MESSAGE scheme)', 'multi-year')
 # string columns for timeseries checks
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 cols_str = ['region', 'variable', 'unit', 'year']
+
+
+def local_config_exists():
+    return os.path.exists(CONFIG_PATH)
+
+
+@pytest.mark.skipif(local_config_exists(),
+                    reason='will not overwrite local config files')
+def test_default_dbprops_file(test_mp_use_default_dbprops_file):
+    test_mp = test_mp_use_default_dbprops_file
+    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
+
+
+@pytest.mark.skipif(local_config_exists(),
+                    reason='will not overwrite local config files')
+def test_db_config_path(test_mp_use_db_config_path):
+    test_mp = test_mp_use_db_config_path
+    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
+
+
+def test_platform_init_raises():
+    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
 
 
 def test_scen_list(test_mp):
@@ -134,7 +165,7 @@ def test_add_cat(test_mp):
     scen2 = scen.clone(keep_sol=False)
     scen2.check_out()
     scen2.add_cat('technology', 'trade',
-                ['transport_from_san-diego', 'transport_from_seattle'])
+                  ['transport_from_san-diego', 'transport_from_seattle'])
     df = scen2.cat('technology', 'trade')
     npt.assert_array_equal(
         df, ['transport_from_san-diego', 'transport_from_seattle'])
@@ -213,7 +244,7 @@ def test_get_timeseries_iamc(test_mp):
     df['unit'] = '???'
     df = df.pivot_table(index=iamc_idx_cols, columns='year')['value']
     df.reset_index(inplace=True)
-    
+
     exp = pd.DataFrame.from_dict(df)
     npt.assert_array_equal(exp[iamc_idx_cols], obs[iamc_idx_cols])
     npt.assert_array_almost_equal(exp[2010], obs[2010])

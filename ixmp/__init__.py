@@ -1,9 +1,11 @@
 from ixmp.core import *
 
-from ixmp import default_paths
-from ixmp import model_settings
-from ixmp import utils
-from ixmp import testing
+from ixmp import (
+    model_settings,
+    utils,
+    default_paths,
+    config,
+)
 
 model_settings.register_model(
     'default',

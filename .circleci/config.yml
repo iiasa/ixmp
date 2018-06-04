@@ -1,5 +1,5 @@
 version: 2
-1;4205;0cjobs:
+jobs:
   build:
     working_directory: ~/ixmp
     docker:

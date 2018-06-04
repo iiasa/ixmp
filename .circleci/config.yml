@@ -14,12 +14,12 @@ jobs:
           name: Build App Docker Image
           command: docker build -t ixmp/ixmp:latest .
       - run:
+          name: Build Docs
+          command: docker run ixmp/ixmp:latest /bin/bash -c 'cd /ixmp/doc && pip3 install -r requirements.txt && make html'
+      - run:
           name: Python2 Tests
           command: docker run ixmp/ixmp:latest python2 -m pytest /ixmp/tests
       - run:
           name: Python3 Tests
           command: docker run ixmp/ixmp:latest python3 -m pytest /ixmp/tests
-      - run:
-          name: Build Docs
-          command: docker run ixmp/ixmp:latest /bin/bash -c 'cd /ixmp/doc && pip3 install -r requirements.txt && make html'
       

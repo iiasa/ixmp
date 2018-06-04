@@ -9,8 +9,10 @@ import glob
 from setuptools import setup, Command, find_packages
 from setuptools.command.install import install
 
+import ixmp
+
 INFO = {
-    'version': '0.1.1',
+    'version': ixmp.__version__,
 }
 
 

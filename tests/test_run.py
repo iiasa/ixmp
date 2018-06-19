@@ -86,7 +86,7 @@ def test_run_gams_api():
 
     # solve model
     here = os.path.dirname(os.path.abspath(__file__))
-    fname = os.path.join(here, 'transport ixmp')
+    fname = os.path.join(here, 'transport_ixmp')
     scen.solve(model=fname)
 
     # test it

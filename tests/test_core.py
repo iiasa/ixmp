@@ -16,8 +16,6 @@ from testing_utils import (
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
-msg_args = ('canning problem (MESSAGE scheme)', 'standard')
-msg_multiyear_args = ('canning problem (MESSAGE scheme)', 'multi-year')
 
 # string columns for timeseries checks
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
@@ -67,6 +65,7 @@ def test_init_par_35(test_mp):
     scen = test_mp.Scenario(*can_args, version='new')
     scen.init_set('ii')
     scen.init_par('new_par', idx_sets='ii')
+
 
 def test_get_scalar(test_mp):
     scen = test_mp.Scenario(*can_args)
@@ -153,54 +152,6 @@ def test_par_filters_unit(test_mp):
     assert obs == exp
 
 
-def test_cat_all(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    df = scen.cat('technology', 'all')
-    npt.assert_array_equal(df, ['canning_plant', 'transport_from_seattle',
-                                'transport_from_san-diego'])
-
-
-def test_add_cat(test_mp):
-    scen = test_mp.Scenario(*msg_args)
-    scen2 = scen.clone(keep_sol=False)
-    scen2.check_out()
-    scen2.add_cat('technology', 'trade',
-                  ['transport_from_san-diego', 'transport_from_seattle'])
-    df = scen2.cat('technology', 'trade')
-    npt.assert_array_equal(
-        df, ['transport_from_san-diego', 'transport_from_seattle'])
-    scen2.discard_changes()
-
-
-def test_add_cat_unique(test_mp):
-    scen = test_mp.Scenario(*msg_multiyear_args)
-    scen2 = scen.clone(keep_sol=False)
-    scen2.check_out()
-    scen2.add_cat('year', 'firstmodelyear', 2020, True)
-    df = scen2.cat('year', 'firstmodelyear')
-    npt.assert_array_equal(
-        df, ['2020'])
-    scen2.discard_changes()
-
-
-def test_years_active(test_mp):
-    scen = test_mp.Scenario(*msg_multiyear_args)
-    df = scen.years_active('seattle', 'canning_plant', '2020')
-    npt.assert_array_equal(df, [2020, 2030])
-
-
-def test_years_active_extend(test_mp):
-    scen = test_mp.Scenario(*msg_multiyear_args)
-    scen = scen.clone(keep_sol=False)
-    scen.check_out()
-    scen.add_set('year', ['2040', '2050'])
-    scen.add_par('duration_period', '2040', 10, 'y')
-    scen.add_par('duration_period', '2050', 10, 'y')
-    df = scen.years_active('seattle', 'canning_plant', '2020')
-    npt.assert_array_equal(df, [2020, 2030, 2040])
-    scen.discard_changes()
-
-
 def test_new_timeseries(test_mp):
     scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
     df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
@@ -208,34 +159,6 @@ def test_new_timeseries(test_mp):
     df['region'] = 'World'
     df['variable'] = 'Testing'
     df['unit'] = '???'
-    scen.add_timeseries(df)
-    scen.commit('importing a testing timeseries')
-
-
-def test_new_timeseries_long_name64(test_mp):
-    scen = test_mp.Scenario(*msg_multiyear_args)
-    scen = scen.clone(keep_sol=False)
-    scen.check_out(timeseries_only=True)
-    df = pd.DataFrame({
-    'region': ['India', ],
-    'variable': ['Emissions|CO2|Energy|Demand|Transportation|Aviation|Domestic|Fre',],
-    'unit': [ 'Mt CO2/yr', ],
-    '2012': [ 0.257009, ]
-    })
-    scen.add_timeseries(df)
-    scen.commit('importing a testing timeseries')
-
-
-def test_new_timeseries_long_name64plus(test_mp):
-    scen = test_mp.Scenario(*msg_multiyear_args)
-    scen = scen.clone(keep_sol=False)
-    scen.check_out(timeseries_only=True)
-    df = pd.DataFrame({
-    'region': ['India', ],
-    'variable': ['Emissions|CO2|Energy|Demand|Transportation|Aviation|Domestic|Freight|Oil',],
-    'unit': [ 'Mt CO2/yr', ],
-    '2012': [ 0.257009, ]
-    })
     scen.add_timeseries(df)
     scen.commit('importing a testing timeseries')
 

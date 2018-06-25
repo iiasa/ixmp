@@ -1,7 +1,7 @@
-import jpype
 import os
 import sys
 import warnings
+import jpype
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,6 @@ from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
 from ixmp.default_paths import default_dbprops_file, find_dbprops
 from ixmp.utils import logger
-
 
 # %% default settings for column headers
 
@@ -887,8 +886,9 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, first_model_year=None, **kwargs):
+    def clone(self, model=None, scen=None, annotation=None,
+              keep_solution=True, first_model_year=None, platform=None,
+              **kwargs):
         """clone the current scenario and return the new scenario
 
         Parameters
@@ -905,6 +905,8 @@ class Scenario(TimeSeries):
         first_model_year: int, default None
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
+        platform : ixmp.Platform
+            Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
             warnings.warn(
@@ -914,10 +916,11 @@ class Scenario(TimeSeries):
 
         first_model_year = first_model_year or 0
 
+        platform = self.platform if not platform else platform
         model = self.model if not model else model
         scenario = self.scenario if not scenario else scenario
 
-        return Scenario(self.platform, model, scenario,
+        return Scenario(platform, model, scenario,
                         version=self._jobj.clone(model, scenario, annotation,
                                                  keep_solution,
                                                  first_model_year),
@@ -1060,6 +1063,35 @@ class Scenario(TimeSeries):
             vintage year
         """
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
+
+    def get_meta(self, name=None):
+        """get scenario metadata
+
+        Parameters
+        ----------
+        name : string, optional
+            metadata attribute name
+        """
+        def unwrap(value):
+            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            if type(value).__name__ == 'java.math.BigDecimal':
+                return value.doubleValue()
+            return value
+        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
+        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
+        return meta if name is None else meta[name]
+
+    def set_meta(self, name, value):
+        """set scenario metadata
+
+        Parameters
+        ----------
+        name : string
+            metadata attribute name
+        value : string|number|boolean
+            metadata attribute value
+        """
+        self._jobj.setMeta(name, value)
 
 
 # %% auxiliary functions for class Scenario

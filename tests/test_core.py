@@ -229,6 +229,9 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
+<< << << < 86b5eec99a30e75d0041eb7cc71457bfd8c01643
+
+
 def test_meta(test_mp):
     test_dict = {
         "test_string": 'test12345',
@@ -253,3 +256,18 @@ def test_meta(test_mp):
     obs = scen.get_meta('test_string')
     exp = test_dict['test_string']
     assert obs == exp
+
+
+def test_load_scenario_data(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=True)
+    scen.load_scenario_data()
+    assert ('par', 'd') in scen._pycache  # key exists
+    df = scen.par('d', filters={'i': ['seattle']})
+    obs = df.loc[0, 'unit']
+    exp = 'km'
+    assert obs == exp
+
+
+def test_load_scenario_data_raises(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=False)
+    pytest.raises(ValueError, scen.load_scenario_data)

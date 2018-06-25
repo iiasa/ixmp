@@ -453,13 +453,29 @@ class Scenario(TimeSeries):
         }
         return funcs[ix_type](name)
 
+    def load_scenario_data(self):
+        """Completely load a scenario into cached memory"""
+        if not self._cache:
+            raise ValueError('Cache must be enabled to load scenario data')
+
+        funcs = {
+            'set': (self.set_list, self.set),
+            'par': (self.par_list, self.par),
+            'var': (self.var_list, self.var),
+            'equ': (self.equ_list, self.equ),
+        }
+        for ix_type, (list_func, get_func) in funcs.items():
+            logger().info('Caching {} data'.format(ix_type))
+            for item in list_func():
+                get_func(item)
+
     def element(self, ix_type, name, filters=None, cache=None):
         """internal function to retrieve a dataframe of item elements"""
         item = self.item(ix_type, name)
 
         # if dataframe in python cache, retrieve from there
         if name in self._pycache:
-            return filtered(self._pycache[name], filters)
+            return filtered(self._pycache[(ix_type, name)], filters)
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
@@ -470,7 +486,7 @@ class Scenario(TimeSeries):
 
         # save if using memcache
         if self._cache:
-            self._pycache[name] = df
+            self._pycache[(ix_type, name)] = df
 
         return filtered(df, filters)
 
@@ -1000,8 +1016,9 @@ class Scenario(TimeSeries):
         if name is None:
             self._pycache = {}
         # remove this element from the python data cache
-        if name is not None and name in self._pycache:
-            del self._pycache[name]
+        for key in self._pycache:
+            if key[1] == name:  # 0 is ix_type, 1 is name
+                self._pycache.pop(key)
 
     def years_active(self, node, tec, yr_vtg):
         """return a list of years in which a technology of certain vintage

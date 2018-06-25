@@ -8,6 +8,12 @@ import pandas as pd
 from jpype import JPackage as java
 from subprocess import check_call
 
+try:
+    from functools import lru_cache  # py3
+except ImportError:
+    from functools32 import lru_cache  # py2
+
+
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
@@ -550,6 +556,7 @@ class Scenario(TimeSeries):
         """
         self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
 
+    @lru_cache
     def set(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific set
 
@@ -650,6 +657,7 @@ class Scenario(TimeSeries):
         """
         self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
 
+    @lru_cache
     def par(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific parameter
 
@@ -817,6 +825,7 @@ class Scenario(TimeSeries):
         """
         self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
 
+    @lru_cache
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
 
@@ -847,6 +856,7 @@ class Scenario(TimeSeries):
         """
         self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
 
+    @lru_cache
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation
 

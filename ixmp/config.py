@@ -16,7 +16,7 @@ def get(key):
 
     if key not in data:
         raise RuntimeError(
-            '{} is not configured, do so with `$ ixmp-config -h`')
+            '{} is not configured, do so with `$ ixmp-config -h`'.format(key))
 
     return data[key]
 

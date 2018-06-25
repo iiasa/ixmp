@@ -3,6 +3,8 @@ jdbc.url.1 = jdbc:hsqldb:hsql://localhost/ixmptest
 jdbc.user.1 = ixmp
 jdbc.pwd.1 = ixmp
 
+force_migration = false
+
 jdbc.driver.2 = org.hsqldb.jdbcDriver
 jdbc.url.2 = jdbc:hsqldb:hsql://localhost/ixmptest
 jdbc.user.2 = ixmp

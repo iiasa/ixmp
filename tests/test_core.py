@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 from numpy import testing as npt
-import pandas.util.testing as pdt
 import ixmp
 import pytest
 

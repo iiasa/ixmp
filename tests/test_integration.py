@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pandas.util.testing as pdt
 
 import ixmp
 
@@ -75,11 +76,15 @@ def make_scenario(platform):
     scen.commit(comment)
 
     # solve model
+    solve_scenario(scen)
+
+    return scen
+
+
+def solve_scenario(scen):
     here = os.path.dirname(os.path.abspath(__file__))
     fname = os.path.join(here, 'transport_ixmp')
     scen.solve(model=fname)
-
-    return scen
 
 
 def test_run_gams_api():
@@ -95,3 +100,14 @@ def test_run_gams_api():
     obs = scen.var('z')['lvl']
     exp = 153.675
     assert np.isclose(obs, exp)
+
+
+def test_multi_db_run():
+    mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen1 = make_scenario(mp1)
+
+    mp2 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen2 = scen1.clone(platform=mp2, keep_sol=False)
+    solve_scenario(scen2)
+
+    pdt.assert_frame_equal(scen1.var('z'), scen2.var('z'))

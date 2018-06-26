@@ -859,12 +859,14 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scen=None, annotation=None, keep_sol=True,
-              first_model_year=None):
+    def clone(self, platform=None, model=None, scen=None, annotation=None,
+              keep_sol=True, first_model_year=None):
         """clone the current scenario and return the new scenario
 
         Parameters
         ----------
+        platform : ixmp.Platform
+            Platform to clone to (default: current platform)
         model : string
             new model name
         scen : string
@@ -880,9 +882,10 @@ class Scenario(TimeSeries):
         """
         first_model_year = first_model_year or 0
 
+        platform = self.platform if not platform else platform
         model = self.model if not model else model
         scen = self.scenario if not scen else scen
-        return Scenario(self.platform, model, scen,
+        return Scenario(platform, model, scen,
                         self._jobj.clone(model, scen, annotation,
                                          keep_sol, first_model_year),
                         cache=self._cache)

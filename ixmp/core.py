@@ -858,7 +858,7 @@ class Scenario(TimeSeries):
         return self.element('equ', name, filters, **kwargs)
 
     def clone(self, model=None, scen=None, annotation=None, keep_sol=True,
-        first_model_year=None, platform=None):
+              first_model_year=None, platform=None):
         """clone the current scenario and return the new scenario
 
         Parameters
@@ -1027,8 +1027,11 @@ class Scenario(TimeSeries):
 
 # %% auxiliary functions for class Scenario
 
-unwrap = lambda value: value.doubleValue() \
-    if type(value).__name__ == 'java.math.BigDecimal' else value
+def unwrap(value):
+    if type(value).__name__ == 'java.math.BigDecimal':
+        return value.doubleValue()
+    return value
+
 
 def filtered(df, filters):
     """Returns a filtered dataframe based on a filters dictionary"""

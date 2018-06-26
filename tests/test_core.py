@@ -221,6 +221,7 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
+
 def test_add_meta(test_mp):
     scen = test_mp.Scenario(*can_args, version=1)
     scen.set_meta('test_string', 'test12345')
@@ -236,3 +237,4 @@ def test_add_meta(test_mp):
         ('test_bool', True), ('test_bool_false', False)
     ])
     npt.assert_equal(obs, exp)
+

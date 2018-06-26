@@ -7,13 +7,6 @@ import pytest
 
 from ixmp.default_path_constants import CONFIG_PATH
 
-from testing_utils import (
-    test_mp,
-    test_mp_props,
-    test_mp_use_default_dbprops_file,
-    test_mp_use_db_config_path,
-)
-
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 
@@ -227,3 +220,18 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_load_scenario_data(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=True)
+    scen.load_scenario_data()
+    assert ('par', 'd') in scen._pycache  # key exists
+    df = scen.par('d', filters={'i': ['seattle']})
+    obs = df.loc[0, 'unit']
+    exp = 'km'
+    assert obs == exp
+
+
+def test_load_scenario_data_raises(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=False)
+    pytest.raises(ValueError, scen.load_scenario_data)

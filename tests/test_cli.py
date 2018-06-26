@@ -4,7 +4,7 @@ import pandas as pd
 import ixmp as ix
 from numpy import testing as npt
 
-from testing_utils import here, test_mp_props
+from testing_utils import here
 
 
 def test_import_timeseries(test_mp_props):

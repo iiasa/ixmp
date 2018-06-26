@@ -7,13 +7,6 @@ import pytest
 
 from ixmp.default_path_constants import CONFIG_PATH
 
-from testing_utils import (
-    test_mp,
-    test_mp_props,
-    test_mp_use_default_dbprops_file,
-    test_mp_use_db_config_path,
-)
-
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 

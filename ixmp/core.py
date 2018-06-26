@@ -1019,20 +1019,16 @@ class Scenario(TimeSeries):
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
     def get_meta(self, name=None):
-        return {x.getKey(): unwrap(x.getValue()) for x in
-                np.array(self._jobj.getMeta().entrySet().toArray()[:])}
+        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
+        return {x.getKey(): unwrap(x.getValue()) for x in meta}
 
     def set_meta(self, name, value):
         self._jobj.setMeta(name, value)
 
 # %% auxiliary functions for class Scenario
 
-def unwrap(value):
-    """Returns unwrapped metadata value
-    (numeric values are saved as BigDecimal numbers in ixmp core)"""
-    if type(value).__name__ == 'java.math.BigDecimal':
-        return value.doubleValue()
-    return value
+unwrap = lambda value: value.doubleValue() \
+    if type(value).__name__ == 'java.math.BigDecimal' else value
 
 def filtered(df, filters):
     """Returns a filtered dataframe based on a filters dictionary"""

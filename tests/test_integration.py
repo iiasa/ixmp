@@ -75,9 +75,6 @@ def make_scenario(platform):
     comment = "creating Dantzig's transport problem for unit test"
     scen.commit(comment)
 
-    # solve model
-    solve_scenario(scen)
-
     return scen
 
 
@@ -95,6 +92,7 @@ def test_run_gams_api():
     # - performs the test on the objective value
     mp = ixmp.Platform(tempdir(), dbtype='HSQLDB')
     scen = make_scenario(mp)
+    solve_scenario(scen)
 
     # test it
     obs = scen.var('z')['lvl']

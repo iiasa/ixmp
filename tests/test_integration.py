@@ -103,6 +103,7 @@ def test_run_gams_api():
 def test_multi_db_run():
     mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
     scen1 = make_scenario(mp1)
+    solve_scenario(scen1)
 
     mp2 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
     scen2 = scen1.clone(platform=mp2, keep_sol=False)

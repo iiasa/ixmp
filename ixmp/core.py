@@ -4,7 +4,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-
 from jpype import JPackage as java
 from subprocess import check_call
 
@@ -13,7 +12,6 @@ from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
 from ixmp.default_paths import default_dbprops_file, find_dbprops
 from ixmp.utils import logger
-
 
 # %% default settings for column headers
 
@@ -859,8 +857,8 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, platform=None, model=None, scen=None, annotation=None,
-              keep_sol=True, first_model_year=None):
+    def clone(self, model=None, scen=None, annotation=None, keep_sol=True,
+        first_model_year=None, platform=None):
         """clone the current scenario and return the new scenario
 
         Parameters

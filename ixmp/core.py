@@ -1027,7 +1027,9 @@ class Scenario(TimeSeries):
 
 # %% auxiliary functions for class Scenario
 
+
 def unwrap(value):
+    """Unwrap metadata numeric value (BigDecimal -> Double)"""
     if type(value).__name__ == 'java.math.BigDecimal':
         return value.doubleValue()
     return value

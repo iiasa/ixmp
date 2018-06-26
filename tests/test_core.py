@@ -237,4 +237,3 @@ def test_add_meta(test_mp):
         ('test_bool', True), ('test_bool_false', False)
     ])
     npt.assert_equal(obs, exp)
-

@@ -1,17 +1,11 @@
 import os
+
 import pandas as pd
-from numpy import testing as npt
-import ixmp
 import pytest
+from numpy import testing as npt
 
+import ixmp
 from ixmp.default_path_constants import CONFIG_PATH
-
-from testing_utils import (
-    test_mp,
-    test_mp_props,
-    test_mp_use_default_dbprops_file,
-    test_mp_use_db_config_path,
-)
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
@@ -235,12 +229,10 @@ def test_add_meta(test_mp):
     scen.set_meta('test_int', 12345)
     scen.set_meta('test_bool', True)
     scen.set_meta('test_bool_false', False)
-    meta = scen.get_meta()
-    npt.assert_equal(meta, dict([
-        ("test_string", 'test12345'),
-        ("test_number", 123.456),
-        ("test_number_negative", -123.456),
-        ('test_int', 12345),
-        ('test_bool', True),
-        ('test_bool_false', False)
-    ]))
+    obs = scen.get_meta()
+    exp = dict([
+        ("test_string", 'test12345'), ("test_number", 123.456),
+        ("test_number_negative", -123.456), ('test_int', 12345),
+        ('test_bool', True), ('test_bool_false', False)
+    ])
+    npt.assert_equal(obs, exp)

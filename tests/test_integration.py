@@ -2,30 +2,20 @@ import os
 
 import numpy as np
 import pandas as pd
-import tempfile
 
 import ixmp
 
+from testing_utils import tempdir
 
-def test_run_gams_api():
-    # this test is designed to cover the full functionality of the GAMS API
-    # - creates a new scenario and exports a gdx file
-    # - runs the tutorial transport model
-    # - reads back the solution from the output
-    # - performs the test on the objective value
 
-    tempdir = os.path.join(tempfile._get_default_tempdir(),
-                           next(tempfile._get_candidate_names()))
-
-    mp = ixmp.Platform(tempdir, dbtype='HSQLDB')
-
+def make_scenario(platform):
     # details for creating a new scenario in the IX modeling platform
     model = "canning problem"
     scenario = "standard"
     annot = "Dantzig's transportation problem for illustration and testing"
 
     # initialize a new scenario instance
-    scen = mp.Scenario(model, scenario, version='new', annotation=annot)
+    scen = platform.Scenario(model, scenario, version='new', annotation=annot)
 
     # define the sets of locations of canning plants and markets
     scen.init_set("i")
@@ -88,6 +78,18 @@ def test_run_gams_api():
     here = os.path.dirname(os.path.abspath(__file__))
     fname = os.path.join(here, 'transport_ixmp')
     scen.solve(model=fname)
+
+    return scen
+
+
+def test_run_gams_api():
+    # this test is designed to cover the full functionality of the GAMS API
+    # - creates a new scenario and exports a gdx file
+    # - runs the tutorial transport model
+    # - reads back the solution from the output
+    # - performs the test on the objective value
+    mp = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen = make_scenario(mp)
 
     # test it
     obs = scen.var('z')['lvl']

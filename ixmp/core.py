@@ -472,10 +472,11 @@ class Scenario(TimeSeries):
     def element(self, ix_type, name, filters=None, cache=None):
         """internal function to retrieve a dataframe of item elements"""
         item = self.item(ix_type, name)
+        cache_key = (ix_type, name)
 
         # if dataframe in python cache, retrieve from there
-        if name in self._pycache:
-            return filtered(self._pycache[(ix_type, name)], filters)
+        if cache_key in self._pycache:
+            return filtered(self._pycache[cache_key], filters)
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
@@ -486,7 +487,7 @@ class Scenario(TimeSeries):
 
         # save if using memcache
         if self._cache:
-            self._pycache[(ix_type, name)] = df
+            self._pycache[cache_key] = df
 
         return filtered(df, filters)
 

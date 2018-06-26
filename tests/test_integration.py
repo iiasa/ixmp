@@ -110,3 +110,67 @@ def test_multi_db_run():
     solve_scenario(scen2)
 
     assert scen1.var('z') == scen2.var('z')
+
+
+def test_multi_db_edit_source():
+    mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen1 = make_scenario(mp1)
+
+    mp2 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen2 = scen1.clone(platform=mp2)
+
+    pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
+
+    scen1.check_out()
+    scen1.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
+    scen1.commit('foo')
+
+    obs = (scen1
+           .par('d')
+           .set_index(['i', 'j'])
+           .loc['san-diego', 'topeka']
+           ['value']
+           )
+    exp = 1.5
+    assert np.isclose(obs, exp)
+
+    obs = (scen2
+           .par('d')
+           .set_index(['i', 'j'])
+           .loc['san-diego', 'topeka']
+           ['value']
+           )
+    exp = 1.4
+    assert np.isclose(obs, exp)
+
+
+def test_multi_db_edit_target():
+    mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen1 = make_scenario(mp1)
+
+    mp2 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
+    scen2 = scen1.clone(platform=mp2)
+
+    pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
+
+    scen2.check_out()
+    scen2.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
+    scen2.commit('foo')
+
+    obs = (scen2
+           .par('d')
+           .set_index(['i', 'j'])
+           .loc['san-diego', 'topeka']
+           ['value']
+           )
+    exp = 1.5
+    assert np.isclose(obs, exp)
+
+    obs = (scen1
+           .par('d')
+           .set_index(['i', 'j'])
+           .loc['san-diego', 'topeka']
+           ['value']
+           )
+    exp = 1.4
+    assert np.isclose(obs, exp)

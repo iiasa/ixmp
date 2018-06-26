@@ -46,3 +46,12 @@ rixmp/source/inst/docum/*.html
 rixmp/source/.Rhistory
 !rixmp/source/*.Rproj
 .Rproj.user
+
+# virtualenv
+.env
+
+# pytest
+.pytest_cache/
+
+# idea
+.idea/

@@ -226,3 +226,21 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+def test_add_meta(test_mp):
+    scen = test_mp.Scenario(*can_args, version=1)
+    scen.set_meta('test_string', 'test12345')
+    scen.set_meta('test_number', 123.456)
+    scen.set_meta("test_number_negative", -123.456)
+    scen.set_meta('test_int', 12345)
+    scen.set_meta('test_bool', True)
+    scen.set_meta('test_bool_false', False)
+    meta = scen.get_meta()
+    npt.assert_equal(meta, dict([
+        ("test_string", 'test12345'),
+        ("test_number", 123.456),
+        ("test_number_negative", -123.456),
+        ('test_int', 12345),
+        ('test_bool', True),
+        ('test_bool_false', False)
+    ]))

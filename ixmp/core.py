@@ -1,11 +1,11 @@
-import jpype
 import os
 import sys
+from subprocess import check_call
 
+import jpype
 import numpy as np
 import pandas as pd
 from jpype import JPackage as java
-from subprocess import check_call
 
 import ixmp as ix
 from ixmp import model_settings
@@ -1018,9 +1018,21 @@ class Scenario(TimeSeries):
         """
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
+    def get_meta(self, name=None):
+        return {x.getKey(): unwrap(x.getValue()) for x in
+                np.array(self._jobj.getMeta().entrySet().toArray()[:])}
+
+    def set_meta(self, name, value):
+        self._jobj.setMeta(name, value)
 
 # %% auxiliary functions for class Scenario
 
+def unwrap(value):
+    """Returns unwrapped metadata value
+    (numeric values are saved as BigDecimal numbers in ixmp core)"""
+    if type(value).__name__ == 'java.math.BigDecimal':
+        return value.doubleValue()
+    return value
 
 def filtered(df, filters):
     """Returns a filtered dataframe based on a filters dictionary"""

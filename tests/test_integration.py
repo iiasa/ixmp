@@ -110,4 +110,4 @@ def test_multi_db_run():
     scen2 = scen1.clone(platform=mp2, keep_sol=False)
     solve_scenario(scen2)
 
-    pdt.assert_frame_equal(scen1.var('z'), scen2.var('z'))
+    assert scen1.var('z') == scen2.var('z')

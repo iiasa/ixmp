@@ -244,3 +244,6 @@ def test_add_meta(test_mp):
         ('test_bool', True), ('test_bool_false', False)
     ])
     npt.assert_equal(obs, exp)
+    obs = scen.get_meta(name='test_number')
+    exp = dict([("test_number", 123.456)])
+    npt.assert_equal(obs, exp)

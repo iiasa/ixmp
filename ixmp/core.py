@@ -863,8 +863,6 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        platform : ixmp.Platform
-            Platform to clone to (default: current platform)
         model : string
             new model name
         scen : string
@@ -877,6 +875,8 @@ class Scenario(TimeSeries):
         first_model_year: int, default None
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
+        platform : ixmp.Platform
+            Platform to clone to (default: current platform)
         """
         first_model_year = first_model_year or 0
 
@@ -1019,20 +1019,36 @@ class Scenario(TimeSeries):
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
     def get_meta(self, name=None):
+        """get scenario metadata
+
+        Parameters
+        ----------
+        name : string
+            metadata attribute name
+        """
+        def unwrap(value):
+            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            if type(value).__name__ == 'java.math.BigDecimal':
+                return value.doubleValue()
+            return value
         meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
-        return {x.getKey(): unwrap(x.getValue()) for x in meta}
+        return {x.getKey(): unwrap(x.getValue()) for x in meta
+                if name is None or x.getKey() == name}
 
     def set_meta(self, name, value):
+        """set scenario metadata
+
+        Parameters
+        ----------
+        name : string
+            metadata attribute name
+        value : string|number|boolean
+            metadata attribute value
+        """
         self._jobj.setMeta(name, value)
 
+
 # %% auxiliary functions for class Scenario
-
-
-def unwrap(value):
-    """Unwrap metadata numeric value (BigDecimal -> Double)"""
-    if type(value).__name__ == 'java.math.BigDecimal':
-        return value.doubleValue()
-    return value
 
 
 def filtered(df, filters):

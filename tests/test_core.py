@@ -1,10 +1,10 @@
 import os
-import pandas as pd
-from numpy import testing as npt
-import pandas.util.testing as pdt
-import ixmp
-import pytest
 
+import pandas as pd
+import pytest
+from numpy import testing as npt
+
+import ixmp
 from ixmp.default_path_constants import CONFIG_PATH
 
 from testing_utils import (
@@ -227,3 +227,23 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_add_meta(test_mp):
+    scen = test_mp.Scenario(*can_args, version=1)
+    scen.set_meta('test_string', 'test12345')
+    scen.set_meta('test_number', 123.456)
+    scen.set_meta("test_number_negative", -123.456)
+    scen.set_meta('test_int', 12345)
+    scen.set_meta('test_bool', True)
+    scen.set_meta('test_bool_false', False)
+    obs = scen.get_meta()
+    exp = dict([
+        ("test_string", 'test12345'), ("test_number", 123.456),
+        ("test_number_negative", -123.456), ('test_int', 12345),
+        ('test_bool', True), ('test_bool_false', False)
+    ])
+    npt.assert_equal(obs, exp)
+    obs = scen.get_meta(name='test_number')
+    exp = dict([("test_number", 123.456)])
+    npt.assert_equal(obs, exp)

@@ -222,6 +222,7 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
+<< << << < 13485e37fee212a06b556cd584dfa63d5c1ec9c8
 << << << < 86b5eec99a30e75d0041eb7cc71457bfd8c01643
 
 
@@ -264,3 +265,26 @@ def test_load_scenario_data(test_mp):
 def test_load_scenario_data_raises(test_mp):
     scen = test_mp.Scenario(*can_args, cache=False)
     pytest.raises(ValueError, scen.load_scenario_data)
+
+
+def test_add_meta(test_mp):
+    scen = test_mp.Scenario(*can_args, version=1)
+    scen.set_meta('test_string', 'test12345')
+    scen.set_meta('test_number', 123.456)
+    scen.set_meta("test_number_negative", -123.456)
+    scen.set_meta('test_int', 12345)
+    scen.set_meta('test_bool', True)
+    scen.set_meta('test_bool_false', False)
+    obs = scen.get_meta()
+    exp = dict([
+        ("test_string", 'test12345'), ("test_number", 123.456),
+        ("test_number_negative", -123.456), ('test_int', 12345),
+        ('test_bool', True), ('test_bool_false', False)
+    ])
+    npt.assert_equal(obs, exp)
+    obs = scen.get_meta(name='test_number')
+    exp = dict([("test_number", 123.456)])
+    npt.assert_equal(obs, exp)
+
+
+>>>>>> > appease stickler

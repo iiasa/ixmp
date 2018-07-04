@@ -285,6 +285,3 @@ def test_add_meta(test_mp):
     obs = scen.get_meta(name='test_number')
     exp = dict([("test_number", 123.456)])
     npt.assert_equal(obs, exp)
-
-
->>>>>> > appease stickler

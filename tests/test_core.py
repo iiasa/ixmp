@@ -229,21 +229,27 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
-def test_add_meta(test_mp):
+def test_meta(test_mp):
+    test_dict = {
+        "test_string": 'test12345',
+        "test_number": 123.456,
+        "test_number_negative": -123.456,
+        'test_int': 12345,
+        'test_bool': True,
+        'test_bool_false': False,
+    }
+
     scen = test_mp.Scenario(*can_args, version=1)
-    scen.set_meta('test_string', 'test12345')
-    scen.set_meta('test_number', 123.456)
-    scen.set_meta("test_number_negative", -123.456)
-    scen.set_meta('test_int', 12345)
-    scen.set_meta('test_bool', True)
-    scen.set_meta('test_bool_false', False)
-    obs = scen.get_meta()
-    exp = dict([
-        ("test_string", 'test12345'), ("test_number", 123.456),
-        ("test_number_negative", -123.456), ('test_int', 12345),
-        ('test_bool', True), ('test_bool_false', False)
-    ])
-    npt.assert_equal(obs, exp)
-    obs = scen.get_meta(name='test_number')
-    exp = dict([("test_number", 123.456)])
-    npt.assert_equal(obs, exp)
+    for k, v in test_dict.items():
+        scen.set_meta(k, v)
+
+    # test all
+    obs_dict = scen.get_meta()
+    for k, exp in test_dict.items():
+        obs = obs_dict[k]
+        assert obs == exp
+
+    # test name
+    obs = scen.get_meta('test_string')
+    exp = test_dict['test_string']
+    assert obs == exp

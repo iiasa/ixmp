@@ -1023,7 +1023,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : string, optional
             metadata attribute name
         """
         def unwrap(value):
@@ -1032,8 +1032,8 @@ class Scenario(TimeSeries):
                 return value.doubleValue()
             return value
         meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
-        return {x.getKey(): unwrap(x.getValue()) for x in meta
-                if name is None or x.getKey() == name}
+        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
+        return meta if name is None else meta[name]
 
     def set_meta(self, name, value):
         """set scenario metadata

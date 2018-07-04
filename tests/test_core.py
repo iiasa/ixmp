@@ -222,10 +222,6 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
-<< << << < 13485e37fee212a06b556cd584dfa63d5c1ec9c8
-<< << << < 86b5eec99a30e75d0041eb7cc71457bfd8c01643
-
-
 def test_meta(test_mp):
     test_dict = {
         "test_string": 'test12345',

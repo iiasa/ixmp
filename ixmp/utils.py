@@ -28,14 +28,18 @@ def pd_read(f, *args, **kwargs):
 
 
 def pd_write(df, f, *args, **kwargs):
-    # guess whether to use index, unless we're told otherwise
-    index = kwargs.pop('index', isinstance(df.index, pd.MultiIndex))
-
+    """Try to write one or more dfs with pandas, no fancy stuff"""
     if f.endswith('csv'):
-        df.to_csv(f, index=index, *args, **kwargs)
+        if not isinstance(df, pd.DataFrame):
+            raise ValueError('Must pass a Dataframe if using csv files')
+        df.to_csv(f, *args, **kwargs)
     else:
         writer = pd.ExcelWriter(f, engine='xlsxwriter')
-        df.to_excel(writer, index=index, *args, **kwargs)
+        if isinstance(df, pd.DataFrame):
+            sheet_name = kwargs.pop('sheet_name', 'Sheet1')
+            df = {sheet_name: df}
+        for k, v in df.items():
+            v.to_excel(writer, sheet_name=k, *args, **kwargs)
         writer.save()
 
 

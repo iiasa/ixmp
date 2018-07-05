@@ -5,6 +5,7 @@ import pandas.util.testing as pdt
 
 from ixmp import utils
 
+
 def do_test(fname, exp):
     utils.pd_write(exp, fname)
     obs = utils.pd_read(fname)

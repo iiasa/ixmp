@@ -30,5 +30,5 @@ def test_pd_io_xlsx_multi():
     exp = {
         'sheet1': pd.DataFrame({'a': [0, 1], 'b': [2, 3]}),
         'sheet2': pd.DataFrame({'c': [4, 5], 'd': [6, 7]}),
-        }
+    }
     do_test(fname, exp)

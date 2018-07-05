@@ -19,7 +19,6 @@ def logger():
     return _LOGGER
 
 
-
 def pd_read(f, *args, **kwargs):
     """Try to read a file with pandas, no fancy stuff"""
     if f.endswith('csv'):
@@ -30,7 +29,7 @@ def pd_read(f, *args, **kwargs):
 
 def pd_write(df, f, *args, **kwargs):
     """Try to write one or more dfs with pandas, no fancy stuff"""
-    is_pd = isinstance(df, [pd.DataFrame, pd.Series])
+    is_pd = isinstance(df, (pd.DataFrame, pd.Series))
     if f.endswith('csv'):
         if not is_pd:
             raise ValueError('Must pass a Dataframe if using csv files')

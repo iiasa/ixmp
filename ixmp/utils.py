@@ -19,6 +19,7 @@ def logger():
     return _LOGGER
 
 
+
 def pd_read(f, *args, **kwargs):
     """Try to read a file with pandas, no fancy stuff"""
     if f.endswith('csv'):
@@ -29,13 +30,14 @@ def pd_read(f, *args, **kwargs):
 
 def pd_write(df, f, *args, **kwargs):
     """Try to write one or more dfs with pandas, no fancy stuff"""
+    is_pd = isinstance(df, [pd.DataFrame, pd.Series])
     if f.endswith('csv'):
-        if not isinstance(df, pd.DataFrame):
+        if not is_pd:
             raise ValueError('Must pass a Dataframe if using csv files')
         df.to_csv(f, *args, **kwargs)
     else:
         writer = pd.ExcelWriter(f, engine='xlsxwriter')
-        if isinstance(df, pd.DataFrame):
+        if is_pd:
             sheet_name = kwargs.pop('sheet_name', 'Sheet1')
             df = {sheet_name: df}
         for k, v in df.items():

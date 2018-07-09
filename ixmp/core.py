@@ -1016,10 +1016,15 @@ class Scenario(TimeSeries):
         # if no name is given, clean the entire cache
         if name is None:
             self._pycache = {}
-        # remove this element from the python data cache
-        for key in self._pycache:
-            if key[1] == name:  # 0 is ix_type, 1 is name
-                self._pycache.pop(key)
+            return  # exit early
+
+        # remove this element from the cache if it exists
+        keys = self._pycache.keys()
+        hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
+        if len(hits) > 1:
+            raise ValueError('Multiple values named {}'.format(name))
+        if hits:
+            self._pycache.pop(hits[0])
 
     def years_active(self, node, tec, yr_vtg):
         """return a list of years in which a technology of certain vintage

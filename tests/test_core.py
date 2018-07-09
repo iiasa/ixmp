@@ -258,6 +258,13 @@ def test_load_scenario_data(test_mp):
     assert obs == exp
 
 
+def test_load_scenario_data_clear_cache(test_mp):
+    # this fails on commit: 4376f54
+    scen = test_mp.Scenario(*can_args, cache=True)
+    scen.load_scenario_data()
+    scen.clear_cache(name='d')
+
+
 def test_load_scenario_data_raises(test_mp):
     scen = test_mp.Scenario(*can_args, cache=False)
     pytest.raises(ValueError, scen.load_scenario_data)

@@ -589,7 +589,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         jSet = self.item('set', name)
 
@@ -640,7 +640,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         if key is None:
             self._jobj.removeSet(name)
@@ -693,7 +693,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         jPar = self.item('par', name)
 
@@ -793,7 +793,7 @@ class Scenario(TimeSeries):
         comment : string
             explanatory comment (optional)
         """
-        self.clear_cache(name)  # delete data for this scalar from the cache
+        self.clear_cache(name=name, ix_type='par')
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
@@ -807,7 +807,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         if key is None:
             self._jobj.removePar(name)
@@ -1005,13 +1005,15 @@ class Scenario(TimeSeries):
         self.read_sol_from_gdx(opth, outgdx, comment,
                                var_list, equ_list, check_sol)
 
-    def clear_cache(self, name=None):
+    def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements
 
         Parameters
         ----------
         name : string, default None
             item name (`None` clears entire Python cache)
+        ix_type : string, default None
+            type of item (if provided, cache clearing is faster)
         """
         # if no name is given, clean the entire cache
         if name is None:
@@ -1019,12 +1021,18 @@ class Scenario(TimeSeries):
             return  # exit early
 
         # remove this element from the cache if it exists
+        key = None
         keys = self._pycache.keys()
-        hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
-        if len(hits) > 1:
-            raise ValueError('Multiple values named {}'.format(name))
-        if hits:
-            self._pycache.pop(hits[0])
+        if ix_type is not None:
+            key = (ix_type, name) if (ix_type, name) in keys else None
+        else:  # look for it
+            hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
+            if len(hits) > 1:
+                raise ValueError('Multiple values named {}'.format(name))
+            if len(hits) == 1:
+                key = hits[0]
+        if key is not None:
+            self._pycache.pop(key)
 
     def years_active(self, node, tec, yr_vtg):
         """return a list of years in which a technology of certain vintage

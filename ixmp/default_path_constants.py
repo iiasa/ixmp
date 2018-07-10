@@ -1,7 +1,8 @@
 import os
 
 # path to local files
-LOCAL_PATH = os.path.expanduser(os.path.join('~', '.local', 'ixmp')).replace('Documents\\','')
+LOCAL_PATH = os.path.expanduser(os.path.join('~', '.local', 'ixmp')
+                                ).replace('Documents\\', '')
 
 # path to local configuration values
 CONFIG_PATH = os.path.join(LOCAL_PATH, 'config.json')

@@ -20,7 +20,7 @@ NULL
             utils::packageDescription(pkgname)$Version) )
 }
 
-utils::globalVariables(c("ixmp_path"))
+#utils::globalVariables(c("ixmp_path"))
 
 ixmp <- NULL
 

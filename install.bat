@@ -19,6 +19,7 @@ IF ERRORLEVEL 1 (
     ECHO No valid installation of R found, skipped build and installation of R package.
 ) ELSE (
     rscript rixmp/build_rixmp.R [--verbose]
+    rscript retixmp/build_retixmp.R [--verbose]
 )
 
 setx IXMP_PATH "%IXMP%"

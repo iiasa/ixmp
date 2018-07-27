@@ -1,6 +1,7 @@
 import jpype
 import os
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -240,6 +241,11 @@ class TimeSeries(object):
 
     def check_out(self, timeseries_only=False):
         """check out from the ixmp database instance for making changes"""
+        if not timeseries_only and self.has_solution():
+            raise ValueError('This Scenario has a solution, '
+                             'use `Scenario.remove_solution()` or '
+                             '`Scenario.clone(..., keep_solution=False)`'
+                             )
         self._jobj.checkOut(timeseries_only)
 
     def commit(self, comment):

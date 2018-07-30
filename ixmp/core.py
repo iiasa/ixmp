@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from jpype import JPackage as java
+from jpype import JClass
 from subprocess import check_call
 
 import ixmp as ix
@@ -49,9 +50,7 @@ def start_jvm(jvmargs=None):
 
 class Platform(object):
     """ The class 'Platform' is the central access point to
-    the ix modeling platform (ixmp). It includes functions for managing
-    and accessing TimeSeries instances (timeseries  and reference data)
-    and Scenario instances (structured model input data and results).
+    the ix modeling platform (ixmp).
 
     Parameters
     ----------
@@ -68,7 +67,6 @@ class Platform(object):
         (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
-
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -139,61 +137,17 @@ class Platform(object):
         df = df[cols]
         return df
 
-    def TimeSeries(self, model, scen, version=None, annotation=None):
-        """Initialize a new TimeSeries (timeseries or reference data)
-        or get an existing TimeSeries instance from the ixmp database.
-
-        Parameters
-        ----------
-        model : string
-            model name
-        scen : string
-            scenario name
-        version : string or integer
-            initialize a new TimeSeries (if version='new'), or
-            load a specific version from the database (if version is integer)
-        annotation : string
-            a short annotation/comment (when initializing a new TimeSeries)
-        """
-        if version == 'new':
-            _jts = self._jobj.newTimeSeries(model, scen, annotation)
-        elif isinstance(version, int):
-            _jts = self._jobj.getTimeSeries(model, scen, version)
-        else:
-            _jts = self._jobj.getTimeSeries(model, scen)
-
-        return TimeSeries(self, model, scen, _jts)
-
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
         """Initialize a new ixmp.Scenario (structured input data and solution)
         or get an existing scenario from the ixmp database instance
 
-        Parameters
-        ----------
-        model : string
-            model name
-        scen : string
-            scenario name
-        version : string or integer
-            initialize a new scenario (if version == 'new'), or
-            load a specific version from the database (if version is integer)
-        scheme : string
-            use an explicit scheme for initializing a new scenario
-            (e.g., 'MESSAGE')
-        annotation : string
-            a short annotation/comment (when initializing a new scenario)
-        memcache : boolean
-            keep all dataframes in memory after first query (default: False)
-        """
-        if version == 'new':
-            _jscen = self._jobj.newScenario(model, scen, scheme, annotation)
-        elif isinstance(version, int):
-            _jscen = self._jobj.getScenario(model, scen, version)
-        else:
-            _jscen = self._jobj.getScenario(model, scen)
+        This function is deprecated, please use `ixmp.Scenario(mp, ...)`"""
 
-        return Scenario(self, model, scen, _jscen, cache=cache)
+        warnings.warn('The constructor `mp.Scenario()` is deprecated, '
+                      'please use `ixmp.Scenario(mp, ...)`')
+
+        return Scenario(self, model, scen, version, scheme, annotation, cache)
 
     def units(self):
         """returns a list of all units initialized
@@ -220,21 +174,35 @@ class TimeSeries(object):
     """The class 'TimeSeries' is a collection of data in timeseries format.
     It can be used for reference data, results from  models submitted
     using the IAMC template, or as parent-class of the 'Scenario' class
-    to store processed model results."""
+    to store processed model results.
 
-    def __init__(self, ix_mp, model, scen, _jobj):
-        """initialize a new Python-class TimeSeries object
-        (via the ixmp.Platform class)"""
+    Parameters
+    ----------
+    mp : ixmp.Platform instance
+    model : string
+        model name
+    scenario : string
+        scenario name
+    version : string or integer
+        initialize a new TimeSeries (if version='new'), or
+        load a specific version from the database (if version is integer)
+    annotation : string
+        a short annotation/comment (when initializing a new TimeSeries)
+    """
+    def __init__(self, mp, model, scenario, version=None, annotation=None):
+        if not isinstance(mp, Platform):
+            raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if not isinstance(ix_mp, Platform):
-            msg = 'Do not initialize a TimeSeries directly, '
-            msg += 'use ixmp.Platform.TimeSeries()!'
-            raise ValueError(msg)
+        if version == 'new':
+            self._jobj = mp._jobj.newTimeSeries(model, scenario, annotation)
+        elif isinstance(version, int):
+            self._jobj = mp._jobj.getTimeSeries(model, scenario, version)
+        else:
+            self._jobj = mp._jobj.getTimeSeries(model, scenario)
 
-        self.platform = ix_mp
+        self.platform = mp
         self.model = model
-        self.scenario = scen
-        self._jobj = _jobj
+        self.scenario = scenario
         self.version = self._jobj.getVersion()
 
     # functions for platform management
@@ -417,6 +385,23 @@ class Scenario(TimeSeries):
     of all data for a model instance (sets and parameters), as well as
     the solution of a model run (levels/marginals of variables and equations).
 
+    Parameters
+    ----------
+    mp : ixmp.Platform instance
+    model : string
+        model name
+    scenario : string
+        scenario name
+    version : string, integer, Java object (at.ac.iiasa.ixmp.objects.Scenario)
+        initialize a new scenario (if version is 'new'),
+        load a specific version from the database (if version is integer)
+    scheme : string
+        use an explicit scheme for initializing a new scenario
+    annotation : string
+        a short annotation/comment (when initializing a new scenario)
+    cache : boolean
+        keep all dataframes in memory after first query (default: False)
+
     The class includes functions to make changes to the data,
     export all data to and import a solution from GAMS gdx,
     and save the scenario data to an ixmp database instance.
@@ -433,19 +418,25 @@ class Scenario(TimeSeries):
         'equ': {'has_level': True},
     }
 
-    def __init__(self, ix_mp, model, scen, _jobj, cache=False):
-        """initialize a new Python-class Scenario object
-        (via the ixmp.Platform class)"""
+    def __init__(self, mp, model, scenario, version=None, scheme=None,
+                 annotation=None, cache=False):
+        if not isinstance(mp, Platform):
+            raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if not isinstance(ix_mp, Platform):
-            msg = 'Do not initialize an Scenario directly, '
-            msg += 'use ixmp.Platform.Scenario()!'
-            raise ValueError(msg)
+        if version == 'new':
+            self._jobj = mp._jobj.newScenario(model, scenario, scheme,
+                                              annotation)
+        elif isinstance(version, int):
+            self._jobj = mp._jobj.getScenario(model, scenario, version)
+        # constructor for `clone()` function
+        elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
+            self._jobj = version
+        else:
+            self._jobj = mp._jobj.getScenario(model, scenario)
 
-        self.platform = ix_mp
+        self.platform = mp
         self.model = model
-        self.scenario = scen
-        self._jobj = _jobj
+        self.scenario = scenario
         self.version = self._jobj.getVersion()
         self._cache = cache
         self._pycache = {}
@@ -865,7 +856,7 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scen=None, annotation=None, keep_solution=True,
+    def clone(self, model=None, scenario=None, annotation=None, keep_solution=True,
               first_model_year=None, **kwargs):
         """clone the current scenario and return the new scenario
 
@@ -893,10 +884,12 @@ class Scenario(TimeSeries):
         first_model_year = first_model_year or 0
 
         model = self.model if not model else model
-        scen = self.scenario if not scen else scen
-        return Scenario(self.platform, model, scen,
-                        self._jobj.clone(model, scen, annotation,
-                                         keep_solution, first_model_year),
+        scenario = self.scenario if not scenario else scenario
+
+        return Scenario(self.platform, model, scenario,
+                        version=self._jobj.clone(model, scenario, annotation,
+                                                 keep_solution,
+                                                 first_model_year),
                         cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):

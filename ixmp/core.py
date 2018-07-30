@@ -1,6 +1,7 @@
 import jpype
 import os
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -240,6 +241,11 @@ class TimeSeries(object):
 
     def check_out(self, timeseries_only=False):
         """check out from the ixmp database instance for making changes"""
+        if not timeseries_only and self.has_solution():
+            raise ValueError('This Scenario has a solution, '
+                             'use `Scenario.remove_solution()` or '
+                             '`Scenario.clone(..., keep_solution=False)`'
+                             )
         self._jobj.checkOut(timeseries_only)
 
     def commit(self, comment):
@@ -859,8 +865,8 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scen=None, annotation=None, keep_sol=True,
-              first_model_year=None):
+    def clone(self, model=None, scen=None, annotation=None, keep_solution=True,
+              first_model_year=None, **kwargs):
         """clone the current scenario and return the new scenario
 
         Parameters
@@ -871,20 +877,26 @@ class Scenario(TimeSeries):
             new scenario name
         annotation : string
             explanatory comment (optional)
-        keep_sol : boolean, default: True
+        keep_solution : boolean, default: True
             indicator whether to include an existing solution
             in the cloned scenario
         first_model_year: int, default None
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
         """
+        if 'keep_sol' in kwargs:
+            warnings.warn(
+                '`keep_sol` is deprecated and will be removed in the next' +
+                ' release, please use `keep_solution`')
+            keep_solution = kwargs.pop('keep_sol')
+
         first_model_year = first_model_year or 0
 
         model = self.model if not model else model
         scen = self.scenario if not scen else scen
         return Scenario(self.platform, model, scen,
                         self._jobj.clone(model, scen, annotation,
-                                         keep_sol, first_model_year),
+                                         keep_solution, first_model_year),
                         cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
@@ -902,7 +914,7 @@ class Scenario(TimeSeries):
         self._jobj.toGDX(path, filename, include_var_equ)
 
     def read_sol_from_gdx(self, path, filename, comment=None,
-                          var_list=None, equ_list=None, check_sol=True):
+                          var_list=None, equ_list=None, check_solution=True):
         """read solution from GAMS gdx and import it to the scenario
 
         Parameters
@@ -917,23 +929,31 @@ class Scenario(TimeSeries):
             variables (levels and marginals) to be imported from gdx
         equ_list : list of strings
             equations (levels and marginals) to be imported from gdx
-        check_sol : boolean, default True
+        check_solution : boolean, default True
             raise an error if GAMS did not solve to optimality
             (only applicable for a MESSAGE-scheme scenario)
         """
         self.clear_cache()  # reset Python data cache
         self._jobj.readSolutionFromGDX(path, filename, comment,
                                        to_jlist(var_list), to_jlist(equ_list),
-                                       check_sol)
+                                       check_solution)
 
-    def remove_sol(self):
+    def has_solution(self):
+        """check whether the Scenario has been solved and a solution (variables
+        and equations) exists in the database"""
+        return self._jobj.hasSolution()
+
+    def remove_solution(self):
         """delete the solution (variables and equations) from the sceanario"""
-        self.clear_cache()  # reset Python data cache
-        self._jobj.removeSolution()
+        if self.has_solution():
+            self.clear_cache()  # reset Python data cache
+            self._jobj.removeSolution()
+        else:
+            raise ValueError('this Scenario does not have a solution')
 
     def solve(self, model, case=None, model_file=None,
               in_file=None, out_file=None, solve_args=None, comment=None,
-              var_list=None, equ_list=None, check_sol=True):
+              var_list=None, equ_list=None, check_solution=True):
         """solve the model (export to gdx, execute GAMS, import the solution)
 
         Parameters
@@ -956,7 +976,7 @@ class Scenario(TimeSeries):
             variables to be imported from the solution
         equ_list : list of strings (optional)
             equations to be imported from the solution
-        check_sol : boolean, default True
+        check_solution : boolean, default True
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         """
@@ -985,7 +1005,7 @@ class Scenario(TimeSeries):
         self.to_gdx(ipth, ingdx)
         run_gams(model_file, args)
         self.read_sol_from_gdx(opth, outgdx, comment,
-                               var_list, equ_list, check_sol)
+                               var_list, equ_list, check_solution)
 
     def clear_cache(self, name=None):
         """clear the Python cache of item elements

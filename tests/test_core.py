@@ -76,7 +76,7 @@ def test_get_scalar(test_mp):
 
 def test_init_scalar(test_mp):
     scen = test_mp.Scenario(*can_args)
-    scen2 = scen.clone(keep_sol=False)
+    scen2 = scen.clone(keep_solution=False)
     scen2.check_out()
     scen2.init_scalar('g', 90.0, 'USD/km')
     scen2.commit("adding a scalar 'g'")
@@ -90,7 +90,7 @@ def test_add_clone(test_mp):
     scen.add_set('h', 'test')
     scen.commit("adding an index set 'h', wiht element 'test'")
 
-    scen2 = scen.clone(keep_sol=False)
+    scen2 = scen.clone(keep_solution=False)
     obs = scen2.set('h')
     npt.assert_array_equal(obs, ['test'])
 
@@ -98,7 +98,7 @@ def test_add_clone(test_mp):
 # make sure that (only) the correct scenario is touched after cloning
 def test_clone_edit(test_mp):
     scen = test_mp.Scenario(*can_args)
-    scen2 = scen.clone(keep_sol=False)
+    scen2 = scen.clone(keep_solution=False)
     scen2.check_out()
     scen2.change_scalar('f', 95.0, 'USD/km')
     scen2.commit('change transport cost')

@@ -856,8 +856,8 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scenario=None, annotation=None, keep_solution=True,
-              first_model_year=None, **kwargs):
+    def clone(self, model=None, scenario=None, annotation=None,
+              keep_solution=True, first_model_year=None, **kwargs):
         """clone the current scenario and return the new scenario
 
         Parameters

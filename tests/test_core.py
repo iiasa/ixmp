@@ -153,7 +153,7 @@ def test_par_filters_unit(test_mp):
 
 
 def test_new_timeseries(test_mp):
-    scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
+    scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
     df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
     df = pd.DataFrame.from_dict(df)
     df['region'] = 'World'
@@ -164,7 +164,7 @@ def test_new_timeseries(test_mp):
 
 
 def test_new_timeseries_error(test_mp):
-    scen = test_mp.TimeSeries(*test_args, version='new', annotation='testing')
+    scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
     df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
     df = pd.DataFrame.from_dict(df)
     df['region'] = 'World'
@@ -173,7 +173,7 @@ def test_new_timeseries_error(test_mp):
 
 
 def test_get_timeseries(test_mp):
-    scen = test_mp.TimeSeries(*test_args, version=2)
+    scen = ixmp.TimeSeries(test_mp, *test_args, version=2)
     obs = scen.timeseries(regions='World', variables='Testing', units='???',
                           years=2020)
     df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
@@ -184,7 +184,7 @@ def test_get_timeseries(test_mp):
 
 
 def test_get_timeseries_iamc(test_mp):
-    scen = test_mp.TimeSeries(*test_args, version=2)
+    scen = ixmp.TimeSeries(test_mp, *test_args, version=2)
     obs = scen.timeseries(iamc=True, regions='World', variables='Testing')
     df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
     df = pd.DataFrame.from_dict(df)
@@ -203,7 +203,7 @@ def test_get_timeseries_iamc(test_mp):
 
 def test_timeseries_edit(test_mp_props):
     mp = ixmp.Platform(test_mp_props)
-    scen = mp.TimeSeries(*test_args)
+    scen = ixmp.TimeSeries(mp, *test_args)
     df = {'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
           'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
     exp = pd.DataFrame.from_dict(df)
@@ -222,7 +222,7 @@ def test_timeseries_edit(test_mp_props):
     mp.close_db()
 
     mp = ixmp.Platform(test_mp_props)
-    scen = mp.TimeSeries(*test_args)
+    scen = ixmp.TimeSeries(mp, *test_args)
     obs = scen.timeseries().sort_values(by=['year'])
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])

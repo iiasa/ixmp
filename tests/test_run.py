@@ -25,7 +25,7 @@ def test_run_gams_api():
     annot = "Dantzig's transportation problem for illustration and testing"
 
     # initialize a new scenario instance
-    scen = mp.Scenario(model, scenario, version='new', annotation=annot)
+    scen = ixmp.Scenario(mp, model, scenario, version='new', annotation=annot)
 
     # define the sets of locations of canning plants and markets
     scen.init_set("i")

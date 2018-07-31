@@ -438,11 +438,10 @@ class Scenario(TimeSeries):
         self.model = model
         self.scenario = scenario
         self.version = self._jobj.getVersion()
-        self.scheme = self._jobj.getScheme()
-        if self.scheme == 'MESSAGE':
-            msg = ('Using the class `ixmp.Scenario` for MESSAGE-scheme '
-                   'scenarios is deprecated, please use `message_ix.Scenario`')
-            warnings.warn(msg)
+        self.scheme = scheme or self._jobj.getScheme()
+        if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
+            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
+                          'is deprecated, please use `message_ix.Scenario`')
 
         self._cache = cache
         self._pycache = {}

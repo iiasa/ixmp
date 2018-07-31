@@ -428,7 +428,7 @@ class Scenario(TimeSeries):
                                               annotation)
         elif isinstance(version, int):
             self._jobj = mp._jobj.getScenario(model, scenario, version)
-        # constructor for `clone()` function
+        # constructor for `message_ix.Scenario.__init__` or `clone()` function
         elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
             self._jobj = version
         else:

@@ -438,6 +438,12 @@ class Scenario(TimeSeries):
         self.model = model
         self.scenario = scenario
         self.version = self._jobj.getVersion()
+        self.scheme = self._jobj.getScheme()
+        if self.scheme == 'MESSAGE':
+            msg = ('Using the class `ixmp.Scenario` for MESSAGE-scheme '
+                   'scenarios is deprecated, please use `message_ix.Scenario`')
+            warnings.warn(msg)
+
         self._cache = cache
         self._pycache = {}
 

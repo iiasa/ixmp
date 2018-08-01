@@ -428,7 +428,7 @@ class Scenario(TimeSeries):
                                               annotation)
         elif isinstance(version, int):
             self._jobj = mp._jobj.getScenario(model, scenario, version)
-        # constructor for `clone()` function
+        # constructor for `message_ix.Scenario.__init__` or `clone()` function
         elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
             self._jobj = version
         else:
@@ -438,6 +438,11 @@ class Scenario(TimeSeries):
         self.model = model
         self.scenario = scenario
         self.version = self._jobj.getVersion()
+        self.scheme = scheme or self._jobj.getScheme()
+        if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
+            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
+                          'is deprecated, please use `message_ix.Scenario`')
+
         self._cache = cache
         self._pycache = {}
 

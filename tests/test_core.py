@@ -227,3 +227,16 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_log_level(test_mp):
+    test_mp.set_log_level('CRITICAL')
+    test_mp.set_log_level('ERROR')
+    test_mp.set_log_level('WARNING')
+    test_mp.set_log_level('INFO')
+    test_mp.set_log_level('DEBUG')
+    test_mp.set_log_level('NOTSET')
+
+
+def test_log_level_raises(test_mp):
+    pytest.raises(ValueError, test_mp.set_log_level, level='foo')

@@ -95,13 +95,13 @@ class Platform(object):
             logger().info(msg)
             raise
 
-    def set_log_level(level):
+    def set_log_level(self, level):
         """Set global logger level (for both Python and Java)
 
         Parameters
         ----------
         level : str, optional, default: None
-            set the logger level if specified, see 
+            set the logger level if specified, see
             https://docs.python.org/3/library/logging.html#logging-levels
         """
         py_to_java = {

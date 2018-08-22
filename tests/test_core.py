@@ -268,3 +268,16 @@ def test_load_scenario_data_clear_cache(test_mp):
 def test_load_scenario_data_raises(test_mp):
     scen = test_mp.Scenario(*can_args, cache=False)
     pytest.raises(ValueError, scen.load_scenario_data)
+
+
+def test_log_level(test_mp):
+    test_mp.set_log_level('CRITICAL')
+    test_mp.set_log_level('ERROR')
+    test_mp.set_log_level('WARNING')
+    test_mp.set_log_level('INFO')
+    test_mp.set_log_level('DEBUG')
+    test_mp.set_log_level('NOTSET')
+
+
+def test_log_level_raises(test_mp):
+    pytest.raises(ValueError, test_mp.set_log_level, level='foo')

@@ -94,6 +94,30 @@ class Platform(object):
             logger().info(msg)
             raise
 
+    def set_log_level(self, level):
+        """Set global logger level (for both Python and Java)
+
+        Parameters
+        ----------
+        level : str, optional, default: None
+            set the logger level if specified, see
+            https://docs.python.org/3/library/logging.html#logging-levels
+        """
+        py_to_java = {
+            'CRITICAL': 'ALL',
+            'ERROR': 'ERROR',
+            'WARNING': 'WARN',
+            'INFO': 'INFO',
+            'DEBUG': 'DEBUG',
+            'NOTSET': 'OFF',
+        }
+        if level not in py_to_java.keys():
+            msg = '{} not a valid Python logger level, see ' + \
+                'https://docs.python.org/3/library/logging.html#logging-level'
+            raise ValueError(msg.format(level))
+        logger().setLevel(level)
+        self._jobj.setLogLevel(py_to_java[level])
+
     def open_db(self):
         """(re-)open the database connection of the platform instance,
         e.g., to continue working after using 'close_db()'"""

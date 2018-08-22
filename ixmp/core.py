@@ -67,6 +67,7 @@ class Platform(object):
         (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
+
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -93,6 +94,30 @@ class Platform(object):
                    "are included in the 'ixmp/lib' folder.")
             logger().info(msg)
             raise
+
+    def set_log_level(level):
+        """Set global logger level (for both Python and Java)
+
+        Parameters
+        ----------
+        level : str, optional, default: None
+            set the logger level if specified, see 
+            https://docs.python.org/3/library/logging.html#logging-levels
+        """
+        py_to_java = {
+            'CRITICAL': 'ALL',
+            'ERROR': 'ERROR',
+            'WARNING': 'WARN',
+            'INFO': 'INFO',
+            'DEBUG': 'DEBUG',
+            'NOTSET': 'OFF',
+        }
+        if level not in py_to_java.keys():
+            msg = '{} not a valid Python logger level, see ' + \
+                'https://docs.python.org/3/library/logging.html#logging-level'
+            raise ValueError(msg.format(level))
+        logger().setLevel(level)
+        self._jobj.setLogLevel(py_to_java[level])
 
     def open_db(self):
         """(re-)open the database connection of the platform instance,
@@ -189,6 +214,7 @@ class TimeSeries(object):
     annotation : string
         a short annotation/comment (when initializing a new TimeSeries)
     """
+
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')

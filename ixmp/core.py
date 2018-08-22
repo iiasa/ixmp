@@ -903,7 +903,7 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scen=None, annotation=None,
+    def clone(self, model=None, scenario=None, annotation=None,
               keep_solution=True, first_model_year=None, platform=None,
               **kwargs):
         """clone the current scenario and return the new scenario
@@ -912,7 +912,7 @@ class Scenario(TimeSeries):
         ----------
         model : string
             new model name
-        scen : string
+        scenario : string
             new scenario name
         annotation : string
             explanatory comment (optional)

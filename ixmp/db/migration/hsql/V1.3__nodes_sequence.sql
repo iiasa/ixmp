@@ -1,1 +1,0 @@
-create sequence iamc_nodes_seq start with 1000;

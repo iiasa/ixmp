@@ -1,6 +1,7 @@
 #' ixmp core
 #'
-#' This page provides documentation for the ixmp-R implementation
+#' This page provides documentation for the ixmp-R-reticulate implementation.
+#' The package is sourcing the ixmp-core Python package, translating it with the R 'reticulate' package.
 #'
 #' Main features:
 #'
@@ -8,6 +9,8 @@
 #'
 #'  - integration with the |MESSAGEix| Integrated Assessment model
 #'    and other numerical models
+#'
+#'  - for full documentation of the Python functions, use py_help(<package>$<class>)
 #' @name retixmp
 NULL
 

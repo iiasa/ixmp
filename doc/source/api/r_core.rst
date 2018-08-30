@@ -3,6 +3,8 @@
 rixmp
 =========
 
+Similar to the Python version, entirely implemented in R, but limited to less functionalities.
+
 .. raw:: html
    :file:   ../../../rixmp/source/inst/docum/ixmp.Platform.html
 

@@ -541,40 +541,13 @@ class Scenario(TimeSeries):
         return to_pylist(self.item('item', name).getIdxNames())
 
     def cat_list(self, name):
-        """return a list of all categories for a set
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        """
-        return to_pylist(self._jobj.getTypeList(name))
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def add_cat(self, name, cat, keys, is_unique=False):
-        """add a set element key to the respective category mapping
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        cat : string
-            name of the category
-        keys : list of strings
-            element keys to be added to the category mapping
-        """
-        self._jobj.addCatEle(name, str(cat), to_jlist(keys), is_unique)
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def cat(self, name, cat):
-        """return a list of all set elements mapped to a category
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        cat : string
-            name of the category
-        """
-        return to_pylist(self._jobj.getCatEle(name, cat))
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def set_list(self):
         """return a list of sets initialized in the scenario"""

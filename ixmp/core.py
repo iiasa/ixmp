@@ -1,7 +1,7 @@
-import jpype
 import os
 import sys
 import warnings
+import jpype
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,6 @@ from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
 from ixmp.default_paths import default_dbprops_file, find_dbprops
 from ixmp.utils import logger
-
 
 # %% default settings for column headers
 
@@ -67,6 +66,7 @@ class Platform(object):
         (for more options see:
         https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
     """
+
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -93,6 +93,30 @@ class Platform(object):
                    "are included in the 'ixmp/lib' folder.")
             logger().info(msg)
             raise
+
+    def set_log_level(self, level):
+        """Set global logger level (for both Python and Java)
+
+        Parameters
+        ----------
+        level : str, optional, default: None
+            set the logger level if specified, see
+            https://docs.python.org/3/library/logging.html#logging-levels
+        """
+        py_to_java = {
+            'CRITICAL': 'ALL',
+            'ERROR': 'ERROR',
+            'WARNING': 'WARN',
+            'INFO': 'INFO',
+            'DEBUG': 'DEBUG',
+            'NOTSET': 'OFF',
+        }
+        if level not in py_to_java.keys():
+            msg = '{} not a valid Python logger level, see ' + \
+                'https://docs.python.org/3/library/logging.html#logging-level'
+            raise ValueError(msg.format(level))
+        logger().setLevel(level)
+        self._jobj.setLogLevel(py_to_java[level])
 
     def open_db(self):
         """(re-)open the database connection of the platform instance,
@@ -189,6 +213,7 @@ class TimeSeries(object):
     annotation : string
         a short annotation/comment (when initializing a new TimeSeries)
     """
+
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
@@ -457,13 +482,30 @@ class Scenario(TimeSeries):
         }
         return funcs[ix_type](name)
 
+    def load_scenario_data(self):
+        """Completely load a scenario into cached memory"""
+        if not self._cache:
+            raise ValueError('Cache must be enabled to load scenario data')
+
+        funcs = {
+            'set': (self.set_list, self.set),
+            'par': (self.par_list, self.par),
+            'var': (self.var_list, self.var),
+            'equ': (self.equ_list, self.equ),
+        }
+        for ix_type, (list_func, get_func) in funcs.items():
+            logger().info('Caching {} data'.format(ix_type))
+            for item in list_func():
+                get_func(item)
+
     def element(self, ix_type, name, filters=None, cache=None):
         """internal function to retrieve a dataframe of item elements"""
         item = self.item(ix_type, name)
+        cache_key = (ix_type, name)
 
         # if dataframe in python cache, retrieve from there
-        if name in self._pycache:
-            return filtered(self._pycache[name], filters)
+        if cache_key in self._pycache:
+            return filtered(self._pycache[cache_key], filters)
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
@@ -474,7 +516,7 @@ class Scenario(TimeSeries):
 
         # save if using memcache
         if self._cache:
-            self._pycache[name] = df
+            self._pycache[cache_key] = df
 
         return filtered(df, filters)
 
@@ -576,7 +618,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         jSet = self.item('set', name)
 
@@ -627,7 +669,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         if key is None:
             self._jobj.removeSet(name)
@@ -680,7 +722,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         jPar = self.item('par', name)
 
@@ -780,7 +822,7 @@ class Scenario(TimeSeries):
         comment : string
             explanatory comment (optional)
         """
-        self.clear_cache(name)  # delete data for this scalar from the cache
+        self.clear_cache(name=name, ix_type='par')
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
@@ -794,7 +836,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         if key is None:
             self._jobj.removePar(name)
@@ -862,14 +904,15 @@ class Scenario(TimeSeries):
         return self.element('equ', name, filters, **kwargs)
 
     def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, first_model_year=None, **kwargs):
+              keep_solution=True, first_model_year=None, platform=None,
+              **kwargs):
         """clone the current scenario and return the new scenario
 
         Parameters
         ----------
         model : string
             new model name
-        scen : string
+        scenario : string
             new scenario name
         annotation : string
             explanatory comment (optional)
@@ -879,6 +922,8 @@ class Scenario(TimeSeries):
         first_model_year: int, default None
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
+        platform : ixmp.Platform
+            Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
             warnings.warn(
@@ -888,10 +933,11 @@ class Scenario(TimeSeries):
 
         first_model_year = first_model_year or 0
 
+        platform = self.platform if not platform else platform
         model = self.model if not model else model
         scenario = self.scenario if not scenario else scenario
 
-        return Scenario(self.platform, model, scenario,
+        return Scenario(platform, model, scenario,
                         version=self._jobj.clone(model, scenario, annotation,
                                                  keep_solution,
                                                  first_model_year),
@@ -1005,20 +1051,34 @@ class Scenario(TimeSeries):
         self.read_sol_from_gdx(opth, outgdx, comment,
                                var_list, equ_list, check_solution)
 
-    def clear_cache(self, name=None):
+    def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements
 
         Parameters
         ----------
         name : string, default None
             item name (`None` clears entire Python cache)
+        ix_type : string, default None
+            type of item (if provided, cache clearing is faster)
         """
         # if no name is given, clean the entire cache
         if name is None:
             self._pycache = {}
-        # remove this element from the python data cache
-        if name is not None and name in self._pycache:
-            del self._pycache[name]
+            return  # exit early
+
+        # remove this element from the cache if it exists
+        key = None
+        keys = self._pycache.keys()
+        if ix_type is not None:
+            key = (ix_type, name) if (ix_type, name) in keys else None
+        else:  # look for it
+            hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
+            if len(hits) > 1:
+                raise ValueError('Multiple values named {}'.format(name))
+            if len(hits) == 1:
+                key = hits[0]
+        if key is not None:
+            self._pycache.pop(key)
 
     def years_active(self, node, tec, yr_vtg):
         """return a list of years in which a technology of certain vintage
@@ -1034,6 +1094,35 @@ class Scenario(TimeSeries):
             vintage year
         """
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
+
+    def get_meta(self, name=None):
+        """get scenario metadata
+
+        Parameters
+        ----------
+        name : string, optional
+            metadata attribute name
+        """
+        def unwrap(value):
+            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            if type(value).__name__ == 'java.math.BigDecimal':
+                return value.doubleValue()
+            return value
+        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
+        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
+        return meta if name is None else meta[name]
+
+    def set_meta(self, name, value):
+        """set scenario metadata
+
+        Parameters
+        ----------
+        name : string
+            metadata attribute name
+        value : string|number|boolean
+            metadata attribute value
+        """
+        self._jobj.setMeta(name, value)
 
 
 # %% auxiliary functions for class Scenario

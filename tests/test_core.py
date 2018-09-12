@@ -1,18 +1,11 @@
 import os
+
 import pandas as pd
-from numpy import testing as npt
-import pandas.util.testing as pdt
-import ixmp
 import pytest
+from numpy import testing as npt
 
+import ixmp
 from ixmp.default_path_constants import CONFIG_PATH
-
-from testing_utils import (
-    test_mp,
-    test_mp_props,
-    test_mp_use_default_dbprops_file,
-    test_mp_use_db_config_path,
-)
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
@@ -227,3 +220,64 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_meta(test_mp):
+    test_dict = {
+        "test_string": 'test12345',
+        "test_number": 123.456,
+        "test_number_negative": -123.456,
+        'test_int': 12345,
+        'test_bool': True,
+        'test_bool_false': False,
+    }
+
+    scen = test_mp.Scenario(*can_args, version=1)
+    for k, v in test_dict.items():
+        scen.set_meta(k, v)
+
+    # test all
+    obs_dict = scen.get_meta()
+    for k, exp in test_dict.items():
+        obs = obs_dict[k]
+        assert obs == exp
+
+    # test name
+    obs = scen.get_meta('test_string')
+    exp = test_dict['test_string']
+    assert obs == exp
+
+
+def test_load_scenario_data(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=True)
+    scen.load_scenario_data()
+    assert ('par', 'd') in scen._pycache  # key exists
+    df = scen.par('d', filters={'i': ['seattle']})
+    obs = df.loc[0, 'unit']
+    exp = 'km'
+    assert obs == exp
+
+
+def test_load_scenario_data_clear_cache(test_mp):
+    # this fails on commit: 4376f54
+    scen = test_mp.Scenario(*can_args, cache=True)
+    scen.load_scenario_data()
+    scen.clear_cache(name='d')
+
+
+def test_load_scenario_data_raises(test_mp):
+    scen = test_mp.Scenario(*can_args, cache=False)
+    pytest.raises(ValueError, scen.load_scenario_data)
+
+
+def test_log_level(test_mp):
+    test_mp.set_log_level('CRITICAL')
+    test_mp.set_log_level('ERROR')
+    test_mp.set_log_level('WARNING')
+    test_mp.set_log_level('INFO')
+    test_mp.set_log_level('DEBUG')
+    test_mp.set_log_level('NOTSET')
+
+
+def test_log_level_raises(test_mp):
+    pytest.raises(ValueError, test_mp.set_log_level, level='foo')

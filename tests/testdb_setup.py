@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import ixmp as ix
+import ixmp
 
 from testing_utils import here
 
@@ -19,12 +19,12 @@ for fname in [
 
 # %% launch the modeling platform instance, creating a new test database file
 
-mp = ix.Platform(dbprops=test_db, dbtype='HSQLDB')
+mp = ixmp.Platform(dbprops=test_db, dbtype='HSQLDB')
 
 # %% initialize a new timeseries instance
 
-ts = mp.TimeSeries('Douglas Adams', 'Hitchhiker',
-                   version='new', annotation='testing')
+ts = ixmp.TimeSeries(mp, 'Douglas Adams', 'Hitchhiker',
+                     version='new', annotation='testing')
 df = {'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
       'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
 df = pd.DataFrame.from_dict(df)
@@ -39,12 +39,12 @@ scenario = "standard"
 annot = "Dantzig's transportation problem for illustration and testing"
 
 # initialize an empty version (for timeseries import testing - version 1)
-scen = mp.Scenario(model, scenario, version='new', annotation=annot)
+scen = ixmp.Scenario(mp, model, scenario, version='new', annotation=annot)
 scen.commit('this is an empty scenario')
 
 # %% initialize another version (for more testing - version 2 - default)
 
-scen = mp.Scenario(model, scenario, version='new', annotation=annot)
+scen = ixmp.Scenario(mp, model, scenario, version='new', annotation=annot)
 
 # define the sets of locations of canning plants and markets
 scen.init_set("i")

@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#88](https://github.com/iiasa/ixmp/pull/80): Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1
 - [#80](https://github.com/iiasa/ixmp/pull/80): Can now set logging level which is harmonized between Java and Python
 - [#79](https://github.com/iiasa/ixmp/pull/79): Adding a deprecated-warning for `ixmp.Scenario` with `scheme=='MESSAGE'`
 - [#76](https://github.com/iiasa/ixmp/pull/76): Changing the API from `mp.Scenario(...)` to `ixmp.Scenario(mp, ...)`

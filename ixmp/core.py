@@ -904,6 +904,12 @@ class Scenario(TimeSeries):
                 ' release, please use `keep_solution`')
             keep_solution = kwargs.pop('keep_sol')
 
+        if 'scen' in kwargs:
+            warnings.warn(
+                '`scen` is deprecated and will be removed in the next' +
+                ' release, please use `scenario`')
+            scenario = kwargs.pop('scen')
+
         first_model_year = first_model_year or 0
 
         platform = self.platform if not platform else platform

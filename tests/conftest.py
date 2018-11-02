@@ -9,6 +9,21 @@ from ixmp.default_path_constants import CONFIG_PATH
 from testing_utils import create_local_testdb
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--win_ci_skip", action="store_true", default=False,
+        help="weird skips for windows ci"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--win_ci_skip"):
+        skip_win_ci = pytest.mark.skip(reason="weird effects on windows ci")
+        for item in items:
+            if "skip_win_ci" in item.keywords:
+                item.add_marker(skip_win_ci)
+
+
 @pytest.fixture(scope="session")
 def test_mp():
     test_props = create_local_testdb()

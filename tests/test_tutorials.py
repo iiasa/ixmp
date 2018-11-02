@@ -31,6 +31,9 @@ def _notebook_run(path, kernel=None):
         "--ExecutePreprocessor.timeout=60",
         "--ExecutePreprocessor.kernel_name={}".format(kernel),
         "--output", fname, path]
+    print('FOO', os.getcwd())
+    print(path)
+    print('BARR', os.path.exists(path))
     subprocess.check_call(args)
 
     nb = nbformat.read(io.open(fname, encoding='utf-8'),

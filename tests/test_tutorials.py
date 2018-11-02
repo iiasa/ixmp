@@ -49,6 +49,7 @@ def _notebook_run(path, kernel=None):
     return nb, errors
 
 
+@pytest.mark.skip_win_ci
 def test_py_transport():
     fname = os.path.join(xport_path, 'py_transport.ipynb')
     nb, errors = _notebook_run(fname)
@@ -59,6 +60,7 @@ def test_py_transport():
     assert np.isclose(obs, exp)
 
 
+@pytest.mark.skip_win_ci
 def test_py_transport_scenario():
     fname = os.path.join(xport_path, 'py_transport_scenario.ipynb')
     nb, errors = _notebook_run(fname)

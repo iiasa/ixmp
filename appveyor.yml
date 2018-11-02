@@ -35,6 +35,7 @@ build: false
 
 test_script:
   - conda install --yes -c conda-forge pytest
+  - conda update jupter
   - pytest -v tests
 
 on_success:

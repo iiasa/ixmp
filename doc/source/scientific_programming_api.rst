@@ -17,11 +17,13 @@ R API
 -----
 
 The documentation can be built only if R is installed.
+Two alternative options are available:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    api/r_core
+   api/r_retixmp
    
 
 

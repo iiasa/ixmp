@@ -4,7 +4,7 @@ import pandas as pd
 import ixmp as ix
 from numpy import testing as npt
 
-from testing_utils import here, test_mp_props
+from testing_utils import here
 
 
 def test_import_timeseries(test_mp_props):
@@ -18,7 +18,7 @@ def test_import_timeseries(test_mp_props):
     subprocess.check_call(cmd, shell=not win)
 
     mp = ix.Platform(test_mp_props)
-    scen = mp.Scenario('canning problem', 'standard', 1)
+    scen = ix.Scenario(mp, 'canning problem', 'standard', 1)
     obs = scen.timeseries()
     df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
           'year': [2020], 'value': [28.3]}

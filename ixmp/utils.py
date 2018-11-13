@@ -58,7 +58,7 @@ def import_timeseries(mp, data, model, scenario, version=None,
 
     if version is not None:
         version = int(version)
-    scen = mp.Scenario(model, scenario, version)
+    scen = ix.Scenario(mp, model, scenario, version)
 
     df = ix.utils.pd_read(data)
     df = df.rename(columns={c: str(c).lower() for c in df.columns})

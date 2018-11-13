@@ -1,11 +1,13 @@
-import jpype
 import os
 import sys
+import warnings
+import jpype
 
 import numpy as np
 import pandas as pd
 
 from jpype import JPackage as java
+from jpype import JClass
 from subprocess import check_call
 
 import ixmp as ix
@@ -13,7 +15,6 @@ from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
 from ixmp.default_paths import default_dbprops_file, find_dbprops
 from ixmp.utils import logger
-
 
 # %% default settings for column headers
 
@@ -48,9 +49,7 @@ def start_jvm(jvmargs=None):
 
 class Platform(object):
     """ The class 'Platform' is the central access point to
-    the ix modeling platform (ixmp). It includes functions for managing
-    and accessing TimeSeries instances (timeseries  and reference data)
-    and Scenario instances (structured model input data and results).
+    the ix modeling platform (ixmp).
 
     Parameters
     ----------
@@ -95,6 +94,30 @@ class Platform(object):
             logger().info(msg)
             raise
 
+    def set_log_level(self, level):
+        """Set global logger level (for both Python and Java)
+
+        Parameters
+        ----------
+        level : str, optional, default: None
+            set the logger level if specified, see
+            https://docs.python.org/3/library/logging.html#logging-levels
+        """
+        py_to_java = {
+            'CRITICAL': 'ALL',
+            'ERROR': 'ERROR',
+            'WARNING': 'WARN',
+            'INFO': 'INFO',
+            'DEBUG': 'DEBUG',
+            'NOTSET': 'OFF',
+        }
+        if level not in py_to_java.keys():
+            msg = '{} not a valid Python logger level, see ' + \
+                'https://docs.python.org/3/library/logging.html#logging-level'
+            raise ValueError(msg.format(level))
+        logger().setLevel(level)
+        self._jobj.setLogLevel(py_to_java[level])
+
     def open_db(self):
         """(re-)open the database connection of the platform instance,
         e.g., to continue working after using 'close_db()'"""
@@ -138,61 +161,17 @@ class Platform(object):
         df = df[cols]
         return df
 
-    def TimeSeries(self, model, scen, version=None, annotation=None):
-        """Initialize a new TimeSeries (timeseries or reference data)
-        or get an existing TimeSeries instance from the ixmp database.
-
-        Parameters
-        ----------
-        model : string
-            model name
-        scen : string
-            scenario name
-        version : string or integer
-            initialize a new TimeSeries (if version='new'), or
-            load a specific version from the database (if version is integer)
-        annotation : string
-            a short annotation/comment (when initializing a new TimeSeries)
-        """
-        if version == 'new':
-            _jts = self._jobj.newTimeSeries(model, scen, annotation)
-        elif isinstance(version, int):
-            _jts = self._jobj.getTimeSeries(model, scen, version)
-        else:
-            _jts = self._jobj.getTimeSeries(model, scen)
-
-        return TimeSeries(self, model, scen, _jts)
-
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
         """Initialize a new ixmp.Scenario (structured input data and solution)
         or get an existing scenario from the ixmp database instance
 
-        Parameters
-        ----------
-        model : string
-            model name
-        scen : string
-            scenario name
-        version : string or integer
-            initialize a new scenario (if version == 'new'), or
-            load a specific version from the database (if version is integer)
-        scheme : string
-            use an explicit scheme for initializing a new scenario
-            (e.g., 'MESSAGE')
-        annotation : string
-            a short annotation/comment (when initializing a new scenario)
-        memcache : boolean
-            keep all dataframes in memory after first query (default: False)
-        """
-        if version == 'new':
-            _jscen = self._jobj.newScenario(model, scen, scheme, annotation)
-        elif isinstance(version, int):
-            _jscen = self._jobj.getScenario(model, scen, version)
-        else:
-            _jscen = self._jobj.getScenario(model, scen)
+        This function is deprecated, please use `ixmp.Scenario(mp, ...)`"""
 
-        return Scenario(self, model, scen, _jscen, cache=cache)
+        warnings.warn('The constructor `mp.Scenario()` is deprecated, '
+                      'please use `ixmp.Scenario(mp, ...)`')
+
+        return Scenario(self, model, scen, version, scheme, annotation, cache)
 
     def units(self):
         """returns a list of all units initialized
@@ -219,27 +198,47 @@ class TimeSeries(object):
     """The class 'TimeSeries' is a collection of data in timeseries format.
     It can be used for reference data, results from  models submitted
     using the IAMC template, or as parent-class of the 'Scenario' class
-    to store processed model results."""
+    to store processed model results.
 
-    def __init__(self, ix_mp, model, scen, _jobj):
-        """initialize a new Python-class TimeSeries object
-        (via the ixmp.Platform class)"""
+    Parameters
+    ----------
+    mp : ixmp.Platform instance
+    model : string
+        model name
+    scenario : string
+        scenario name
+    version : string or integer
+        initialize a new TimeSeries (if version='new'), or
+        load a specific version from the database (if version is integer)
+    annotation : string
+        a short annotation/comment (when initializing a new TimeSeries)
+    """
 
-        if not isinstance(ix_mp, Platform):
-            msg = 'Do not initialize a TimeSeries directly, '
-            msg += 'use ixmp.Platform.TimeSeries()!'
-            raise ValueError(msg)
+    def __init__(self, mp, model, scenario, version=None, annotation=None):
+        if not isinstance(mp, Platform):
+            raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        self.platform = ix_mp
+        if version == 'new':
+            self._jobj = mp._jobj.newTimeSeries(model, scenario, annotation)
+        elif isinstance(version, int):
+            self._jobj = mp._jobj.getTimeSeries(model, scenario, version)
+        else:
+            self._jobj = mp._jobj.getTimeSeries(model, scenario)
+
+        self.platform = mp
         self.model = model
-        self.scenario = scen
-        self._jobj = _jobj
+        self.scenario = scenario
         self.version = self._jobj.getVersion()
 
     # functions for platform management
 
     def check_out(self, timeseries_only=False):
         """check out from the ixmp database instance for making changes"""
+        if not timeseries_only and self.has_solution():
+            raise ValueError('This Scenario has a solution, '
+                             'use `Scenario.remove_solution()` or '
+                             '`Scenario.clone(..., keep_solution=False)`'
+                             )
         self._jobj.checkOut(timeseries_only)
 
     def commit(self, comment):
@@ -411,6 +410,23 @@ class Scenario(TimeSeries):
     of all data for a model instance (sets and parameters), as well as
     the solution of a model run (levels/marginals of variables and equations).
 
+    Parameters
+    ----------
+    mp : ixmp.Platform instance
+    model : string
+        model name
+    scenario : string
+        scenario name
+    version : string, integer, Java object (at.ac.iiasa.ixmp.objects.Scenario)
+        initialize a new scenario (if version is 'new'),
+        load a specific version from the database (if version is integer)
+    scheme : string
+        use an explicit scheme for initializing a new scenario
+    annotation : string
+        a short annotation/comment (when initializing a new scenario)
+    cache : boolean
+        keep all dataframes in memory after first query (default: False)
+
     The class includes functions to make changes to the data,
     export all data to and import a solution from GAMS gdx,
     and save the scenario data to an ixmp database instance.
@@ -427,20 +443,31 @@ class Scenario(TimeSeries):
         'equ': {'has_level': True},
     }
 
-    def __init__(self, ix_mp, model, scen, _jobj, cache=False):
-        """initialize a new Python-class Scenario object
-        (via the ixmp.Platform class)"""
+    def __init__(self, mp, model, scenario, version=None, scheme=None,
+                 annotation=None, cache=False):
+        if not isinstance(mp, Platform):
+            raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if not isinstance(ix_mp, Platform):
-            msg = 'Do not initialize an Scenario directly, '
-            msg += 'use ixmp.Platform.Scenario()!'
-            raise ValueError(msg)
+        if version == 'new':
+            self._jobj = mp._jobj.newScenario(model, scenario, scheme,
+                                              annotation)
+        elif isinstance(version, int):
+            self._jobj = mp._jobj.getScenario(model, scenario, version)
+        # constructor for `message_ix.Scenario.__init__` or `clone()` function
+        elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
+            self._jobj = version
+        else:
+            self._jobj = mp._jobj.getScenario(model, scenario)
 
-        self.platform = ix_mp
+        self.platform = mp
         self.model = model
-        self.scenario = scen
-        self._jobj = _jobj
+        self.scenario = scenario
         self.version = self._jobj.getVersion()
+        self.scheme = scheme or self._jobj.getScheme()
+        if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
+            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
+                          'is deprecated, please use `message_ix.Scenario`')
+
         self._cache = cache
         self._pycache = {}
 
@@ -455,13 +482,30 @@ class Scenario(TimeSeries):
         }
         return funcs[ix_type](name)
 
+    def load_scenario_data(self):
+        """Completely load a scenario into cached memory"""
+        if not self._cache:
+            raise ValueError('Cache must be enabled to load scenario data')
+
+        funcs = {
+            'set': (self.set_list, self.set),
+            'par': (self.par_list, self.par),
+            'var': (self.var_list, self.var),
+            'equ': (self.equ_list, self.equ),
+        }
+        for ix_type, (list_func, get_func) in funcs.items():
+            logger().info('Caching {} data'.format(ix_type))
+            for item in list_func():
+                get_func(item)
+
     def element(self, ix_type, name, filters=None, cache=None):
         """internal function to retrieve a dataframe of item elements"""
         item = self.item(ix_type, name)
+        cache_key = (ix_type, name)
 
         # if dataframe in python cache, retrieve from there
-        if name in self._pycache:
-            return filtered(self._pycache[name], filters)
+        if cache_key in self._pycache:
+            return filtered(self._pycache[cache_key], filters)
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
@@ -472,7 +516,7 @@ class Scenario(TimeSeries):
 
         # save if using memcache
         if self._cache:
-            self._pycache[name] = df
+            self._pycache[cache_key] = df
 
         return filtered(df, filters)
 
@@ -497,40 +541,13 @@ class Scenario(TimeSeries):
         return to_pylist(self.item('item', name).getIdxNames())
 
     def cat_list(self, name):
-        """return a list of all categories for a set
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        """
-        return to_pylist(self._jobj.getTypeList(name))
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def add_cat(self, name, cat, keys, is_unique=False):
-        """add a set element key to the respective category mapping
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        cat : string
-            name of the category
-        keys : list of strings
-            element keys to be added to the category mapping
-        """
-        self._jobj.addCatEle(name, str(cat), to_jlist(keys), is_unique)
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def cat(self, name, cat):
-        """return a list of all set elements mapped to a category
-
-        Parameters
-        ----------
-        name : string
-            name of the set
-        cat : string
-            name of the category
-        """
-        return to_pylist(self._jobj.getCatEle(name, cat))
+        raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def set_list(self):
         """return a list of sets initialized in the scenario"""
@@ -574,7 +591,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         jSet = self.item('set', name)
 
@@ -625,7 +642,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this set from the cache
+        self.clear_cache(name=name, ix_type='set')
 
         if key is None:
             self._jobj.removeSet(name)
@@ -678,7 +695,7 @@ class Scenario(TimeSeries):
         comment : string, list/range of strings
             comment (optional, only used if 'key' is a string or list/range)
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         jPar = self.item('par', name)
 
@@ -778,7 +795,7 @@ class Scenario(TimeSeries):
         comment : string
             explanatory comment (optional)
         """
-        self.clear_cache(name)  # delete data for this scalar from the cache
+        self.clear_cache(name=name, ix_type='par')
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
@@ -792,7 +809,7 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name)  # delete data for this parameter from the cache
+        self.clear_cache(name=name, ix_type='par')
 
         if key is None:
             self._jobj.removePar(name)
@@ -859,32 +876,50 @@ class Scenario(TimeSeries):
         """
         return self.element('equ', name, filters, **kwargs)
 
-    def clone(self, model=None, scen=None, annotation=None, keep_sol=True,
-              first_model_year=None):
+    def clone(self, model=None, scenario=None, annotation=None,
+              keep_solution=True, first_model_year=None, platform=None,
+              **kwargs):
         """clone the current scenario and return the new scenario
 
         Parameters
         ----------
         model : string
             new model name
-        scen : string
+        scenario : string
             new scenario name
         annotation : string
             explanatory comment (optional)
-        keep_sol : boolean, default: True
+        keep_solution : boolean, default: True
             indicator whether to include an existing solution
             in the cloned scenario
         first_model_year: int, default None
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
+        platform : ixmp.Platform
+            Platform to clone to (default: current platform)
         """
+        if 'keep_sol' in kwargs:
+            warnings.warn(
+                '`keep_sol` is deprecated and will be removed in the next' +
+                ' release, please use `keep_solution`')
+            keep_solution = kwargs.pop('keep_sol')
+
+        if 'scen' in kwargs:
+            warnings.warn(
+                '`scen` is deprecated and will be removed in the next' +
+                ' release, please use `scenario`')
+            scenario = kwargs.pop('scen')
+
         first_model_year = first_model_year or 0
 
+        platform = self.platform if not platform else platform
         model = self.model if not model else model
-        scen = self.scenario if not scen else scen
-        return Scenario(self.platform, model, scen,
-                        self._jobj.clone(model, scen, annotation,
-                                         keep_sol, first_model_year),
+        scenario = self.scenario if not scenario else scenario
+
+        return Scenario(platform, model, scenario,
+                        version=self._jobj.clone(model, scenario, annotation,
+                                                 keep_solution,
+                                                 first_model_year),
                         cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
@@ -902,7 +937,7 @@ class Scenario(TimeSeries):
         self._jobj.toGDX(path, filename, include_var_equ)
 
     def read_sol_from_gdx(self, path, filename, comment=None,
-                          var_list=None, equ_list=None, check_sol=True):
+                          var_list=None, equ_list=None, check_solution=True):
         """read solution from GAMS gdx and import it to the scenario
 
         Parameters
@@ -917,23 +952,31 @@ class Scenario(TimeSeries):
             variables (levels and marginals) to be imported from gdx
         equ_list : list of strings
             equations (levels and marginals) to be imported from gdx
-        check_sol : boolean, default True
+        check_solution : boolean, default True
             raise an error if GAMS did not solve to optimality
             (only applicable for a MESSAGE-scheme scenario)
         """
         self.clear_cache()  # reset Python data cache
         self._jobj.readSolutionFromGDX(path, filename, comment,
                                        to_jlist(var_list), to_jlist(equ_list),
-                                       check_sol)
+                                       check_solution)
 
-    def remove_sol(self):
+    def has_solution(self):
+        """check whether the Scenario has been solved and a solution (variables
+        and equations) exists in the database"""
+        return self._jobj.hasSolution()
+
+    def remove_solution(self):
         """delete the solution (variables and equations) from the sceanario"""
-        self.clear_cache()  # reset Python data cache
-        self._jobj.removeSolution()
+        if self.has_solution():
+            self.clear_cache()  # reset Python data cache
+            self._jobj.removeSolution()
+        else:
+            raise ValueError('this Scenario does not have a solution')
 
     def solve(self, model, case=None, model_file=None,
               in_file=None, out_file=None, solve_args=None, comment=None,
-              var_list=None, equ_list=None, check_sol=True):
+              var_list=None, equ_list=None, check_solution=True):
         """solve the model (export to gdx, execute GAMS, import the solution)
 
         Parameters
@@ -956,7 +999,7 @@ class Scenario(TimeSeries):
             variables to be imported from the solution
         equ_list : list of strings (optional)
             equations to be imported from the solution
-        check_sol : boolean, default True
+        check_solution : boolean, default True
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         """
@@ -985,22 +1028,36 @@ class Scenario(TimeSeries):
         self.to_gdx(ipth, ingdx)
         run_gams(model_file, args)
         self.read_sol_from_gdx(opth, outgdx, comment,
-                               var_list, equ_list, check_sol)
+                               var_list, equ_list, check_solution)
 
-    def clear_cache(self, name=None):
+    def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements
 
         Parameters
         ----------
         name : string, default None
             item name (`None` clears entire Python cache)
+        ix_type : string, default None
+            type of item (if provided, cache clearing is faster)
         """
         # if no name is given, clean the entire cache
         if name is None:
             self._pycache = {}
-        # remove this element from the python data cache
-        if name is not None and name in self._pycache:
-            del self._pycache[name]
+            return  # exit early
+
+        # remove this element from the cache if it exists
+        key = None
+        keys = self._pycache.keys()
+        if ix_type is not None:
+            key = (ix_type, name) if (ix_type, name) in keys else None
+        else:  # look for it
+            hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
+            if len(hits) > 1:
+                raise ValueError('Multiple values named {}'.format(name))
+            if len(hits) == 1:
+                key = hits[0]
+        if key is not None:
+            self._pycache.pop(key)
 
     def years_active(self, node, tec, yr_vtg):
         """return a list of years in which a technology of certain vintage
@@ -1016,6 +1073,35 @@ class Scenario(TimeSeries):
             vintage year
         """
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
+
+    def get_meta(self, name=None):
+        """get scenario metadata
+
+        Parameters
+        ----------
+        name : string, optional
+            metadata attribute name
+        """
+        def unwrap(value):
+            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            if type(value).__name__ == 'java.math.BigDecimal':
+                return value.doubleValue()
+            return value
+        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
+        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
+        return meta if name is None else meta[name]
+
+    def set_meta(self, name, value):
+        """set scenario metadata
+
+        Parameters
+        ----------
+        name : string
+            metadata attribute name
+        value : string|number|boolean
+            metadata attribute value
+        """
+        self._jobj.setMeta(name, value)
 
 
 # %% auxiliary functions for class Scenario

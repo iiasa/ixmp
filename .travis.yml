@@ -25,7 +25,7 @@ before_install:
   - ./miniconda.sh -b -f -p $MINICONDA
   - conda update --yes conda
   # install ixmp deps
-  - conda install --yes -c conda-forge ixmp xlsxwriter xlrd
+  - conda install --yes -c conda-forge ixmp
   - conda remove --force --yes ixmp
 
 install:

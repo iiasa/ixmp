@@ -1,4 +1,3 @@
-__version__ = '0.1.2'
 
 from ixmp.core import *
 
@@ -16,3 +15,7 @@ model_settings.register_model(
                                outp='{model}_out.gdx',
                                args=['--in="{inp}"', '--out="{outp}"'])
 )
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

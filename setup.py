@@ -5,36 +5,9 @@ import os
 import shutil
 import sys
 import glob
+import versioneer
 
-from setuptools import setup, Command, find_packages
-from setuptools.command.install import install
-
-INFO = {
-    'version': '0.1.3',
-}
-
-
-class Cmd(install):
-    """Custom clean command to tidy up the project root."""
-
-    def initialize_options(self):
-        install.initialize_options(self)
-
-    def finalize_options(self):
-        install.finalize_options(self)
-
-    def _clean_dirs(self):
-        dirs = [
-            'ixmp.egg-info',
-            'build',
-        ]
-        for d in dirs:
-            print('removing {}'.format(d))
-            shutil.rmtree(d)
-
-    def run(self):
-        install.run(self)
-        self._clean_dirs()
+from setuptools import setup
 
 
 def main():
@@ -50,9 +23,6 @@ def main():
             'ixmp-config=ixmp.cli:config',
         ],
     }
-    cmdclass = {
-        'install': Cmd,
-    }
     lib_files = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/lib/*')]
     db_files = [x.split('ixmp/')[-1]
                 for x in glob.glob('ixmp/db/migration/*/*')]
@@ -63,7 +33,8 @@ def main():
     }
     setup_kwargs = {
         "name": "ixmp",
-        "version": INFO['version'],
+        "version": versioneer.get_version(),
+        "cmdclass": versioneer.get_cmdclass(),
         "description": 'ix modeling platform',
         "author": 'Daniel Huppmann, Matthew Gidden, Volker Krey, '
                   'Oliver Fricko, Peter Kolp',
@@ -73,7 +44,6 @@ def main():
         "package_dir": pack_dir,
         "package_data": pack_data,
         "entry_points": entry_points,
-        "cmdclass": cmdclass,
     }
     rtn = setup(**setup_kwargs)
 

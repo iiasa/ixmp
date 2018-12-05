@@ -1,6 +1,8 @@
 
 # Next Release
 
+- [#103](https://github.com/iiasa/ixmp/pull/103): Specify dependencies in setup.py.
+
 # v0.1.3
 
 - [#88](https://github.com/iiasa/ixmp/pull/80): Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1

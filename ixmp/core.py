@@ -76,14 +76,14 @@ class Platform(object):
             if dbtype is None:
                 dbprops = default_dbprops_file() if dbprops is None \
                     else find_dbprops(dbprops)
-                logger().info("launching ixmp.Platform using config file at '{}'"
-                              .format(dbprops))
+                logger().info("launching ixmp.Platform using config file at"
+                              "'{}'".format(dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops)
             # if dbtype is specified, launch Platform with local database
             elif dbtype == 'HSQLDB':
                 dbprops = dbprops or DEFAULT_LOCAL_DB_PATH
-                logger().info("launching ixmp.Platform with local {} database at '{}'"
-                              .format(dbtype, dbprops))
+                logger().info("launching ixmp.Platform with local {} database "
+                              "at '{}'".format(dbtype, dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops, dbtype)
             else:
                 raise ValueError('Unknown dbtype: {}'.format(dbtype))

@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import os
-import shutil
-import sys
 import glob
 import versioneer
 
 from setuptools import setup
+
+
+INSTALL_REQUIRES = [
+    'JPype1>=0.6.2',
+    'pandas',
+    'xlsxwriter',
+    'xlrd',
+]
+
+EXTRAS_REQUIRE = {
+    'tests': ['pytest>=3.0.6', 'jupyter'],
+    'docs': ['cloud_sptheme', 'numpydoc', 'sphinx', 'sphinxcontrib-bibtex',
+             'sphinxcontrib-fulltoc'],
+    'tutorial': ['jupyter'],
+}
 
 
 def main():
@@ -40,6 +52,8 @@ def main():
                   'Oliver Fricko, Peter Kolp',
         "author_email": 'message_ix@iiasa.ac.at',
         "url": 'http://github.com/iiasa/message_ix',
+        "install_requires": INSTALL_REQUIRES,
+        "extras_require": EXTRAS_REQUIRE,
         "packages": packages,
         "package_dir": pack_dir,
         "package_data": pack_data,

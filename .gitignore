@@ -3,6 +3,7 @@
 *.~op
 *.pyc
 *.bak
+*.egg-info
 *.gdx
 *.lst
 *.log

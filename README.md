@@ -26,8 +26,7 @@ Please refer to the [NOTICE](NOTICE.rst) for details and the user guidelines.
 
 ## Documentation and tutorial
 
-A [documentation the ix modeling platform and the MESSAGEix
-framework](http://MESSAGEix.iiasa.ac.at/) is automatically created from the
+[Documentation of ixmp and the MESSAGEix framework](http://MESSAGEix.iiasa.ac.at/) is automatically created from the
 documentation of the Python and R API packages.  The online documentation is
 synchronyzed with the contents of the master branch of the repositories
 [www.github.com/iiasa/ixmp](http://www.github.com/iiasa/ixmp) and
@@ -56,13 +55,13 @@ the ix modeling platform for scientific publications or technical reports:
 
 1. Install Python via [Anaconda](https://www.continuum.io/downloads). We
    recommend the latest version, e.g., Python 3.6+.
-   
+
 2. Install [GAMS](https://www.gams.com/download/). **Importantly**:
 
    - Check the box labeled `Use advanced installation mode`
    - Check the box labeled `Add GAMS directory to PATH environment variable` on
      the Advanced Options page.
-   
+
 3. Open a command prompt and type
 
     ```
@@ -73,90 +72,87 @@ the ix modeling platform for scientific publications or technical reports:
 
 ### Dependencies
 
-0. Install the Java Development Kit (Java SE 8) and set the environment variable
+1. Install the Java Development Kit (Java SE 8) and set the environment variable
    `JAVA_HOME` per the [JDK website
    instructions](https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/);
    if `JAVA_HOME` does not exist, add as new system variable.  *At this point,
    ixmp is not compatible with JAVA SE 9.*
-   
-0. Update your `PATH` environment variable to point to the JRE binaries and
+
+2. Update your `PATH` environment variable to point to the JRE binaries and
    server installation (e.g., `C:\Program Files\Java\jdk[YOUR JDK
    VERSION]\jre\bin\`, `C:\Program Files\Java\jdk[YOUR JDK
    VERSION]\jre\bin\server`).
-   
+
    <aside class="warning">
    Do not overwrite the existing `PATH` environment variable, but add to the list of existing paths.
    </aside>
 
-0. Install the latest version of GAMS, otherwise, the export to GDX may not work
+3. Install the latest version of GAMS, otherwise, the export to GDX may not work
    properly (visit [www.gams.com](http://www.gams.com)).  If you only have a
    license for an older verson of GAMS, install both versions.  Note that for
    using the integrated MESSAGEix-MACRO model, it is important to install a GAMS
    version >= 24.8.1.
 
-0. Update your `PATH` environment variable to point to the GAMS installation
+4. Update your `PATH` environment variable to point to the GAMS installation
    (e.g. `C:\GAMS\win64\24.8`); again do not overwrite existing `PATH` but
    rather add to end.
 
-0. Install some version of Python (2.7 is supported, but 3.6 or higher is
+5. Install some version of Python (2.7 is supported, but 3.6 or higher is
    recommended).  [Anaconda](https://www.continuum.io/downloads) is a good
    choice for users not yet familiar with the language (during installation
    select add anaconda to PATH system variable)
 
-0. Install a Windows C++ Compiler
+6. Install a Windows C++ Compiler
 
    - For Python 3: [link](http://landinghub.visualstudio.com/visual-cpp-build-tools)
    - For Python 2: [link](https://www.microsoft.com/en-us/download/details.aspx?id=44266)
 
-0. Install a version of `git`, (see, e.g., the [website](https://git-scm.com/downloads))
+7. Install a version of `git`, (see, e.g., the [website](https://git-scm.com/downloads))
 
-0. In a command prompt, execute the following two lines to install all Python
-   dependencies for running the unit tests and building the auto-documentation
-   for the Python interface and the MESSAGEix GAMS code:
-
-    ```
-    pip install cython numpy pandas "pytest>=3.0.6" "JPype1>=0.6.2" 
-    pip install sphinx sphinxcontrib.bibtex sphinxcontrib-fulltoc numpydoc cloud_sptheme
-    ```
 
 #### Additional dependencies for R users
 
-0. Make sure the R version installed is either 32 OR 64 bit (and >= 3.3.0), consistently with GAMS and Java. Having both 32 and 64 bit generates error.
+1. Make sure the R version installed is either 32 OR 64 bit (and >= 3.3.0),
+   consistently with GAMS and Java. Having both 32 and 64 bit generates error.
 
-0. Install packages, `devtools` and `optparse` via the R package manager
+1. Install packages, `devtools` and `optparse` via the R package manager
 
-0. Two alternative options are available:
+1. Two alternative options are available:
 
     - use the package developed in Python, requires the `reticulate` R package (it will allow to install/use `retixmp`)
 
     - use specific R packages (less available functionalities), requires the `rJava` R package (it will allow to install/use `rixmp`)
 
-0. Install Rtools and add the path to the environment variables
+1. Install Rtools and add the path to the environment variables
 
-0. For working with Jupyter notebooks using R, install the [IRkernel](https://irkernel.github.io)
+1. For working with Jupyter notebooks using R, install the
+   [IRkernel](https://irkernel.github.io).
 
 
 ### Installing the ix modeling platform
 
-0. Fork this repository and clone the forked repository (`<user>/ixmp`)
-   to your machine.  To fork the repository, look for the fork button 
+1. Fork this repository and clone the forked repository (`<user>/ixmp`)
+   to your machine.  To fork the repository, look for the fork button
    in the top right at [iiasa/ixmp](https://github.com/iiasa/ixmp).
    Add `iiasa/ixmp` as `upstream` to your clone.
 
-   *We recommend* [GitKraken](https://www.gitkraken.com/) *for users who prefer a graphical user 
-    interface application to work with Github (as opposed to the command line).*
+   *We recommend* [GitKraken](https://www.gitkraken.com/) *for users who prefer
+   a graphical user interface application to work with Github (as opposed to
+   the command line).*
 
-0. Open a command prompt in the new `ixmp` directory and type
+2. Open a command prompt in the new `ixmp` directory and type:
 
-   ```
-   pip install -r requirements.txt
-   python setup.py install && py.test tests
-   ```
+       $ pip install .
 
-### Notes and Warnings 
+3. (Optional) Run tests to check that `ixmp` works on your system:
 
-0. For **Anaconda** users experiencing problems during installation of ixmp,
-   Anaconda might not have been added to the PATH system variable properly. 
+       $ pip install .[tests]
+       $ py.test tests
+
+### Notes and Warnings
+
+1. For **Anaconda** users experiencing problems during installation of ixmp,
+   Anaconda might not have been added to the PATH system variable properly.
    So, if ``install.bat`` just opens and collapses again, check if:
 
     ```
@@ -169,9 +165,14 @@ the ix modeling platform for scientific publications or technical reports:
 
 ### Building Documentation
 
-Navigate to the `doc` folder and in a command prompt type
+1. Install dependencies for the documentation:
 
-   ```
-   make doc
-   ```
+       $ pip install .[doc]
 
+2. Navigate to the `doc` directory and build the documentation:
+
+       $ cd doc
+       $ make html
+
+The built documentation appears in `doc/build/html/index.html`; open this file
+using a web browser.

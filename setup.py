@@ -10,6 +10,8 @@ from setuptools import setup
 INSTALL_REQUIRES = [
     'JPype1>=0.6.2',
     'pandas',
+    'xlsxwriter',
+    'xlrd',
 ]
 
 EXTRAS_REQUIRE = {

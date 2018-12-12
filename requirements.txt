@@ -7,3 +7,5 @@ pytest>=3.0.6
 sphinx
 sphinxcontrib-bibtex
 sphinxcontrib-fulltoc
+xlsxwriter
+xlrd

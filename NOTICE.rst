@@ -90,7 +90,8 @@ Please refer to `CONTRIBUTING.rst`_ for details.
 References
 ----------
 
-[1] Clara Orthofer, Daniel Huppmann, and Volker Krey. "South Africa's shale gas resources - chance or challenge?"
-2018, submitted. Electronic pre-print available at `pure.iiasa.ac.at/15085/`_.
+[1] Clara Orthofer, Daniel Huppmann, and Volker Krey.
+"South Africa after Paris - Fracking its Way to the NDCs?"
+2018, in review. Electronic pre-print available at `pure.iiasa.ac.at/15085/`_.
 
 .. _`pure.iiasa.ac.at/15085/` : https://pure.iiasa.ac.at/15085/

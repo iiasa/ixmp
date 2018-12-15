@@ -62,7 +62,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ix modeling platform'
-copyright = u'2017, IIASA, Energy Program'
+copyright = u'2018, IIASA, Energy Program'
 author = u'Daniel Huppmann, Matthew Gidden, et al.'
 
 # The version info for the project you're documenting, acts as replacement for

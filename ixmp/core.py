@@ -76,14 +76,14 @@ class Platform(object):
             if dbtype is None:
                 dbprops = default_dbprops_file() if dbprops is None \
                     else find_dbprops(dbprops)
-                logger().info("launching ixmp.Platform using config file at '{}'"
-                              .format(dbprops))
+                logger().info("launching ixmp.Platform using config file at"
+                              "'{}'".format(dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops)
             # if dbtype is specified, launch Platform with local database
             elif dbtype == 'HSQLDB':
                 dbprops = dbprops or DEFAULT_LOCAL_DB_PATH
-                logger().info("launching ixmp.Platform with local {} database at '{}'"
-                              .format(dbtype, dbprops))
+                logger().info("launching ixmp.Platform with local {} database "
+                              "at '{}'".format(dbtype, dbprops))
                 self._jobj = java.ixmp.Platform("Python", dbprops, dbtype)
             else:
                 raise ValueError('Unknown dbtype: {}'.format(dbtype))
@@ -610,11 +610,11 @@ class Scenario(TimeSeries):
             idx_names = self.idx_names(name)
             if "comment" in list(key):
                 for i in key.index:
-                    jSet.addElement(to_jlist(key.ix[i], idx_names),
+                    jSet.addElement(to_jlist(key.loc[i], idx_names),
                                     str(key['comment'][i]))
             else:
                 for i in key.index:
-                    jSet.addElement(to_jlist(key.ix[i], idx_names))
+                    jSet.addElement(to_jlist(key.loc[i], idx_names))
         elif isinstance(key, list):
             if isinstance(key[0], list):
                 for i in range(len(key)):
@@ -721,13 +721,13 @@ class Scenario(TimeSeries):
             idx_names = self.idx_names(name)
             if "comment" in list(key):
                 for i in key.index:
-                    jPar.addElement(to_jlist(key.ix[i], idx_names),
+                    jPar.addElement(to_jlist(key.loc[i], idx_names),
                                     _jdouble(key['value'][i]),
                                     str(key['unit'][i]),
                                     str(key['comment'][i]))
             else:
                 for i in key.index:
-                    jPar.addElement(to_jlist(key.ix[i], idx_names),
+                    jPar.addElement(to_jlist(key.loc[i], idx_names),
                                     _jdouble(key['value'][i]),
                                     str(key['unit'][i]))
         elif isinstance(key, list) and isinstance(key[0], list):
@@ -1228,7 +1228,7 @@ def _remove_ele(item, key):
                 key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
             idx_names = to_pylist(item.getIdxNames())
             for i in key.index:
-                item.removeElement(to_jlist(key.ix[i], idx_names))
+                item.removeElement(to_jlist(key.loc[i], idx_names))
         else:
             item.removeElement(str(key))
 

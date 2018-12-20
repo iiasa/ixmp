@@ -554,16 +554,21 @@ class Scenario(TimeSeries):
         return to_pylist(self._jobj.getSetList())
 
     def init_set(self, name, idx_sets=None, idx_names=None):
-        """initialize a new set in the scenario
+        """Initialize a new set in the scenario.
 
         Parameters
         ----------
         name : string
-            name of the item
+            Name of the item
         idx_sets : list of strings
             index set list
         idx_names : list of strings
             index name list (optional, default to 'idx_sets')
+
+        Raises
+        ------
+        :class:`jpype.JavaException`
+            If the set (or another object with the same *name*) already exists.
         """
         self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
 
@@ -580,16 +585,27 @@ class Scenario(TimeSeries):
         return self.element('set', name, filters, **kwargs)
 
     def add_set(self, name, key, comment=None):
-        """add elements to a set
+        """Add elements to an existing set.
+
+        Sets must be created with :meth:`init_set` before :meth:`add_set` is
+        called.
 
         Parameters
         ----------
-        name : string
-            name of the set
-        key : string, list/range of strings/values, dictionary, dataframe
-            element(s) to be added
-        comment : string, list/range of strings
-            comment (optional, only used if 'key' is a string or list/range)
+        name : str
+            Name of the set.
+        key : str or iterable of str or dict or :class:`pandas.DataFrame`
+            Element(s) to be added. If *name* exists, the elements are
+            appended to existing elements.
+        comment : string or iterable of str, optional
+            Comment describing the element(s). Only used if *key* is a string
+            or list/range.
+
+
+        Raises
+        ------
+        :class:`jpype.JavaException`
+            If the set *name* does not exist.
         """
         self.clear_cache(name=name, ix_type='set')
 

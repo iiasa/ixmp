@@ -31,6 +31,7 @@
 
 # files generated during install
 build
+dist
 
 # credentials
 config/*.properties

@@ -3,7 +3,7 @@ import collections
 import six
 import pandas as pd
 
-import ixmp as ix
+import ixmp
 
 # globally accessible logger
 _LOGGER = None
@@ -67,18 +67,18 @@ def numcols(df):
 
 def import_timeseries(mp, data, model, scenario, version=None,
                       firstyear=None, lastyear=None):
-    if not isinstance(mp, ix.Platform):
+    if not isinstance(mp, ixmp.Platform):
         raise ValueError("{} is not a valid 'ixmp.Platform' instance".
                          format(mp))
 
     if version is not None:
         version = int(version)
-    scen = ix.Scenario(mp, model, scenario, version)
+    scen = ixmp.Scenario(mp, model, scenario, version)
 
-    df = ix.utils.pd_read(data)
+    df = ixmp.utils.pd_read(data)
     df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
-    cols = ix.utils.numcols(df)
+    cols = ixmp.utils.numcols(df)
     years = [int(i) for i in cols]
     fyear = int(firstyear or min(years))
     lyear = int(lastyear or max(years))

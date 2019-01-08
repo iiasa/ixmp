@@ -1152,6 +1152,9 @@ class Scenario(TimeSeries):
                 ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
+        if first_model_year is not None:
+            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
+                          'is deprecated, please use `message_ix.Scenario`')
         first_model_year = first_model_year or 0
 
         platform = self.platform if not platform else platform

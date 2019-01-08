@@ -101,6 +101,14 @@ def test_run_gams_api():
     assert np.isclose(obs, exp)
 
 
+def scenario_list(mp):
+    return mp.scenario_list(default=False)[['model', 'scenario']]
+
+
+def assert_multi_db(mp1, mp2):
+    pd.testing.assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
+
+
 def test_multi_db_run():
     mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
     scen1 = make_scenario(mp1)
@@ -111,6 +119,7 @@ def test_multi_db_run():
     solve_scenario(scen2)
 
     assert scen1.var('z') == scen2.var('z')
+    assert_multi_db(mp1, mp2)
 
 
 def test_multi_db_edit_source():
@@ -144,6 +153,8 @@ def test_multi_db_edit_source():
     exp = 1.4
     assert np.isclose(obs, exp)
 
+    assert_multi_db(mp1, mp2)
+
 
 def test_multi_db_edit_target():
     mp1 = ixmp.Platform(tempdir(), dbtype='HSQLDB')
@@ -175,3 +186,5 @@ def test_multi_db_edit_target():
            )
     exp = 1.4
     assert np.isclose(obs, exp)
+
+    assert_multi_db(mp1, mp2)

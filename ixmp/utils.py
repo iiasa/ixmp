@@ -1,6 +1,6 @@
 import logging
-
-import numpy as np
+import collections
+import six
 import pandas as pd
 
 import ixmp as ix
@@ -17,6 +17,21 @@ def logger():
         _LOGGER = logging.getLogger()
         _LOGGER.setLevel('INFO')
     return _LOGGER
+
+
+def isstr(x):
+    """Returns True if x is a string"""
+    return isinstance(x, six.string_types)
+
+
+def isscalar(x):
+    """Returns True if x is a scalar"""
+    return not isinstance(x, collections.Iterable) or isstr(x)
+
+
+def islistable(x):
+    """Returns True if x is a list but not a string"""
+    return isinstance(x, collections.Iterable) and not isstr(x)
 
 
 def pd_read(f, *args, **kwargs):

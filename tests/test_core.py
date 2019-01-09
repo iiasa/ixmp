@@ -257,13 +257,23 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
     scen.check_out(timeseries_only=True)
+    df = {'region': ['World', 'World'],
+          'variable': ['Testing', 'Testing'],
+          'unit': ['???', '???'], 'year': [2010, 2020],
+          'value': [23.7, 23.8]}
+    df = pd.DataFrame.from_dict(df)
+    scen.add_timeseries(df)
+    scen.commit('testing of editing timeseries (same years)')
+    mp.close_db()
+
+    scen.check_out(timeseries_only=True)
     df = {'region': ['World', 'World', 'World'],
           'variable': ['Testing', 'Testing', 'Testing2'],
           'unit': ['???', '???', '???'], 'year': [2020, 2030, 2030],
           'value': [24.8, 24.9, 25.1]}
     df = pd.DataFrame.from_dict(df)
     scen.add_timeseries(df)
-    scen.commit('testing of editing timeseries')
+    scen.commit('testing of editing timeseries (other years)')
     mp.close_db()
 
     mp = ixmp.Platform(test_mp_props)

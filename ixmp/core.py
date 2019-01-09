@@ -1154,6 +1154,8 @@ def to_jlist(pylist, idx_names=None):
 
 def make_dims(sets, names):
     """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
+    if isinstance(sets, set) or isinstance(names, set):
+        raise ValueError('index dimension must be string or ordered lists!')
     return to_jlist(sets), to_jlist(names if names is not None else sets)
 
 

@@ -388,6 +388,10 @@ class TimeSeries(object):
         if "time" in df.columns:
             raise("sub-annual time slices not supported by Python interface!")
 
+        # reset the index if meaningful entries are included there
+        if not list(df.index.names) == [None]:
+            df.reset_index(inplace=True)
+
         # rename columns to standard notation
         cols = {c: str(c).lower() for c in df.columns}
         cols.update(node='region')

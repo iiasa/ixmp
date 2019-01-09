@@ -1,9 +1,9 @@
 import logging
-
-import numpy as np
+import collections
+import six
 import pandas as pd
 
-import ixmp as ix
+import ixmp
 
 # globally accessible logger
 _LOGGER = None
@@ -17,6 +17,21 @@ def logger():
         _LOGGER = logging.getLogger()
         _LOGGER.setLevel('INFO')
     return _LOGGER
+
+
+def isstr(x):
+    """Returns True if x is a string"""
+    return isinstance(x, six.string_types)
+
+
+def isscalar(x):
+    """Returns True if x is a scalar"""
+    return not isinstance(x, collections.Iterable) or isstr(x)
+
+
+def islistable(x):
+    """Returns True if x is a list but not a string"""
+    return isinstance(x, collections.Iterable) and not isstr(x)
 
 
 def pd_read(f, *args, **kwargs):
@@ -52,18 +67,18 @@ def numcols(df):
 
 def import_timeseries(mp, data, model, scenario, version=None,
                       firstyear=None, lastyear=None):
-    if not isinstance(mp, ix.Platform):
+    if not isinstance(mp, ixmp.Platform):
         raise ValueError("{} is not a valid 'ixmp.Platform' instance".
                          format(mp))
 
     if version is not None:
         version = int(version)
-    scen = ix.Scenario(mp, model, scenario, version)
+    scen = ixmp.Scenario(mp, model, scenario, version)
 
-    df = ix.utils.pd_read(data)
+    df = ixmp.utils.pd_read(data)
     df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
-    cols = ix.utils.numcols(df)
+    cols = ixmp.utils.numcols(df)
     years = [int(i) for i in cols]
     fyear = int(firstyear or min(years))
     lyear = int(lastyear or max(years))

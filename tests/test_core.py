@@ -264,7 +264,6 @@ def test_timeseries_edit(test_mp_props):
     df = pd.DataFrame.from_dict(df)
     scen.add_timeseries(df)
     scen.commit('testing of editing timeseries (same years)')
-    mp.close_db()
 
     scen.check_out(timeseries_only=True)
     df = {'region': ['World', 'World', 'World'],

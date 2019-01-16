@@ -553,6 +553,10 @@ class Scenario(TimeSeries):
         """return a list of sets initialized in the scenario"""
         return to_pylist(self._jobj.getSetList())
 
+    def has_set(self, name):
+        """check whether the scenario has a set with that name"""
+        return self._jobj.hasSet()
+
     def init_set(self, name, idx_sets=None, idx_names=None):
         """initialize a new set in the scenario
 
@@ -652,6 +656,10 @@ class Scenario(TimeSeries):
     def par_list(self):
         """return a list of parameters initialized in the scenario"""
         return to_pylist(self._jobj.getParList())
+
+    def has_par(self, name):
+        """check whether the scenario has a parameter with that name"""
+        return self._jobj.hasPar()
 
     def init_par(self, name, idx_sets, idx_names=None):
         """initialize a new parameter in the scenario
@@ -820,6 +828,10 @@ class Scenario(TimeSeries):
         """return a list of variables initialized in the scenario"""
         return to_pylist(self._jobj.getVarList())
 
+    def has_var(self, name):
+        """check whether the scenario has a variable with that name"""
+        return self._jobj.hasVar()
+
     def init_var(self, name, idx_sets=None, idx_names=None):
         """initialize a new variable in the scenario
 
@@ -863,6 +875,10 @@ class Scenario(TimeSeries):
             index name list (optional, default to 'idx_sets')
         """
         self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
+
+    def has_equ(self, name):
+        """check whether the scenario has an equation with that name"""
+        return self._jobj.hasEqu()
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation

@@ -54,6 +54,12 @@ def test_default_version(test_mp):
     assert scen.version == 2
 
 
+def test_has_set(test_mp):
+    scen = ixmp.Scenario(test_mp, *can_args)
+    assert scen.has_set('i')
+    assert not scen.has_set('k')
+
+
 def test_init_par_35(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args, version='new')
     scen.init_set('ii')
@@ -65,6 +71,12 @@ def test_get_scalar(test_mp):
     obs = scen.scalar('f')
     exp = {'unit': 'USD/km', 'value': 90}
     assert obs == exp
+
+
+def test_has_par(test_mp):
+    scen = ixmp.Scenario(test_mp, *can_args)
+    assert scen.has_par('f')
+    assert not scen.has_par('m')
 
 
 def test_init_scalar(test_mp):
@@ -107,6 +119,12 @@ def test_idx_name(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
     df = scen.idx_names('d')
     npt.assert_array_equal(df, ['i', 'j'])
+
+
+def test_has_var(test_mp):
+    scen = ixmp.Scenario(test_mp, *can_args)
+    assert scen.has_var('x')
+    assert not scen.has_var('y')
 
 
 def test_var_marginal(test_mp):

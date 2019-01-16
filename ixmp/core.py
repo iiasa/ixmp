@@ -555,7 +555,7 @@ class Scenario(TimeSeries):
 
     def has_set(self, name):
         """check whether the scenario has a set with that name"""
-        return self._jobj.hasSet()
+        return self._jobj.hasSet(name)
 
     def init_set(self, name, idx_sets=None, idx_names=None):
         """initialize a new set in the scenario
@@ -659,7 +659,7 @@ class Scenario(TimeSeries):
 
     def has_par(self, name):
         """check whether the scenario has a parameter with that name"""
-        return self._jobj.hasPar()
+        return self._jobj.hasPar(name)
 
     def init_par(self, name, idx_sets, idx_names=None):
         """initialize a new parameter in the scenario
@@ -830,7 +830,7 @@ class Scenario(TimeSeries):
 
     def has_var(self, name):
         """check whether the scenario has a variable with that name"""
-        return self._jobj.hasVar()
+        return self._jobj.hasVar(name)
 
     def init_var(self, name, idx_sets=None, idx_names=None):
         """initialize a new variable in the scenario
@@ -878,7 +878,7 @@ class Scenario(TimeSeries):
 
     def has_equ(self, name):
         """check whether the scenario has an equation with that name"""
-        return self._jobj.hasEqu()
+        return self._jobj.hasEqu(name)
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation

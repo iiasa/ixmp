@@ -56,8 +56,10 @@ class Platform(object):
        a local file (``dbtype='HSQLDB'``) or a database server accessed via a
        network connection. In the latter case, connection information is read
        from a `properties file`.
-    2. A Java Virtual Machine (**JVM**) to run core ixmp logic.
-    3. One or more GAMS **model(s)**.
+    2. A Java Virtual Machine (**JVM**) to run core ixmp logic and access the
+       database.
+    3. One or more **model(s)**, implemented in GAMS or another language or
+       framework.
 
     The constructor parameters control these components. :class:`TimeSeries`
     and :class:`Scenario` objects are specific to one Platform; to move data
@@ -151,8 +153,9 @@ class Platform(object):
     def close_db(self):
         """Close the database connection.
 
-        When working with a local database, it is important to call
-        :meth:`close_db` to ensure database changes are written to file.
+        A HSQL database can only be used by one :class:`Platform` instance at a
+        time. Any existing connection must be closed before a new one can be
+        opened.
         """
         self._jobj.closeDB()
 
@@ -321,7 +324,7 @@ class TimeSeries(object):
     def commit(self, comment):
         """Commit all changed data to the database.
 
-        :attr:`version` is incremented.
+        :attr:`version` is not incremented.
         """
         self._jobj.commit(comment)
         # if version == 0, this is a new instance
@@ -834,7 +837,7 @@ class Scenario(TimeSeries):
         return self.element('par', name, filters, **kwargs)
 
     def add_par(self, name, key, val=None, unit=None, comment=None):
-        """Set values of a parameter.
+        """Set the values of a parameter.
 
         Parameters
         ----------

@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#108](https://github.com/iiasa/ixmp/pull/105): Improve documentation.
 - [#105](https://github.com/iiasa/ixmp/pull/105): Replace [deprecated](http://pandas.pydata.org/pandas-docs/stable/indexing.html#ix-indexer-is-deprecated) pandas `.ix` indexer with `.iloc`.
 - [#103](https://github.com/iiasa/ixmp/pull/103): Specify dependencies in setup.py.
 

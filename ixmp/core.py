@@ -48,23 +48,46 @@ def start_jvm(jvmargs=None):
 
 
 class Platform(object):
-    """ The class 'Platform' is the central access point to
-    the ix modeling platform (ixmp).
+    """Database-backed instance of the ixmp.
+
+    Each Platform connects three components:
+
+    1. A **database** for storing model inputs and outputs. This may either be
+       a local file (``dbtype='HSQLDB'``) or a database server accessed via a
+       network connection. In the latter case, connection information is read
+       from a `properties file`.
+    2. A Java Virtual Machine (**JVM**) to run core ixmp logic and access the
+       database.
+    3. One or more **model(s)**, implemented in GAMS or another language or
+       framework.
+
+    The constructor parameters control these components. :class:`TimeSeries`
+    and :class:`Scenario` objects are specific to one Platform; to move data
+    between platforms, see :meth:`Scenario.clone`.
 
     Parameters
     ----------
-    dbprops : string
-        either the name or path/name for a database.properties file
-        (defaults to folder 'config', file 'default.properties')
-        or the path/name for a local database (if 'dbtype' not None)
-    dbtype : string
-        the type of the local database (e.g., 'HSQLDB')
-        if no 'dbprops' is specified, the local database is
-        created/accessed at '~/.local/ixmp/localdb/default'
-    jvmargs : string
-        options for launching the JVM, e.g., the maximum heap space: "-Xmx4G"
-        (for more options see:
-        https://docs.oracle.com/javase/7/docs/technotes/tools/windows/java.html)
+    dbprops : path-like, optional
+        If `dbtype` is :obj:`None`, the name of a database properties file
+        (default: 'default.properties') in the properties file directory
+        (default: ???) or the path of a properties file.
+
+        If `dbtype == 'HSQLDB'`, the path of a local database,
+        (default: "$HOME/.local/ixmp/localdb/default") or name of a
+        database file in the local database directory (default:
+        "$HOME/.local/ixmp/localdb/").
+
+    dbtype : 'HSQLDB', optional
+        Database type to use. If `None`, a remote database is accessed. If
+        'HSQLDB', a local database is created and used at the path given by
+        `dbprops`.
+
+    jvmargs : str, optional
+        Options for launching the Java Virtual Machine, e.g., the maximum heap
+        space: "-Xmx4G". See the `JVM documentation`_ for a list of options.
+
+        .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
+           /technotes/tools/windows/java.html)
     """
 
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
@@ -99,7 +122,7 @@ class Platform(object):
 
         Parameters
         ----------
-        level : str, optional, default: None
+        level : str
             set the logger level if specified, see
             https://docs.python.org/3/library/logging.html#logging-levels
         """
@@ -119,27 +142,54 @@ class Platform(object):
         self._jobj.setLogLevel(py_to_java[level])
 
     def open_db(self):
-        """(re-)open the database connection of the platform instance,
-        e.g., to continue working after using 'close_db()'"""
+        """(Re-)open the database connection.
+
+        The database connection is opened automatically for many operations.
+        After calling :meth:`close_db`, it must be re-opened.
+
+        """
         self._jobj.openDB()
 
     def close_db(self):
-        """close the database connection of the platform instance
-        this is important when working with local database files ('HSQLDB')"""
+        """Close the database connection.
+
+        A HSQL database can only be used by one :class:`Platform` instance at a
+        time. Any existing connection must be closed before a new one can be
+        opened.
+        """
         self._jobj.closeDB()
 
     def scenario_list(self, default=True, model=None, scen=None):
-        """Get a list of all TimeSeries and Scenario instances
-        initialized in the ixmp database instance
+        """Return information on all TimeSeries and Scenarios in the database.
 
         Parameters
         ----------
-        default : boolean, default True
-            include only default model/scenario version (true) or all versions
-        model : string
-            the model name (optional)
-        scen : string
-            the scenario name (optional)
+        default : boolean, optional
+            Return only the default version of each TimeSeries/Scenario. If
+            :obj:`False`, return all versions.
+        model : str, optional
+            A model name. If given, only return information for *model*.
+        scen : str, optional
+            A Scenario name. If given, only return information for *scen*.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Scenario information, with the columns:
+
+            - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario
+              identifiers; see :class:`Scenario`.
+            - ``is_default``—:obj:`True` if the ``version`` is the default
+              version for the (``model``, ``scenario``).
+            - ``is_locked``—:obj:`True` if the Scenario has been locked for
+              use.
+            - ``cre_user`` and ``cre_date``—database user that created the
+              Scenario, and creation time.
+            - ``upd_user`` and ``upd_date``—user and time for last modification
+              of the Scenario.
+            - ``lock_user`` and ``lock_date``—user that locked the Scenario and
+              lock time.
+            - ``annotation``: description of the Scenario or changelog.
         """
         mod_scen_list = self._jobj.getScenarioList(default, model, scen)
 
@@ -156,17 +206,21 @@ class Platform(object):
                            for j in mod_range]
         cols.append("version")
 
-        df = pd.DataFrame
-        df = df.from_dict(data, orient='columns', dtype=None)
+        df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
         df = df[cols]
         return df
 
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
-        """Initialize a new ixmp.Scenario (structured input data and solution)
-        or get an existing scenario from the ixmp database instance
+        """Initialize a new :class:`Scenario`.
 
-        This function is deprecated, please use `ixmp.Scenario(mp, ...)`"""
+        .. deprecated:: 1.1.0
+
+           Instead, use:
+
+           >>> mp = ixmp.Platform(…)
+           >>> ixmp.Scenario(mp, …)
+        """
 
         warnings.warn('The constructor `mp.Scenario()` is deprecated, '
                       'please use `ixmp.Scenario(mp, ...)`')
@@ -174,20 +228,24 @@ class Platform(object):
         return Scenario(self, model, scen, version, scheme, annotation, cache)
 
     def units(self):
-        """returns a list of all units initialized
-        in the ixmp database instance"""
+        """Return all units described in the database.
+
+        Returns
+        -------
+        list
+        """
         return to_pylist(self._jobj.getUnitList())
 
     def add_unit(self, unit, comment='None'):
-        """define a unit in the ixmp database instance
+        """Define a unit.
 
         Parameters
         ----------
-        unit : string
-            name of the new unit
-        comment : string, default None
-            annotation why this unit was added
-            (timestamp and user are added automatically)
+        unit : str
+            Name of the unit.
+        comment : str, optional
+            Annotation describing the unit or why it was added. The current
+            database user and timestamp are appended automatically.
         """
         self._jobj.addUnitToDB(unit, comment)
 
@@ -195,24 +253,49 @@ class Platform(object):
 
 
 class TimeSeries(object):
-    """The class 'TimeSeries' is a collection of data in timeseries format.
-    It can be used for reference data, results from  models submitted
-    using the IAMC template, or as parent-class of the 'Scenario' class
-    to store processed model results.
+    """Generic collection of data in time series format.
+
+    TimeSeries is the parent/super-class of :class:`Scenario`.
+
+    A TimeSeries is uniquely identified by three values:
+
+    1. `model`: the name of a model used to perform calculations between input
+       and output data.
+
+       - In TimeSeries storing non-model data, arbitrary strings can be used.
+       - In a :class:`Scenario`, the `model` is a reference to a GAMS program
+         registered to the :class:`Platform` that can be solved with
+         :meth:`Scenario.solve`. See
+         :meth:`ixmp.model_settings.register_model`.
+
+    2. `scenario`: the name of a specific, coherent description of the real-
+       world system being modeled. Any `model` may be used to represent mutiple
+       alternate, or 'counter-factual', `scenarios`.
+    3. `version`: an integer identifying a specific iteration of a
+       (`model`, `scenario`). A new `version` is created by:
+
+       - Instantiating a new TimeSeries with the same `model` and `scenario` as
+         an existing TimeSeries.
+       - Calling :meth:`Scenario.clone`.
 
     Parameters
     ----------
-    mp : ixmp.Platform instance
-    model : string
-        model name
-    scenario : string
-        scenario name
-    version : string or integer
-        initialize a new TimeSeries (if version='new'), or
-        load a specific version from the database (if version is integer)
-    annotation : string
-        a short annotation/comment (when initializing a new TimeSeries)
+    mp : :class:`Platform`
+        ixmp instance in which to store data.
+    model : str
+        Model name.
+    scenario : str
+        Scenario name.
+    version : int or str, optional
+        If omitted, load the default version of the (`model`, `scenario`).
+        If :class:`int`, load a specific version.
+        If ``'new'``, create a new TimeSeries.
+    annotation : str, optional
+        A short annotation/comment used when ``version='new'``.
     """
+
+    # Version of the TimeSeries
+    version = None
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
@@ -242,7 +325,10 @@ class TimeSeries(object):
         self._jobj.checkOut(timeseries_only)
 
     def commit(self, comment):
-        """commit all changes made to the ixmp database instance"""
+        """Commit all changed data to the database.
+
+        :attr:`version` is not incremented.
+        """
         self._jobj.commit(comment)
         # if version == 0, this is a new instance
         # and a new version number was assigned after the initial commit
@@ -250,15 +336,15 @@ class TimeSeries(object):
             self.version = self._jobj.getVersion()
 
     def discard_changes(self):
-        """discard all changes, reload from the ixmp database instance"""
+        """Discard all changes and reload from the database."""
         self._jobj.discardChanges()
 
     def set_as_default(self):
-        """set this instance of a model/scenario as default version"""
+        """Set the current :attr:`version` as the default."""
         self._jobj.setAsDefaultVersion()
 
     def is_default(self):
-        """ check whether this TimeSeries is set as default"""
+        """Return :obj:`True` if the :attr:`version` is the default."""
         return bool(self._jobj.isDefault())
 
     def last_update(self):
@@ -276,16 +362,26 @@ class TimeSeries(object):
     # functions for importing and retrieving timeseries data
 
     def add_timeseries(self, df, meta=False):
-        """add a timeseries dataframe to the TimeSeries instance
+        """Add data to the TimeSeries.
 
         Parameters
         ----------
-        df : a Pandas dataframe either
-             - in tabular form (cols: region[/node], variable, unit, year)
-             - in IAMC format (cols: region[/node], variable, unit, <years>)
-        meta : boolean
-            indicator whether this timeseries is 'meta-data'
-            (special treatment during cloning for MESSAGE-scheme scenarios)
+        df : :class:`pandas.DataFrame`
+            Data to add. `df` must have the following columns:
+
+            - `region` or `node`
+            - `variable`
+            - `unit`
+
+            Additional column names may be either of:
+
+            - `year` and `value`—long, or 'tabular', format.
+            - one or more specific years—wide, or 'IAMC' format.
+
+        meta : bool, optional
+            If :obj:`True`, store `df` as metadata. Metadata is treated
+            specially when :meth:`Scenario.clone` is called for Scenarios
+            created with ``scheme='MESSAGE'``.
         """
         meta = 1 if meta else 0
 
@@ -345,22 +441,26 @@ class TimeSeries(object):
 
     def timeseries(self, iamc=False, regions=None, variables=None, units=None,
                    years=None):
-        """retrieve timeseries data as a pandas.DataFrame
+        """Retrieve TimeSeries data.
 
         Parameters
         ----------
-        iamc : boolean, default True
-            returns a pandas.DataFrame either
-            - 'IAMC-style' format (cols: region, variable unit, <years>)
-            - in tabular form (cols: region, variable, unit, year)
-        regions : list of strings
-            filter by regions
-        variables : list of strings
-            filter by variables
-        units : list of strings
-            filter by units
-        years : list of integers
-            filter by years
+        iamc : bool
+            Return data in wide/'IAMC' format. If :obj:`False`, return data in
+            long/'tabular' format; see :meth:`add_timeseries`.
+        regions : list of str, optional
+            Regions to include in returned data.
+        variables : list of str, optional
+            Variables to include in returned data.
+        units : list of str, optional
+            Units to include in returned data.
+        years : list of int, optional
+            Years to include in returned data.
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            Specified data.
         """
 
         # convert filter lists to Java objects
@@ -406,35 +506,69 @@ class TimeSeries(object):
 # %% class Scenario
 
 class Scenario(TimeSeries):
-    """ The class 'Scenario' is a generic collection
-    of all data for a model instance (sets and parameters), as well as
-    the solution of a model run (levels/marginals of variables and equations).
+    """Collection of model-related input and output data.
+
+    A Scenario is a :class:`TimeSeries` associated with a particular model that
+    can be run on the current :class:`Platform` by calling :meth:`solve`. The
+    Scenario also stores the output, or 'solution' of a model run; this
+    includes the 'level' and 'marginal' values of GAMS equations and variables.
+
+    Data in a Scenario are closely related to different types in the GAMS data
+    model:
+
+    - A **set** is a named collection of labels. See :meth:`init_set`,
+      :meth:`add_set`, and :meth:`set`. There are two types of sets:
+
+      1. Sets that are lists of labels.
+      2. Sets that are 'indexed' by one or more other set(s). For this type of
+         set, each member is an ordered tuple of the labels in the index sets.
+
+    - A **scalar** is a named, single, numerical value. See
+      :meth:`init_scalar`, :meth:`change_scalar`, and :meth:`scalar`.
+
+    - **Parameters**, **variables**, and **equations** are multi-dimensional
+      arrays of values that are indexed by one or more sets (i.e. with
+      dimension 1 or greater). The Scenario methods for handling these types
+      are very similar; they mainly differ in how they are used within GAMS
+      models registered with ixmp:
+
+      - **Parameters** are generic data that can be defined before a model run.
+        They may be altered by the model solution. See :meth:`init_par`,
+        :meth:`remove_par`, :meth:`par_list`, :meth:`add_par`, and :meth:`par`.
+      - **Variables** are calculated during or after a model run by GAMS code,
+        so they cannot be modified by a Scenario. See :meth:`init_var`,
+        :meth:`var_list`, and :meth:`var`.
+      - **Equations** describe fundamental relationships between other types
+        (parameters, variables, and scalars) in a model. They are defined in
+        GAMS code, so cannot be modified by a Scenario. See :meth:`init_equ`,
+        :meth:`equ_list`, and :meth:`equ`.
 
     Parameters
     ----------
-    mp : ixmp.Platform instance
-    model : string
-        model name
-    scenario : string
-        scenario name
-    version : string, integer, Java object (at.ac.iiasa.ixmp.objects.Scenario)
-        initialize a new scenario (if version is 'new'),
-        load a specific version from the database (if version is integer)
-    scheme : string
-        use an explicit scheme for initializing a new scenario
-    annotation : string
-        a short annotation/comment (when initializing a new scenario)
-    cache : boolean
-        keep all dataframes in memory after first query (default: False)
+    mp : :class:`Platform`
+        ixmp instance in which to store data.
+    model : str
+        Model name; must be a registered model.
+    scenario : str
+        Scenario name.
+    version : str or int or at.ac.iiasa.ixmp.objects.Scenario, optional
+        If omitted, load the default version of the (`model`, `scenario`).
+        If :class:`int`, load the specified version.
+        If ``'new'``, initialize a new TimeSeries.
+    scheme : str, optional
+        Use an explicit scheme for initializing a new scenario.
+    annotation : str, optional
+        A short annotation/comment used when ``version='new'``.
+    cache : bool, optional
+        Store data in memory and return cached values instead of repeatedly
+        querying the database.
 
-    The class includes functions to make changes to the data,
-    export all data to and import a solution from GAMS gdx,
-    and save the scenario data to an ixmp database instance.
-    All changes are logged for comprehensive version control.
+    """
+    # Name of the model associated with the Scenario
+    model = None
 
-    This class inherits all functions of the class 'TimeSeries'.
-    The timeseries functions can be used to store and retrieve
-    processed model outputs in the IAMC-style format."""
+    # Name of the Scenario
+    scenario = None
 
     _java_kwargs = {
         'set': {},
@@ -483,7 +617,13 @@ class Scenario(TimeSeries):
         return funcs[ix_type](name)
 
     def load_scenario_data(self):
-        """Completely load a scenario into cached memory"""
+        """Load all Scenario data into memory.
+
+        Raises
+        ------
+        ValueError
+            If the Scenario was instantiated with ``cache=False``.
+        """
         if not self._cache:
             raise ValueError('Cache must be enabled to load scenario data')
 
@@ -521,11 +661,11 @@ class Scenario(TimeSeries):
         return filtered(df, filters)
 
     def idx_sets(self, name):
-        """return the list of index sets for an item (set, par, var, equ)
+        """Return the list of index sets for an item (set, par, var, equ)
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the item
         """
         return to_pylist(self.item('item', name).getIdxSets())
@@ -535,7 +675,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the item
         """
         return to_pylist(self.item('item', name).getIdxNames())
@@ -550,46 +690,66 @@ class Scenario(TimeSeries):
         raise DeprecationWarning('function was migrated to `message_ix` class')
 
     def set_list(self):
-        """return a list of sets initialized in the scenario"""
+        """List all defined sets."""
         return to_pylist(self._jobj.getSetList())
 
     def init_set(self, name, idx_sets=None, idx_names=None):
-        """initialize a new set in the scenario
+        """Initialize a new set.
 
         Parameters
         ----------
-        name : string
-            name of the item
-        idx_sets : list of strings
-            index set list
-        idx_names : list of strings
-            index name list (optional, default to 'idx_sets')
+        name : str
+            Name of the set.
+        idx_sets : list of str, optional
+            Names of other sets that index this set.
+        idx_names : list of str, optional
+            Names of the dimensions indexed by `idx_sets`.
+
+        Raises
+        ------
+        :class:`jpype.JavaException`
+            If the set (or another object with the same *name*) already exists.
         """
         self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
 
     def set(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific set
+        """Return the (filtered) elements of a set.
 
         Parameters
         ----------
-        name : string
-            name of the item
-        filters : dictionary
-            index names mapped list of index set elements
+        name : str
+            Name of the set.
+        filters : dict
+            Mapping of `dimension_name` → `elements`, where `dimension_name`
+            is one of the `idx_names` given when the set was initialized (see
+            :meth:`init_set`), and `elements` is an iterable of labels to
+            include in the return value.
+
+        Returns
+        -------
+        pandas.DataFrame
         """
         return self.element('set', name, filters, **kwargs)
 
     def add_set(self, name, key, comment=None):
-        """add elements to a set
+        """Add elements to an existing set.
 
         Parameters
         ----------
-        name : string
-            name of the set
-        key : string, list/range of strings/values, dictionary, dataframe
-            element(s) to be added
-        comment : string, list/range of strings
-            comment (optional, only used if 'key' is a string or list/range)
+        name : str
+            Name of the set.
+        key : str or iterable of str or dict or :class:`pandas.DataFrame`
+            Element(s) to be added. If *name* exists, the elements are
+            appended to existing elements.
+        comment : str or iterable of str, optional
+            Comment describing the element(s). Only used if *key* is a string
+            or list/range.
+
+        Raises
+        ------
+        :class:`jpype.JavaException`
+            If the set *name* does not exist. :meth:`init_set` must be called
+            before :meth:`add_set`.
         """
         self.clear_cache(name=name, ix_type='set')
 
@@ -637,7 +797,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the set
         key : dataframe or key list or concatenated string
             elements to be removed
@@ -650,20 +810,20 @@ class Scenario(TimeSeries):
             _remove_ele(self._jobj.getSet(name), key)
 
     def par_list(self):
-        """return a list of parameters initialized in the scenario"""
+        """List all defined parameters."""
         return to_pylist(self._jobj.getParList())
 
     def init_par(self, name, idx_sets, idx_names=None):
-        """initialize a new parameter in the scenario
+        """Initialize a new parameter.
 
         Parameters
         ----------
-        name : string
-            name of the item
-        idx_sets : list of strings
-            index set list
-        idx_names : list of strings
-            index name list (optional, default to 'idx_sets')
+        name : str
+            Name of the parameter.
+        idx_sets : list of str
+            Names of sets that index this parameter.
+        idx_names : list of str, optional
+            Names of the dimensions indexed by `idx_sets`.
         """
         self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
 
@@ -672,27 +832,27 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the parameter
-        filters : dictionary
+        filters : dict
             index names mapped list of index set elements
         """
         return self.element('par', name, filters, **kwargs)
 
     def add_par(self, name, key, val=None, unit=None, comment=None):
-        """add elements to a parameter
+        """Set the values of a parameter.
 
         Parameters
         ----------
-        name : string
-            name of the parameter
-        key : string, list/range of strings/values, dictionary, dataframe
+        name : str
+            Name of the parameter.
+        key : str, list/range of strings/values, dictionary, dataframe
             element(s) to be added
-        val : values, list/range of values
+        val : values, list/range of values, optional
             element values (only used if 'key' is a string or list/range)
-        unit : string, list/range of strings
+        unit : str, list/range of strings, optional
             element units (only used if 'key' is a string or list/range)
-        comment : string, list/range of strings
+        comment : str or list/range of strings, optional
             comment (optional, only used if 'key' is a string or list/range)
         """
         self.clear_cache(name=name, ix_type='par')
@@ -755,58 +915,61 @@ class Scenario(TimeSeries):
             jPar.addElement(str(key), _jdouble(val), unit, comment)
 
     def init_scalar(self, name, val, unit, comment=None):
-        """initialize a new scalar
+        """Initialize a new scalar.
 
         Parameters
         ----------
-        name : string
-            name of the scalar
+        name : str
+            Name of the scalar
         val : number
-            value
-        unit : string
-            unit
-        comment : string
-            explanatory comment (optional)
+            Initial value of the scalar.
+        unit : str
+            Unit of the scalar.
+        comment : str, optional
+            Description of the scalar.
         """
         jPar = self._jobj.initializePar(name, None, None)
         jPar.addElement(_jdouble(val), unit, comment)
 
     def scalar(self, name):
-        """return a dictionary of the value and unit for a scalar
+        """Return the value and unit of a scalar.
 
         Parameters
         ----------
-        name : string
-            name of the scalar
+        name : str
+            Name of the scalar.
+
+        Returns
+        -------
+        {'value': value, 'unit': unit}
         """
         return _get_ele_list(self._jobj.getPar(name), None, has_value=True)
 
     def change_scalar(self, name, val, unit, comment=None):
-        """change the value or unit of a scalar
+        """Set the value and unit of a scalar.
 
         Parameters
         ----------
-        name : string
-            name of the scalar
+        name : str
+            Name of the scalar.
         val : number
-            value
-        unit : string
-            unit
-        comment : string
-            explanatory comment (optional)
+            New value of the scalar.
+        unit : str
+            New unit of the scalar.
+        comment : str, optional
+            Description of the change.
         """
         self.clear_cache(name=name, ix_type='par')
         self.item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
-        """delete a parameter from the scenario
-        or remove an element from a parameter (if key is specified)
+        """Remove parameter values or an entire parameter.
 
         Parameters
         ----------
-        name : string
-            name of the parameter
-        key : dataframe or key list or concatenated string
+        name : str
+            Name of the parameter.
+        key : dataframe or key list or concatenated string, optional
             elements to be removed
         """
         self.clear_cache(name=name, ix_type='par')
@@ -817,7 +980,7 @@ class Scenario(TimeSeries):
             _remove_ele(self._jobj.getPar(name), key)
 
     def var_list(self):
-        """return a list of variables initialized in the scenario"""
+        """List all defined variables."""
         return to_pylist(self._jobj.getVarList())
 
     def init_var(self, name, idx_sets=None, idx_names=None):
@@ -825,12 +988,12 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the item
-        idx_sets : list of strings
+        idx_sets : list of str
             index set list
-        idx_names : list of strings
-            index name list (optional, default to 'idx_sets')
+        idx_names : list of str, optional
+            index name list
         """
         self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
 
@@ -839,28 +1002,28 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the variable
-        filters : dictionary
+        filters : dict
             index names mapped list of index set elements
         """
         return self.element('var', name, filters, **kwargs)
 
     def equ_list(self):
-        """return a list of equations initialized in the scenario"""
+        """List all defined equations."""
         return to_pylist(self._jobj.getEquList())
 
     def init_equ(self, name, idx_sets=None, idx_names=None):
-        """initialize a new equation in the scenario
+        """Initialize a new equation.
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the item
-        idx_sets : list of strings
+        idx_sets : list of str
             index set list
-        idx_names : list of strings
-            index name list (optional, default to 'idx_sets')
+        idx_names : list of str, optional
+            index name list
         """
         self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
 
@@ -869,9 +1032,9 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             name of the equation
-        filters : dictionary
+        filters : dict
             index names mapped list of index set elements
         """
         return self.element('equ', name, filters, **kwargs)
@@ -879,23 +1042,23 @@ class Scenario(TimeSeries):
     def clone(self, model=None, scenario=None, annotation=None,
               keep_solution=True, first_model_year=None, platform=None,
               **kwargs):
-        """clone the current scenario and return the new scenario
+        """Clone the current scenario and return the clone.
 
         Parameters
         ----------
-        model : string
+        model : str
             new model name
-        scenario : string
+        scenario : str
             new scenario name
-        annotation : string
-            explanatory comment (optional)
-        keep_solution : boolean, default: True
+        annotation : str, optional
+            explanatory comment
+        keep_solution : boolean, optional
             indicator whether to include an existing solution
             in the cloned scenario
-        first_model_year: int, default None
+        first_model_year: int, optional
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
-        platform : ixmp.Platform
+        platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
@@ -927,11 +1090,11 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        path : string
+        path : str
             path to the folder
-        filename : string
+        filename : str
             name of the gdx file
-        include_var_equ : boolean, default False
+        include_var_equ : boolean, optional
             indicator whether to include variables/equations in gdx
         """
         self._jobj.toGDX(path, filename, include_var_equ)
@@ -942,17 +1105,17 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        path : string
+        path : str
             path to the folder
-        filename : string
+        filename : str
             name of the gdx file
-        comment : string
+        comment : str
             comment to be added to the changelog
-        var_list : list of strings
+        var_list : list of str
             variables (levels and marginals) to be imported from gdx
-        equ_list : list of strings
+        equ_list : list of str
             equations (levels and marginals) to be imported from gdx
-        check_solution : boolean, default True
+        check_solution : boolean, optional
             raise an error if GAMS did not solve to optimality
             (only applicable for a MESSAGE-scheme scenario)
         """
@@ -962,12 +1125,21 @@ class Scenario(TimeSeries):
                                        check_solution)
 
     def has_solution(self):
-        """check whether the Scenario has been solved and a solution (variables
-        and equations) exists in the database"""
+        """Return :obj:`True` if the Scenario has been solved.
+
+        If ``has_solution() == True``, model solution data is exists in the
+        database.
+        """
         return self._jobj.hasSolution()
 
     def remove_solution(self):
-        """delete the solution (variables and equations) from the sceanario"""
+        """Delete the model solution.
+
+        Raises
+        ------
+        ValueError
+            If Scenario has no solution.
+        """
         if self.has_solution():
             self.clear_cache()  # reset Python data cache
             self._jobj.removeSolution()
@@ -977,29 +1149,35 @@ class Scenario(TimeSeries):
     def solve(self, model, case=None, model_file=None,
               in_file=None, out_file=None, solve_args=None, comment=None,
               var_list=None, equ_list=None, check_solution=True):
-        """solve the model (export to gdx, execute GAMS, import the solution)
+        """Solve the model and store output.
+
+        ixmp 'solves' a model using the following steps:
+
+        1. Write all Scenario data to a GDX model input file.
+        2. Run GAMS for the specified `model` to perform calculations.
+        3. Read the model output, or 'solution', into the database.
 
         Parameters
         ----------
-        model : string
+        model : str
             model (e.g., MESSAGE) or GAMS file name (excluding '.gms')
-        case : string
+        case : str
             identifier of gdx file names, defaults to 'model_name_scen_name'
-        model_file : string, optional
+        model_file : str, optional
             path to GAMS file (including '.gms' extension)
-        in_file : string, optional
+        in_file : str, optional
             path to GAMS gdx input file (including '.gdx' extension)
-        out_file : string, optional
+        out_file : str, optional
             path to GAMS gdx output file (including '.gdx' extension)
-        solve_args : string, optional
+        solve_args : str, optional
             arguments to be passed to GAMS (input/output file names, etc.)
-        comment : string, default None
+        comment : str, optional
             additional comment added to changelog when importing the solution
-        var_list : list of strings (optional)
+        var_list : list of str, optional
             variables to be imported from the solution
-        equ_list : list of strings (optional)
+        equ_list : list of str, optional
             equations to be imported from the solution
-        check_solution : boolean, default True
+        check_solution : boolean, optional
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         """
@@ -1035,9 +1213,9 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string, default None
+        name : str, optional
             item name (`None` clears entire Python cache)
-        ix_type : string, default None
+        ix_type : str, optional
             type of item (if provided, cache clearing is faster)
         """
         # if no name is given, clean the entire cache
@@ -1065,11 +1243,11 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        node : string
+        node : str
             node name
-        tec : string
+        tec : str
             name of the technology
-        yr_vtg : string
+        yr_vtg : str
             vintage year
         """
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
@@ -1079,7 +1257,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string, optional
+        name : str, optional
             metadata attribute name
         """
         def unwrap(value):
@@ -1096,9 +1274,9 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : string
+        name : str
             metadata attribute name
-        value : string|number|boolean
+        value : str or number or bool
             metadata attribute value
         """
         self._jobj.setMeta(name, value)

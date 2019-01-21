@@ -18,7 +18,8 @@ with the scientific programming languages Python and R.
 The platform also includes an API with the mathematical programming
 software system `GAMS`_.
 
-For the scientific reference, see Huppmann et al. (submitted) :cite:`huppmann_messageix_2018`.
+For the scientific reference, see Huppmann et al. (2019)
+:cite:`huppmann_messageix_2018`.
 
 .. _`GAMS` : http://www.gams.com
 

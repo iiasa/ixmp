@@ -14,7 +14,7 @@ import ixmp as ix
 from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
 from ixmp.default_paths import default_dbprops_file, find_dbprops
-from ixmp.utils import logger
+from ixmp.utils import logger, islistable
 
 # %% default settings for column headers
 
@@ -1316,11 +1316,8 @@ def to_jlist(pylist, idx_names=None):
 
     jList = java.LinkedList()
     if idx_names is None:
-        if type(pylist) is list:
+        if islistable(pylist):
             for key in pylist:
-                jList.add(str(key))
-        elif type(pylist) is set:
-            for key in list(pylist):
                 jList.add(str(key))
         else:
             jList.add(str(pylist))
@@ -1330,9 +1327,11 @@ def to_jlist(pylist, idx_names=None):
     return jList
 
 
-def make_dims(idx_sets, idx_names):
+def make_dims(sets, names):
     """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
-    return to_jlist(idx_sets), to_jlist(idx_names or idx_sets)
+    if isinstance(sets, set) or isinstance(names, set):
+        raise ValueError('index dimension must be string or ordered lists!')
+    return to_jlist(sets), to_jlist(names if names is not None else sets)
 
 
 def _get_ele_list(item, filters=None, has_value=False, has_level=False):

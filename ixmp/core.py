@@ -272,8 +272,11 @@ class TimeSeries(object):
        world system being modeled. Any `model` may be used to represent mutiple
        alternate, or 'counter-factual', `scenarios`.
     3. `version`: an integer identifying a specific iteration of a
-       (`model`, `scenario`). A new `version` is derived from an earlier one by
-       by sequential sets of changes, each saved with :meth:`commit`.
+       (`model`, `scenario`). A new `version` is created by:
+
+       - Instantiating a new TimeSeries with the same `model` and `scenario` as
+         an existing TimeSeries.
+       - Calling :meth:`Scenario.clone`.
 
     Parameters
     ----------

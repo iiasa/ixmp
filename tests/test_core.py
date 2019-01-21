@@ -1,5 +1,6 @@
 import os
 
+import jpype
 import pandas as pd
 import pytest
 from numpy import testing as npt
@@ -85,6 +86,39 @@ def test_init_scalar(test_mp):
     scen2.check_out()
     scen2.init_scalar('g', 90.0, 'USD/km')
     scen2.commit("adding a scalar 'g'")
+
+
+def test_init_set(test_mp):
+    """Test ixmp.Scenario.init_set()."""
+    scen = ixmp.Scenario(test_mp, *can_args)
+
+    # Add set on a locked scenario
+    with pytest.raises(jpype.JavaException,
+                       message="at.ac.iiasa.ixmp.exceptions.IxException: "
+                               "This Scenario cannot be edited, do a checkout "
+                               "first!"):
+        scen.init_set('foo')
+
+    scen = scen.clone(keep_solution=False)
+    scen.check_out()
+    scen.init_set('foo')
+
+    # Initialize an already-existing set
+    with pytest.raises(jpype.JavaException,
+                       message="at.ac.iiasa.ixmp.exceptions.IxException: "
+                               "An Item with the name 'foo' already exists!"):
+        scen.init_set('foo')
+
+
+def test_add_set(test_mp):
+    """Test ixmp.Scenario.add_set()."""
+    scen = ixmp.Scenario(test_mp, *can_args)
+
+    # Add element to a non-existent set
+    with pytest.raises(jpype.JavaException,
+                       message="at.ac.iiasa.ixmp.exceptions.IxException: "
+                               "No Set 'foo' exists in this Scenario!"):
+        scen.add_set('foo', 'bar')
 
 
 # make sure that changes to a scenario are copied over during clone

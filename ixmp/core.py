@@ -1250,7 +1250,8 @@ class Scenario(TimeSeries):
 
     def solve(self, model, case=None, model_file=None,
               in_file=None, out_file=None, solve_args=None, comment=None,
-              var_list=None, equ_list=None, check_solution=True):
+              var_list=None, equ_list=None, check_solution=True,
+              callback=None):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1258,6 +1259,13 @@ class Scenario(TimeSeries):
         1. Write all Scenario data to a GDX model input file.
         2. Run GAMS for the specified `model` to perform calculations.
         3. Read the model output, or 'solution', into the database.
+
+        If the optional argument `callback` is given, then additional steps are
+        performed:
+
+        4. Execute `callback` with the Scenario as an argument.
+        5. If the return value of `callback` is :obj:`False`, go to 1; else
+           finish.
 
         Parameters
         ----------
@@ -1282,6 +1290,7 @@ class Scenario(TimeSeries):
         check_solution : boolean, optional
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
+        callback : callable, optional
         """
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
@@ -1304,11 +1313,22 @@ class Scenario(TimeSeries):
         opth = os.path.dirname(outp)
         outgdx = os.path.basename(outp)
 
-        # write to gdx, execture GAMS, read solution from gdx
-        self.to_gdx(ipth, ingdx)
-        run_gams(model_file, args)
-        self.read_sol_from_gdx(opth, outgdx, comment,
-                               var_list, equ_list, check_solution)
+        # Iterate until convergence
+        while True:
+            # Write model data to file
+            self.to_gdx(ipth, ingdx)
+
+            # Invoke GAMS
+            run_gams(model_file, args)
+
+            # Read model solution
+            self.read_sol_from_gdx(opth, outgdx, comment,
+                                   var_list, equ_list, check_solution)
+
+            if not callable(callback) or callback(self):
+                # Exit if there is no callback given OR the callback
+                # returns True
+                break
 
     def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements

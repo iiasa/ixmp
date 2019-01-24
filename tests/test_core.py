@@ -219,8 +219,8 @@ def test_new_timeseries_error(test_mp):
 
 def test_get_timeseries(test_mp):
     scen = ixmp.TimeSeries(test_mp, *test_args, version=2)
-    obs = scen.timeseries(regions='World', variables='Testing', units='???',
-                          years=2020)
+    obs = scen.timeseries(region='World', variable='Testing', unit='???',
+                          year=2020)
     df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
           'year': [2020], 'value': [23.6]}
     exp = pd.DataFrame.from_dict(df)

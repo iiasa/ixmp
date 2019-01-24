@@ -10,6 +10,8 @@ from jpype import JPackage as java
 from jpype import JClass
 from subprocess import check_call
 
+from pyam.utils import pattern_match
+
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
@@ -443,8 +445,8 @@ class TimeSeries(object):
                 self._jobj.addTimeseries(df.region[i], df.variable[i], time,
                                          jData, df.unit[i], meta)
 
-    def timeseries(self, iamc=False, regions=None, variables=None, units=None,
-                   years=None):
+    def timeseries(self, iamc=False, region=None, variable=None, level=None,
+                   unit=None, year=None, **kwargs):
         """Retrieve TimeSeries data.
 
         Parameters
@@ -452,13 +454,13 @@ class TimeSeries(object):
         iamc : bool
             Return data in wide/'IAMC' format. If :obj:`False`, return data in
             long/'tabular' format; see :meth:`add_timeseries`.
-        regions : list of str, optional
+        region : str or list of strings
             Regions to include in returned data.
-        variables : list of str, optional
+        variable : str or list of strings
             Variables to include in returned data.
-        units : list of str, optional
+        unit : str or list of strings
             Units to include in returned data.
-        years : list of int, optional
+        year : str, int or list of strings or integers
             Years to include in returned data.
 
         Returns
@@ -466,15 +468,14 @@ class TimeSeries(object):
         :class:`pandas.DataFrame`
             Specified data.
         """
-
         # convert filter lists to Java objects
-        regions = ix.to_jlist(regions)
-        variables = ix.to_jlist(variables)
-        units = ix.to_jlist(units)
-        years = ix.to_jlist(years)
+        region = ix.to_jlist(region)
+        variable = ix.to_jlist(variable)
+        unit = ix.to_jlist(unit)
+        year = ix.to_jlist(year)
 
         # retrieve data, convert to pandas.DataFrame
-        data = self._jobj.getTimeseries(regions, variables, units, None, years)
+        data = self._jobj.getTimeseries(region, variable, unit, None, year)
         dictionary = {}
 
         # if in tabular format

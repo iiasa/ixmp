@@ -387,21 +387,7 @@ class TimeSeries(object):
         """
         meta = 1 if meta else 0
 
-        if "time" in df.columns:
-            raise("sub-annual time slices not supported by Python interface!")
-
-        # reset the index if meaningful entries are included there
-        if not list(df.index.names) == [None]:
-            df.reset_index(inplace=True)
-
-        # rename columns to standard notation
-        cols = {c: str(c).lower() for c in df.columns}
-        cols.update(node='region')
-        df = df.rename(columns=cols)
-        required_cols = ['region', 'variable', 'unit']
-        if not set(required_cols).issubset(set(df.columns)):
-            missing = list(set(required_cols) - set(df.columns))
-            raise ValueError("missing required columns {}!".format(missing))
+        df = to_iamc_template(df)
 
         # if in tabular format
         if ("value" in df.columns):
@@ -451,7 +437,7 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        iamc : bool
+        iamc : bool, default: False
             Return data in wide/'IAMC' format. If :obj:`False`, return data in
             long/'tabular' format; see :meth:`add_timeseries`.
         region : str or list of strings
@@ -1349,6 +1335,27 @@ def to_jlist(pylist, idx_names=None):
         for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
+
+
+def to_iamc_template(df):
+    """Formats a pd.DataFrame to an IAMC-compatible table"""
+    if "time" in df.columns:
+        raise("sub-annual time slices not supported by the Python interface!")
+
+    # reset the index if meaningful entries are included there
+    if not list(df.index.names) == [None]:
+        df.reset_index(inplace=True)
+
+    # rename columns to standard notation
+    cols = {c: str(c).lower() for c in df.columns}
+    cols.update(node='region')
+    df = df.rename(columns=cols)
+    required_cols = ['region', 'variable', 'unit']
+    if not set(required_cols).issubset(set(df.columns)):
+        missing = list(set(required_cols) - set(df.columns))
+        raise ValueError("missing required columns `{}`!".format(missing))
+
+    return df
 
 
 def make_dims(sets, names):

@@ -11,9 +11,16 @@ from ixmp.default_path_constants import CONFIG_PATH
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 
-# string columns for timeseries checks
+# string columns and dataframe for timeseries checks
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 cols_str = ['region', 'variable', 'unit', 'year']
+
+TS_DF = {'year': [2010, 2020], 'value': [23.7, 23.8]}
+TS_DF = pd.DataFrame.from_dict(TS_DF)
+TS_DF['region'] = 'World'
+TS_DF['variable'] = 'Testing'
+TS_DF['unit'] = '???'
+
 
 
 def local_config_exists():
@@ -197,15 +204,42 @@ def test_par_filters_unit(test_mp):
     assert obs == exp
 
 
-def test_new_timeseries(test_mp):
+def test_get_timeseries(test_mp):
+    scen = ixmp.TimeSeries(test_mp, *test_args)
+    assert_timeseries(scen)
+
+
+def test_get_timeseries_iamc(test_mp):
+    scen = ixmp.TimeSeries(test_mp, *test_args)
+    obs = scen.timeseries(iamc=True, regions='World', variables='Testing')
+
+    exp = TS_DF.pivot_table(index=['region', 'variable', 'unit'],
+                            columns='year')['value'].reset_index()
+    exp['model'] = 'Douglas Adams'
+    exp['scenario'] = 'Hitchhiker'
+
+    npt.assert_array_equal(exp[iamc_idx_cols], obs[iamc_idx_cols])
+    npt.assert_array_almost_equal(exp[2010], obs[2010])
+
+
+def test_new_timeseries_as_year_value(test_mp):
     scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
-    df = pd.DataFrame.from_dict(df)
-    df['region'] = 'World'
-    df['variable'] = 'Testing'
-    df['unit'] = '???'
-    scen.add_timeseries(df)
+    scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
+    assert_timeseries(scen)
+
+
+def test_new_timeseries_as_iamc(test_mp):
+    scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.commit('importing a testing timeseries')
+    assert_timeseries(scen)
+
+
+def assert_timeseries(scen):
+    obs = scen.timeseries(region='World', variable='Testing')
+    npt.assert_array_equal(TS_DF[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(TS_DF['value'], obs['value'])
 
 
 def test_new_timeseries_error(test_mp):
@@ -214,36 +248,8 @@ def test_new_timeseries_error(test_mp):
     df = pd.DataFrame.from_dict(df)
     df['region'] = 'World'
     df['variable'] = 'Testing'
+    # colum `unit` is missing
     pytest.raises(ValueError, scen.add_timeseries, df)
-
-
-def test_get_timeseries(test_mp):
-    scen = ixmp.TimeSeries(test_mp, *test_args, version=2)
-    obs = scen.timeseries(region='World', variable='Testing', unit='???',
-                          year=2020)
-    df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
-          'year': [2020], 'value': [23.6]}
-    exp = pd.DataFrame.from_dict(df)
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
-    npt.assert_array_almost_equal(exp['value'], obs['value'])
-
-
-def test_get_timeseries_iamc(test_mp):
-    scen = ixmp.TimeSeries(test_mp, *test_args, version=2)
-    obs = scen.timeseries(iamc=True, regions='World', variables='Testing')
-    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
-    df = pd.DataFrame.from_dict(df)
-    df['model'] = 'Douglas Adams'
-    df['scenario'] = 'Hitchhiker'
-    df['region'] = 'World'
-    df['variable'] = 'Testing'
-    df['unit'] = '???'
-    df = df.pivot_table(index=iamc_idx_cols, columns='year')['value']
-    df.reset_index(inplace=True)
-
-    exp = pd.DataFrame.from_dict(df)
-    npt.assert_array_equal(exp[iamc_idx_cols], obs[iamc_idx_cols])
-    npt.assert_array_almost_equal(exp[2010], obs[2010])
 
 
 def test_timeseries_edit(test_mp_props):

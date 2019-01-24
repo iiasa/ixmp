@@ -50,10 +50,10 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_timeseries(scen)
 
 
-def assert_timeseries(scen):
-    obs = scen.timeseries(region='World', variable='Testing')
-    npt.assert_array_equal(TS_DF[cols_str], obs[cols_str])
-    npt.assert_array_almost_equal(TS_DF['value'], obs['value'])
+def assert_timeseries(scen, exp=TS_DF, variable='Testing'):
+    obs = scen.timeseries(region='World')
+    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(exp['value'], obs['value'])
 
 
 def test_new_timeseries_error(test_mp):
@@ -101,3 +101,33 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_timeseries_remove_single_entry(test_mp):
+    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='fo')
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.commit('importing a testing timeseries')
+
+    scen.check_out()
+    scen.remove_timeseries(TS_DF[TS_DF.year == 2010])
+    scen.commit('testing for removing a single timeseries data point')
+
+    exp = TS_DF[TS_DF.year == 2020]
+    assert_timeseries(scen, exp)
+
+
+def test_timeseries_remove_all_data(test_mp):
+    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='fo')
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.commit('importing a testing timeseries')
+
+    exp = TS_DF.copy()
+    exp['variable'] = 'Testing2'
+
+    scen.check_out()
+    scen.add_timeseries(exp)
+    scen.remove_timeseries(TS_DF)
+    scen.commit('testing for removing a full timeseries row')
+
+    assert scen.timeseries(region='World', variable='Testing').empty
+    assert_timeseries(scen, exp, 'Testing2')

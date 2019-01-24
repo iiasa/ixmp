@@ -493,6 +493,29 @@ class TimeSeries(object):
 
         return df
 
+    def remove_timeseries(self, df):
+        """Remove timeseries data from the TimeSeries instance.
+
+        Parameters
+        ----------
+        df : :class:`pandas.DataFrame`
+            Data to remove. `df` must have the following columns:
+
+            - `region` or `node`
+            - `variable`
+            - `unit`
+            - `year`
+        """
+        df = to_iamc_template(df)
+        if 'year' not in df.columns:
+            pd.melt(df, id_vars=['region', 'variable', 'unit'],
+                    var_name='year', value_name='value')
+        for name, data in df.groupby(['region', 'variable', 'unit']):
+            years = java.LinkedList()
+            for y in data['year']:
+                years.add(java.Integer(y))
+            self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
+
 
 # %% class Scenario
 

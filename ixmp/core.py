@@ -10,8 +10,6 @@ from jpype import JPackage as java
 from jpype import JClass
 from subprocess import check_call
 
-from pyam.utils import pattern_match
-
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH

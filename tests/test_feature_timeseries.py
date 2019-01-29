@@ -50,7 +50,7 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_timeseries(scen)
 
 
-def assert_timeseries(scen, exp=TS_DF, variable='Testing'):
+def assert_timeseries(scen, exp=TS_DF):
     obs = scen.timeseries(region='World')
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
@@ -104,9 +104,7 @@ def test_timeseries_edit(test_mp_props):
 
 
 def test_timeseries_remove_single_entry(test_mp):
-    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
-    scen.commit('importing a testing timeseries')
+    scen = ixmp.Scenario(test_mp, *test_args).clone(scenario='Hitchhiker2')
 
     scen.check_out()
     scen.remove_timeseries(TS_DF[TS_DF.year == 2010])
@@ -117,9 +115,7 @@ def test_timeseries_remove_single_entry(test_mp):
 
 
 def test_timeseries_remove_all_data(test_mp):
-    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
-    scen.commit('importing a testing timeseries')
+    scen = ixmp.Scenario(test_mp, *test_args).clone(scenario='Hitchhiker3')
 
     exp = TS_DF.copy()
     exp['variable'] = 'Testing2'

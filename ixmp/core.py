@@ -506,8 +506,8 @@ class TimeSeries(object):
         """
         df = to_iamc_template(df)
         if 'year' not in df.columns:
-            pd.melt(df, id_vars=['region', 'variable', 'unit'],
-                    var_name='year', value_name='value')
+            df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
+                         var_name='year', value_name='value')
         for name, data in df.groupby(['region', 'variable', 'unit']):
             years = java.LinkedList()
             for y in data['year']:

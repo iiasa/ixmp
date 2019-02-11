@@ -104,7 +104,14 @@ def test_timeseries_edit(test_mp_props):
 
 
 def test_timeseries_remove_single_entry(test_mp):
-    scen = ixmp.Scenario(test_mp, *test_args).clone(scenario='Hitchhiker2')
+    args_single = ('Douglas Adams', 'test_remove_single')
+
+    scen = ixmp.Scenario(test_mp, *args_single, version='new', annotation='fo')
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.commit('importing a testing timeseries')
+
+    scen = ixmp.Scenario(test_mp, *args_single)
+    assert_timeseries(scen, TS_DF)
 
     scen.check_out()
     scen.remove_timeseries(TS_DF[TS_DF.year == 2010])
@@ -115,7 +122,14 @@ def test_timeseries_remove_single_entry(test_mp):
 
 
 def test_timeseries_remove_all_data(test_mp):
-    scen = ixmp.Scenario(test_mp, *test_args).clone(scenario='Hitchhiker3')
+    args_all = ('Douglas Adams', 'test_remove_all')
+
+    scen = ixmp.Scenario(test_mp, *args_all, version='new', annotation='fo')
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.commit('importing a testing timeseries')
+
+    scen = ixmp.Scenario(test_mp, *args_all)
+    assert_timeseries(scen, TS_DF)
 
     exp = TS_DF.copy()
     exp['variable'] = 'Testing2'
@@ -126,4 +140,4 @@ def test_timeseries_remove_all_data(test_mp):
     scen.commit('testing for removing a full timeseries row')
 
     assert scen.timeseries(region='World', variable='Testing').empty
-    assert_timeseries(scen, exp, 'Testing2')
+    assert_timeseries(scen, exp)

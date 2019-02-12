@@ -386,17 +386,7 @@ class TimeSeries(object):
         """
         meta = 1 if meta else 0
 
-        if "time" in df.columns:
-            raise("sub-annual time slices not supported by Python interface!")
-
-        # rename columns to standard notation
-        cols = {c: str(c).lower() for c in df.columns}
-        cols.update(node='region')
-        df = df.rename(columns=cols)
-        required_cols = ['region', 'variable', 'unit']
-        if not set(required_cols).issubset(set(df.columns)):
-            missing = list(set(required_cols) - set(df.columns))
-            raise ValueError("missing required columns {}!".format(missing))
+        df = to_iamc_template(df)
 
         # if in tabular format
         if ("value" in df.columns):
@@ -440,22 +430,22 @@ class TimeSeries(object):
                 self._jobj.addTimeseries(df.region[i], df.variable[i], time,
                                          jData, df.unit[i], meta)
 
-    def timeseries(self, iamc=False, regions=None, variables=None, units=None,
-                   years=None):
+    def timeseries(self, iamc=False, region=None, variable=None, level=None,
+                   unit=None, year=None, **kwargs):
         """Retrieve TimeSeries data.
 
         Parameters
         ----------
-        iamc : bool
+        iamc : bool, default: False
             Return data in wide/'IAMC' format. If :obj:`False`, return data in
             long/'tabular' format; see :meth:`add_timeseries`.
-        regions : list of str, optional
+        region : str or list of strings
             Regions to include in returned data.
-        variables : list of str, optional
+        variable : str or list of strings
             Variables to include in returned data.
-        units : list of str, optional
+        unit : str or list of strings
             Units to include in returned data.
-        years : list of int, optional
+        year : str, int or list of strings or integers
             Years to include in returned data.
 
         Returns
@@ -463,15 +453,14 @@ class TimeSeries(object):
         :class:`pandas.DataFrame`
             Specified data.
         """
-
         # convert filter lists to Java objects
-        regions = ix.to_jlist(regions)
-        variables = ix.to_jlist(variables)
-        units = ix.to_jlist(units)
-        years = ix.to_jlist(years)
+        region = ix.to_jlist(region)
+        variable = ix.to_jlist(variable)
+        unit = ix.to_jlist(unit)
+        year = ix.to_jlist(year)
 
         # retrieve data, convert to pandas.DataFrame
-        data = self._jobj.getTimeseries(regions, variables, units, None, years)
+        data = self._jobj.getTimeseries(region, variable, unit, None, year)
         dictionary = {}
 
         # if in tabular format
@@ -502,6 +491,29 @@ class TimeSeries(object):
             df.reset_index(inplace=True)
 
         return df
+
+    def remove_timeseries(self, df):
+        """Remove timeseries data from the TimeSeries instance.
+
+        Parameters
+        ----------
+        df : :class:`pandas.DataFrame`
+            Data to remove. `df` must have the following columns:
+
+            - `region` or `node`
+            - `variable`
+            - `unit`
+            - `year`
+        """
+        df = to_iamc_template(df)
+        if 'year' not in df.columns:
+            df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
+                         var_name='year', value_name='value')
+        for name, data in df.groupby(['region', 'variable', 'unit']):
+            years = java.LinkedList()
+            for y in data['year']:
+                years.add(java.Integer(y))
+            self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
 
 
 # %% class Scenario
@@ -1345,6 +1357,27 @@ def to_jlist(pylist, idx_names=None):
         for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
+
+
+def to_iamc_template(df):
+    """Formats a pd.DataFrame to an IAMC-compatible table"""
+    if "time" in df.columns:
+        raise("sub-annual time slices not supported by the Python interface!")
+
+    # reset the index if meaningful entries are included there
+    if not list(df.index.names) == [None]:
+        df.reset_index(inplace=True)
+
+    # rename columns to standard notation
+    cols = {c: str(c).lower() for c in df.columns}
+    cols.update(node='region')
+    df = df.rename(columns=cols)
+    required_cols = ['region', 'variable', 'unit']
+    if not set(required_cols).issubset(set(df.columns)):
+        missing = list(set(required_cols) - set(df.columns))
+        raise ValueError("missing required columns `{}`!".format(missing))
+
+    return df
 
 
 def make_dims(sets, names):

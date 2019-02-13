@@ -1,7 +1,6 @@
 sphinx
+sphinx_rtd_theme
 sphinxcontrib-bibtex
-sphinxcontrib-fulltoc
 numpydoc
-cloud_sptheme
 nbformat
 jupyter

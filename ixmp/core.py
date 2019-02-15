@@ -1162,7 +1162,8 @@ class Scenario(TimeSeries):
         scenario = self.scenario if not scenario else scenario
 
         return Scenario(platform, model, scenario,
-                        version=self._jobj.clone(model, scenario, annotation,
+                        version=self._jobj.clone(platform._jobj,
+                                                 model, scenario, annotation,
                                                  keep_solution,
                                                  first_model_year),
                         cache=self._cache)

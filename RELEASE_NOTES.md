@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#118](https://github.com/iiasa/ixmp/pull/118): Switch to RTD Sphinx theme.
 - [#116](https://github.com/iiasa/ixmp/pull/116): Bugfix and extend functionality for working with IAMC-style timeseries data
 - [#111](https://github.com/iiasa/ixmp/pull/111): Add functions to check if a Scenario has an item (set, par, var, equ)
 - [#110](https://github.com/iiasa/ixmp/pull/110): Generalize the internal functions to format index dimensions for mapping sets and parameters

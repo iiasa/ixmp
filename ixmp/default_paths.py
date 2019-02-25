@@ -1,6 +1,11 @@
 import os
+import sys
 
 from ixmp import config
+
+
+if sys.version[0] == 2:
+    FileNotFoundError = OSError
 
 
 def default_dbprops_file():

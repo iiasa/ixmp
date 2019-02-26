@@ -38,7 +38,14 @@ def find_dbprops(fname):
         *fname* is not found in any of the search paths.
     """
     # Look in the current directory first, then the configured directory
-    dirs = ['', db_config_path()]
+    dirs = ['']
+
+    try:
+        # Catch exception raised by db_config_path() if no config file exists.
+        # See TODO in config.get().
+        dirs.append(db_config_path())
+    except RuntimeError:
+        pass
 
     for directory in dirs:
         path = os.path.abspath(os.path.join(directory, fname))

@@ -1,10 +1,12 @@
 import os
-import sys
 
 from ixmp import config
 
 
-if sys.version[0] == 2:
+try:
+    FileNotFoundError
+except NameError:
+    # Python 2.7
     FileNotFoundError = OSError
 
 

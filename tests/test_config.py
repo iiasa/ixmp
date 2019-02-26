@@ -1,13 +1,15 @@
 import os
 import os.path
-import sys
 
 import pytest
 
 from ixmp.default_paths import find_dbprops
 
 
-if sys.version[0] == 2:
+try:
+    FileNotFoundError
+except NameError:
+    # Python 2.7
     FileNotFoundError = OSError
 
 

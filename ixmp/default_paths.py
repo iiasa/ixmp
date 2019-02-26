@@ -3,6 +3,13 @@ import os
 from ixmp import config
 
 
+try:
+    FileNotFoundError
+except NameError:
+    # Python 2.7
+    FileNotFoundError = OSError
+
+
 def default_dbprops_file():
     return config.get('DEFAULT_DBPROPS_FILE')
 
@@ -12,22 +19,39 @@ def db_config_path():
 
 
 def find_dbprops(fname):
-    """Search directories for file fname. First start in local dir (`.`), then look
-    in ixmp default locations.
+    """Return the absolute path to a database properties file.
+
+    Searches for a file named *fname*, first in the current working directory
+    (`.`), then in the ixmp default location.
 
     Parameters
     ----------
-    fname : string
-        filename
-    """
-    # look local first
-    if os.path.isfile(fname):
-        return fname
+    fname : str
+        Name of a database properties file to locate.
 
-    # otherwise look in default directory
-    config_path = db_config_path()
-    _fname = os.path.join(config_path, fname)
-    if not os.path.isfile(_fname):
-        raise IOError('Could not find {} either locally or in {}'.format(
-            fname, config_path))
-    return _fname
+    Returns
+    -------
+    str
+        Absolute path to *fname*.
+
+    Raises
+    ------
+    FileNotFoundError
+        *fname* is not found in any of the search paths.
+    """
+    # Look in the current directory first, then the configured directory
+    dirs = ['']
+
+    try:
+        # Catch exception raised by db_config_path() if no config file exists.
+        # See TODO in config.get().
+        dirs.append(db_config_path())
+    except RuntimeError:
+        pass
+
+    for directory in dirs:
+        path = os.path.abspath(os.path.join(directory, fname))
+        if os.path.isfile(path):
+            return path
+
+    raise FileNotFoundError('Could not find {} in {!r}'.format(fname, dirs))

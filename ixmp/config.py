@@ -7,6 +7,7 @@ from ixmp.utils import logger
 
 def get(key):
     """Return key from configuration file"""
+    # TODO return sensible defaults even if the user has not given ixmp-config
     if not os.path.exists(CONFIG_PATH):
         raise RuntimeError(
             'ixmp has not been configured, do so with `$ ixmp-config -h`')

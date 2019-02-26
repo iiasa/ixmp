@@ -40,8 +40,8 @@ def find_dbprops(fname):
     # Look in the current directory first, then the configured directory
     dirs = ['', db_config_path()]
 
-    for dir in dirs:
-        path = os.path.abspath(os.path.join(dir, fname))
+    for directory in dirs:
+        path = os.path.abspath(os.path.join(directory, fname))
         if os.path.isfile(path):
             return path
 

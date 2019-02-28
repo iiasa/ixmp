@@ -4,15 +4,17 @@ import pandas as pd
 
 
 def test_regions(test_mp):
-    obs = test_mp.regions()
+    regions = test_mp.regions()
+    obs = regions[regions.region == 'World']
     assert all(obs.columns == ['region', 'mapped_to', 'parent', 'hierarchy'])
-    assert all(obs[obs.region == 'World'] == ['World', None, None, 'common'])
+    assert all([list(obs.loc[0]) == ['World', None, 'World', 'common']])
 
 
 def test_add_region(test_mp):
     test_mp.add_region('foo', 'bar', 'World')
-    obs = test_mp.regions()
-    assert all(obs[obs['region'] == 'foo'] == ['foo', None, 'World', 'bar'])
+    regions = test_mp.regions()
+    obs = regions[regions['region'] == 'foo'].reset_index(drop=True)
+    assert all([list(obs.loc[0]) == ['foo', None, 'World', 'bar']])
 
 
 def test_add_region_synonym(test_mp):

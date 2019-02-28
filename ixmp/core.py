@@ -250,6 +250,53 @@ class Platform(object):
         """
         self._jobj.addUnitToDB(unit, comment)
 
+    def regions(self):
+        """Return all regions defined for the IAMC-style timeseries format
+        including known synonyms.
+
+        Returns
+        -------
+        pd.Dataframe
+        """
+        lst = []
+        for r in self._jobj.listNodes('%'):
+            n, p, h = (r.getName(), r.getParent(), r.getHierarchy())
+            lst.extend([(n, None, p, h)])
+            lst.extend([(s, n, p, h) for s in (r.getSynonyms() or [])])
+        region = pd.DataFrame(lst)
+        region.columns = ['region', 'mapped_to', 'parent', 'hierarchy']
+        return region
+
+    def add_region(self, region, hierarchy, parent='World'):
+        """Define a region including a hierarchy level and a 'parent' region.
+        *Before adding a region, please use `regions()` and check whether the
+        region already exists with a different spelling.
+        If so, use `add_region_synonym()` instead.
+
+        Parameters
+        ----------
+        region : str
+            Name of the region.
+        hierarchy : str
+            Hierarchy level of the region (e.g., country, R11, basin)
+        parent : str, default 'World'
+            Assign a 'parent' region.
+        """
+        self._jobj.addNode(region, parent, hierarchy)
+
+    def add_region_synomym(self, region, mapped_to):
+        """Define a synomym for a `region`. When adding timeseries data using
+        the synonym in the region column, it will be converted to `mapped_to`.
+
+        Parameters
+        ----------
+        region : str
+            Name of the region synonym.
+        mapped_to : str
+            Name of the region to which the synonym should be mapped.
+        """
+        self._jobj.addNodeSynonym(mapped_to, region)
+
 # %% class TimeSeries
 
 

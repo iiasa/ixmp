@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#125](https://github.com/iiasa/ixmp/pull/125): Add functions to view and add regions for IAMC-style timeseries data.
 - [#123](https://github.com/iiasa/ixmp/pull/123): Return absolute path from `find_dbprops()`.
 - [#118](https://github.com/iiasa/ixmp/pull/118): Switch to RTD Sphinx theme.
 - [#116](https://github.com/iiasa/ixmp/pull/116): Bugfix and extend functionality for working with IAMC-style timeseries data

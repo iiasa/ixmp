@@ -256,7 +256,7 @@ class Platform(object):
 
         Returns
         -------
-        pd.Dataframe
+        :class:`pandas.DataFrame`
         """
         lst = []
         for r in self._jobj.listNodes('%'):
@@ -269,6 +269,7 @@ class Platform(object):
 
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
+
         *Before adding a region, please use `regions()` and check whether the
         region already exists with a different spelling.
         If so, use `add_region_synonym()` instead.
@@ -285,8 +286,10 @@ class Platform(object):
         self._jobj.addNode(region, parent, hierarchy)
 
     def add_region_synomym(self, region, mapped_to):
-        """Define a synomym for a `region`. When adding timeseries data using
-        the synonym in the region column, it will be converted to `mapped_to`.
+        """Define a synomym for a `region`.
+
+        When adding timeseries data using the synonym in the region column, it
+        will be converted to `mapped_to`.
 
         Parameters
         ----------

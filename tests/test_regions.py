@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+
 def test_regions(test_mp):
     obs = test_mp.regions()
     assert all(obs.columns == ['region', 'mapped_to', 'parent', 'hierarchy'])
@@ -18,7 +19,6 @@ def test_add_region_synonym(test_mp):
     test_mp.add_region_synomym('foo2', 'foo')
     regions = test_mp.regions()
     obs = regions[regions.region.isin(['foo', 'foo2'])].reset_index(drop=True)
-    print(obs)
 
     exp = pd.DataFrame([
         ['foo', None, 'World', 'bar'],

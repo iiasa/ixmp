@@ -1,3 +1,8 @@
+"""Elementary computations for reporting."""
+# TODO:
+# - Accept pd.DataFrame user input by casting to xr.DataArray with a pd_to_xr
+#   method that is a no-op for xr objects.
+
 import xarray as xr
 
 

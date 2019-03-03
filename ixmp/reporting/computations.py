@@ -1,3 +1,9 @@
+import xarray as xr
+
+
+xr.set_options(keep_attrs=True)
+
+
 def aggregate(var, dims):
     return var.sum(dim=dims)
 

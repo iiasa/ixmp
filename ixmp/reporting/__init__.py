@@ -19,6 +19,8 @@
 from functools import partial
 
 from dask.threaded import get as dask_get
+import pandas as pd
+import xarray as xr
 
 from .utils import Key
 from . import computations
@@ -26,6 +28,35 @@ from .computations import (   # noqa:F401
     disaggregate_shares,
     load_file,
 )
+
+
+def par_as_da(scenario, par_name):
+    """Retrieve parameter *par_name* from *scenario* as an xr.DataArray."""
+    # NB this could be moved to ixmp.Scenario itself, with a return_type
+    # kwarg on scenario.par(), or as a separate method
+    data = scenario.par(par_name)
+
+    if isinstance(data, dict):
+        # ixmp/GAMS scalar is not returned as pd.DataFrame
+        data = pd.DataFrame.from_records([data])
+
+    # Remove the unit
+    unit = pd.unique(data.pop('unit'))
+    assert len(unit) == 1
+    unit = unit[0]
+
+    # List of the dimensions
+    dims = data.columns.tolist()
+    dims.remove('value')
+
+    # Set index if 1 or more dimensions
+    if len(dims):
+        data.set_index(dims, inplace=True)
+
+    # Convert to a series, then DataArray
+    return xr.DataArray.from_series(data['value']) \
+                       .assign_attrs(unit=unit) \
+                       .rename(par_name)
 
 
 class Reporter(object):
@@ -61,20 +92,18 @@ class Reporter(object):
         # New Reporter
         rep = cls()
 
-        for par in scenario.par_list():
-            # TODO retrieve parameter name, dims, and data
-            name = NotImplementedError
-            dims = NotImplementedError
-            data = NotImplementedError
+        for par_name in scenario.par_list():
+            # Retrieve parameter data
+            data = par_as_da(scenario, par_name)
 
             # Add the parameter itself
-            base_key = Key(name, dims)
-            cls.add(base_key, data)
+            base_key = Key(par_name, data.coords.keys())
+            rep.add(base_key, data)
 
             # Add aggregates
-            cls.graph.update(base_key.aggregates())
+            rep.graph.update(base_key.aggregates())
 
-        # TODO add sets, scalars, and equations
+        # TODO add sets and equations
 
         return rep
 

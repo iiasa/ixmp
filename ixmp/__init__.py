@@ -10,6 +10,8 @@ from ixmp import (
     utils,
 )
 
+from ixmp.reporting import Reporter  # noqa: F401
+
 model_settings.register_model(
     'default',
     model_settings.ModelConfig(model_file='"{model}.gms"',

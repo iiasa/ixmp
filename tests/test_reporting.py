@@ -4,6 +4,8 @@ from ixmp.reporting import Key, Reporter
 import pandas as pd
 import pytest
 
+from testing_utils import dantzig
+
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -41,6 +43,13 @@ def test_reporter(scenario):
     r.finalize(scenario)
 
     # TODO add some assertions
+
+
+def test_reporter_from_dantzig(test_mp):
+    scen = dantzig(test_mp)
+
+    # Reporter.from_scenario can handle the Dantzig problem
+    Reporter.from_scenario(scen)
 
 
 def test_reporter_disaggregate():

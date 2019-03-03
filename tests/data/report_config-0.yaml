@@ -1,0 +1,14 @@
+# Reporting configuration file for Dantzig's transport problem
+
+# Default report
+default: all
+
+# Exogenous data from files
+files:
+  foo: foo.txt
+
+# Aliases
+alias:
+  bar: d
+
+# TODO specify format for other configurable aspects of reporting

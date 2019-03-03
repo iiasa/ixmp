@@ -27,6 +27,7 @@ from . import computations
 from .computations import (   # noqa:F401
     disaggregate_shares,
     load_file,
+    write_report,
 )
 
 
@@ -92,6 +93,8 @@ class Reporter(object):
         # New Reporter
         rep = cls()
 
+        all_keys = []
+
         for par_name in scenario.par_list():
             # Retrieve parameter data
             data = par_as_da(scenario, par_name)
@@ -103,9 +106,18 @@ class Reporter(object):
             # Add aggregates
             rep.graph.update(base_key.aggregates())
 
-        # TODO add sets and equations
+            all_keys.append(base_key)
+
+        rep.add('all', all_keys)
+
+        # TODO add sets
+        # TODO add equations
 
         return rep
+
+    def read_config(self, path):
+        """Configure the Reporter with information from a file at *path*."""
+        raise NotImplementedError
 
     # Generic graph manipulations
     def add(self, key, computation, strict=False):
@@ -191,4 +203,16 @@ class Reporter(object):
 
     # Convenience methods
     def add_file(self, path):
-        self.add('file:{}'.format(path), (partial(load_file, path),))
+        """Add exogenous quantities from *path*.
+
+        A file at a path like '/path/to/foo.ext' is added at the key
+        'file:foo.ext'. Shorthand for
+        :meth:`ixmp.reporting.computations.load_file`.
+        """
+        self.add('file:{}'.format(path.name), (partial(load_file, path),),
+                 strict=True)
+
+    def write(self, key, path):
+        """Write the report *key* to the file *path*."""
+        # Call the method directly without adding it to the graph
+        write_report(self.get(key), path)

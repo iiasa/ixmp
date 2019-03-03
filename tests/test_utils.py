@@ -1,3 +1,4 @@
+"""Tests for ixmp.utils."""
 import os
 
 import pandas as pd

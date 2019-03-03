@@ -1,3 +1,5 @@
+"""Tests for ixmp.reporting."""
+
 import ixmp
 import ixmp.reporting
 from ixmp.reporting import Key, Reporter
@@ -71,6 +73,9 @@ def test_reporter_from_dantzig(test_mp):
     # Units pass through disaggregation
     assert b_jp.attrs['unit'] == 'cases'
 
+    # 'all' key retrieves all variables at their defined dimensionality
+    assert all(a == b.name for a, b in zip('a b d f'.split(), rep.get('all')))
+
 
 def test_reporter_disaggregate():
     r = Reporter()
@@ -88,3 +93,29 @@ def test_reporter_disaggregate():
     # Invalid method
     with pytest.raises(ValueError):
         r.disaggregate(foo, 'd', method='baz')
+
+
+def test_reporting_files(tmp_path):
+    r = Reporter()
+
+    # Path to a temporary file
+    p = tmp_path / 'foo.txt'
+
+    # File can be added to the Reporter before it is created, because the file
+    # is not read until/unless required
+    r.add_file(p)
+
+    # Add some contents to the file
+    p.write_text('Hello, world!')
+
+    # The file's contents can be read through the Reporter
+    assert r.get('file:foo.txt') == 'Hello, world!'
+
+    # Write the report to file
+    p2 = tmp_path / 'bar.txt'
+    r.write('file:foo.txt', p2)
+
+    # The Reporter produces the expected output file
+    assert p2.read_text() == 'Hello, world!'
+
+    # TODO test reading CSV data to xarray

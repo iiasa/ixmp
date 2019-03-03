@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import compress
+from math import ceil
 
 from .computations import aggregate
 
@@ -7,11 +8,11 @@ from .computations import aggregate
 def combo_partition(iterable):
     """Yield pairs of lists with all possible subsets of *iterable*."""
     # Format string for binary conversion, e.g. '04b'
-    fmt = '0' + str(2 + int(len(iterable) ** 0.5)) + 'b'
+    fmt = '0{}b'.format(ceil(len(iterable) ** 0.5))
     for n in range(2 ** len(iterable) - 1):
         # Two binary lists
         a, b = zip(*[(v, not v) for v in map(int, format(n, fmt))])
-        yield compress(iterable, a), compress(iterable, b)
+        yield list(compress(iterable, a)), list(compress(iterable, b))
 
 
 class Key:
@@ -42,6 +43,7 @@ class Key:
     # (dis)aggregation, other manipulation
     # TODO add tags or other information to describe quantities computed
     # multiple ways
+    # TODO cache repr() and only recompute when name/dims changed
     def __init__(self, name, dims=[]):
         self._name = name
         self._dims = dims
@@ -67,5 +69,4 @@ class Key:
     def aggregates(self):
         """Yield (key, task) for all possible aggregations of the Key."""
         for agg_dims, others in combo_partition(self._dims):
-            yield Key(self._name, agg_dims), \
-                (aggregate, hash(self), list(others))
+            yield Key(self._name, agg_dims), (aggregate, self, others)

@@ -28,10 +28,14 @@ def scenario(test_mp):
 def test_reporting_key():
     k1 = Key('foo', ['a', 'b', 'c'])
 
+    # Representation
     assert repr(k1) == 'foo:a-b-c'
 
     # Key hashes the same as its string representation
     assert hash(k1) == hash('foo:a-b-c')
+
+    # Key compares equal to its string representation
+    assert k1 == 'foo:a-b-c'
 
     # Number of aggregates for a 3-dimensional quantity
     assert sum(1 for a in k1.aggregates()) == 7

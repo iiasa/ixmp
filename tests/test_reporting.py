@@ -3,6 +3,7 @@ import ixmp.reporting
 from ixmp.reporting import Key, Reporter
 import pandas as pd
 import pytest
+import xarray as xr
 
 from testing_utils import dantzig
 
@@ -53,7 +54,22 @@ def test_reporter_from_dantzig(test_mp):
     scen = dantzig(test_mp)
 
     # Reporter.from_scenario can handle the Dantzig problem
-    Reporter.from_scenario(scen)
+    rep = Reporter.from_scenario(scen)
+
+    # Aggregates are available automatically (d is defined over i and j)
+    d_i = rep.get('d:i')
+
+    # Units pass through summation
+    assert d_i.attrs['unit'] == 'km'
+
+    # Disaggregation with explicit data
+    # (cases of canned food 'p'acked in oil or water)
+    shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+    rep.disaggregate('b:j', 'p', args=[shares])
+    b_jp = rep.get('b:j-p')
+
+    # Units pass through disaggregation
+    assert b_jp.attrs['unit'] == 'cases'
 
 
 def test_reporter_disaggregate():

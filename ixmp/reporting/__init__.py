@@ -65,6 +65,7 @@ class Reporter(object):
 
     A Reporter is used to postprocess data from from one or more
     :class:`ixmp.Scenario` objects. :meth:`get` can be used to:
+
     - Generate an entire *report* composed of multiple quantities. Generating a
       report may trigger output to file(s) or a database.
     - Retrieve individual quantities from a Scenario.
@@ -87,6 +88,7 @@ class Reporter(object):
         """Create a Reporter by introspecting *scenario*.
 
         The reporter will contain:
+
         - Every parameter in the *scenario* and all possible aggregations
           across different dimensions.
         """
@@ -124,6 +126,7 @@ class Reporter(object):
         """Add *computation* to the Reporter under *key*.
 
         :meth:`add` may be used to:
+
         - Provide an alias from one *key* to another:
 
           >>> r.add('aliased name', 'original name')
@@ -143,6 +146,7 @@ class Reporter(object):
             A string, Key, or other value identifying the output of *task*.
         computation: object
             One of:
+
             1. any existing *key* in the Reporter.
             2. any other literal value or constant.
             3. a task, i.e. a tuple with a callable followed by one or more
@@ -163,7 +167,12 @@ class Reporter(object):
         return dask_get(self.graph, key)
 
     def finalize(self, scenario):
-        """Prepare the Reporter to act on *scenario*."""
+        """Prepare the Reporter to act on *scenario*.
+
+        The :class:`Scenario <message_ix.Scenario>` object *scenario* is
+        associated with the key ``'scenario'``. All subsequent processing will
+        act on data from this *scenario*.
+        """
         self.graph['scenario'] = scenario
 
     # ixmp data model manipulations
@@ -206,8 +215,8 @@ class Reporter(object):
         """Add exogenous quantities from *path*.
 
         A file at a path like '/path/to/foo.ext' is added at the key
-        'file:foo.ext'. Shorthand for
-        :meth:`ixmp.reporting.computations.load_file`.
+        ``'file:foo.ext'``. See
+        :meth:`load_file <ixmp.reporting.computations.load_file>`.
         """
         self.add('file:{}'.format(path.name), (partial(load_file, path),),
                  strict=True)

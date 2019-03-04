@@ -9,29 +9,33 @@ import xarray as xr
 xr.set_options(keep_attrs=True)
 
 
-def aggregate(var, dims):
-    return var.sum(dim=dims)
+def aggregate(quantity, dimensions):
+    """Aggregate *quantity* over *dimensions*."""
+    return quantity.sum(dim=dimensions)
 
 
-def disaggregate_shares(var, shares):
-    return var * shares
+def disaggregate_shares(quantity, shares):
+    """Disaggregate *quantity* by *shares*."""
+    return quantity * shares
 
 
 # Conversion
-def make_dataframe(*vars):
-    """Concatenate *vars* into a single pd.DataFrame."""
+def make_dataframe(*quantities):
+    """Concatenate *quantities* into a single pd.DataFrame."""
     # TODO also rename
     raise NotImplementedError
 
 
 # Input and output
 def load_file(path):
+    """Read the file at *path* and return its contents."""
     # TODO automatically parse common file formats: yaml, csv, xls(x)
     # TODO optionally cache: if the same Reporter is used repeatedly, then the
     #      file will be read each time; instead cache the contents in memory.
     return open(path).read()
 
 
-def write_report(report, path):
+def write_report(key, path):
+    """Write the report identified by *key* to the file at *path*."""
     # TODO intelligently handle different formats of *report*
-    path.write_text(report)
+    path.write_text(key)

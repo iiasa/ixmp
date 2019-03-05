@@ -1137,6 +1137,10 @@ class Scenario(TimeSeries):
         first_model_year: int, optional
             new first model year in cloned scenario
             ('slicing', only available for MESSAGE-scheme scenarios)
+            If given, all time series data in the Scenario is omitted from the
+            clone for years from `first_model_year` onwards. Time series data
+            with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
+            cloned for all years.
         platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
         """

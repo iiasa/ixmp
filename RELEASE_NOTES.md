@@ -24,3 +24,4 @@
 - [#61](https://github.com/iiasa/ixmp/pull/61): Now able to connect to multiple databases (Platforms)
 - [#58](https://github.com/iiasa/ixmp/pull/58): Add MacOSX support in CI
 - [#52](https://github.com/iiasa/ixmp/pull/52): Add ability to load all scenario data into memory for fast subsequent computation.
+- [#120](https://github.com/iiasa/ixmp/pull/120): Fix cloning scenario between databases

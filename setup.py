@@ -4,7 +4,7 @@ from __future__ import print_function
 import glob
 import versioneer
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 INSTALL_REQUIRES = [
@@ -22,9 +22,6 @@ EXTRAS_REQUIRE = {
 
 
 def main():
-    packages = [
-        'ixmp',
-    ]
     pack_dir = {
         'ixmp': 'ixmp',
     }
@@ -53,7 +50,7 @@ def main():
         "url": 'http://github.com/iiasa/message_ix',
         "install_requires": INSTALL_REQUIRES,
         "extras_require": EXTRAS_REQUIRE,
-        "packages": packages,
+        "packages": find_packages(),
         "package_dir": pack_dir,
         "package_data": pack_data,
         "entry_points": entry_points,

@@ -13,7 +13,6 @@
 #
 # TODO meet the requirements:
 # A8iii. Read CLI arguments for subset reporting.
-# A9. Handle units for quantities.
 # A11. Callable through `retixmp`.
 
 from functools import partial
@@ -45,13 +44,11 @@ class Reporter(object):
 
     """
     # TODO meet the requirements:
-    # A2. Use exogenous data: given programmatically; from file.
     # A3i. Weighted sums.
     # A3iii. Interpolation.
     # A6. Duplicate or clone existing operations for multiple other sets of
     #     inputs or outputs. [Sub-graph manipulations.]
     # A7. Renaming of outputs.
-    # A10. Provide description of how quantities are computed.
 
     def __init__(self):
         self.graph = {}
@@ -118,12 +115,27 @@ class Reporter(object):
         return rep
 
     def read_config(self, path):
-        """Configure the Reporter with information from a file at *path*."""
+        """Configure the Reporter with information from a YAML file at *path*.
+
+        See :meth:`configure`.
+        """
         with open(path, 'r') as f:
             self.configure(**yaml.load(f), config_dir=path.parent)
 
     def configure(self, **config):
-        """Configure the reporter."""
+        """Configure the Reporter.
+
+        Valid configuration keys include:
+
+        - *default*: the default reporting target.
+        - *files*: a :py:`dict` mapping keys to file paths.
+        - *alias: a :py:`dict` mapping aliases to original keys.
+
+        Warns
+        -----
+        UserWarning
+            If *config* contains unrecognized keys.
+        """
         config_dir = config.pop('config_dir', '.')
 
         # Read sections
@@ -250,6 +262,10 @@ class Reporter(object):
         """
         key = key if key else 'file:{}'.format(path.name)
         self.add(key, (partial(load_file, path),), strict=True)
+
+    def visualize(self, *args, **kwargs):
+        # TODO Provide description of how quantities are computed (req. A10)
+        raise NotImplementedError
 
     def write(self, key, path):
         """Write the report *key* to the file *path*."""

@@ -115,7 +115,7 @@ def quantity_as_xr(scenario, name, kind='par'):
         'par': ['value'],
         'equ': ['lvl', 'mrg'],
         'var': ['lvl', 'mrg'],
-        }[kind]
+    }[kind]
 
     [dims.remove(col) for col in value_columns]
 

@@ -77,7 +77,7 @@ class Reporter(object):
             zip(scenario.par_list(), repeat('par')),
             zip(scenario.equ_list(), repeat('equ')),
             zip(scenario.var_list(), repeat('var')),
-            )
+        )
 
         for name, kind in quantities:
             # Retrieve data
@@ -120,7 +120,7 @@ class Reporter(object):
         See :meth:`configure`.
         """
         with open(path, 'r') as f:
-            self.configure(**yaml.load(f), config_dir=path.parent)
+            self.configure(config_dir=path.parent, **yaml.load(f))
 
     def configure(self, **config):
         """Configure the Reporter.

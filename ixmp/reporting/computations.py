@@ -13,7 +13,7 @@ __all__ = [
     'make_dataframe',
     'load_file',
     'write_report',
-    ]
+]
 
 
 # Carry unit attributes automatically

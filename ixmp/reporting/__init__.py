@@ -18,8 +18,11 @@
 
 from functools import partial
 from itertools import chain, repeat
+from pathlib import Path
+from warnings import warn
 
 from dask.threaded import get as dask_get
+import yaml
 
 from .utils import quantity_as_xr, Key
 from . import computations
@@ -116,7 +119,37 @@ class Reporter(object):
 
     def read_config(self, path):
         """Configure the Reporter with information from a file at *path*."""
-        raise NotImplementedError
+        with open(path, 'r') as f:
+            self.configure(**yaml.load(f), config_dir=path.parent)
+
+    def configure(self, **config):
+        """Configure the reporter."""
+        config_dir = config.pop('config_dir', '.')
+
+        # Read sections
+        extra_sections = set(config.keys()) - {'default', 'files', 'alias'}
+        if len(extra_sections):
+            warn(('Unrecognized sections {!r} in reporting configuration will '
+                  'have no effect').format(extra_sections))
+
+        # Default report
+        try:
+            self.default_target = config['default']
+        except KeyError:
+            pass
+
+        # Files with exogenous data
+        for key, path in config.get('files', {}).items():
+            path = Path(path)
+            if not path.is_absolute():
+                # Resolve relative paths relative to the directory containing
+                # the configuration file
+                path = config_dir / path
+            self.add_file(path, key)
+
+        # Aliases
+        for alias, original in config.get('alias', {}).items():
+            self.add(alias, original)
 
     # Generic graph manipulations
     def add(self, key, computation, strict=False):
@@ -208,15 +241,15 @@ class Reporter(object):
         self.graph[key] = tuple([method, var] + args)
 
     # Convenience methods
-    def add_file(self, path):
+    def add_file(self, path, key=None):
         """Add exogenous quantities from *path*.
 
         A file at a path like '/path/to/foo.ext' is added at the key
         ``'file:foo.ext'``. See
         :meth:`load_file <ixmp.reporting.computations.load_file>`.
         """
-        self.add('file:{}'.format(path.name), (partial(load_file, path),),
-                 strict=True)
+        key = key if key else 'file:{}'.format(path.name)
+        self.add(key, (partial(load_file, path),), strict=True)
 
     def write(self, key, path):
         """Write the report *key* to the file *path*."""

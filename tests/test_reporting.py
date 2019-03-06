@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from testing_utils import dantzig
+from testing_utils import dantzig, test_data_path
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -79,6 +79,18 @@ def test_reporter_from_dantzig(test_mp):
     # 'all' key retrieves all quantities
     names = set('a b d f demand demand-margin z x'.split())
     assert names == {da.name for da in rep.get('all')}
+
+
+def test_reporter_read_config(test_mp):
+    scen = dantzig(test_mp)
+
+    rep = Reporter.from_scenario(scen)
+    with pytest.warns(UserWarning,
+                      match=r"Unrecognized sections {'notarealsection'}"):
+        rep.read_config(test_data_path / 'report-config-0.yaml')
+
+    # Data from configured file is available
+    assert rep.get('d_check').loc['seattle', 'chicago'] == 1.7
 
 
 def test_reporter_disaggregate():

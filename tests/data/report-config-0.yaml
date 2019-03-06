@@ -5,10 +5,15 @@ default: all
 
 # Exogenous data from files
 files:
-  foo: foo.txt
+  d_check: ./report-input.csv
 
 # Aliases
 alias:
   bar: d
+
+# Unrecognized section raises a warning
+notarealsection:
+  - 0
+  - 1
 
 # TODO specify format for other configurable aspects of reporting

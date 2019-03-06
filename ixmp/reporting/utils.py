@@ -3,6 +3,9 @@ from functools import partial
 from itertools import compress
 from math import ceil
 
+import pandas as pd
+import xarray as xr
+
 from .computations import aggregate
 
 
@@ -72,3 +75,62 @@ class Key:
         for agg_dims, others in combo_partition(self._dims):
             yield Key(self._name, agg_dims), \
                 (partial(aggregate, dimensions=others), self)
+
+
+def quantity_as_xr(scenario, name, kind='par'):
+    """Retrieve quantity *name* from *scenario* as an xr.Dataset.
+
+    Parameters
+    ----------
+    *kind* : 'par' or 'equ'
+        Type of quantity to be retrieved.
+
+    Returns
+    -------
+    dict of :class:'xarray.DataArray'
+        Dictionary keys are 'level' (kind='par') or ('lvl', 'mrg')
+        (kind='equ').
+    """
+    # NB this could be moved to ixmp.Scenario
+    data = getattr(scenario, kind)(name)
+
+    if isinstance(data, dict):
+        # ixmp/GAMS scalar is not returned as pd.DataFrame
+        data = pd.DataFrame.from_records([data])
+
+    # Remove the unit from the DataFrame
+    try:
+        unit = pd.unique(data.pop('unit'))
+        assert len(unit) == 1
+        attrs = {'unit': unit[0]}
+    except KeyError:
+        # 'equ' are returned without units
+        attrs = {}
+
+    # List of the dimensions
+    dims = data.columns.tolist()
+
+    # Columns containing values
+    value_columns = {
+        'par': ['value'],
+        'equ': ['lvl', 'mrg'],
+        'var': ['lvl', 'mrg'],
+        }[kind]
+
+    [dims.remove(col) for col in value_columns]
+
+    # Set index if 1 or more dimensions
+    if len(dims):
+        data.set_index(dims, inplace=True)
+
+    # Convert to a series, then Dataset
+    ds = xr.Dataset.from_dataframe(data)
+    try:
+        # Remove length-1 dimensions for scalars
+        ds = ds.squeeze('index', drop=True)
+    except KeyError:
+        pass
+
+    # Assign attributes (units) and name to each xr.DataArray individually
+    return {col: ds[col].assign_attrs(attrs).rename(name)
+            for col in value_columns}

@@ -7,5 +7,6 @@ pytest>=3.9
 sphinx
 sphinx_rtd_theme
 sphinxcontrib-bibtex
+xarray
 xlsxwriter
 xlrd

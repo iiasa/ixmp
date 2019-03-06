@@ -11,6 +11,7 @@ INSTALL_REQUIRES = [
     'JPype1>=0.6.2',
     'dask',
     'pandas',
+    'xarray',
     'xlsxwriter',
     'xlrd',
 ]

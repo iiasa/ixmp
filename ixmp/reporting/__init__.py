@@ -16,6 +16,7 @@
 # A9. Handle units for quantities.
 # A11. Callable through `retixmp`.
 
+from itertools import chain, repeat
 from functools import partial
 
 from dask.threaded import get as dask_get
@@ -31,33 +32,63 @@ from .computations import (   # noqa:F401
 )
 
 
-def par_as_da(scenario, par_name):
-    """Retrieve parameter *par_name* from *scenario* as an xr.DataArray."""
-    # NB this could be moved to ixmp.Scenario itself, with a return_type
-    # kwarg on scenario.par(), or as a separate method
-    data = scenario.par(par_name)
+def quantity_as_xr(scenario, name, kind='par'):
+    """Retrieve quantity *name* from *scenario* as an xr.Dataset.
+
+    Parameters
+    ----------
+    *kind* : 'par' or 'equ'
+        Type of quantity to be retrieved.
+
+    Returns
+    -------
+    dict of :class:'xarray.DataArray'
+        Dictionary keys are 'level' (kind='par') or ('lvl', 'mrg')
+        (kind='equ').
+    """
+    # NB this could be moved to ixmp.Scenario
+    data = getattr(scenario, kind)(name)
 
     if isinstance(data, dict):
         # ixmp/GAMS scalar is not returned as pd.DataFrame
         data = pd.DataFrame.from_records([data])
 
-    # Remove the unit
-    unit = pd.unique(data.pop('unit'))
-    assert len(unit) == 1
-    unit = unit[0]
+    # Remove the unit from the DataFrame
+    try:
+        unit = pd.unique(data.pop('unit'))
+        assert len(unit) == 1
+        attrs = {'unit': unit[0]}
+    except KeyError:
+        # 'equ' are returned without units
+        attrs = {}
 
     # List of the dimensions
     dims = data.columns.tolist()
-    dims.remove('value')
+
+    # Columns containing values
+    value_columns = {
+        'par': ['value'],
+        'equ': ['lvl', 'mrg'],
+        'var': ['lvl', 'mrg'],
+        }[kind]
+
+    [dims.remove(col) for col in value_columns]
 
     # Set index if 1 or more dimensions
     if len(dims):
         data.set_index(dims, inplace=True)
 
-    # Convert to a series, then DataArray
-    return xr.DataArray.from_series(data['value']) \
-                       .assign_attrs(unit=unit) \
-                       .rename(par_name)
+    # Convert to a series, then Dataset
+    ds = xr.Dataset.from_dataframe(data)
+    try:
+        # Remove length-1 dimensions for scalars
+        ds = ds.squeeze('index', drop=True)
+    except KeyError:
+        pass
+
+    # Assign attributes (units) and name to each xr.DataArray individually
+    return {col: ds[col].assign_attrs(attrs).rename(name)
+            for col in value_columns}
 
 
 class Reporter(object):
@@ -87,33 +118,56 @@ class Reporter(object):
     def from_scenario(cls, scenario):
         """Create a Reporter by introspecting *scenario*.
 
-        The reporter will contain:
+        Returns
+        -------
+        Reporter
+          …containing:
 
-        - Every parameter in the *scenario* and all possible aggregations
-          across different dimensions.
+          - A 'scenario' key referring to the *scenario* object.
+          - Each parameter, equation, and variable in the *scenario*.
+          - All possible aggregations across different sets of dimensions.
         """
         # New Reporter
         rep = cls()
 
         all_keys = []
 
-        for par_name in scenario.par_list():
-            # Retrieve parameter data
-            data = par_as_da(scenario, par_name)
+        # Iterate over parameters and equations together
+        quantities = chain(
+            zip(scenario.par_list(), repeat('par')),
+            zip(scenario.equ_list(), repeat('equ')),
+            zip(scenario.var_list(), repeat('var')),
+            )
 
-            # Add the parameter itself
-            base_key = Key(par_name, data.coords.keys())
-            rep.add(base_key, data)
+        for name, kind in quantities:
+            # Retrieve data
+            data = quantity_as_xr(scenario, name, kind)
+
+            # Add the full-resolution quantity
+            base_data = data['value' if kind == 'par' else 'lvl']
+            base_key = Key(name, base_data.coords.keys())
+            rep.add(base_key, base_data)
+
+            all_keys.append(base_key)
 
             # Add aggregates
             rep.graph.update(base_key.aggregates())
 
-            all_keys.append(base_key)
+            if kind == 'equ':
+                # Add the marginal values at full resolution
+                mrg_data = data['mrg'].rename('{}-margin'.format(name))
+                mrg_key = Key('{}-margin'.format(name),
+                              mrg_data.coords.keys())
+                rep.add(mrg_key, mrg_data)
 
-        rep.add('all', all_keys)
+                all_keys.append(mrg_key)
+
+                # (No aggregates for marginals)
 
         # TODO add sets
-        # TODO add equations
+
+        # Add a target which simply collects all raw data.
+        rep.add('all', all_keys)
 
         return rep
 

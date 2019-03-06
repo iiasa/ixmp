@@ -53,7 +53,7 @@ def test_reporter(scenario):
 
 
 def test_reporter_from_dantzig(test_mp):
-    scen = dantzig(test_mp)
+    scen = dantzig(test_mp, solve=True)
 
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)
@@ -74,7 +74,8 @@ def test_reporter_from_dantzig(test_mp):
     assert b_jp.attrs['unit'] == 'cases'
 
     # 'all' key retrieves all variables at their defined dimensionality
-    assert all(a == b.name for a, b in zip('a b d f'.split(), rep.get('all')))
+    names = 'a b d f demand demand-margin z x'.split()
+    assert all(a == b.name for a, b in zip(names, rep.get('all')))
 
 
 def test_reporter_disaggregate():

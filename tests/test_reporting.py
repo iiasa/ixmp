@@ -73,9 +73,12 @@ def test_reporter_from_dantzig(test_mp):
     # Units pass through disaggregation
     assert b_jp.attrs['unit'] == 'cases'
 
-    # 'all' key retrieves all variables at their defined dimensionality
-    names = 'a b d f demand demand-margin z x'.split()
-    assert all(a == b.name for a, b in zip(names, rep.get('all')))
+    # Set elements are available
+    assert rep.get('j') == ['new-york', 'chicago', 'topeka']
+
+    # 'all' key retrieves all quantities
+    names = set('a b d f demand demand-margin z x'.split())
+    assert names == {da.name for da in rep.get('all')}
 
 
 def test_reporter_disaggregate():

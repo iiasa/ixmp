@@ -1,4 +1,5 @@
 from copy import deepcopy
+from functools import partial
 from itertools import compress
 from math import ceil
 
@@ -69,4 +70,5 @@ class Key:
     def aggregates(self):
         """Yield (key, task) for all possible aggregations of the Key."""
         for agg_dims, others in combo_partition(self._dims):
-            yield Key(self._name, agg_dims), (aggregate, self, others)
+            yield Key(self._name, agg_dims), \
+                (partial(aggregate, dimensions=others), self)

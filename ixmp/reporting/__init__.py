@@ -16,8 +16,8 @@
 # A9. Handle units for quantities.
 # A11. Callable through `retixmp`.
 
-from itertools import chain, repeat
 from functools import partial
+from itertools import chain, repeat
 
 from dask.threaded import get as dask_get
 import pandas as pd
@@ -126,13 +126,14 @@ class Reporter(object):
           - A 'scenario' key referring to the *scenario* object.
           - Each parameter, equation, and variable in the *scenario*.
           - All possible aggregations across different sets of dimensions.
+          - Each set in the *scenario*.
         """
         # New Reporter
         rep = cls()
 
         all_keys = []
 
-        # Iterate over parameters and equations together
+        # Add parameters, equations, and variables to the graph
         quantities = chain(
             zip(scenario.par_list(), repeat('par')),
             zip(scenario.equ_list(), repeat('equ')),
@@ -164,10 +165,13 @@ class Reporter(object):
 
                 # (No aggregates for marginals)
 
-        # TODO add sets
-
-        # Add a target which simply collects all raw data.
+        # Add a key which simply collects all quantities
         rep.add('all', all_keys)
+
+        # Add sets
+        for name in scenario.set_list():
+            elements = scenario.set(name).tolist()
+            rep.add(name, elements)
 
         return rep
 

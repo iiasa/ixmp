@@ -539,6 +539,9 @@ class TimeSeries(object):
         if iamc:
             df = df.pivot_table(index=IAMC_IDX, columns='year')['value']
             df.reset_index(inplace=True)
+            df.columns = [c if isinstance(c, str) else int(c)
+                          for c in df.columns]
+            df.columns.names = [None]
 
         return df
 

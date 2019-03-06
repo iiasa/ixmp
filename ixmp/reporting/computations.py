@@ -6,6 +6,16 @@
 import xarray as xr
 
 
+__all__ = [
+    'aggregate',
+    'disaggregate_shares',
+    'make_dataframe',
+    'load_file',
+    'write_report',
+    ]
+
+
+# Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
 
 

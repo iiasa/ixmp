@@ -43,7 +43,7 @@ class Key:
     foo:a-b
 
     """
-    # TODO add 'method' attribute to describe the method used to perform
+    # TODO add 'method' attribute to describe the method(s) used to perform
     # (dis)aggregation, other manipulation
     # TODO add tags or other information to describe quantities computed
     # multiple ways

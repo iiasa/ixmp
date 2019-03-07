@@ -13,7 +13,8 @@ def create_local_testdb(db_path, data_path):
     """
     # Copy test database
     dst = db_path / 'testdb'
-    shutil.copytree(data_path, dst)
+    # str() here is for py2 compatibility
+    shutil.copytree(str(data_path), dst)
 
     # Create properties file
     props = (data_path / 'test.properties_template').read_text()

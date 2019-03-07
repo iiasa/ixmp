@@ -66,8 +66,6 @@ def test_mp_use_db_config_path(tmp_path_factory, test_data_path):
     Like *test_mp*, except 'ixmp-config' is used to write the database
     configuration path to the user's configuration.
     """
-    assert not os.path.exists(CONFIG_PATH)
-
     db_path = tmp_path_factory.mktemp('test_mp_use_db_config_path')
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
     dirname = os.path.dirname(test_props)
@@ -97,8 +95,6 @@ def test_mp_use_default_dbprops_file(tmp_path_factory, test_data_path):
     Like *test_mp*, except 'ixmp-config' is used to write the location of the
     default database properties file to the user's configuration.
     """
-    assert not os.path.exists(CONFIG_PATH)
-
     db_path = tmp_path_factory.mktemp('test_mp_use_default_dbprops_file')
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 

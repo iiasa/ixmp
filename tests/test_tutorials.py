@@ -18,8 +18,7 @@ def _notebook_run(nb_path, tmpdir, kernel=None):
     """
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
-    dirname, __ = os.path.split(nb_path)
-    os.chdir(dirname)
+    os.chdir(nb_path.parent)
     fname = tmpdir / 'test.ipynb'
     args = [
         "jupyter", "nbconvert", "--to", "notebook", "--execute",
@@ -36,7 +35,7 @@ def _notebook_run(nb_path, tmpdir, kernel=None):
         for output in cell["outputs"] if output.output_type == "error"
     ]
 
-    os.remove(fname)
+    fname.unlink()
 
     return nb, errors
 

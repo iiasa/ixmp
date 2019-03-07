@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#128](https://github.com/iiasa/ixmp/pull/128): New module `ixmp.testing` for reuse of testing utilities.
 - [#125](https://github.com/iiasa/ixmp/pull/125): Add functions to view and add regions for IAMC-style timeseries data.
 - [#123](https://github.com/iiasa/ixmp/pull/123): Return absolute path from `find_dbprops()`.
 - [#118](https://github.com/iiasa/ixmp/pull/118): Switch to RTD Sphinx theme.

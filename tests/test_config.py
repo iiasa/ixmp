@@ -1,9 +1,7 @@
 try:
     from pathlib import Path
-    WindowsError = OSError
 except ImportError:
     from pathlib2 import Path
-import sys
 
 import pytest
 
@@ -17,10 +15,6 @@ except NameError:
     FileNotFoundError = OSError
 
 
-@pytest.mark.skipif(
-    condition=sys.platform.startswith('win'),
-    reason='https://github.com/mcmtroffaes/pathlib2/issues/45',
-    raises=WindowsError)
 def test_find_dbprops():
     # Returns an absolute path
     expected_abs_path = Path.cwd() / 'foo.properties'

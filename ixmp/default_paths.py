@@ -44,7 +44,7 @@ def find_dbprops(fname):
         *fname* is not found in any of the search paths.
     """
     # Look in the current directory first, then the configured directory
-    dirs = [Path('.')]
+    dirs = [Path.cwd()]
 
     try:
         # Catch exception raised by db_config_path() if no config file exists.
@@ -54,8 +54,15 @@ def find_dbprops(fname):
         pass
 
     for directory in dirs:
-        path = (directory / fname).resolve()
-        if path.is_file():
+        # Want to do the following, but resolve() currently tries to stat() the
+        # file under Windows / Python 2.7, which raises an exception. There is
+        # an unreleased fix: https://github.com/mcmtroffaes/pathlib2/issues/45
+        # path = (directory / fname).resolve()
+        # if path.is_file():
+        #
+        # …so instead:
+        path = directory / fname
+        if os.path.exists(str(path)):
             return path
 
     raise FileNotFoundError('Could not find {} in {!r}'.format(fname, dirs))

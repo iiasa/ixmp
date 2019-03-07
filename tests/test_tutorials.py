@@ -28,7 +28,8 @@ def _notebook_run(nb_path, tmp_path, kernel=None):
         "--output", str(fname), str(nb_path)]
     subprocess.check_call(args)
 
-    nb = nbformat.read(io.open(fname, encoding='utf-8'),
+    # str() here is for python2 compatibility
+    nb = nbformat.read(io.open(str(fname), encoding='utf-8'),
                        nbformat.current_nbformat)
 
     errors = [

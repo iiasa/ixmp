@@ -1,4 +1,8 @@
 import os
+try:
+    from pathlib import Path
+except ImportError:
+    from pathlib2 import Path
 
 from ixmp import config
 
@@ -11,11 +15,11 @@ except NameError:
 
 
 def default_dbprops_file():
-    return config.get('DEFAULT_DBPROPS_FILE')
+    return Path(config.get('DEFAULT_DBPROPS_FILE'))
 
 
 def db_config_path():
-    return config.get('DB_CONFIG_PATH')
+    return Path(config.get('DB_CONFIG_PATH'))
 
 
 def find_dbprops(fname):
@@ -40,7 +44,7 @@ def find_dbprops(fname):
         *fname* is not found in any of the search paths.
     """
     # Look in the current directory first, then the configured directory
-    dirs = ['']
+    dirs = [Path('.')]
 
     try:
         # Catch exception raised by db_config_path() if no config file exists.
@@ -50,8 +54,8 @@ def find_dbprops(fname):
         pass
 
     for directory in dirs:
-        path = os.path.abspath(os.path.join(directory, fname))
-        if os.path.isfile(path):
+        path = (directory / fname).resolve()
+        if path.is_file():
             return path
 
     raise FileNotFoundError('Could not find {} in {!r}'.format(fname, dirs))

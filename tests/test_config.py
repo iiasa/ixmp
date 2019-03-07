@@ -1,5 +1,7 @@
-import os
-import os.path
+try:
+    from pathlib import Path
+except ImportError:
+    from pathlib2 import Path
 
 import pytest
 
@@ -15,13 +17,12 @@ except NameError:
 
 def test_find_dbprops():
     # Returns an absolute path
-    with open('foo.properties', 'w') as f:
-        f.write('bar')
+    expected_abs_path = Path.cwd() / 'foo.properties'
+    expected_abs_path.write_text('bar')
 
-    expected_abs_path = os.path.join(os.getcwd(), 'foo.properties')
-    assert find_dbprops('foo.properties') == expected_abs_path
+    assert find_dbprops('foo.properties') == Path(expected_abs_path)
 
-    os.remove('foo.properties')
+    expected_abs_path.unlink()
 
     # Exception raised on missing file
     with pytest.raises(FileNotFoundError):

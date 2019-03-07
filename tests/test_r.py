@@ -1,8 +1,7 @@
-import os
 import subprocess
 import pytest
 
-from testing_utils import create_local_testdb, here
+from ixmp.testing import create_local_testdb
 
 
 def r_installed():
@@ -15,8 +14,8 @@ def r_installed():
 
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')
-def test_run():
+def test_run(request):
     test_props = create_local_testdb()
-    testf = os.path.join(here, 'r_tests.r')
+    testf = request.fspath / 'r_tests.r'
     cmd = ['Rscript', testf, '--props={}'.format(test_props)]
     subprocess.check_call(cmd)

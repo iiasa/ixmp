@@ -4,11 +4,9 @@ import pandas as pd
 import ixmp as ix
 from numpy import testing as npt
 
-from testing_utils import here
 
-
-def test_import_timeseries(test_mp_props):
-    fname = os.path.join(here, 'timeseries_canning.csv')
+def test_import_timeseries(test_mp_props, test_data_path):
+    fname = test_data_path / 'timeseries_canning.csv'
 
     cmd = 'import-timeseries --dbprops="{}" --data="{}" --model="{}" --scenario="{}" --version="{}" --firstyear="{}"'
     cmd = cmd.format(test_mp_props, fname,

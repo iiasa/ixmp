@@ -18,7 +18,8 @@ def _notebook_run(nb_path, tmpdir, kernel=None):
     """
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
-    os.chdir(nb_path.parent)
+    # str() here is for python2 compatibility
+    os.chdir(str(nb_path.parent))
     fname = tmpdir / 'test.ipynb'
     args = [
         "jupyter", "nbconvert", "--to", "notebook", "--execute",

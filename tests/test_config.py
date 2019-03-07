@@ -18,7 +18,7 @@ except NameError:
 def test_find_dbprops():
     # Returns an absolute path
     expected_abs_path = Path.cwd() / 'foo.properties'
-    expected_abs_path.write_text('bar', encoding='utf-8')
+    expected_abs_path.write_text(u'bar')
 
     assert find_dbprops('foo.properties') == Path(expected_abs_path)
 

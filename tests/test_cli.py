@@ -1,16 +1,20 @@
+# See also:
+# - test_core.test_default_dbprops_file, testing 'ixmp-config'.
+# - test_core.test_db_config_path, testing 'ixmp-config'.
 import os
 import subprocess
-import pandas as pd
+
 import ixmp as ix
-from numpy import testing as npt
+import numpy.testing as npt
+import pandas as pd
 
 
 def test_import_timeseries(test_mp_props, test_data_path):
     fname = test_data_path / 'timeseries_canning.csv'
 
-    cmd = 'import-timeseries --dbprops="{}" --data="{}" --model="{}" --scenario="{}" --version="{}" --firstyear="{}"'
-    cmd = cmd.format(test_mp_props, fname,
-                     'canning problem', 'standard', 1, 2020)
+    cmd = ('import-timeseries --dbprops="{}" --data="{}" --model="{}" '
+           '--scenario="{}" --version="{}" --firstyear="{}"').format(
+        test_mp_props, fname, 'canning problem', 'standard', 1, 2020)
 
     win = os.name == 'nt'
     subprocess.check_call(cmd, shell=not win)

@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import jpype
 import pytest
@@ -17,18 +18,38 @@ def local_config_exists():
 
 @pytest.mark.skipif(local_config_exists(),
                     reason='will not overwrite local config files')
-def test_default_dbprops_file(test_mp_use_default_dbprops_file):
-    test_mp = test_mp_use_default_dbprops_file
-    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
+def test_default_dbprops_file(test_mp_props):
+    # Configure
+    cmd = 'ixmp-config --default_dbprops_file {}'.format(test_mp_props)
+    subprocess.check_call(cmd.split())
+
+    try:
+        # Platform is instantiated using the default database properties file
+        mp = ixmp.Platform()
+
+        # Platform contains the expected scenarios
+        scenario = mp.scenario_list(model='Douglas Adams')['scenario']
+        assert scenario[0] == 'Hitchhiker'
+    finally:
+        os.remove(CONFIG_PATH)
 
 
 @pytest.mark.skipif(local_config_exists(),
                     reason='will not overwrite local config files')
-def test_db_config_path(test_mp_use_db_config_path):
-    test_mp = test_mp_use_db_config_path
-    scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
+def test_db_config_path(test_mp_props):
+    # Configure
+    cmd = 'ixmp-config --db_config_path {}'.format(test_mp_props.parent)
+    subprocess.check_call(cmd.split())
+
+    try:
+        # Platform is instantiated used a relative filename, found in the
+        # database configuration path
+        mp = ixmp.Platform(test_mp_props.name)
+
+        scenario = mp.scenario_list(model='Douglas Adams')['scenario']
+        assert scenario[0] == 'Hitchhiker'
+    finally:
+        os.remove(CONFIG_PATH)
 
 
 def test_platform_init_raises():

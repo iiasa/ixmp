@@ -3,10 +3,8 @@ try:
     from pathlib import Path
 except ImportError:
     from pathlib2 import Path
-import subprocess
 
 import ixmp
-from ixmp.default_path_constants import CONFIG_PATH
 from ixmp.testing import create_local_testdb
 import pytest
 
@@ -57,62 +55,6 @@ def test_mp(tmp_path_factory, test_data_path):
     mp.open_db()
 
     yield mp
-
-
-@pytest.fixture()
-def test_mp_use_db_config_path(tmp_path_factory, test_data_path):
-    """An ixmp.Platform backed by a local database.
-
-    Like *test_mp*, except 'ixmp-config' is used to write the database
-    configuration path to the user's configuration.
-    """
-    db_path = tmp_path_factory.mktemp('test_mp_use_db_config_path')
-    test_props = create_local_testdb(db_path, test_data_path / 'testdb')
-    dirname = os.path.dirname(test_props)
-    basename = os.path.basename(test_props)
-
-    # configure
-    cmd = 'ixmp-config --db_config_path {}'.format(dirname)
-    subprocess.check_call(cmd.split())
-
-    # launch Platform and connect to testdb (reconnect if closed)
-    try:
-        mp = ixmp.Platform(basename)
-        mp.open_db()
-    except Exception:
-        os.remove(CONFIG_PATH)
-        raise
-
-    yield mp
-
-    os.remove(CONFIG_PATH)
-
-
-@pytest.fixture()
-def test_mp_use_default_dbprops_file(tmp_path_factory, test_data_path):
-    """An ixmp.Platform backed by a local database.
-
-    Like *test_mp*, except 'ixmp-config' is used to write the location of the
-    default database properties file to the user's configuration.
-    """
-    db_path = tmp_path_factory.mktemp('test_mp_use_default_dbprops_file')
-    test_props = create_local_testdb(db_path, test_data_path / 'testdb')
-
-    # configure
-    cmd = 'ixmp-config --default_dbprops_file {}'.format(test_props)
-    subprocess.check_call(cmd.split())
-
-    # launch Platform and connect to testdb (reconnect if closed)
-    try:
-        mp = ixmp.Platform()
-        mp.open_db()
-    except Exception:
-        os.remove(CONFIG_PATH)
-        raise
-
-    yield mp
-
-    os.remove(CONFIG_PATH)
 
 
 @pytest.fixture(scope="session")

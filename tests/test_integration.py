@@ -128,12 +128,13 @@ def test_multi_db_run(tmpdir, test_data_path):
     mp2.add_region('wrong_region', 'country')
 
     scen2 = scen1.clone(platform=mp2, keep_solution=False)
+    assert np.isnan(scen2.var('z')['lvl'])
     scen2.solve(model=str(test_data_path / 'transport_ixmp'))
-
     assert scen1.var('z') == scen2.var('z')
     assert_multi_db(mp1, mp2)
 
     # check that custom unit and region are migrated correctly
+    assert scen2.par('f')['value'] == 90.0
     assert scen2.par('f')['unit'] == 'USD_per_km'
     obs = scen2.timeseries(iamc=True)
     pd.testing.assert_frame_equal(obs, TS_DF, check_dtype=False)

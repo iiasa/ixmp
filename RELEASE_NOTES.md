@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#129](https://github.com/iiasa/ixmp/pull/129): Fully implement `Scenario.clone()` across platforms (databases).
 - [#128](https://github.com/iiasa/ixmp/pull/128): New module `ixmp.testing` for reuse of testing utilities.
 - [#125](https://github.com/iiasa/ixmp/pull/125): Add functions to view and add regions for IAMC-style timeseries data.
 - [#123](https://github.com/iiasa/ixmp/pull/123): Return absolute path from `find_dbprops()`.
@@ -24,4 +25,3 @@
 - [#61](https://github.com/iiasa/ixmp/pull/61): Now able to connect to multiple databases (Platforms)
 - [#58](https://github.com/iiasa/ixmp/pull/58): Add MacOSX support in CI
 - [#52](https://github.com/iiasa/ixmp/pull/52): Add ability to load all scenario data into memory for fast subsequent computation.
-- [#120](https://github.com/iiasa/ixmp/pull/120): Fix cloning scenario between databases

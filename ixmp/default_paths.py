@@ -1,21 +1,20 @@
 import os
+try:
+    from pathlib import Path
+except ImportError:
+    # Python 2.7 compatibility
+    from pathlib2 import Path
+    FileNotFoundError = OSError
 
 from ixmp import config
 
 
-try:
-    FileNotFoundError
-except NameError:
-    # Python 2.7
-    FileNotFoundError = OSError
-
-
 def default_dbprops_file():
-    return config.get('DEFAULT_DBPROPS_FILE')
+    return Path(config.get('DEFAULT_DBPROPS_FILE'))
 
 
 def db_config_path():
-    return config.get('DB_CONFIG_PATH')
+    return Path(config.get('DB_CONFIG_PATH'))
 
 
 def find_dbprops(fname):
@@ -40,7 +39,7 @@ def find_dbprops(fname):
         *fname* is not found in any of the search paths.
     """
     # Look in the current directory first, then the configured directory
-    dirs = ['']
+    dirs = [Path.cwd()]
 
     try:
         # Catch exception raised by db_config_path() if no config file exists.
@@ -50,8 +49,15 @@ def find_dbprops(fname):
         pass
 
     for directory in dirs:
-        path = os.path.abspath(os.path.join(directory, fname))
-        if os.path.isfile(path):
+        # Want to do the following, but resolve() currently tries to stat() the
+        # file under Windows / Python 2.7, which raises an exception. There is
+        # an unreleased fix: https://github.com/mcmtroffaes/pathlib2/issues/45
+        # path = (directory / fname).resolve()
+        # if path.is_file():
+        #
+        # …so instead:
+        path = directory / fname
+        if os.path.exists(str(path)):
             return path
 
     raise FileNotFoundError('Could not find {} in {!r}'.format(fname, dirs))

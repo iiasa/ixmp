@@ -42,7 +42,7 @@ def tutorial_path(request):
 
 @pytest.fixture(scope="session")
 def test_mp(tmp_path_factory, test_data_path):
-    """An ixmp.Platform backed by a local database.
+    """An ixmp.Platform connected to a temporary, local database.
 
     *test_mp* is used across the entire test session, so the contents of the
     database may reflect other tests already run.

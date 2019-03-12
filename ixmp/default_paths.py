@@ -2,16 +2,11 @@ import os
 try:
     from pathlib import Path
 except ImportError:
+    # Python 2.7 compatibility
     from pathlib2 import Path
+    FileNotFoundError = OSError
 
 from ixmp import config
-
-
-try:
-    FileNotFoundError
-except NameError:
-    # Python 2.7
-    FileNotFoundError = OSError
 
 
 def default_dbprops_file():

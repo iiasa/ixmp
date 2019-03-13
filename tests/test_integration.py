@@ -2,7 +2,7 @@ import numpy as np
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import dantzig_transport
+from ixmp.testing import dantzig_transport, TS_DF
 
 
 def test_run_gams_api(tmpdir, test_data_path):
@@ -20,15 +20,34 @@ def test_run_gams_api(tmpdir, test_data_path):
     assert np.isclose(obs, exp)
 
 
+def scenario_list(mp):
+    return mp.scenario_list(default=False)[['model', 'scenario']]
+
+
+def assert_multi_db(mp1, mp2):
+    pdt.assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
+
+
 def test_multi_db_run(tmpdir, test_data_path):
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = dantzig_transport(mp1, solve=test_data_path)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
-    scen2 = scen1.clone(platform=mp2, keep_solution=False)
-    scen2.solve(model=str(test_data_path / 'transport_ixmp'))
+    # add other unit to make sure that the mapping is correct during clone
+    mp2.add_unit('wrong_unit')
+    mp2.add_region('wrong_region', 'country')
 
+    scen2 = scen1.clone(platform=mp2, keep_solution=False)
+    assert np.isnan(scen2.var('z')['lvl'])
+    scen2.solve(model=str(test_data_path / 'transport_ixmp'))
     assert scen1.var('z') == scen2.var('z')
+    assert_multi_db(mp1, mp2)
+
+    # check that custom unit and region are migrated correctly
+    assert scen2.par('f')['value'] == 90.0
+    assert scen2.par('f')['unit'] == 'USD_per_km'
+    obs = scen2.timeseries(iamc=True)
+    pdt.assert_frame_equal(obs, TS_DF, check_dtype=False)
 
 
 def test_multi_db_edit_source(tmpdir):
@@ -62,6 +81,8 @@ def test_multi_db_edit_source(tmpdir):
     exp = 1.4
     assert np.isclose(obs, exp)
 
+    assert_multi_db(mp1, mp2)
+
 
 def test_multi_db_edit_target(tmpdir):
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
@@ -93,3 +114,5 @@ def test_multi_db_edit_target(tmpdir):
            )
     exp = 1.4
     assert np.isclose(obs, exp)
+
+    assert_multi_db(mp1, mp2)

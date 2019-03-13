@@ -5,6 +5,14 @@ import pandas as pd
 from .core import Scenario
 
 
+MODEL = "canning problem"
+SCENARIO = "standard"
+TS_DF = pd.DataFrame(
+    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 900], ],
+    columns=['model', 'scenario', 'region', 'variable', 'unit', 2005],
+)
+
+
 def create_local_testdb(db_path, data_path):
     """Create a local database for testing in the directory *path*.
 
@@ -40,14 +48,17 @@ def dantzig_transport(mp, solve=False):
     :class:`ixmp.Scenario`
         A scenario containing the transport problem.
     """
+    # add custom units and region for timeseries data
+    mp.add_unit('USD_per_km')
+    mp.add_region('DantzigLand', 'country')
+
+    # initialize a new (empty) instance of an `ixmp.Scenario`
     model = 'canning problem'
     scenario = 'standard'
     annot = "Dantzig's transportation problem for illustration and testing"
-
-    # Initialize an empty version
     scen = Scenario(mp, model, scenario, version='new', annotation=annot)
 
-    # Define sets
+    # define sets
     scen.init_set('i')
     scen.add_set('i', ['seattle', 'san-diego'])
     scen.init_set('j')
@@ -83,19 +94,16 @@ def dantzig_transport(mp, solve=False):
     scen.add_par('d', d_data)
 
     # cost per case per 1000 miles
-    # initialize scalar with a value and a unit (and optionally a comment)
-    scen.init_scalar('f', 90.0, 'USD/km')
-
-    # add some timeseries for testing purposes
-    df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
-          'year': [2010], 'value': [23.7]}
-    df = pd.DataFrame.from_dict(df)
-    scen.add_timeseries(df)
+    # initialize scalar with a value and a unit
+    scen.init_scalar('f', 90.0, 'USD_per_km')
 
     # initialize the decision variables and equations
     scen.init_var('z', None, None)
     scen.init_var('x', idx_sets=['i', 'j'])
     scen.init_equ('demand', idx_sets=['j'])
+
+    # add timeseries data for testing the clone across platforms
+    scen.add_timeseries(TS_DF)
 
     scen.commit("Import Dantzig's transport problem for testing.")
 

@@ -539,6 +539,9 @@ class TimeSeries(object):
         if iamc:
             df = df.pivot_table(index=IAMC_IDX, columns='year')['value']
             df.reset_index(inplace=True)
+            df.columns = [c if isinstance(c, str) else int(c)
+                          for c in df.columns]
+            df.columns.names = [None]
 
         return df
 
@@ -1135,8 +1138,10 @@ class Scenario(TimeSeries):
             indicator whether to include an existing solution
             in the cloned scenario
         first_model_year: int, optional
-            new first model year in cloned scenario
-            ('slicing', only available for MESSAGE-scheme scenarios)
+            If given, all time series data in the Scenario is omitted from the
+            clone for years from `first_model_year` onwards. Time series data
+            with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
+            cloned for all years.
         platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
         """
@@ -1159,7 +1164,8 @@ class Scenario(TimeSeries):
         scenario = self.scenario if not scenario else scenario
 
         return Scenario(platform, model, scenario,
-                        version=self._jobj.clone(model, scenario, annotation,
+                        version=self._jobj.clone(platform._jobj,
+                                                 model, scenario, annotation,
                                                  keep_solution,
                                                  first_model_year),
                         cache=self._cache)

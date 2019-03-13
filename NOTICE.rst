@@ -1,7 +1,7 @@
 User Guidelines and Notice
 ==========================
 
-   Copyright 2017-18 IIASA Energy Program
+   Copyright © 2017–2019 IIASA Energy Program
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ the ix modeling platform  for scientific publications or technical reports:
   Michael Pimmer, Nikolay Kushin, Adriano Vinca, Alessio Mastrucci,
   Keywan Riahi, and Volker Krey.
   "The MESSAGEix Integrated Assessment Model and the ix modeling platform".
-  *Environmental Modelling & Software* 112:143-156, 2019. 
+  *Environmental Modelling & Software* 112:143-156, 2019.
   doi: `10.1016/j.envsoft.2018.11.012`_
   electronic pre-print available at `pure.iiasa.ac.at/15157/`_.
 
@@ -63,7 +63,7 @@ or scientific analysis using the MESSAGEix framework.
 B) Developing new model instances
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Researchers are welcome to develop new model instances using the |MESSAGEix| framework 
+Researchers are welcome to develop new model instances using the |MESSAGEix| framework
 for their own research interests. However, any such model must be named "MESSAGEix xxx" or "MESSAGEix-xxx",
 where 'xxx' is replaced by the name of the country/region, institutional affiliation or a similar identifying name.
 For example, the national model for South Africa developed by Orthofer et al. [1] is called "MESSAGEix South Africa".

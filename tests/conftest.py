@@ -5,7 +5,6 @@ except ImportError:
     from pathlib2 import Path
 
 import ixmp
-from ixmp.config import Config
 from ixmp.testing import create_local_testdb
 import pytest
 

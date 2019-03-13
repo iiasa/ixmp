@@ -170,7 +170,8 @@ class Config(object):
 
         # Write the file
         logger().info('Updating configuration file: {}'.format(path))
-        with open(path, 'w') as f:
+        # str() here is for py2 compatibility
+        with open(str(path), 'w') as f:
             json.dump({k: str(self.values[k]) for k in self._keys if
                        self.values[k] is not None}, f)
 

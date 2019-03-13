@@ -8,8 +8,6 @@ from ixmp.core import *
 from ixmp import (
     model_settings,
     utils,
-    default_paths,
-    config,
 )
 
 model_settings.register_model(

@@ -12,9 +12,27 @@ from test_r import r_installed
 # taken from the execellent example here:
 # https://blog.thedataincubator.com/2016/06/testing-jupyter-notebooks/
 
-def _notebook_run(nb_path, tmp_path, kernel=None):
-    """Execute a notebook via nbconvert and collect output.
-    :returns (parsed nb object, execution errors)
+def _notebook_run(nb_path, tmp_path, env=os.environ, kernel=None):
+    """Execute a Jupyter notebook via nbconvert and collect output.
+
+    Parameters
+    ----------
+    nb_path : path-like
+        The notebook file to execute.
+    tmp_path : path-like
+        A directory in which to create temporary output.
+    env : dict-like
+        Execution environment for `nbconvert`.
+    kernel : str
+        Jupyter kernel to use. Default: `python2` or `python3`, matching the
+        current Python version.
+
+    Returns
+    -------
+    nb : :class:`nbformat.NotebookNode`
+        Parsed and executed notebook.
+    errors : list
+        Any execution errors.
     """
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
@@ -26,7 +44,7 @@ def _notebook_run(nb_path, tmp_path, kernel=None):
         "--ExecutePreprocessor.timeout=60",
         "--ExecutePreprocessor.kernel_name={}".format(kernel),
         "--output", str(fname), str(nb_path)]
-    subprocess.check_call(args)
+    subprocess.check_call(args, env=env)
 
     # str() here is for python2 compatibility
     nb = nbformat.read(io.open(str(fname), encoding='utf-8'),
@@ -43,9 +61,9 @@ def _notebook_run(nb_path, tmp_path, kernel=None):
 
 
 @pytest.mark.skip_win_ci
-def test_py_transport(tutorial_path, tmp_path):
+def test_py_transport(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / 'transport' / 'py_transport.ipynb'
-    nb, errors = _notebook_run(fname, tmp_path)
+    nb, errors = _notebook_run(fname, tmp_path, tmp_env)
     assert errors == []
 
     obs = eval(nb.cells[-5]['outputs'][0]['data']['text/plain'])['lvl']
@@ -54,9 +72,9 @@ def test_py_transport(tutorial_path, tmp_path):
 
 
 @pytest.mark.skip_win_ci
-def test_py_transport_scenario(tutorial_path, tmp_path):
+def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / 'transport' / 'py_transport_scenario.ipynb'
-    nb, errors = _notebook_run(fname, tmp_path)
+    nb, errors = _notebook_run(fname, tmp_path, tmp_env)
     assert errors == []
 
     obs = eval(nb.cells[-9]['outputs'][0]['data']['text/plain'])['lvl']
@@ -69,14 +87,14 @@ def test_py_transport_scenario(tutorial_path, tmp_path):
 
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')
-def test_R_transport(tutorial_path, tmp_path):
+def test_R_transport(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / 'transport' / 'R_transport.ipynb'
-    nb, errors = _notebook_run(fname, tmp_path, kernel='IR')
+    nb, errors = _notebook_run(fname, tmp_path, tmp_env, kernel='IR')
     assert errors == []
 
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')
-def test_R_transport_scenario(tutorial_path, tmp_path):
+def test_R_transport_scenario(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / 'transport' / 'R_transport_scenario.ipynb'
-    nb, errors = _notebook_run(fname, tmp_path, kernel='IR')
+    nb, errors = _notebook_run(fname, tmp_path, tmp_env, kernel='IR')
     assert errors == []

@@ -5,6 +5,7 @@ except ImportError:
     from pathlib2 import Path
 
 import ixmp
+from ixmp.config import Config
 from ixmp.testing import create_local_testdb
 import pytest
 
@@ -25,7 +26,14 @@ def pytest_collection_modifyitems(config, items):
 
 
 def pytest_report_header(config, startdir):
+    """Add the ixmp import path to the pytest report header."""
     return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
+
+
+def pytest_sessionstart(session):
+    """Unset any configuration read from the user's directory."""
+    ixmp.config._config.clear()
+    print(ixmp.config._config.values)
 
 
 @pytest.fixture(scope='session')
@@ -38,6 +46,20 @@ def test_data_path(request):
 def tutorial_path(request):
     """Path to the directory containing tutorials."""
     return Path(__file__).parent / '..' / 'tutorial'
+
+
+@pytest.fixture(scope='session')
+def tmp_env(tmp_path_factory):
+    """Return the os.environ dict with the IXMP_DATA variable set.
+
+    IXMP_DATA will point to a temporary directory that is unique to the
+    test session. ixmp configuration (i.e. the 'config.json' file) can be
+    written and read in this directory without modifying the current user's
+    configuration.
+    """
+    os.environ['IXMP_DATA'] = str(tmp_path_factory.mktemp('config'))
+
+    yield os.environ
 
 
 @pytest.fixture(scope="session")

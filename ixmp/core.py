@@ -13,8 +13,7 @@ from subprocess import check_call
 
 import ixmp as ix
 from ixmp import model_settings
-from ixmp.default_path_constants import DEFAULT_LOCAL_DB_PATH
-from ixmp.default_paths import default_dbprops_file, find_dbprops
+from ixmp.config import _config
 from ixmp.utils import logger, islistable
 
 # %% default settings for column headers
@@ -98,14 +97,13 @@ class Platform(object):
         try:
             # if no dbtype is specified, launch Platform with properties file
             if dbtype is None:
-                dbprops = default_dbprops_file() if dbprops is None \
-                    else find_dbprops(dbprops)
-                logger().info("launching ixmp.Platform using config file at"
+                dbprops = _config.find_dbprops(dbprops)
+                logger().info("launching ixmp.Platform using config file at "
                               "'{}'".format(dbprops))
                 self._jobj = java.ixmp.Platform("Python", str(dbprops))
             # if dbtype is specified, launch Platform with local database
             elif dbtype == 'HSQLDB':
-                dbprops = dbprops or DEFAULT_LOCAL_DB_PATH
+                dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
                 logger().info("launching ixmp.Platform with local {} database "
                               "at '{}'".format(dbtype, dbprops))
                 self._jobj = java.ixmp.Platform("Python", str(dbprops), dbtype)

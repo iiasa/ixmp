@@ -1,4 +1,3 @@
-import os
 import subprocess
 
 import jpype
@@ -6,50 +5,48 @@ import pytest
 from numpy import testing as npt
 
 import ixmp
-from ixmp.default_path_constants import CONFIG_PATH
+
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
+launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
-def local_config_exists():
-    return os.path.exists(CONFIG_PATH)
-
-
-@pytest.mark.skipif(local_config_exists(),
-                    reason='will not overwrite local config files')
-def test_default_dbprops_file(test_mp_props):
+def test_default_dbprops_file(tmp_env, test_mp_props, caplog):
     # Configure
     cmd = 'ixmp-config --default_dbprops_file {}'.format(test_mp_props)
-    subprocess.check_call(cmd.split())
+    subprocess.check_call(cmd.split(), env=tmp_env)
 
-    try:
-        # Platform is instantiated using the default database properties file
-        mp = ixmp.Platform()
+    # Force configuration reload
+    ixmp.config._config.read()
 
-        # Platform contains the expected scenarios
-        scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-        assert scenario[0] == 'Hitchhiker'
-    finally:
-        os.remove(CONFIG_PATH)
+    # Platform is instantiated using the default database properties file
+    mp = ixmp.Platform()
+
+    # NB. Scenario.__init__() does not store the name of the dbprops file.
+    #     Use captured log output to confirm the expected file is used.
+    assert launch_log_msg.format(test_mp_props) in caplog.text
+
+    # Platform contains the expected scenarios
+    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
 
 
-@pytest.mark.skipif(local_config_exists(),
-                    reason='will not overwrite local config files')
-def test_db_config_path(test_mp_props):
+def test_db_config_path(tmp_env, test_mp_props, caplog):
     # Configure
     cmd = 'ixmp-config --db_config_path {}'.format(test_mp_props.parent)
-    subprocess.check_call(cmd.split())
+    subprocess.check_call(cmd.split(), env=tmp_env)
 
-    try:
-        # Platform is instantiated used a relative filename, found in the
-        # database configuration path
-        mp = ixmp.Platform(test_mp_props.name)
+    # Force configuration reload
+    ixmp.config._config.read()
 
-        scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-        assert scenario[0] == 'Hitchhiker'
-    finally:
-        os.remove(CONFIG_PATH)
+    # Platform is instantiated used a relative filename, found in the
+    # database configuration path
+    mp = ixmp.Platform(test_mp_props.name)
+    assert launch_log_msg.format(test_mp_props) in caplog.text
+
+    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
+    assert scenario[0] == 'Hitchhiker'
 
 
 def test_platform_init_raises():

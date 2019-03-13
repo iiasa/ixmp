@@ -6,19 +6,21 @@ import ixmp
 def config():
     # construct cli
     parser = argparse.ArgumentParser()
-    db_config_path = 'Set default directory for database connection ' + \
-        'and configuration files.'
+    db_config_path = ('Set default directory for database connection and '
+                      'configuration files.')
     parser.add_argument('--db_config_path', help=db_config_path, default=None)
-    default_dbprops_file = 'Set default properties file for database connection.'
+    default_dbprops_file = ('Set default properties file for database '
+                            ' connection.')
     parser.add_argument('--default_dbprops_file',
                         help=default_dbprops_file, default=None)
     args = parser.parse_args()
 
-    # do the config
-    ixmp.config.config(
-        db_config_path=args.db_config_path,
-        default_dbprops_file=args.default_dbprops_file,
-    )
+    # Store the user-supplied configuration values
+    ixmp.config._config.set('DB_CONFIG_PATH', args.db_config_path)
+    ixmp.config._config.set('DEFAULT_DBPROPS_FILE', args.default_dbprops_file)
+
+    # Save the configuration to file
+    ixmp.config._config.save()
 
 
 def import_timeseries():

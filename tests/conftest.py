@@ -84,5 +84,4 @@ def test_mp_props(tmp_path_factory, test_data_path):
     db_path = Path(str(tmp_path_factory.mktemp('test_mp_props')))
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
-    print(type(db_path))
     yield test_props

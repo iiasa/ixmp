@@ -1248,10 +1248,9 @@ class Scenario(TimeSeries):
         else:
             raise ValueError('this Scenario does not have a solution')
 
-    def solve(self, model, case=None, model_file=None,
-              in_file=None, out_file=None, solve_args=None, comment=None,
-              var_list=None, equ_list=None, check_solution=True,
-              callback=None):
+    def solve(self, model, case=None, model_file=None, in_file=None,
+              out_file=None, solve_args=None, comment=None, var_list=None,
+              equ_list=None, check_solution=True, callback=None):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1263,9 +1262,11 @@ class Scenario(TimeSeries):
         If the optional argument `callback` is given, then additional steps are
         performed:
 
-        4. Execute `callback` with the Scenario as an argument.
-        5. If the return value of `callback` is :obj:`False`, go to 1; else
-           finish.
+        4. Execute `callback` with the Scenario as an argument. The Scenario
+           has an attribute, `iteration`, that stores the number of the time
+           the model has been solved (#2).
+        5. If the `callback` returns :obj:`False` or similar, go to #1;
+           otherwise exit.
 
         Parameters
         ----------
@@ -1291,6 +1292,9 @@ class Scenario(TimeSeries):
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
         callback : callable, optional
+            Method to execute arbitrary non-model code. Must accept a single
+            argument, the Scenario. Must return a :non:`False` value to
+            indicate convergence.
         """
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
@@ -1325,10 +1329,18 @@ class Scenario(TimeSeries):
             self.read_sol_from_gdx(opth, outgdx, comment,
                                    var_list, equ_list, check_solution)
 
-            if not callable(callback) or callback(self):
-                # Exit if there is no callback given OR the callback
-                # returns True
+            if not callable(callback):
+                # No callback given; done
                 break
+            else:
+                # Store an iteration number to help the callback
+                if not hasattr(self, 'iteration'):
+                    self.iteration = 0
+                self.iteration += 1
+
+                if callback(self):
+                    # Callback indicates convergence is reached
+                    break
 
     def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements

@@ -1,10 +1,12 @@
 import subprocess
 
 import jpype
+import pandas as pd
 import pytest
 from numpy import testing as npt
 
 import ixmp
+from ixmp.testing import dantzig_transport
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -269,3 +271,61 @@ def test_log_level(test_mp):
 
 def test_log_level_raises(test_mp):
     pytest.raises(ValueError, test_mp.set_log_level, level='foo')
+
+
+def test_solve_callback(test_mp, test_data_path):
+    """Test the callback argument to Scenario.solve().
+
+    In real usage, callback() would compute some kind of convergence criterion.
+    This test uses a sequence of different values for d(seattle, new-york) in
+    Dantzig's transport problem. Once the correct value is set on the
+    ixmp.Scenario, the solution equals an expected value, and the model has
+    'converged'.
+    """
+    # Set up the Dantzig problem
+    scen = dantzig_transport(test_mp)
+
+    # Solve the scenario as configured
+    solve_args = dict(model=str(test_data_path / 'transport_ixmp'),
+                      case='transport_standard')
+    scen.solve(**solve_args)
+
+    # Store the expected value of the decision variable, x
+    expected = scen.var('x')
+
+    # The reference distance between Seattle and New York is 2.5 [10³ miles]
+    d = [3.5, 2.0, 2.7, 2.5, 1.0]
+
+    def set_d(scenario, value):
+        """Set the distance between Seattle and New York to *value*."""
+        scenario.remove_solution()
+        scenario.check_out()
+        data = {'i': 'seattle', 'j': 'new-york', 'value': value, 'unit': 'km'}
+        # TODO should not be necessary here to call pd.DataFrame
+        scenario.add_par('d', pd.DataFrame(data, index=[0]))
+        scenario.commit('iterative solution')
+
+    # Changing the entry in the array 'd' results in an optimal 'x' that is
+    # different from the one stored as *expected*.
+    set_d(scen, d[0])
+
+    def change_distance(scenario):
+        """Callback for model solution."""
+        # Check if the model has 'converged' on the correct solution
+        if (scenario.var('x') == expected).all(axis=None):
+            return True
+
+        # Convergence not reached
+
+        # Change the distance between Seattle and New York, using the
+        # 'iteration' variable stored on the Scenario object
+        set_d(scenario, d[scenario.iteration])
+
+        # Trigger another solution of the model
+        return False
+
+    # Model iterates automatically
+    # TODO capturelog
+    scen.solve(**solve_args, callback=change_distance)
+    # Solution reached after 4 iterations, i.e. for f[4 - 1] == 90.0
+    assert scen.iteration == 4

@@ -159,17 +159,19 @@ class Platform(object):
         self._jobj.closeDB()
 
     def scenario_list(self, default=True, model=None, scen=None):
-        """Return information on all TimeSeries and Scenarios in the database.
+        """Return information on TimeSeries and Scenarios in the database.
 
         Parameters
         ----------
-        default : boolean, optional
-            Return only the default version of each TimeSeries/Scenario. If
-            :obj:`False`, return all versions.
+        default : bool, optional
+            Return *only* the default version of each TimeSeries/Scenario (see
+            :meth:`TimeSeries.set_as_default`). Any (`model`, `scenario`)
+            without a default version is omitted. If :obj:`False`, return all
+            versions.
         model : str, optional
             A model name. If given, only return information for *model*.
         scen : str, optional
-            A Scenario name. If given, only return information for *scen*.
+            A scenario name. If given, only return information for *scen*.
 
         Returns
         -------
@@ -306,7 +308,8 @@ class TimeSeries(object):
 
     TimeSeries is the parent/super-class of :class:`Scenario`.
 
-    A TimeSeries is uniquely identified by three values:
+    A TimeSeries is uniquely identified on its :class:`Platform` by three
+    values:
 
     1. `model`: the name of a model used to perform calculations between input
        and output data.
@@ -327,6 +330,9 @@ class TimeSeries(object):
          an existing TimeSeries.
        - Calling :meth:`Scenario.clone`.
 
+       Optionally, one `version` may be set as a **default version**. See
+       :meth:`set_as_default`.
+
     Parameters
     ----------
     mp : :class:`Platform`
@@ -336,7 +342,8 @@ class TimeSeries(object):
     scenario : str
         Scenario name.
     version : int or str, optional
-        If omitted, load the default version of the (`model`, `scenario`).
+        If omitted and a default version of the (`model`, `scenario`) has been
+        designated (see :meth:`set_as_default`), load that version.
         If :class:`int`, load a specific version.
         If ``'new'``, create a new TimeSeries.
     annotation : str, optional
@@ -393,7 +400,7 @@ class TimeSeries(object):
         self._jobj.setAsDefaultVersion()
 
     def is_default(self):
-        """Return :obj:`True` if the :attr:`version` is the default."""
+        """Return :obj:`True` if the :attr:`version` is the default version."""
         return bool(self._jobj.isDefault())
 
     def last_update(self):
@@ -1124,23 +1131,34 @@ class Scenario(TimeSeries):
               **kwargs):
         """Clone the current scenario and return the clone.
 
+        If the (`model`, `scenario`) given already exist on the
+        :class:`Platform`, the `version` for the cloned Scenario follows the
+        last existing version. Otherwise, the `version` for the cloned Scenario
+        is 0.
+
+        .. note::
+            :meth:`clone` does not set or alter default versions. This means
+            that a clone to new (`model`, `scenario`) names has no default
+            version, and will not be returned by
+            :meth:`Platform.scenarios_list` unless ``default=False`` is given.
+
         Parameters
         ----------
-        model : str
-            new model name
-        scenario : str
-            new scenario name
+        model : str, optional
+            New model name. If not given, use the existing model name.
+        scenario : str, optional
+            New scenario name. If not given, use the existing scenario name.
         annotation : str, optional
-            explanatory comment
-        keep_solution : boolean, optional
-            indicator whether to include an existing solution
-            in the cloned scenario
-        first_model_year: int, optional
+            Explanatory comment for the clone operation.
+        keep_solution : bool
+            If :py:const:`True`, include data from an existing model solution
+            in the clone.
+        first_model_year: int
             If given, all time series data in the Scenario is omitted from the
             clone for years from `first_model_year` onwards. Time series data
             with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
             cloned for all years.
-        platform : :class:`Platform`, optional
+        platform : :class:`Platform`
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
@@ -1161,12 +1179,13 @@ class Scenario(TimeSeries):
         model = self.model if not model else model
         scenario = self.scenario if not scenario else scenario
 
-        return Scenario(platform, model, scenario,
-                        version=self._jobj.clone(platform._jobj,
-                                                 model, scenario, annotation,
-                                                 keep_solution,
-                                                 first_model_year),
-                        cache=self._cache)
+        scenario_class = self.__class__
+        return scenario_class(platform, model, scenario,
+                              version=self._jobj.clone(platform._jobj, model,
+                                                       scenario, annotation,
+                                                       keep_solution,
+                                                       first_model_year),
+                              cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
         """export the scenario data to GAMS gdx

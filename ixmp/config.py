@@ -147,10 +147,9 @@ class Config(object):
 
         # Set 'DEFAULT_LOCAL_DB_PATH'
         # Use the first identifiable path
-        for label, config_dir in self._iter_paths():
-            self.values['DEFAULT_LOCAL_DB_PATH'] = (config_dir / 'localdb' /
-                                                    'default')
-            break
+        _, config_dir = next(self._iter_paths())
+        self.values['DEFAULT_LOCAL_DB_PATH'] = (config_dir / 'localdb'
+                                                'default')
 
     def save(self):
         """Write configuration keys to file.
@@ -159,9 +158,8 @@ class Config(object):
         directories that exists. Only non-null values are written.
         """
         # Use the first identifiable path
-        for label, config_dir in self._iter_paths():
-            path = config_dir / 'config.json'
-            break
+        _, config_dir = next(self._iter_paths())
+        path = config_dir / 'config.json'
 
         # TODO merge with existing configuration
 

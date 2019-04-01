@@ -68,7 +68,12 @@ def test_mp(tmp_path_factory, test_data_path):
     *test_mp* is used across the entire test session, so the contents of the
     database may reflect other tests already run.
     """
-    db_path = tmp_path_factory.mktemp('test_mp')
+    # casting to Path(str()) is a hotfix due to errors upstream in pytest on
+    # Python 3.5 (at least, perhaps others), there is an implicit cast to
+    # python2's pathlib which is incompatible with python3's pathlib Path
+    # objects.  This can be taken out once it is resolved upstream and CI is
+    # setup on multiple Python3.x distros.
+    db_path = Path(str(tmp_path_factory.mktemp('test_mp')))
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
     # launch Platform and connect to testdb (reconnect if closed)
@@ -81,7 +86,12 @@ def test_mp(tmp_path_factory, test_data_path):
 @pytest.fixture(scope="session")
 def test_mp_props(tmp_path_factory, test_data_path):
     """Path to a database properties file referring to a test database."""
-    db_path = tmp_path_factory.mktemp('test_mp_props')
+    # casting to Path(str()) is a hotfix due to errors upstream in pytest on
+    # Python 3.5 (at least, perhaps others), there is an implicit cast to
+    # python2's pathlib which is incompatible with python3's pathlib Path
+    # objects.  This can be taken out once it is resolved upstream and CI is
+    # setup on multiple Python3.x distros.
+    db_path = Path(str(tmp_path_factory.mktemp('test_mp_props')))
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
     yield test_props

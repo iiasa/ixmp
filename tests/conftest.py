@@ -68,7 +68,7 @@ def test_mp(tmp_path_factory, test_data_path):
     *test_mp* is used across the entire test session, so the contents of the
     database may reflect other tests already run.
     """
-    db_path = tmp_path_factory.mktemp('test_mp')
+    db_path = Path(str(tmp_path_factory.mktemp('test_mp')))
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
     # launch Platform and connect to testdb (reconnect if closed)
@@ -81,7 +81,8 @@ def test_mp(tmp_path_factory, test_data_path):
 @pytest.fixture(scope="session")
 def test_mp_props(tmp_path_factory, test_data_path):
     """Path to a database properties file referring to a test database."""
-    db_path = tmp_path_factory.mktemp('test_mp_props')
+    db_path = Path(str(tmp_path_factory.mktemp('test_mp_props')))
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
+    print(type(db_path))
     yield test_props

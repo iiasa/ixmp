@@ -331,7 +331,7 @@ def test_solve_callback(test_mp, test_data_path):
                'indefinitely unless True is returned.')
     with pytest.warns(UserWarning, match=message):
         # Model iterates automatically
-        scen.solve(**solve_args, callback=change_distance)
+        scen.solve(callback=change_distance, **solve_args)
 
     # Solution reached after 4 iterations, i.e. for f[4 - 1] == 90.0
     assert scen.iteration == 4

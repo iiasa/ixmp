@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#130](https://github.com/iiasa/ixmp/pull/130): Recognize `IXMP_DATA` environment variable for configuration and local databases.
 - [#129](https://github.com/iiasa/ixmp/pull/129): Fully implement `Scenario.clone()` across platforms (databases).
 - [#128](https://github.com/iiasa/ixmp/pull/128): New module `ixmp.testing` for reuse of testing utilities.
 - [#125](https://github.com/iiasa/ixmp/pull/125): Add functions to view and add regions for IAMC-style timeseries data.

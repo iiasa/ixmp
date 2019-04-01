@@ -5,7 +5,7 @@ except ImportError:
 
 import pytest
 
-from ixmp.default_paths import find_dbprops
+from ixmp.config import Config
 
 
 try:
@@ -15,16 +15,32 @@ except NameError:
     FileNotFoundError = OSError
 
 
-def test_find_dbprops():
+@pytest.fixture
+def cfg():
+    """Return a :class:`ixmp.config.Config` object that doesn't read a file."""
+    yield Config(read=False)
+
+
+def test_locate_nonexistent(cfg):
+    with pytest.raises(FileNotFoundError):
+        cfg._locate('nonexistent')
+
+
+def test_get(cfg):
+    # This key has a value even with no configuration provided
+    assert cfg.get('DEFAULT_LOCAL_DB_PATH')
+
+
+def test_find_dbprops(cfg):
     # Returns an absolute path
     expected_abs_path = Path.cwd() / 'foo.properties'
     # u'' here is for python2 compatibility
     expected_abs_path.write_text(u'bar')
 
-    assert find_dbprops('foo.properties') == Path(expected_abs_path)
+    assert cfg.find_dbprops('foo.properties') == Path(expected_abs_path)
 
     expected_abs_path.unlink()
 
     # Exception raised on missing file
     with pytest.raises(FileNotFoundError):
-        find_dbprops('foo.properties')
+        cfg.find_dbprops('foo.properties')

@@ -270,9 +270,10 @@ class Platform(object):
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
 
-        *Before adding a region, please use `regions()` and check whether the
-        region already exists with a different spelling.
-        If so, use `add_region_synonym()` instead.
+        .. tip::
+           On a :class:`Platform` backed by a shared database, a region may
+           already exist with a different spelling. Use :meth:`regions` first
+           to check, and consider calling :meth:`add_region_synonym` instead.
 
         Parameters
         ----------

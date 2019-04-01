@@ -1262,9 +1262,9 @@ class Scenario(TimeSeries):
         If the optional argument `callback` is given, then additional steps are
         performed:
 
-        4. Execute `callback` with the Scenario as an argument. The Scenario
-           has an attribute, `iteration`, that stores the number of the time
-           the model has been solved (#2).
+        4. Execute the `callback` with the Scenario as an argument. The
+           Scenario has an `iteration` attribute that stores the number of
+           times the underlying model has been solved (#2).
         5. If the `callback` returns :obj:`False` or similar, go to #1;
            otherwise exit.
 
@@ -1293,8 +1293,15 @@ class Scenario(TimeSeries):
             (only applies to MESSAGE runs)
         callback : callable, optional
             Method to execute arbitrary non-model code. Must accept a single
-            argument, the Scenario. Must return a :non:`False` value to
+            argument, the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
+
+        Warns
+        -----
+        UserWarning
+            If `callback` is given and returns :obj:`None`. This may indicate
+            that the user has forgotten a ``return`` statement, in which case
+            the iteration will continue indefinitely.
         """
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \

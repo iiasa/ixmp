@@ -1161,12 +1161,13 @@ class Scenario(TimeSeries):
         model = self.model if not model else model
         scenario = self.scenario if not scenario else scenario
 
-        return Scenario(platform, model, scenario,
-                        version=self._jobj.clone(platform._jobj,
-                                                 model, scenario, annotation,
-                                                 keep_solution,
-                                                 first_model_year),
-                        cache=self._cache)
+        scenario_class = self.__class__
+        return scenario_class(platform, model, scenario,
+                              version=self._jobj.clone(platform._jobj, model,
+                                                       scenario, annotation,
+                                                       keep_solution,
+                                                       first_model_year),
+                              cache=self._cache)
 
     def to_gdx(self, path, filename, include_var_equ=False):
         """export the scenario data to GAMS gdx

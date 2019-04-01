@@ -1318,6 +1318,8 @@ class Scenario(TimeSeries):
         outgdx = os.path.basename(outp)
 
         # Iterate until convergence
+        warn_none = True
+
         while True:
             # Write model data to file
             self.to_gdx(ipth, ingdx)
@@ -1338,7 +1340,17 @@ class Scenario(TimeSeries):
                     self.iteration = 0
                 self.iteration += 1
 
-                if callback(self):
+                # Invoke the callback
+                cb_result = callback(self)
+
+                if cb_result is None and warn_none:
+                    warnings.warn('solve(callback=...) argument returned None;'
+                                  ' will loop indefinitely unless True is'
+                                  ' returned.')
+                    # Don't repeat the warning
+                    warn_none = False
+
+                if cb_result:
                     # Callback indicates convergence is reached
                     break
 

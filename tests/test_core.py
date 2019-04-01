@@ -321,11 +321,17 @@ def test_solve_callback(test_mp, test_data_path):
         # 'iteration' variable stored on the Scenario object
         set_d(scenario, d[scenario.iteration])
 
-        # Trigger another solution of the model
-        return False
+        # commented: see below
+        # # Trigger another solution of the model
+        # return False
 
-    # Model iterates automatically
-    # TODO capturelog
-    scen.solve(**solve_args, callback=change_distance)
+    # Warning is raised because 'return False' is commented above, meaning
+    # user may have forgotten any return statement in the callback
+    message = (r'solve\(callback=...\) argument returned None; will loop '
+               'indefinitely unless True is returned.')
+    with pytest.warns(UserWarning, match=message):
+        # Model iterates automatically
+        scen.solve(**solve_args, callback=change_distance)
+
     # Solution reached after 4 iterations, i.e. for f[4 - 1] == 90.0
     assert scen.iteration == 4

@@ -293,7 +293,7 @@ def test_solve_callback(test_mp, test_data_path):
     # Store the expected value of the decision variable, x
     expected = scen.var('x')
 
-    # The reference distance between Seattle and New York is 2.5 [10³ miles]
+    # The reference distance between Seattle and New York is 2.5 [10^3 miles]
     d = [3.5, 2.0, 2.7, 2.5, 1.0]
 
     def set_d(scenario, value):

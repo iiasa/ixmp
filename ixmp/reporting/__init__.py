@@ -17,7 +17,10 @@
 
 from functools import partial
 from itertools import chain, repeat
-from pathlib import Path
+try:
+    from pathlib import Path
+except ImportError:
+    from pathlib2 import Path
 from warnings import warn
 
 from dask.threaded import get as dask_get

@@ -146,7 +146,11 @@ def make_dantzig(mp, solve=False):
         for the scenario.
     """
     # add custom units and region for timeseries data
-    mp.add_unit('USD_per_km')
+    try:
+        mp.add_unit('USD_per_km')
+    except Exception:
+        # Unit already exists. Pending bugfix from zikolach
+        pass
     mp.add_region('DantzigLand', 'country')
 
     # initialize a new (empty) instance of an `ixmp.Scenario`

@@ -13,7 +13,6 @@
 #   - an optional attribute 'unit' describing the units of the object.
 #
 # TODO meet the requirements:
-# A8iii. Read CLI arguments for subset reporting.
 # A11. Callable through `retixmp`.
 
 from functools import partial
@@ -50,11 +49,12 @@ class Reporter(object):
     #: The default reporting key.
     default_key = None
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.graph = {}
+        self.configure(**kwargs)
 
     @classmethod
-    def from_scenario(cls, scenario):
+    def from_scenario(cls, scenario, **kwargs):
         """Create a Reporter by introspecting *scenario*.
 
         Returns
@@ -68,7 +68,7 @@ class Reporter(object):
           - Each set in the *scenario*.
         """
         # New Reporter
-        rep = cls()
+        rep = cls(**kwargs)
 
         all_keys = []
 
@@ -119,6 +119,7 @@ class Reporter(object):
 
         See :meth:`configure`.
         """
+        path = Path(path)
         with open(path, 'r') as f:
             self.configure(config_dir=path.parent, **yaml.load(f))
 
@@ -306,3 +307,14 @@ class Reporter(object):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
         write_report(self.get(key), path)
+
+
+def parse_reporting_args(args):
+    """Parse command-line arguments."""
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', help='reporting configuration file')
+    parser.add_argument('--default', help='default reporting key')
+
+    return parser.parse_known_args(args)

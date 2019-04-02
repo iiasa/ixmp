@@ -1,4 +1,5 @@
 """Tests for ixmp.reporting."""
+import subprocess
 
 import ixmp
 import ixmp.reporting
@@ -8,6 +9,7 @@ import pytest
 import xarray as xr
 
 from ixmp.testing import dantzig_transport
+
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -186,3 +188,30 @@ def test_reporter_visualize(test_mp):
     r.visualize('visualize.png')
 
     # TODO compare to a specimen; place in a temporary directory
+
+
+def test_reporting_cli(test_mp_props, test_data_path):
+    # Put something in the database
+    mp = ixmp.Platform(dbprops=test_mp_props)
+    dantzig_transport(mp)
+    mp.close_db()
+    del mp
+
+    cmd = ['ixmp', 'report',
+           '--dbprops', test_mp_props,
+           '--model', 'canning problem',
+           '--scenario', 'standard',
+           '--config', test_data_path / 'report-config-0.yaml',
+           '--default', 'd_check',
+           ]
+    out = subprocess.check_output(cmd, encoding='utf-8')
+
+    # Reporting produces the expected command-line output
+    assert out.endswith("""
+<xarray.DataArray 'value' (i: 2, j: 3)>
+array([[1.8, 2.5, 1.4],
+       [1.7, 2.5, 1.8]])
+Coordinates:
+  * i        (i) object 'san-diego' 'seattle'
+  * j        (j) object 'chicago' 'new-york' 'topeka'
+""")

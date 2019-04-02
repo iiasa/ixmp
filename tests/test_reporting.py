@@ -7,8 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from testing_utils import dantzig, test_data_path
-
+from ixmp.testing import dantzig_transport
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -52,8 +51,8 @@ def test_reporter(scenario):
     # TODO add some assertions
 
 
-def test_reporter_from_dantzig(test_mp):
-    scen = dantzig(test_mp, solve=True)
+def test_reporter_from_dantzig(test_mp, test_data_path):
+    scen = dantzig_transport(test_mp, solve=test_data_path)
 
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)
@@ -81,8 +80,8 @@ def test_reporter_from_dantzig(test_mp):
     assert names == {da.name for da in rep.get('all')}
 
 
-def test_reporter_read_config(test_mp):
-    scen = dantzig(test_mp)
+def test_reporter_read_config(test_mp, test_data_path):
+    scen = dantzig_transport(test_mp)
 
     rep = Reporter.from_scenario(scen)
     with pytest.warns(UserWarning,

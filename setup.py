@@ -10,6 +10,7 @@ from setuptools import find_packages, setup
 INSTALL_REQUIRES = [
     'JPype1>=0.6.2',
     'dask[array]',
+    'graphviz',
     'pandas',
     'xarray',
     'xlsxwriter',

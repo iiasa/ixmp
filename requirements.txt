@@ -1,5 +1,6 @@
 JPype1>=0.6.2
 dask[array]
+graphviz
 jupyter
 numpydoc
 pandas

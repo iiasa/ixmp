@@ -11,7 +11,8 @@ Python API
    :maxdepth: 2
 
    api/python_core
- 
+   api/python_reporting
+
 
 R API
 -----
@@ -24,7 +25,7 @@ Two alternative options are available:
 
    api/r_core
    api/r_retixmp
-   
+
 
 
 The Java interface

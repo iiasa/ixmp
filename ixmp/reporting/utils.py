@@ -20,29 +20,7 @@ def combo_partition(iterable):
 
 
 class Key:
-    """A hashable key for a quantity that includes its dimensionality.
-
-    Quantities in `ixmp.Scenario` can be indexed by one or more dimensions:
-
-    >>> scenario.init_par('foo', ['a', 'b', 'c'], ['apple', 'bird', 'car'])
-
-    Reporting computations for this `scenario` might use the quantity `foo`:
-    1. in its full resolution, i.e. indexed by a, b, and c;
-    2. aggregated over any one dimension, e.g. aggregated over c and thus
-       indexed by a and b;
-    3. aggregated over any two dimensions; etc.
-
-    A Key for (1) will hash, display, and evaluate as equal to 'foo:a-b-c'. A
-    key for (2) corresponds to `foo:a-b`, and so forth.
-
-    Keys may be generated concisely by defining a convenience method:
-
-    >>> def foo(dims):
-    >>>     return Key('foo', dims.split(''))
-    >>> foo('a b')
-    foo:a-b
-
-    """
+    """A hashable key for a quantity that includes its dimensionality."""
     # TODO add 'method' attribute to describe the method(s) used to perform
     # (dis)aggregation, other manipulation
     # TODO add tags or other information to describe quantities computed
@@ -78,17 +56,19 @@ class Key:
 
 
 def quantity_as_xr(scenario, name, kind='par'):
-    """Retrieve quantity *name* from *scenario* as an xr.Dataset.
+    """Retrieve *name* from `scenario` as a :class:`xarray.Dataset`.
 
     Parameters
     ----------
-    *kind* : 'par' or 'equ'
+    scenario : ixmp.Scenario
+        Source
+    kind : 'par' or 'equ'
         Type of quantity to be retrieved.
 
     Returns
     -------
-    dict of :class:'xarray.DataArray'
-        Dictionary keys are 'level' (kind='par') or ('lvl', 'mrg')
+    dict of xarray.DataArray
+        Dictionary keys are 'value' (kind='par') or ('lvl', 'mrg')
         (kind='equ').
     """
     # NB this could be moved to ixmp.Scenario

@@ -21,7 +21,7 @@ TS_DF['unit'] = '???'
 @pytest.fixture
 def scenario(test_mp):
     # from test_feature_timeseries.test_new_timeseries_as_year_value
-    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='fo')
+    scen = ixmp.Scenario(test_mp, *test_args, version='new', annotation='foo')
     scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
     return scen
@@ -134,3 +134,12 @@ def test_reporting_files(tmp_path):
     assert p2.read_text() == 'Hello, world!'
 
     # TODO test reading CSV data to xarray
+
+
+def test_reporter_visualize(test_mp):
+    scen = dantzig_transport(test_mp)
+    r = Reporter.from_scenario(scen)
+
+    r.visualize('visualize.png')
+
+    # TODO compare to a specimen; place in a temporary directory

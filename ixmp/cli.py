@@ -10,7 +10,7 @@ def config():
     db_config_path = ('Set default directory for database connection and '
                       'configuration files.')
     parser.add_argument('--db_config_path', help=db_config_path, default=None)
-    default_dbprops_file = ('Set default properties file for database'
+    default_dbprops_file = ('Set default properties file for database '
                             ' connection.')
     parser.add_argument('--default_dbprops_file',
                         help=default_dbprops_file, default=None)

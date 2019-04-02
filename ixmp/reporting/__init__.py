@@ -1,4 +1,5 @@
-"""Scenario reporting."""
+# Scenario reporting.
+#
 # Implementation notes:
 #
 # The core design pattern uses dask graphs; see
@@ -23,6 +24,7 @@ except ImportError:
     from pathlib2 import Path
 from warnings import warn
 
+import dask
 from dask.threaded import get as dask_get
 import yaml
 
@@ -36,22 +38,16 @@ from .computations import (   # noqa:F401
 
 
 class Reporter(object):
-    """Reporter.
-
-    A Reporter is used to postprocess data from from one or more
-    :class:`ixmp.Scenario` objects. :meth:`get` can be used to:
-
-    - Generate an entire *report* composed of multiple quantities. Generating a
-      report may trigger output to file(s) or a database.
-    - Retrieve individual quantities from a Scenario.
-
-    """
+    """Class for generating reports on :class:`ixmp.Scenario` objects."""
     # TODO meet the requirements:
     # A3i. Weighted sums.
     # A3iii. Interpolation.
     # A6. Duplicate or clone existing operations for multiple other sets of
     #     inputs or outputs. [Sub-graph manipulations.]
     # A7. Renaming of outputs.
+
+    #: A dask-format :doc:`graph <graphs>`.
+    graph = {}
 
     def __init__(self):
         self.graph = {}
@@ -131,8 +127,8 @@ class Reporter(object):
         Valid configuration keys include:
 
         - *default*: the default reporting target.
-        - *files*: a :py:`dict` mapping keys to file paths.
-        - *alias: a :py:`dict` mapping aliases to original keys.
+        - *files*: a :class:`dict` mapping keys to file paths.
+        - *alias*: a :class:`dict` mapping aliases to original keys.
 
         Warns
         -----
@@ -170,21 +166,6 @@ class Reporter(object):
     def add(self, key, computation, strict=False):
         """Add *computation* to the Reporter under *key*.
 
-        :meth:`add` may be used to:
-
-        - Provide an alias from one *key* to another:
-
-          >>> r.add('aliased name', 'original name')
-
-        - Define an arbitrarily complex computation that operates directly on
-          the :class:`ismp.Scenario` being reported:
-
-          >>> def my_report(scenario):
-          >>>     # many lines of code
-          >>> r.add('my report', (my_report, 'scenario'))
-          >>> r.finalize(scenario)
-          >>> r.get('my report')
-
         Parameters
         ----------
         key: hashable
@@ -192,13 +173,18 @@ class Reporter(object):
         computation: object
             One of:
 
-            1. any existing *key* in the Reporter.
+            1. any existing key in the Reporter.
             2. any other literal value or constant.
             3. a task, i.e. a tuple with a callable followed by one or more
                computations.
             4. A list containing one or more of #1, #2, and/or #3.
         strict : bool, optional
             If True (default), *key* must not already exist in the Reporter.
+
+        Raises
+        ------
+        KeyError
+            If `key` is already in the Reporter.
         """
         if strict and key in self.graph:
             raise KeyError(key)
@@ -210,6 +196,9 @@ class Reporter(object):
         Only *key* and its dependencies are computed.
         """
         return dask_get(self.graph, key)
+
+    def keys(self):
+        return self.graph.keys()
 
     def finalize(self, scenario):
         """Prepare the Reporter to act on *scenario*.
@@ -260,15 +249,23 @@ class Reporter(object):
         """Add exogenous quantities from *path*.
 
         A file at a path like '/path/to/foo.ext' is added at the key
-        ``'file:foo.ext'``. See
-        :meth:`load_file <ixmp.reporting.computations.load_file>`.
+        ``'file:foo.ext'``.
+
+        See also
+        --------
+        ixmp.reporting.computations.load_file
         """
         key = key if key else 'file:{}'.format(path.name)
         self.add(key, (partial(load_file, path),), strict=True)
 
-    def visualize(self, *args, **kwargs):
+    def visualize(self, filename, **kwargs):
+        """Generate an image describing the reporting structure.
+
+        This is a shorthand for :meth:`dask.visualize`. Requires
+        `graphviz <https://pypi.org/project/graphviz/>`__.
+        """
         # TODO Provide description of how quantities are computed (req. A10)
-        raise NotImplementedError
+        return dask.visualize(self.graph, filename=filename, **kwargs)
 
     def write(self, key, path):
         """Write the report *key* to the file *path*."""

@@ -7,6 +7,7 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
    :maxdepth: 2
 
    api-python
+   api/python_reporting
 
 R (``rixmp`` package)
 -----------------------
@@ -31,7 +32,7 @@ One additional method, ``adapt_to_ret()`` is provided. Access its documentation 
 .. warning::
    The *ixmp* source also contains an older R package, now called ``rixmp.legacy`` that provided reduced-functionality versions of :class:`ixmp.Platform` and :class:`ixmp.Scenario`.
    This code is unmaintained and untested, and users are strongly advised to use or migrate to ``rixmp``.
-   
+
 Major syntax differences between ``rixmp.legacy`` and the new ``rixmp`` (see tutorial for practical examples):
 
 Initialization:
@@ -41,7 +42,7 @@ Initialization:
     library("rixmp.legacy")
     # launch the ix modeling platform using a local HSQL database instance
     mp <- ixmp.Platform(dbtype="HSQLDB")
-   
+
 ``rixmp``::
 
     library("rixmp")
@@ -52,7 +53,7 @@ To load sets and parameter on the oracle database with ``rixmp.legacy`` the user
 
     scen$init_set("i")
     scen$add_set("i", "seattle")
-    scen$add_set("i", "san-diego") 
+    scen$add_set("i", "san-diego")
 
 With ``rixmp`` the user can load entire sets of strings or dataframes, which require the additional function 'adapt_to_ret()'::
 

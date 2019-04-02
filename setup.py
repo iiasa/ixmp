@@ -31,6 +31,7 @@ def main():
         'console_scripts': [
             'import-timeseries=ixmp.cli:import_timeseries',
             'ixmp-config=ixmp.cli:config',
+            'ixmp=ixmp.cli:main',
         ],
     }
     lib_files = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/lib/*')]

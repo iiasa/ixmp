@@ -1,5 +1,5 @@
 JPype1>=0.6.2
-dask
+dask[array]
 jupyter
 numpydoc
 pandas

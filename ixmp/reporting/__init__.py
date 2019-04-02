@@ -42,12 +42,13 @@ class Reporter(object):
     # TODO meet the requirements:
     # A3i. Weighted sums.
     # A3iii. Interpolation.
-    # A6. Duplicate or clone existing operations for multiple other sets of
-    #     inputs or outputs. [Sub-graph manipulations.]
     # A7. Renaming of outputs.
 
     #: A dask-format :doc:`graph <graphs>`.
     graph = {}
+
+    #: The default reporting key.
+    default_key = None
 
     def __init__(self):
         self.graph = {}
@@ -126,7 +127,7 @@ class Reporter(object):
 
         Valid configuration keys include:
 
-        - *default*: the default reporting target.
+        - *default*: the default reporting key; sets :attr:`default_key`.
         - *files*: a :class:`dict` mapping keys to file paths.
         - *alias*: a :class:`dict` mapping aliases to original keys.
 
@@ -145,7 +146,7 @@ class Reporter(object):
 
         # Default report
         try:
-            self.default_target = config['default']
+            self.default_key = config['default']
         except KeyError:
             pass
 
@@ -190,11 +191,45 @@ class Reporter(object):
             raise KeyError(key)
         self.graph[key] = computation
 
-    def get(self, key):
+    def apply(self, generator, *keys):
+        """Add computations from `generator` applied to `key`.
+
+        Parameters
+        ----------
+        generator : callable
+            Function to apply to `keys`. Must yield a sequence (0 or more) of
+            (`key`, `computation`), which are added to the :attr:`graph`.
+        keys : hashable
+            The starting key(s)
+        """
+        try:
+            self.graph.update(generator(*keys))
+        except TypeError as e:
+            if e.args[0] == "'NoneType' object is not iterable":
+                pass
+            else:
+                raise
+
+    def get(self, key=None):
         """Execute and return the result of the computation *key*.
 
         Only *key* and its dependencies are computed.
+
+        Parameters
+        ----------
+        key : str, optional
+            If not provided, :attr:`default_key` is used.
+
+        Raises
+        ------
+        ValueError
+            If `key` and :attr:`default_key` are both :obj:`None`.
         """
+        if key is None:
+            if self.default_key is not None:
+                key = self.default_key
+            else:
+                raise ValueError('no default reporting key set')
         return dask_get(self.graph, key)
 
     def keys(self):

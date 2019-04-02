@@ -92,6 +92,49 @@ def test_reporter_read_config(test_mp, test_data_path):
     assert rep.get('d_check').loc['seattle', 'chicago'] == 1.7
 
 
+def test_reporter_apply():
+    # Reporter with two scalar values
+    r = Reporter()
+    r.add('foo', 42)
+    r.add('bar', 11)
+
+    # A computation
+    def product(a, b):
+        return a * b
+
+    # A generator method that yields keys and computations
+    def baz_qux(key):
+        yield key + ':baz', (product, key, 0.5)
+        yield key + ':qux', (product, key, 1.1)
+
+    # Apply the generator to two targets
+    r.apply(baz_qux, 'foo')
+    r.apply(baz_qux, 'bar')
+
+    # Four computations were added to the reporter
+    assert len(r.keys()) == 6
+    assert r.get('foo:baz') == 42 * 0.5
+    assert r.get('foo:qux') == 42 * 1.1
+    assert r.get('bar:baz') == 11 * 0.5
+    assert r.get('bar:qux') == 11 * 1.1
+
+    # A generator that takes two arguments
+    def twoarg(key1, key2):
+        yield key1 + '__' + key2, (product, key1, key2)
+
+    r.apply(twoarg, 'foo:baz', 'bar:qux')
+
+    # One computation added to the reporter
+    assert len(r.keys()) == 7
+    assert r.get('foo:baz__bar:qux') == 42 * 0.5 * 11 * 1.1
+
+    # A useless generator that does nothing
+    def useless(key):
+        return
+    r.apply(useless, 'foo:baz__bar:qux')
+    assert len(r.keys()) == 7
+
+
 def test_reporter_disaggregate():
     r = Reporter()
     foo = Key('foo', ['a', 'b', 'c'])

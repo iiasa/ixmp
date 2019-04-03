@@ -201,7 +201,7 @@ def test_reporting_cli(test_mp_props, test_data_path):
            '--dbprops', test_mp_props,
            '--model', 'canning problem',
            '--scenario', 'standard',
-           '--config', test_data_path / 'report-config-0.yaml',
+           '--config', str(test_data_path / 'report-config-0.yaml'),
            '--default', 'd_check',
            ]
     out = subprocess.check_output(cmd, encoding='utf-8')

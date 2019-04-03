@@ -333,5 +333,5 @@ def test_solve_callback(test_mp, test_data_path):
         # Model iterates automatically
         scen.solve(callback=change_distance, **solve_args)
 
-    # Solution reached after 4 iterations, i.e. for f[4 - 1] == 90.0
+    # Solution reached after 4 iterations, i.e. for d[4 - 1] == 2.5
     assert scen.iteration == 4

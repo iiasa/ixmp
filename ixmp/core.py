@@ -1332,7 +1332,8 @@ class Scenario(TimeSeries):
         if callback is not None and not callable(callback):
             raise ValueError('callback={!r} is not callable'.format(callback))
         elif callback is None:
-            def callback(*args, **kwargs):
+            # Make the callback a no-op
+            def callback(scenario, **kwargs):
                 return True
 
         warn_none = True

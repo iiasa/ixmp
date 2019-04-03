@@ -198,7 +198,7 @@ def test_reporting_cli(test_mp_props, test_data_path):
     del mp
 
     cmd = ['ixmp', 'report',
-           '--dbprops', test_mp_props,
+           '--dbprops', str(test_mp_props),
            '--model', 'canning problem',
            '--scenario', 'standard',
            '--config', str(test_data_path / 'report-config-0.yaml'),

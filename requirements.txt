@@ -5,6 +5,7 @@ jupyter
 numpydoc
 pandas
 pytest>=3.9
+PyYAML
 sphinx
 sphinx_rtd_theme
 sphinxcontrib-bibtex

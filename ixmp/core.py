@@ -1251,7 +1251,8 @@ class Scenario(TimeSeries):
 
     def solve(self, model, case=None, model_file=None, in_file=None,
               out_file=None, solve_args=None, comment=None, var_list=None,
-              equ_list=None, check_solution=True, callback=None):
+              equ_list=None, check_solution=True, callback=None,
+              cb_kwargs={}):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1296,6 +1297,8 @@ class Scenario(TimeSeries):
             Method to execute arbitrary non-model code. Must accept a single
             argument, the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
+        cb_kwargs : dict, optional
+            Keyword arguments to pass to `callback`.
 
         Warns
         -----
@@ -1325,9 +1328,16 @@ class Scenario(TimeSeries):
         opth = os.path.dirname(outp)
         outgdx = os.path.basename(outp)
 
-        # Iterate until convergence
+        # Validate *callback* argument
+        if callback is not None and not callable(callback):
+            raise ValueError('callback={!r} is not callable'.format(callback))
+        elif callback is None:
+            def callback(*args, **kwargs):
+                return True
+
         warn_none = True
 
+        # Iterate until convergence
         while True:
             # Write model data to file
             self.to_gdx(ipth, ingdx)
@@ -1339,28 +1349,25 @@ class Scenario(TimeSeries):
             self.read_sol_from_gdx(opth, outgdx, comment,
                                    var_list, equ_list, check_solution)
 
-            if not callable(callback):
-                # No callback given; done
+            # Store an iteration number to help the callback
+            if not hasattr(self, 'iteration'):
+                self.iteration = 0
+
+            self.iteration += 1
+
+            # Invoke the callback
+            cb_result = callback(self, **cb_kwargs)
+
+            if cb_result is None and warn_none:
+                warnings.warn('solve(callback=...) argument returned None;'
+                              ' will loop indefinitely unless True is'
+                              ' returned.')
+                # Don't repeat the warning
+                warn_none = False
+
+            if cb_result:
+                # Callback indicates convergence is reached
                 break
-            else:
-                # Store an iteration number to help the callback
-                if not hasattr(self, 'iteration'):
-                    self.iteration = 0
-                self.iteration += 1
-
-                # Invoke the callback
-                cb_result = callback(self)
-
-                if cb_result is None and warn_none:
-                    warnings.warn('solve(callback=...) argument returned None;'
-                                  ' will loop indefinitely unless True is'
-                                  ' returned.')
-                    # Don't repeat the warning
-                    warn_none = False
-
-                if cb_result:
-                    # Callback indicates convergence is reached
-                    break
 
     def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements

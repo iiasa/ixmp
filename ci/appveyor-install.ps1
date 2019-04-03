@@ -53,7 +53,7 @@ Exec { conda update --quiet --yes conda }
 # each about 150 MB. Enable Appveyor caching or tweak conda configuration to
 # speed up.
 Exec { conda install --channel conda-forge  --quiet --yes `
-       ixmp[tests] pytest coveralls pytest-cov }
+       ixmp[tests] pytest coveralls pytest-cov graphviz }
 Exec { conda remove --force --yes ixmp }
 
 # Show information

@@ -12,6 +12,7 @@ INSTALL_REQUIRES = [
     'dask[array]',
     'graphviz',
     'pandas',
+    'PyYAML',
     'xarray',
     'xlsxwriter',
     'xlrd',

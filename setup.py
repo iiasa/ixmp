@@ -15,7 +15,7 @@ INSTALL_REQUIRES = [
 ]
 
 EXTRAS_REQUIRE = {
-    'tests': ['pytest>=3.0.6', 'jupyter'],
+    'tests': ['pytest>=3.9', 'jupyter'],
     'docs': ['numpydoc', 'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-bibtex'],
     'tutorial': ['jupyter'],
 }

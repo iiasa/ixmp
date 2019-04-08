@@ -1,23 +1,46 @@
+import pytest
 import numpy as np
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import make_dantzig, TS_DF
+from ixmp.testing import dantzig_transport, TS_DF, HIST_DF
 
 
-def test_run_gams_api(tmpdir, test_data_path):
+def test_run_clone(tmpdir, test_data_path):
     # this test is designed to cover the full functionality of the GAMS API
     # - creates a new scenario and exports a gdx file
     # - runs the tutorial transport model
     # - reads back the solution from the output
     # - performs the test on the objective value
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
-    scen = make_dantzig(mp, solve=test_data_path)
+    scen = dantzig_transport(mp, solve=test_data_path)
+    assert np.isclose(scen.var('z')['lvl'], 153.675)
 
-    # test it
-    obs = scen.var('z')['lvl']
-    exp = 153.675
-    assert np.isclose(obs, exp)
+    # cloning with `keep_solution=True` keeps all timeseries and the solution
+    scen2 = scen.clone(keep_solution=True)
+    assert np.isclose(scen2.var('z')['lvl'], 153.675)
+    obs = scen2.timeseries(iamc=True)
+    pdt.assert_frame_equal(obs, TS_DF)
+
+    # cloning with `keep_solution=True` and `first_model_year` raises an error
+    pytest.raises(ValueError, scen.clone, first_model_year=2005)
+
+    # cloning with `keep_solution=False` drops the solution and only keeps
+    # timeseries set as `meta=True`
+    scen3 = scen.clone(keep_solution=False)
+    assert np.isnan(scen3.var('z')['lvl'])
+    obs = scen3.timeseries(iamc=True)
+    pdt.assert_frame_equal(obs, HIST_DF)
+
+    # cloning with `keep_solution=False` and `first_model_year`
+    # drops the solution and removes all timeseries not marked `meta=True`
+    # in the model horizon (i.e, `year >= first_model_year`)
+    scen4 = scen.clone(keep_solution=False, first_model_year=2005)
+    assert np.isnan(scen4.var('z')['lvl'])
+    obs = scen4.timeseries(iamc=True)
+    exp = TS_DF.copy()
+    exp.loc[0, 2005] = np.nan
+    pdt.assert_frame_equal(obs, exp)
 
 
 def scenario_list(mp):

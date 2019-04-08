@@ -1152,8 +1152,10 @@ class Scenario(TimeSeries):
         annotation : str, optional
             Explanatory comment for the clone operation.
         keep_solution : bool
-            If :py:const:`True`, include data from an existing model solution
-            in the clone.
+            If :py:const:`True`, include all timeseries data and the solution
+            (vars and equs) from the source scenario in the clone.
+            If :py:const:`False`, only include timeseries data marked
+            `meta=True` (see :meth:`TimeSeries.add_timeseries`).
         first_model_year: int
             If given, all time series data in the Scenario is omitted from the
             clone for years from `first_model_year` onwards. Time series data
@@ -1174,19 +1176,22 @@ class Scenario(TimeSeries):
                 ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
-        first_model_year = first_model_year or 0
+        if keep_solution and first_model_year is not None:
+            raise ValueError('Use `keep_solution=False` when cloning with '
+                             '`first_model_year`!')
 
-        platform = self.platform if not platform else platform
-        model = self.model if not model else model
-        scenario = self.scenario if not scenario else scenario
+        platform = platform or self.platform
+        model = model or self.model
+        scenario = scenario or self.scenario
+        args = [platform._jobj, model, scenario, annotation, keep_solution]
+        if first_model_year is not None:
+            if not isinstance(first_model_year, int):
+                raise ValueError('arg `first_model_year` must be integer!')
+            args.append(first_model_year)
 
         scenario_class = self.__class__
-        return scenario_class(platform, model, scenario,
-                              version=self._jobj.clone(platform._jobj, model,
-                                                       scenario, annotation,
-                                                       keep_solution,
-                                                       first_model_year),
-                              cache=self._cache)
+        return scenario_class(platform, model, scenario, cache=self._cache,
+                              version=self._jobj.clone(*args))
 
     def to_gdx(self, path, filename, include_var_equ=False):
         """export the scenario data to GAMS gdx

@@ -24,6 +24,7 @@ import pytest
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario
+from .core import Scenario, IAMC_IDX
 
 
 # pytest hooks and fixtures
@@ -92,10 +93,17 @@ def test_mp_props(tmp_path_factory, test_data_path):
 
 MODEL = "canning problem"
 SCENARIO = "standard"
-TS_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 900], ],
-    columns=['model', 'scenario', 'region', 'variable', 'unit', 2005],
+HIST_DF = pd.DataFrame(
+    [[MODEL, SCENARIO, 'DantzigLand', 'GDP', 'USD', 850., 900., 950.], ],
+    columns=IAMC_IDX + [2000, 2005, 2010],
 )
+INP_DF = pd.DataFrame(
+    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 850., 900.], ],
+    columns=IAMC_IDX + [2000, 2005],
+)
+TS_DF = pd.concat([HIST_DF, INP_DF], sort=False)
+TS_DF.sort_values(by='variable', inplace=True)
+TS_DF.index = range(len(TS_DF.index))
 
 
 def create_local_testdb(db_path, data_path):
@@ -183,8 +191,9 @@ def make_dantzig(mp, solve=False):
     scen.init_var('x', idx_sets=['i', 'j'])
     scen.init_equ('demand', idx_sets=['j'])
 
-    # add timeseries data for testing the clone across platforms
-    scen.add_timeseries(TS_DF)
+    # add timeseries data for testing `clone(keep_solution=False)`
+    scen.add_timeseries(HIST_DF, meta=True)
+    scen.add_timeseries(INP_DF)
 
     scen.commit("Import Dantzig's transport problem for testing.")
 

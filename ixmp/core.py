@@ -1180,6 +1180,10 @@ class Scenario(TimeSeries):
             raise ValueError('Use `keep_solution=False` when cloning with '
                              '`first_model_year`!')
 
+        if platform is not None and not keep_solution:
+            raise ValueError('Cloning across platforms is only possible '
+                             'with `keep_solution=True`!')
+
         platform = platform or self.platform
         model = model or self.model
         scenario = scenario or self.scenario

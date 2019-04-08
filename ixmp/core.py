@@ -270,9 +270,10 @@ class Platform(object):
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
 
-        *Before adding a region, please use `regions()` and check whether the
-        region already exists with a different spelling.
-        If so, use `add_region_synonym()` instead.
+        .. tip::
+           On a :class:`Platform` backed by a shared database, a region may
+           already exist with a different spelling. Use :meth:`regions` first
+           to check, and consider calling :meth:`add_region_synonym` instead.
 
         Parameters
         ----------
@@ -1248,9 +1249,10 @@ class Scenario(TimeSeries):
         else:
             raise ValueError('this Scenario does not have a solution')
 
-    def solve(self, model, case=None, model_file=None,
-              in_file=None, out_file=None, solve_args=None, comment=None,
-              var_list=None, equ_list=None, check_solution=True):
+    def solve(self, model, case=None, model_file=None, in_file=None,
+              out_file=None, solve_args=None, comment=None, var_list=None,
+              equ_list=None, check_solution=True, callback=None,
+              cb_kwargs={}):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1258,6 +1260,15 @@ class Scenario(TimeSeries):
         1. Write all Scenario data to a GDX model input file.
         2. Run GAMS for the specified `model` to perform calculations.
         3. Read the model output, or 'solution', into the database.
+
+        If the optional argument `callback` is given, then additional steps are
+        performed:
+
+        4. Execute the `callback` with the Scenario as an argument. The
+           Scenario has an `iteration` attribute that stores the number of
+           times the underlying model has been solved (#2).
+        5. If the `callback` returns :obj:`False` or similar, go to #1;
+           otherwise exit.
 
         Parameters
         ----------
@@ -1282,6 +1293,19 @@ class Scenario(TimeSeries):
         check_solution : boolean, optional
             flag whether a non-optimal solution raises an exception
             (only applies to MESSAGE runs)
+        callback : callable, optional
+            Method to execute arbitrary non-model code. Must accept a single
+            argument, the Scenario. Must return a non-:obj:`False` value to
+            indicate convergence.
+        cb_kwargs : dict, optional
+            Keyword arguments to pass to `callback`.
+
+        Warns
+        -----
+        UserWarning
+            If `callback` is given and returns :obj:`None`. This may indicate
+            that the user has forgotten a ``return`` statement, in which case
+            the iteration will continue indefinitely.
         """
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
@@ -1304,11 +1328,47 @@ class Scenario(TimeSeries):
         opth = os.path.dirname(outp)
         outgdx = os.path.basename(outp)
 
-        # write to gdx, execture GAMS, read solution from gdx
-        self.to_gdx(ipth, ingdx)
-        run_gams(model_file, args)
-        self.read_sol_from_gdx(opth, outgdx, comment,
-                               var_list, equ_list, check_solution)
+        # Validate *callback* argument
+        if callback is not None and not callable(callback):
+            raise ValueError('callback={!r} is not callable'.format(callback))
+        elif callback is None:
+            # Make the callback a no-op
+            def callback(scenario, **kwargs):
+                return True
+
+        warn_none = True
+
+        # Iterate until convergence
+        while True:
+            # Write model data to file
+            self.to_gdx(ipth, ingdx)
+
+            # Invoke GAMS
+            run_gams(model_file, args)
+
+            # Read model solution
+            self.read_sol_from_gdx(opth, outgdx, comment,
+                                   var_list, equ_list, check_solution)
+
+            # Store an iteration number to help the callback
+            if not hasattr(self, 'iteration'):
+                self.iteration = 0
+
+            self.iteration += 1
+
+            # Invoke the callback
+            cb_result = callback(self, **cb_kwargs)
+
+            if cb_result is None and warn_none:
+                warnings.warn('solve(callback=...) argument returned None;'
+                              ' will loop indefinitely unless True is'
+                              ' returned.')
+                # Don't repeat the warning
+                warn_none = False
+
+            if cb_result:
+                # Callback indicates convergence is reached
+                break
 
     def clear_cache(self, name=None, ix_type=None):
         """clear the Python cache of item elements

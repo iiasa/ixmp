@@ -1150,18 +1150,18 @@ class Scenario(TimeSeries):
         scenario : str, optional
             New scenario name. If not given, use the existing scenario name.
         annotation : str, optional
-            Explanatory comment for the clone operation.
-        keep_solution : bool
+            Explanatory comment for the clone commit message to the database.
+        keep_solution : bool, default True
             If :py:const:`True`, include all timeseries data and the solution
             (vars and equs) from the source scenario in the clone.
             If :py:const:`False`, only include timeseries data marked
             `meta=True` (see :meth:`TimeSeries.add_timeseries`).
-        first_model_year: int
-            If given, all time series data in the Scenario is omitted from the
-            clone for years from `first_model_year` onwards. Time series data
+        first_model_year: int, optional
+            If given, all timeseries data in the Scenario is omitted from the
+            clone for years from `first_model_year` onwards. Timeseries data
             with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
             cloned for all years.
-        platform : :class:`Platform`
+        platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:

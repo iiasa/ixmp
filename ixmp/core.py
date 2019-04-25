@@ -1323,7 +1323,16 @@ class Scenario(TimeSeries):
             If `callback` is given and returns :obj:`None`. This may indicate
             that the user has forgotten a ``return`` statement, in which case
             the iteration will continue indefinitely.
+
+        Raises
+        ------
+        ValueError
+            If the Scenario has already been solved.
         """
+        if self.has_solution():
+            raise ValueError('This Scenario has already been solved, ',
+                             'use `remove_solution()` first!')
+
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
             else model_settings.model_config('default')

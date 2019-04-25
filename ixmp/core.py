@@ -89,7 +89,6 @@ class Platform(object):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
-
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -1135,13 +1134,13 @@ class Scenario(TimeSeries):
         If the (`model`, `scenario`) given already exist on the
         :class:`Platform`, the `version` for the cloned Scenario follows the
         last existing version. Otherwise, the `version` for the cloned Scenario
-        is 0.
+        is 1.
 
         .. note::
             :meth:`clone` does not set or alter default versions. This means
             that a clone to new (`model`, `scenario`) names has no default
             version, and will not be returned by
-            :meth:`Platform.scenarios_list` unless ``default=False`` is given.
+            :meth:`Platform.scenario_list` unless `default=False` is given.
 
         Parameters
         ----------

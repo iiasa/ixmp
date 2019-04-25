@@ -80,8 +80,9 @@ def assert_multi_db(mp1, mp2):
 
 
 def test_multi_db_run(tmpdir, test_data_path):
+    # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = make_dantzig(mp1, solve=test_data_path)
+    scen1 = dantzig_transport(mp1)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     # add other unit to make sure that the mapping is correct during clone
@@ -91,25 +92,18 @@ def test_multi_db_run(tmpdir, test_data_path):
     # check that cloning across platforms must copy the full solution
     pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
-    # clone across platforms (with default settings)
+    # clone un-solved model across platforms (with default settings)
     scen2 = scen1.clone(platform=mp2)
     assert np.isnan(scen2.var('z')['lvl'])
 
-    # solve both models in their respective databases
-    scen1.solve(model=str(test_data_path / 'transport_ixmp'))
-    scen2.solve(model=str(test_data_path / 'transport_ixmp'))
-    assert scen1.var('z') == scen2.var('z')
-    assert_multi_db(mp1, mp2)
-
-    # check that custom unit and region are migrated correctly
+    # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par('f')['value'] == 90.0
     assert scen2.par('f')['unit'] == 'USD_per_km'
-
-    obs = scen2.timeseries(iamc=True)
-    pdt.assert_frame_equal(obs, TS_DF)
+    pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
 
 def test_multi_db_edit_source(tmpdir):
+    # create a new instance of the transport problem
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = make_dantzig(mp1)
 
@@ -144,6 +138,7 @@ def test_multi_db_edit_source(tmpdir):
 
 
 def test_multi_db_edit_target(tmpdir):
+    # create a new instance of the transport problem
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = make_dantzig(mp1)
 

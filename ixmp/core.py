@@ -1242,19 +1242,29 @@ class Scenario(TimeSeries):
         """
         return self._jobj.hasSolution()
 
-    def remove_solution(self):
-        """Delete the model solution.
+    def remove_solution(self, first_model_year=None):
+        """Delete the model solution (variables and equations) and timeseries
+        data marked as `meta=False` (see :meth:`TimeSeries.add_timeseries`).
+
+        Parameters
+        ----------
+        first_model_year: int, optional
+            If given, timeseries data marked as `meta=False` is removed
+            only for years from `first_model_year` onwards.
 
         Raises
         ------
         ValueError
-            If Scenario has no solution.
+            If Scenario has no solution or if `first_model_year` is not `int`.
         """
         if self.has_solution():
             self.clear_cache()  # reset Python data cache
-            self._jobj.removeSolution()
+            if is_year(first_model_year, 'first_model_year'):
+                self._jobj.removeSolution(first_model_year)
+            else:
+                self._jobj.removeSolution()
         else:
-            raise ValueError('this Scenario does not have a solution')
+            raise ValueError('This Scenario does not have a solution!')
 
     def solve(self, model, case=None, model_file=None, in_file=None,
               out_file=None, solve_args=None, comment=None, var_list=None,

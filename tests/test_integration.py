@@ -44,7 +44,31 @@ def test_run_clone(tmpdir, test_data_path):
     pdt.assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
 
 
-    pdt.assert_frame_equal(obs, exp)
+def test_run_remove_solution(tmpdir, test_data_path):
+    # create a new instance of the transport problem and solve it
+    mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
+    scen = dantzig_transport(mp, solve=test_data_path)
+    assert np.isclose(scen.var('z')['lvl'], 153.675)
+
+    # check that re-solving the model will raise an error if a solution exists
+    pytest.raises(ValueError, scen.solve,
+                  model=str(test_data_path / 'transport_ixmp'), case='fail')
+
+    # remove the solution, check that variables are empty
+    # and timeseries not marked `meta=True` are removed
+    scen2 = scen.clone()
+    scen2.remove_solution()
+    assert not scen2.has_solution()
+    assert np.isnan(scen2.var('z')['lvl'])
+    pdt.assert_frame_equal(scen2.timeseries(iamc=True), HIST_DF)
+
+    # remove the solution with a specific year as first model year, check that
+    # variables are empty and timeseries not marked `meta=True` are removed
+    scen3 = scen.clone()
+    scen3.remove_solution(first_model_year=2005)
+    assert not scen3.has_solution()
+    assert np.isnan(scen3.var('z')['lvl'])
+    pdt.assert_frame_equal(scen3.timeseries(iamc=True), TS_DF_CLEARED)
 
 
 def scenario_list(mp):

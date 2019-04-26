@@ -88,10 +88,6 @@ class Config(object):
                 # e.g. 'DB_CONFIG_PATH' via find_dbprops() is None
                 continue
 
-            # fix for R users (was in default_path_constants.py)
-            parts = filter(lambda p: p != 'Documents', directory.parts)
-            directory = Path(*parts)
-
             if filename:
                 # Locate a specific file
                 if (directory / filename).exists():

@@ -35,5 +35,4 @@ ixmp <- NULL
                                       args = gsub("/","\\\\" , paste('--in=',file.path( ".", "{model}_in.gdx"),' --out=',file.path(".", "{model}_out.gdx")))))
 
   ixmp <<- reticulate::import('ixmp', delay_load = TRUE)
-
 }

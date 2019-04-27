@@ -1,5 +1,7 @@
 language: minimal
 
+r: release
+
 matrix:
     include:
         - os: linux
@@ -23,6 +25,7 @@ before_install:
 
 install:
   - python setup.py install
+  - R -e 'devtools::install_deps(package = "retixmp/source", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

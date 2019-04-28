@@ -53,4 +53,5 @@ export PATH=$HOME/miniconda/bin:$PATH
 
 # R
 # cf. https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/script/r.rb
+export R_PROFILE=$HOME/.Rprofile
 export R_LIBS_USER=$HOME/R/Library

@@ -31,5 +31,6 @@ conda remove -n testing --force --yes ixmp
 
 # Install R packages needed for testing
 env | sort
+mkdir -p $R_LIBS_USER
 Rscript -e 'print(.libPaths())'
 Rscript -e 'install.packages("devtools")'

@@ -1,7 +1,5 @@
 language: minimal
 
-r: release
-
 matrix:
     include:
         - os: linux
@@ -18,6 +16,12 @@ matrix:
 #        - os: windows
 #          env: PYENV=py27
 
+addons:
+  apt:
+    packages:
+    - r-cran-devtools
+    - r-cran-testthat
+
 before_install:
   - source ./ci/env.sh
   - bash ./ci/travis-install.sh
@@ -29,9 +33,13 @@ install:
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
-  - cd tests
-  - py.test --verbose --cov=ixmp --cov-config ../ci/.coveragerc --cov-report term-missing
-  - cd ..
+  # Python tests; these include equivalent of the Travis R tests via test_r.py
+  - > pytest
+    --verbose
+    --cov=ixmp
+    --cov-config ci/.coveragerc
+    --cov-report term-missing
+  # Test that documentation can be built
   - cd doc
   - pip install -r requirements.txt
   - make html

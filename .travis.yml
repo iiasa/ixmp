@@ -34,7 +34,8 @@ install:
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
   # Python tests; these include equivalent of the Travis R tests via test_r.py
-  - > pytest
+  - >
+    pytest
     --verbose
     --cov=ixmp
     --cov-config ci/.coveragerc

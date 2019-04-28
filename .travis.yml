@@ -21,7 +21,24 @@ matrix:
 addons:
   apt:
     packages:
+    # For building R packages
     - r-base-dev
+    # Dependencies of devtools, to avoid rebuilding
+    - r-cran-callr
+    - r-cran-cli
+    - r-cran-digest
+    - r-cran-git2r
+    - r-cran-httr
+    - r-cran-jsonlite
+    - r-cran-memoise
+    - r-cran-pkgbuild
+    - r-cran-pkgload
+    - r-cran-rcmdcheck
+    - r-cran-remotes
+    - r-cran-rstudioapi
+    - r-cran-sessioninfo
+    - r-cran-usethis
+    - r-cran-withr
 
 before_install:
   - source ./ci/env.sh
@@ -30,7 +47,7 @@ before_install:
 
 install:
   - python setup.py install
-  - Rscript -e 'remotes::install_dev_deps("retixmp/source")'
+  - Rscript -e 'devtools::install_dev_deps("retixmp/source")'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

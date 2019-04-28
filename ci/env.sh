@@ -1,3 +1,5 @@
+# Set environment variables for Travis
+
 # gams info
 case "${TRAVIS_OS_NAME}" in
     linux)
@@ -49,3 +51,6 @@ esac
 export CONDAURL="https://repo.anaconda.com/miniconda/Miniconda$PYVERSION-latest-$OSNAME-x86_64.$EXT"
 export PATH=$HOME/miniconda/bin:$PATH
 
+# R
+# cf. https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/script/r.rb
+export R_LIBS_USER=~/R/Library

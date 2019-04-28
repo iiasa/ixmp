@@ -28,3 +28,6 @@ conda install -n testing -c conda-forge --yes \
       coveralls \
       pytest-cov 
 conda remove -n testing --force --yes ixmp
+
+# Install R packages needed for testing
+Rscript -e 'install.packages("devtools")'

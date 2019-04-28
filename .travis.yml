@@ -1,3 +1,5 @@
+dist: xenial
+
 language: minimal
 
 matrix:
@@ -19,17 +21,17 @@ matrix:
 addons:
   apt:
     packages:
-    - r-cran-devtools
-    - r-cran-testthat
+    - r-base-dev
 
 before_install:
   - source ./ci/env.sh
   - bash ./ci/travis-install.sh
   - source activate testing
+  - Rscript -e 'install.packages(devtools)'
 
 install:
   - python setup.py install
-  - R -e 'devtools::install_deps(package = "retixmp/source", dep = T)'
+  - Rscript -e 'devtools::install_deps(package = "retixmp/source", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

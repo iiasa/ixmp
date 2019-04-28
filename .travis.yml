@@ -30,7 +30,7 @@ before_install:
 
 install:
   - python setup.py install
-  - Rscript -e 'devtools::install_deps(package = "retixmp/source", dep = T)'
+  - Rscript -e 'remotes::install_dev_deps("retixmp/source")'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

@@ -1,12 +1,17 @@
 from copy import deepcopy
 from functools import partial
 from itertools import compress
+from logging import getLogger
 from math import ceil
 
 import pandas as pd
+import pint
 import xarray as xr
 
-from .computations import aggregate
+log = getLogger(__name__)
+
+ureg = pint.UnitRegistry()
+
 
 
 def combo_partition(iterable):
@@ -21,8 +26,6 @@ def combo_partition(iterable):
 
 class Key:
     """A hashable key for a quantity that includes its dimensionality."""
-    # TODO add 'method' attribute to describe the method(s) used to perform
-    # (dis)aggregation, other manipulation
     # TODO cache repr() and only recompute when name/dims changed
     def __init__(self, name, dims=[], tag=None):
         self._name = name
@@ -58,9 +61,24 @@ class Key:
 
     def aggregates(self):
         """Yield (key, task) for all possible aggregations of the Key."""
+        from .computations import aggregate
+
         for agg_dims, others in combo_partition(self._dims):
             yield Key(self._name, agg_dims), \
                 (partial(aggregate, dimensions=others), self)
+
+
+def collect_units(*args):
+    for arg in args:
+        if '_unit' in arg.attrs:
+            # Convert units if necessary
+            if isinstance(arg.attrs['_unit'], str):
+                arg.attrs['_unit'] = ureg.parse_units(arg.attrs['_unit'])
+        else:
+            log.info('assuming {} is unitless'.format(arg))
+            arg.attrs['_unit'] = ureg.parse_units('')
+
+    return [arg.attrs['_unit'] for arg in args]
 
 
 def quantity_as_xr(scenario, name, kind='par'):
@@ -90,7 +108,7 @@ def quantity_as_xr(scenario, name, kind='par'):
     try:
         unit = pd.unique(data.pop('unit'))
         assert len(unit) == 1
-        attrs = {'unit': unit[0]}
+        attrs = {'_unit': unit[0]}
     except KeyError:
         # 'equ' are returned without units
         attrs = {}

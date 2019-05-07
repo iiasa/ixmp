@@ -23,12 +23,11 @@ class Key:
     """A hashable key for a quantity that includes its dimensionality."""
     # TODO add 'method' attribute to describe the method(s) used to perform
     # (dis)aggregation, other manipulation
-    # TODO add tags or other information to describe quantities computed
-    # multiple ways
     # TODO cache repr() and only recompute when name/dims changed
-    def __init__(self, name, dims=[]):
+    def __init__(self, name, dims=[], tag=None):
         self._name = name
         self._dims = dims
+        self._tag = tag
 
     @classmethod
     def from_str_or_key(cls, value):
@@ -40,7 +39,8 @@ class Key:
 
     def __repr__(self):
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
-        return ':'.join([self._name, '-'.join(self._dims)])
+        return ':'.join([self._name, '-'.join(self._dims)] +
+                        ([self._tag] if self._tag is not None else []))
 
     def __hash__(self):
         return hash(repr(self))

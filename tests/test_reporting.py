@@ -7,8 +7,10 @@ from ixmp.reporting import Key, Reporter
 import pandas as pd
 import pytest
 import xarray as xr
+from xarray.testing import assert_equal as assert_xr_equal
 
 from ixmp.testing import dantzig_transport
+from ixmp.reporting.computations import aggregate
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -65,10 +67,30 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     # Units pass through summation
     assert d_i.attrs['unit'] == 'km'
 
+    # Aggregation with weights
+    weights = xr.DataArray([1, 2, 3],
+                           coords=['chicago new-york topeka'.split()],
+                           dims=['j'])
+    new_key = rep.aggregate('d:i-j', 'j', 'weighted', weights)
+
+    # …produces the expected new key with the summed dimension removed and
+    # tag added
+    assert new_key == 'd:i:weighted'
+
+    # …produces the expected new value
+    assert_xr_equal(
+        rep.get(new_key),
+        (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
+        )
+
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    rep.disaggregate('b:j', 'p', args=[shares])
+    new_key = rep.disaggregate('b:j', 'p', args=[shares])
+
+    # …produces the expected key with new dimension added
+    assert new_key == 'b:j-p'
+
     b_jp = rep.get('b:j-p')
 
     # Units pass through disaggregation

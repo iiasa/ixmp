@@ -106,9 +106,23 @@ def quantity_as_xr(scenario, name, kind='par'):
 
     # Remove the unit from the DataFrame
     try:
+        # Ensure there is only one type of unit defined
         unit = pd.unique(data.pop('unit'))
         assert len(unit) == 1
-        attrs = {'_unit': unit[0]}
+        unit = unit[0]
+
+        # Parse units
+        try:
+            unit = ureg.parse_units(unit)
+        except pint.UndefinedUnitError:
+            # Units do not exist; define them in the UnitRegistry
+            definition = f'{unit} = [{unit}]'
+            log.info(f'Definining units {definition} for quantity {name}.')
+            ureg.define(definition)
+            unit = ureg.parse_units(unit)
+
+        # Store
+        attrs = {'_unit': unit}
     except KeyError:
         # 'equ' are returned without units
         attrs = {}

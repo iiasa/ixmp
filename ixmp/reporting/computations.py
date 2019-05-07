@@ -108,7 +108,11 @@ def load_file(path):
         return open(path).read()
 
 
-def write_report(key, path):
+def write_report(quantity, path):
     """Write the report identified by *key* to the file at *path*."""
-    # TODO intelligently handle different formats of *report*, e.g. CSV
-    path.write_text(key)
+    if path.suffix == '.csv':
+        quantity.to_dataframe().to_csv(path)
+    elif path.suffix == '.xlsx':
+        quantity.to_dataframe().to_excel(path, merge_cells=False)
+    else:
+        path.write_text(quantity)

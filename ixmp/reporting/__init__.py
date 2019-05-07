@@ -309,7 +309,7 @@ class Reporter(object):
             key = (key,)
         return self._describe(key) + '\n'
 
-    def _describe(self, comp, depth=0, seen=set()):
+    def _describe(self, comp, depth=0, seen=None):
         """Recursive helper for :meth:`describe`.
 
         Parameters
@@ -323,10 +323,13 @@ class Reporter(object):
             double-printing.
         """
         comp = comp if isinstance(comp, tuple) else (comp,)
+        seen = set() if seen is None else seen
 
         indent = (' ' * 2 * (depth - 1)) + ('- ' if depth > 0 else '')
 
+        # Strings for arguments
         result = []
+
         for arg in comp:
             # Don't fully reprint keys and their ancestors that have been seen
             try:
@@ -347,7 +350,7 @@ class Reporter(object):
                 fn_name = arg.func.__name__
                 fn_args = ', '.join(chain(
                     map(str, arg.args),
-                    map('{0[0]}={0[1]}'.format, arg.keywords)))
+                    map('{0[0]}={0[1]}'.format, arg.keywords.items())))
                 item = f'{fn_name}({fn_args}, ...)'
             elif isinstance(arg, (str, Key)) and arg in self.graph:
                 # key that exists in the graph → recurse
@@ -356,9 +359,10 @@ class Reporter(object):
                     self._describe(self.graph[arg], depth + 1, seen))
                 seen.add(arg)
             elif isinstance(arg, list) and arg[0] in self.graph:
+                # list → collection of items
                 item = "list of:\n{}".format(
                     self._describe(tuple(arg), depth + 1, seen))
-                seen |= set(arg)
+                seen.update(arg)
             else:
                 item = str(arg)
 

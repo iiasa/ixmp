@@ -5,28 +5,33 @@
 - ['new-york', 'chicago', 'topeka']
 
 'a:':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['i'], ...)
 - 'a:i':
   - <xarray.DataArray 'a' (i: 2)>
 
 'b:':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['j'], ...)
 - 'b:j':
   - <xarray.DataArray 'b' (j: 3)>
 
 'd:':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['i', 'j'], ...)
+- 'd:i-j':
+  - <xarray.DataArray 'd' (i: 2, j: 3)>
+
+'d:i':
+- aggregate(dimensions=['j'], ...)
 - 'd:i-j' (above)
 
 'd:j':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['i'], ...)
 - 'd:i-j' (above)
 
 'demand-margin:j':
 - <xarray.DataArray 'demand-margin' (j: 0)>
 
 'demand:':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['j'], ...)
 - 'demand:j':
   - <xarray.DataArray 'demand' (j: 0)>
 
@@ -34,16 +39,16 @@
 - <xarray.DataArray 'f' ()>
 
 'x:':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['i', 'j'], ...)
 - 'x:i-j':
   - <xarray.DataArray 'x' (i: 0, j: 0)>
 
 'x:i':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['j'], ...)
 - 'x:i-j' (above)
 
 'x:j':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['i'], ...)
 - 'x:i-j' (above)
 
 'z:':

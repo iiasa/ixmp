@@ -53,7 +53,7 @@ def test_reporter(scenario):
 
     r.finalize(scenario)
 
-    # TODO add some assertions
+    assert 'scenario' in r.graph
 
 
 def test_reporter_from_dantzig(test_mp, test_data_path):
@@ -66,7 +66,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     d_i = rep.get('d:i')
 
     # Units pass through summation
-    assert d_i.attrs['unit'] == 'km'
+    assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
     # Aggregation with weights
     weights = xr.DataArray([1, 2, 3],
@@ -213,8 +213,22 @@ def test_reporting_file_formats(test_data_path, tmp_path):
                     index_col=['i', 'j'])['value'])
 
     # CSV file is automatically parsed to xr.DataArray
-    k = r.add_file(test_data_path / 'report-input.csv')
+    p1 = test_data_path / 'report-input.csv'
+    k = r.add_file(p1)
     assert_xr_equal(r.get(k), expected)
+
+    # Write to CSV
+    p2 = tmp_path / 'report-output.csv'
+    r.write(k, p2)
+
+    # Output is identical to input file, except for order
+    assert (sorted(p1.read_text().split('\n')) ==
+            sorted(p2.read_text().split('\n')))
+
+    # Write to Excel
+    p3 = tmp_path / 'report-output.xlsx'
+    r.write(k, p3)
+    # TODO check the contents of the Excel file
 
 
 def test_reporting_units():

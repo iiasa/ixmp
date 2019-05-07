@@ -52,35 +52,36 @@ def import_timeseries():
 
 
 @click.group()
-@click.option('--dbprops', help='database properties file')
-@click.option('--model', help='model name')
-@click.option('--scenario', help='scenario name')
-@click.option('--version', help='version', default=None)
+@click.option('--dbprops', help='Database properties file', default=None)
+@click.option('--model', help='Model name', default=None)
+@click.option('--scenario', help='Scenario name', default=None)
+@click.option('--version', help='Scenario version', default=None)
 @click.pass_context
-def main(dbprops, model, scenario, version):
+def main(ctx, dbprops, model, scenario, version):
     """Command interface, e.g. $ ixmp COMMAND """
-    pass
+
+    # Load the indicated Platform
+    if dbprops:
+        mp = ixmp.Platform(dbprops)
+        ctx.obj = dict(mp=mp)
+
+        # With a Platform, load the indicated Scenario
+        if model and scenario:
+            scen = ixmp.Scenario(mp, model, scenario, version=version)
+            ctx.obj['scen'] = scen
 
 
 @main.command()
-@click.option('--config', help='reporting configuration file')
-@click.option('--default', help='default reporting key')
+@click.option('--config', help='Path to reporting configuration file')
+@click.option('--default', help='Default reporting key')
 @click.pass_context
 def report(ctx, config, default):
     # Import here to avoid importing reporting dependencies when running
     # other commands
     from ixmp.reporting import Reporter
 
-    # Parse reporting-related arguments
-    r_config, remaining = parse_reporting_args(sys.argv)
-    r_config = vars(r_config)
-
-    # Load the indicated scenario
-    mp = ixmp.Platform(ctx.dbprops)
-    scen = ixmp.Scenario(mp, ctx.model, ctx.scenario, version=ctx.version)
-
-    # Instantiate the Reporter with the given scenario
-    r = Reporter.from_scenario(scen)
+    # Instantiate the Reporter with the Scenario loaded by main()
+    r = Reporter.from_scenario(ctx.obj['scen'])
 
     # Read the configuration file, if any
     if config:

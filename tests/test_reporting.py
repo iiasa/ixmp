@@ -283,10 +283,11 @@ def test_reporting_cli(test_mp_props, test_data_path):
     mp.close_db()
     del mp
 
-    cmd = ['ixmp', 'report',
+    cmd = ['ixmp',
            '--dbprops', str(test_mp_props),
            '--model', 'canning problem',
            '--scenario', 'standard',
+           'report',
            '--config', str(test_data_path / 'report-config-0.yaml'),
            '--default', 'd_check',
            ]

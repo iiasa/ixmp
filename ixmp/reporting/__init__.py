@@ -110,7 +110,12 @@ class Reporter(object):
 
         # Add sets
         for name in scenario.set_list():
-            elements = scenario.set(name).tolist()
+            elements = scenario.set(name)
+            try:
+                elements = elements.tolist()
+            except AttributeError:
+                # pd.DataFrame for a multidimensional set; store as-is
+                pass
             rep.add(name, elements)
 
         return rep

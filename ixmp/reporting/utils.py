@@ -48,6 +48,14 @@ class Key:
     def __eq__(self, other):
         return repr(self) == other
 
+    def __lt__(self, other):
+        if isinstance(other, (self.__class__, str)):
+            return repr(self) < repr(other)
+
+    def __gt__(self, other):
+        if isinstance(other, (self.__class__, str)):
+            return repr(self) > repr(other)
+
     def aggregates(self):
         """Yield (key, task) for all possible aggregations of the Key."""
         for agg_dims, others in combo_partition(self._dims):

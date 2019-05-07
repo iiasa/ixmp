@@ -181,6 +181,21 @@ def test_reporting_files(tmp_path):
     # TODO test reading CSV data to xarray
 
 
+def test_reporter_describe(test_mp, test_data_path):
+    scen = dantzig_transport(test_mp)
+    r = Reporter.from_scenario(scen)
+
+    expected = """'d:i':
+- aggregate(d=i, ...)
+- 'd:i-j':
+  - <xarray.DataArray 'd' (i: 2, j: 3)>
+"""
+    assert r.describe('d:i') == expected
+
+    print(r.describe())
+    assert r.describe() == (test_data_path / 'report-describe.txt').read_text()
+
+
 def test_reporter_visualize(test_mp):
     scen = dantzig_transport(test_mp)
     r = Reporter.from_scenario(scen)

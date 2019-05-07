@@ -1,0 +1,61 @@
+'i':
+- ['seattle', 'san-diego']
+
+'j':
+- ['new-york', 'chicago', 'topeka']
+
+'a:':
+- aggregate(d=i, ...)
+- 'a:i':
+  - <xarray.DataArray 'a' (i: 2)>
+
+'b:':
+- aggregate(d=i, ...)
+- 'b:j':
+  - <xarray.DataArray 'b' (j: 3)>
+
+'d:':
+- aggregate(d=i, ...)
+- 'd:i-j' (above)
+
+'d:j':
+- aggregate(d=i, ...)
+- 'd:i-j' (above)
+
+'demand-margin:j':
+- <xarray.DataArray 'demand-margin' (j: 0)>
+
+'demand:':
+- aggregate(d=i, ...)
+- 'demand:j':
+  - <xarray.DataArray 'demand' (j: 0)>
+
+'f:':
+- <xarray.DataArray 'f' ()>
+
+'x:':
+- aggregate(d=i, ...)
+- 'x:i-j':
+  - <xarray.DataArray 'x' (i: 0, j: 0)>
+
+'x:i':
+- aggregate(d=i, ...)
+- 'x:i-j' (above)
+
+'x:j':
+- aggregate(d=i, ...)
+- 'x:i-j' (above)
+
+'z:':
+- <xarray.DataArray 'z' ()>
+
+'all':
+- list of:
+  - 'a:i' (above)
+  - 'b:j' (above)
+  - 'd:i-j' (above)
+  - 'f:' (above)
+  - 'demand:j' (above)
+  - 'demand-margin:j' (above)
+  - 'z:' (above)
+  - 'x:i-j' (above)

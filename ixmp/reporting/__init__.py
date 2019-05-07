@@ -367,7 +367,6 @@ class Reporter(object):
         # Combine items
         return ('\n' if depth > 0 else '\n\n').join(result)
 
-
     def visualize(self, filename, **kwargs):
         """Generate an image describing the reporting structure.
 

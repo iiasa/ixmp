@@ -26,6 +26,7 @@ from warnings import warn
 import dask
 from dask.threaded import get as dask_get
 import yaml
+import xarray as xr
 
 from .utils import quantity_as_xr, Key
 from . import computations
@@ -294,13 +295,85 @@ class Reporter(object):
         key = key if key else 'file:{}'.format(path.name)
         self.add(key, (partial(load_file, path),), strict=True)
 
+    def describe(self, key=None):
+        """Return a string describing the computations that produce *key*.
+
+        If *key* is not provided, all keys in the Reporter are described.
+        """
+        # TODO allow key to be an iterable of keys
+        if key is None:
+            # Sort with 'all' at the end
+            key = tuple(sorted(filter(lambda k: k != 'all',
+                                      self.graph.keys())) + ['all'])
+        else:
+            key = (key,)
+        return self._describe(key) + '\n'
+
+    def _describe(self, comp, depth=0, seen=set()):
+        """Recursive helper for :meth:`describe`.
+
+        Parameters
+        ----------
+        comp :
+            A dask computation.
+        depth : int
+            Recursion depth. Used for indentation.
+        seen : set
+            Keys that have already been described. Used to avoid
+            double-printing.
+        """
+        comp = comp if isinstance(comp, tuple) else (comp,)
+
+        indent = (' ' * 2 * (depth - 1)) + ('- ' if depth > 0 else '')
+
+        result = []
+        for arg in comp:
+            # Don't fully reprint keys and their ancestors that have been seen
+            try:
+                if arg in seen:
+                    if depth > 0:
+                        # Don't print top-level items that have been seen
+                        result.append(f"{indent}'{arg}' (above)")
+                    continue
+            except TypeError:
+                pass
+
+            # Convert various types of arguments to string
+            if isinstance(arg, xr.DataArray):
+                # DataArray → just the first line of the string representation
+                item = str(arg).split('\n')[0]
+            elif isinstance(arg, partial):
+                # functools.partial → less verbose format
+                fn_name = arg.func.__name__
+                fn_args = ', '.join(chain(
+                    map(str, arg.args),
+                    map('{0[0]}={0[1]}'.format, arg.keywords)))
+                item = f'{fn_name}({fn_args}, ...)'
+            elif isinstance(arg, (str, Key)) and arg in self.graph:
+                # key that exists in the graph → recurse
+                item = "'{}':\n{}".format(
+                    arg,
+                    self._describe(self.graph[arg], depth + 1, seen))
+                seen.add(arg)
+            elif isinstance(arg, list) and arg[0] in self.graph:
+                item = "list of:\n{}".format(
+                    self._describe(tuple(arg), depth + 1, seen))
+                seen |= set(arg)
+            else:
+                item = str(arg)
+
+            result.append(indent + item)
+
+        # Combine items
+        return ('\n' if depth > 0 else '\n\n').join(result)
+
+
     def visualize(self, filename, **kwargs):
         """Generate an image describing the reporting structure.
 
         This is a shorthand for :meth:`dask.visualize`. Requires
         `graphviz <https://pypi.org/project/graphviz/>`__.
         """
-        # TODO Provide description of how quantities are computed (req. A10)
         return dask.visualize(self.graph, filename=filename, **kwargs)
 
     def write(self, key, path):

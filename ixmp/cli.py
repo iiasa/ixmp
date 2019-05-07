@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+import click
 import ixmp
 
 
@@ -50,42 +51,44 @@ def import_timeseries():
     mp.close_db()
 
 
-def main():
+@click.group()
+@click.option('--dbprops', help='database properties file')
+@click.option('--model', help='model name')
+@click.option('--scenario', help='scenario name')
+@click.option('--version', help='version', default=None)
+@click.pass_context
+def main(dbprops, model, scenario, version):
     """Command interface, e.g. $ ixmp COMMAND """
-    # Only supported command
-    assert sys.argv[1] == 'report'
-    del sys.argv[1]
-    report()
+    pass
 
 
-def report():
-    from ixmp.reporting import Reporter, parse_reporting_args
+@main.command()
+@click.option('--config', help='reporting configuration file')
+@click.option('--default', help='default reporting key')
+@click.pass_context
+def report(ctx, config, default):
+    # Import here to avoid importing reporting dependencies when running
+    # other commands
+    from ixmp.reporting import Reporter
 
     # Parse reporting-related arguments
     r_config, remaining = parse_reporting_args(sys.argv)
     r_config = vars(r_config)
 
-    # Parse non-reporting arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dbprops', help='database properties file')
-    parser.add_argument('--model', help='model name')
-    parser.add_argument('--scenario', help='scenario name')
-    parser.add_argument('--version', help='version', type=str, default=None)
-    args = parser.parse_args(remaining[1:])
-
     # Load the indicated scenario
-    mp = ixmp.Platform(args.dbprops)
-    scen = ixmp.Scenario(mp, args.model, args.scenario, version=args.version)
+    mp = ixmp.Platform(ctx.dbprops)
+    scen = ixmp.Scenario(mp, ctx.model, ctx.scenario, version=ctx.version)
 
     # Instantiate the Reporter with the given scenario
     r = Reporter.from_scenario(scen)
 
     # Read the configuration file, if any
-    if 'config' in r_config:
-        r.read_config(r_config.pop('config'))
+    if config:
+        r.read_config(config)
 
     # Process remaining configuration from command-line arguments
-    r.configure(**r_config)
+    if default:
+        r.configure(default=default)
 
     # Print the default target
     print(r.get())

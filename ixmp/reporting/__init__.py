@@ -423,14 +423,3 @@ class Reporter(object):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
         write_report(self.get(key), path)
-
-
-def parse_reporting_args(args):
-    """Parse command-line arguments."""
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', help='reporting configuration file')
-    parser.add_argument('--default', help='default reporting key')
-
-    return parser.parse_known_args(args)

@@ -6,6 +6,7 @@
 import pandas as pd
 import xarray as xr
 
+from .utils import collect_units
 
 __all__ = [
     'aggregate',
@@ -24,11 +25,14 @@ xr.set_options(keep_attrs=True)
 def aggregate(quantity, weights=None, dimensions=None):
     """Aggregate *quantity* over *dimensions*, with optional *weights*."""
     if weights is not None:
-        return ((quantity * weights).sum(dim=dimensions) /
-                weights.sum(dim=dimensions))
+        result = ((quantity * weights).sum(dim=dimensions) /
+                   weights.sum(dim=dimensions))
     else:
-        return quantity.sum(dim=dimensions)
+        result = quantity.sum(dim=dimensions)
 
+    result.attrs['_unit'] = collect_units(result)[0]
+
+    return result
 
 def disaggregate_shares(quantity, shares):
     """Disaggregate *quantity* by *shares*."""
@@ -36,13 +40,35 @@ def disaggregate_shares(quantity, shares):
 
 
 def product(*quantities):
-    # TODO handle units intelligently (req. A9)
-    raise NotImplementedError
+    """Return the product of any number of *quantities*."""
+    if len(quantities) == 1:
+        quantities = [quantities]
+
+    # Iterator over (quantity, unit) tuples
+    items = zip(quantities, collect_units(*quantities))
+
+    # Initialize result values with first entry
+    result, u_result = next(items)
+
+    # Iterate over remaining entries
+    for q, u in items:
+        result *= q
+        u_result *= u
+
+    result.attrs['_unit'] = u_result
+
+    return result
 
 
 def ratio(numerator, denominator):
-    # TODO handle units intelligently (req. A9)
-    raise NotImplementedError
+    """Return the ratio *numerator* / *denominator*."""
+    # Handle units
+    u_num, u_denom = collect_units(numerator, denominator)
+
+    result = numerator / denominator
+    result.attrs['_unit'] = u_num / u_denom
+
+    return result
 
 
 # Conversion

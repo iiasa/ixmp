@@ -334,6 +334,7 @@ class Reporter(object):
         """
         key = key if key else 'file:{}'.format(path.name)
         self.add(key, (partial(load_file, path),), strict=True)
+        return key
 
     def describe(self, key=None):
         """Return a string describing the computations that produce *key*.

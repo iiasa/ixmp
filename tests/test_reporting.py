@@ -10,7 +10,8 @@ import xarray as xr
 from xarray.testing import assert_equal as assert_xr_equal
 
 from ixmp.testing import dantzig_transport
-from ixmp.reporting.computations import aggregate
+from ixmp.reporting.computations import aggregate, product, ratio
+from ixmp.reporting.utils import ureg
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -94,7 +95,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     b_jp = rep.get('b:j-p')
 
     # Units pass through disaggregation
-    assert b_jp.attrs['unit'] == 'cases'
+    assert b_jp.attrs['_unit'] == 'cases'
 
     # Set elements are available
     assert rep.get('j') == ['new-york', 'chicago', 'topeka']
@@ -177,7 +178,7 @@ def test_reporter_disaggregate():
         r.disaggregate(foo, 'd', method='baz')
 
 
-def test_reporting_files(tmp_path):
+def test_reporter_file(tmp_path):
     r = Reporter()
 
     # Path to a temporary file
@@ -185,7 +186,10 @@ def test_reporting_files(tmp_path):
 
     # File can be added to the Reporter before it is created, because the file
     # is not read until/unless required
-    r.add_file(p)
+    k1 = r.add_file(p)
+
+    # File has the expected key
+    assert k1 == 'file:foo.txt'
 
     # Add some contents to the file
     p.write_text('Hello, world!')
@@ -200,7 +204,39 @@ def test_reporting_files(tmp_path):
     # The Reporter produces the expected output file
     assert p2.read_text() == 'Hello, world!'
 
-    # TODO test reading CSV data to xarray
+
+def test_reporting_file_formats(test_data_path, tmp_path):
+    r = Reporter()
+
+    expected = xr.DataArray.from_series(
+        pd.read_csv(test_data_path / 'report-input.csv',
+                    index_col=['i', 'j'])['value'])
+
+    # CSV file is automatically parsed to xr.DataArray
+    k = r.add_file(test_data_path / 'report-input.csv')
+    assert_xr_equal(r.get(k), expected)
+
+
+def test_reporting_units():
+    r = Reporter()
+
+    # Create some dummy data
+    dims = dict(coords=['a b c'.split()], dims=['x'])
+    r.add('energy:x', xr.DataArray([1., 3, 8], **dims, attrs={'_unit': 'MJ'}))
+    r.add('time', xr.DataArray([5., 6, 8], **dims, attrs={'_unit': 'hour'}))
+    r.add('efficiency', xr.DataArray([0.9, 0.8, 0.95], **dims))
+
+    # Aggregation preserves units
+    r.add('energy', (aggregate, 'energy:x', None, ['x']))
+    assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
+
+    # Units are derived for a ratio of two quantities
+    r.add('power', (ratio, 'energy:x', 'time'))
+    assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
+
+    # Product of dimensioned and dimensionless quantities keeps the former
+    r.add('energy2', (product, 'energy:x', 'efficiency'))
+    assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
 
 
 def test_reporter_describe(test_mp, test_data_path):

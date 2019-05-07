@@ -186,13 +186,12 @@ def test_reporter_describe(test_mp, test_data_path):
     r = Reporter.from_scenario(scen)
 
     expected = """'d:i':
-- aggregate(d=i, ...)
+- aggregate(dimensions=['j'], ...)
 - 'd:i-j':
   - <xarray.DataArray 'd' (i: 2, j: 3)>
 """
     assert r.describe('d:i') == expected
 
-    print(r.describe())
     assert r.describe() == (test_data_path / 'report-describe.txt').read_text()
 
 

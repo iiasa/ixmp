@@ -31,6 +31,7 @@ import xarray as xr
 from .utils import quantity_as_xr, Key
 from . import computations
 from .computations import (   # noqa:F401
+    aggregate,
     disaggregate_shares,
     load_file,
     write_report,
@@ -40,7 +41,6 @@ from .computations import (   # noqa:F401
 class Reporter(object):
     """Class for generating reports on :class:`ixmp.Scenario` objects."""
     # TODO meet the requirements:
-    # A3i. Weighted sums.
     # A3iii. Interpolation.
     # A7. Renaming of outputs.
 
@@ -247,6 +247,39 @@ class Reporter(object):
         self.graph['scenario'] = scenario
 
     # ixmp data model manipulations
+    def aggregate(self, var, dim_or_dims, tag, weights):
+        """Add a computation that aggregates *var* using *weights*.
+
+        Parameters
+        ----------
+        var: hashable
+            Key of the variable to be disaggregated.
+        dim_or_dims: str or iterable of str
+            Name(s) of the dimension(s) to sum over.
+        tag: str
+            Additional key tag to add to the end of the variable key.
+        weights : xr.DataArray
+            Weights for weighted aggregation.
+
+        Returns
+        -------
+        Key
+            The key of the newly-added node.
+        """
+        dims = [dim_or_dims] if isinstance(dim_or_dims, str) else dim_or_dims
+
+        # Compute the new key
+        key = Key.from_str_or_key(var)
+        key._dims = list(filter(lambda d: d not in dims, key._dims))
+        key._tag = tag
+
+        self.graph[key] = tuple([
+            partial(aggregate, dimensions=dims),
+            var,
+            weights])
+
+        return key
+
     def disaggregate(self, var, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.
 
@@ -263,6 +296,11 @@ class Reporter(object):
         args: list, optional
             Additional arguments to the *method*. The first element should be
             the key for a quantity giving shares for disaggregation.
+
+        Returns
+        -------
+        Key
+            The key of the newly-added node.
         """
         # Compute the new key
         key = Key.from_str_or_key(var)
@@ -280,6 +318,8 @@ class Reporter(object):
             raise ValueError(method)
 
         self.graph[key] = tuple([method, var] + args)
+
+        return key
 
     # Convenience methods
     def add_file(self, path, key=None):

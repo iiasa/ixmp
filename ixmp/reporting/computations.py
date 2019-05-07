@@ -21,9 +21,13 @@ xr.set_options(keep_attrs=True)
 
 
 # Calculation
-def aggregate(quantity, dimensions):
-    """Aggregate *quantity* over *dimensions*."""
-    return quantity.sum(dim=dimensions)
+def aggregate(quantity, weights=None, dimensions=None):
+    """Aggregate *quantity* over *dimensions*, with optional *weights*."""
+    if weights is not None:
+        return ((quantity * weights).sum(dim=dimensions) /
+                weights.sum(dim=dimensions))
+    else:
+        return quantity.sum(dim=dimensions)
 
 
 def disaggregate_shares(quantity, shares):

@@ -68,6 +68,19 @@ class Key:
                 (partial(aggregate, dimensions=others), self)
 
 
+def clean_units(input_string):
+    """Tolerate messy strings for units.
+
+    Handles two specific cases found in |MESSAGEix| test cases:
+
+    - Dimensions enclosed in '[]' have these characters stripped.
+    - The '%' symbol cannot be supported by pint, because it is a Python
+      operator; it is translated to 'percent'.
+
+    """
+    return input_string.strip('[]').replace('%', 'percent')
+
+
 def collect_units(*args):
     for arg in args:
         if '_unit' in arg.attrs:
@@ -81,8 +94,12 @@ def collect_units(*args):
     return [arg.attrs['_unit'] for arg in args]
 
 
+# Mapping from raw → preferred dimension names
+rename_dims = {}
+
+
 def quantity_as_xr(scenario, name, kind='par'):
-    """Retrieve *name* from `scenario` as a :class:`xarray.Dataset`.
+    """Retrieve *name* from *scenario* as a :class:`xarray.Dataset`.
 
     Parameters
     ----------
@@ -108,16 +125,18 @@ def quantity_as_xr(scenario, name, kind='par'):
     try:
         # Ensure there is only one type of unit defined
         unit = pd.unique(data.pop('unit'))
-        assert len(unit) == 1
-        unit = unit[0]
-
+        assert len(unit) <= 1
         # Parse units
         try:
+            unit = clean_units(unit[0])
             unit = ureg.parse_units(unit)
+        except IndexError:
+            # Quantity has no unit
+            unit = ureg.parse_units('')
         except pint.UndefinedUnitError:
             # Units do not exist; define them in the UnitRegistry
             definition = f'{unit} = [{unit}]'
-            log.info(f'Definining units {definition} for quantity {name}.')
+            log.info(f'Definining units for quantity {name}: {definition}')
             ureg.define(definition)
             unit = ureg.parse_units(unit)
 
@@ -137,10 +156,16 @@ def quantity_as_xr(scenario, name, kind='par'):
         'var': ['lvl', 'mrg'],
     }[kind]
 
+    # Dimension columns are the remainder
     [dims.remove(col) for col in value_columns]
+
+    # Rename dimensions
+    dims = [rename_dims.get(d, d) for d in dims]
 
     # Set index if 1 or more dimensions
     if len(dims):
+        # First rename, then set index
+        data.rename(columns=rename_dims, inplace=True)
         data.set_index(dims, inplace=True)
 
     # Convert to a series, then Dataset

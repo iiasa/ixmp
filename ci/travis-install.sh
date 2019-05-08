@@ -28,4 +28,4 @@ conda info --all
 echo 'options(repos=c("https://cloud.r-project.org"))' >$R_PROFILE
 Rscript -e 'install.packages(c("devtools", "IRkernel"))'
 Rscript -e 'devtools::install_dev_deps("retixmp/source")'
-Rscript -e 'IRkernel::install_spec()'
+Rscript -e 'IRkernel::installspec()'

@@ -18,6 +18,9 @@ matrix:
 #  - os: windows
 #    env: PYENV=py27
 
+env:
+  - CACHE=$HOME/.cache/ixmp
+
 addons:
   apt:
     packages:
@@ -29,9 +32,14 @@ addons:
     - r-cran-digest
     - r-cran-jsonlite
     - r-cran-memoise
+  homebrew:
+    packages:
+    - r
 
 cache:
   directories:
+  - $HOME/miniconda/pkgs
+  - $HOME/R/Library
   - $HOME/.cache/ixmp
 
 before_install:

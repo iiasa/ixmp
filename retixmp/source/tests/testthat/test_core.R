@@ -25,3 +25,17 @@ test_that('parameter values can be set on a Scenario', {
   # TODO complete this test
   succeed()
 })
+
+test_that('the canning problem can be solved', {
+  # Create the Scenario
+  ixmp <- import('ixmp')
+  mp <- ixmp$Platform(dbtype = 'HSQLDB')
+  scen <- ixmp$testing$dantzig_transport(mp)
+
+  # Solve
+  model_path = file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'transport_ixmp')
+  scen$solve(model = model_path)
+
+  # Check value
+  expect_equal(scen$var('z')$lvl, 153.675, tolerance = 1e-5)
+})

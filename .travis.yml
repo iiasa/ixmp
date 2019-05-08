@@ -23,23 +23,12 @@ addons:
     packages:
     # For building R packages
     - r-base-dev
-    # Dependencies of devtools, to avoid rebuilding
-    - r-base-core
-    - r-cran-callr
-    - r-cran-cli
+    # Dependencies of R devtools, to avoid rebuilding
+    # Not available in xenial: callr, cli, git2r, httr, pkgbuild, pkgload,
+    # rcmdcheck, remotes, rstudioapi, sessioninfo, usethis, withr
     - r-cran-digest
-    - r-cran-git2r
-    - r-cran-httr
     - r-cran-jsonlite
     - r-cran-memoise
-    - r-cran-pkgbuild
-    - r-cran-pkgload
-    - r-cran-rcmdcheck
-    - r-cran-remotes
-    - r-cran-rstudioapi
-    - r-cran-sessioninfo
-    - r-cran-usethis
-    - r-cran-withr
 
 cache:
   directories:

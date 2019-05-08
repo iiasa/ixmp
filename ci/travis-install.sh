@@ -6,7 +6,7 @@ which gams
 
 
 # Install and update conda
-$CACHE/$CONDAFNAME -b -p $HOME/miniconda
+$CACHE/$CONDAFNAME -b -f -p $HOME/miniconda
 conda update --yes conda
 
 # Create named env

@@ -1,14 +1,15 @@
 Package: retixmp
 Type: Package
 Title: R package for ix modeling platform (ixmp)
-Version: 0.0.1
+Version: 0.2.0.9000
 Date: 2018-05-18
 Authors@R: c(
   person("Adriano", "Vinca", email = "vinca@iiasa.ac.at", role = c("aut", "cre")),
   person("Matthew", "Gidden", role = "aut")
+  person("Paul", "Kishimoto", email = "kishimot@iiasa.ac.at", role = "ctb")
   )
 Description: The ix modeling platform (ixmp) is a data warehouse for high-powered scenario analysis,
- with interfaces to Python and R for efficient scientific workflows and effective data pre- and 
+ with interfaces to Python and R for efficient scientific workflows and effective data pre- and
  post-processing, and a structured database backend for version-controlled data management.
  This package allow the R user to use code developed in Python and interact with the ix modeling platform.
 Depends:
@@ -25,7 +26,7 @@ BugReports: https://github.com/iiasa/ixmp/issues
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Collate: 
+Collate:
     'init_retixmp.R'
     'adapt_to_ret.R'
 VignetteBuilder: knitr

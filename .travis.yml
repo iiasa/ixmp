@@ -36,6 +36,7 @@ addons:
 cache:
   # Travis ensures these directories are created if they do not already exist
   directories:
+  - $HOME/.conda/pkgs
   - $HOME/miniconda/pkgs
   - $HOME/R/Library
   - $HOME/.cache/ixmp
@@ -46,6 +47,7 @@ before_install:
 
 install:
   - source ci/travis-install.sh
+  - source activate testing
   - python setup.py install
 
 script:

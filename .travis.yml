@@ -1,6 +1,8 @@
 dist: xenial
 
-language: minimal
+language: r
+
+r: release
 
 matrix:
   include:

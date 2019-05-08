@@ -20,6 +20,9 @@ conda install -n testing -c conda-forge --yes \
       pytest-cov
 conda remove -n testing --force --yes ixmp
 
+# Activate the env
+conda activate testing
+
 # Show information
 conda info --all
 

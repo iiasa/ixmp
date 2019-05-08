@@ -18,9 +18,6 @@ matrix:
 #  - os: windows
 #    env: PYENV=py27
 
-env:
-  - CACHE=$HOME/.cache/ixmp
-
 addons:
   apt:
     packages:
@@ -37,6 +34,7 @@ addons:
     - r
 
 cache:
+  # Travis ensures these directories are created if they do not already exist
   directories:
   - $HOME/miniconda/pkgs
   - $HOME/R/Library

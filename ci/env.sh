@@ -1,5 +1,7 @@
 # Set environment variables for Travis
 
+export CACHE=$HOME/.cache/ixmp
+
 # gams info
 case "${TRAVIS_OS_NAME}" in
     linux)

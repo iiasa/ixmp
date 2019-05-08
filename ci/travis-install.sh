@@ -26,8 +26,5 @@ conda remove -n testing --force --yes ixmp
 # Show information
 conda info --all
 
-# Install R packages needed for testing
-echo 'options(repos=c("https://cloud.r-project.org"))' >$R_PROFILE
-Rscript -e 'install.packages(c("devtools", "IRkernel"))'
-Rscript -e 'devtools::install_dev_deps("retixmp/source")'
+# Install the IR kernel for running Jupyter R notebooks
 Rscript -e 'IRkernel::installspec()'

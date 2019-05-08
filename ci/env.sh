@@ -53,8 +53,3 @@ esac
 export CONDAFNAME=Miniconda$PYVERSION-latest-$OSNAME-x86_64.$EXT
 export CONDAURL=https://repo.anaconda.com/miniconda/$CONDAFNAME
 export PATH=$HOME/miniconda/bin:$PATH
-
-# R
-# cf. https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/script/r.rb
-export R_PROFILE=$HOME/.Rprofile
-export R_LIBS_USER=$HOME/R/Library

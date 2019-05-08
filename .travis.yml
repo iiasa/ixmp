@@ -20,20 +20,8 @@ matrix:
 #  - os: windows
 #    env: PYENV=py27
 
-addons:
-  apt:
-    packages:
-    # For building R packages
-    - r-base-dev
-    # Dependencies of R devtools, to avoid rebuilding
-    # Not available in xenial: callr, cli, git2r, httr, pkgbuild, pkgload,
-    # rcmdcheck, remotes, rstudioapi, sessioninfo, usethis, withr
-    - r-cran-digest
-    - r-cran-jsonlite
-    - r-cran-memoise
-  homebrew:
-    packages:
-    - r
+r_packages:
+- IRkernel
 
 cache:
   # Travis ensures these directories are created if they do not already exist
@@ -50,7 +38,7 @@ before_install:
 install:
   - source ci/travis-install.sh
   - python setup.py install
-  - Rscript -e 'devtools::install("retixmp/source")'
+  - Rscript -e 'devtools::install("retixmp/source", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

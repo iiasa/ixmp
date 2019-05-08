@@ -48,6 +48,7 @@ before_install:
 install:
   - source ci/travis-install.sh
   - python setup.py install
+  - Rscript -e 'devtools::install("retixmp/source")'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

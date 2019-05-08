@@ -34,7 +34,7 @@ def r_args(request, tmp_env, test_data_path):
 
 def test_r_build_and_check(r_args):
     """R package can be built and R CMD check succeeds on the built package."""
-    cmd = ['R', 'CMD', 'build']
+    cmd = ['R', 'CMD', 'build', '.']
     subprocess.check_call(cmd, **r_args)
 
     cmd = ['R', 'CMD', 'check'] + list(r_args['cwd'].glob('*.tar.gz'))

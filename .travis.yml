@@ -47,7 +47,6 @@ before_install:
 
 install:
   - source ci/travis-install.sh
-  - source activate testing
   - python setup.py install
 
 script:

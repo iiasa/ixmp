@@ -6,7 +6,7 @@ which gams
 
 
 # Install and update conda
-$CACHE/$CONDAFNAME -b -f -p $HOME/miniconda
+$CACHE/$CONDAFNAME -b -u -p $HOME/miniconda
 conda update --yes conda
 
 # Create named env
@@ -20,9 +20,11 @@ conda install -n testing -c conda-forge --yes \
       pytest-cov
 conda remove -n testing --force --yes ixmp
 
+# Use '.' (POSIX) instead of 'source' (a bashism)
+. activate testing
+
 # Show information
 conda info --all
-
 
 # Install R packages needed for testing
 echo 'options(repos=c("https://cloud.r-project.org"))' >$R_PROFILE

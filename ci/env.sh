@@ -3,16 +3,16 @@
 # gams info
 case "${TRAVIS_OS_NAME}" in
     linux)
-	OSFIX=linux
-	GAMSPATH=linux_x64_64_sfx
+        OSFIX=linux
+        GAMSPATH=linux_x64_64_sfx
     ;;
     osx)
-	OSFIX=macosx
-	GAMSPATH=osx_x64_64_sfx
+        OSFIX=macosx
+        GAMSPATH=osx_x64_64_sfx
     ;;
     windows)
-	OSFIX=windows
-	GAMSPATH=windows_x64_64
+        OSFIX=windows
+        GAMSPATH=windows_x64_64
     ;;
 esac
 
@@ -48,7 +48,8 @@ case "${PYENV}" in
     ;;
 esac
 
-export CONDAURL="https://repo.anaconda.com/miniconda/Miniconda$PYVERSION-latest-$OSNAME-x86_64.$EXT"
+export CONDAFNAME=Miniconda$PYVERSION-latest-$OSNAME-x86_64.$EXT
+export CONDAURL=https://repo.anaconda.com/miniconda/$CONDAFNAME
 export PATH=$HOME/miniconda/bin:$PATH
 
 # R

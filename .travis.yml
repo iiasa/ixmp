@@ -3,20 +3,20 @@ dist: xenial
 language: minimal
 
 matrix:
-    include:
-        - os: linux
-          env: PYENV=py37
-        - os: linux
-          env: PYENV=py27
-        - os: osx
-          env: PYENV=py37
-        - os: osx
-          env: PYENV=py27
+  include:
+  - os: linux
+    env: PYENV=py37
+  - os: linux
+    env: PYENV=py27
+  - os: osx
+    env: PYENV=py37
+  - os: osx
+    env: PYENV=py27
 # turn these on once travis support gets a little better, see pyam for example
-#        - os: windows
-#          env: PYENV=py37
-#        - os: windows
-#          env: PYENV=py27
+#  - os: windows
+#    env: PYENV=py37
+#  - os: windows
+#    env: PYENV=py27
 
 addons:
   apt:
@@ -24,6 +24,7 @@ addons:
     # For building R packages
     - r-base-dev
     # Dependencies of devtools, to avoid rebuilding
+    - r-base-core
     - r-cran-callr
     - r-cran-cli
     - r-cran-digest
@@ -40,14 +41,18 @@ addons:
     - r-cran-usethis
     - r-cran-withr
 
+cache:
+  directories:
+  - $HOME/.cache/ixmp
+
 before_install:
-  - source ./ci/env.sh
-  - bash ./ci/travis-install.sh
+  - source ci/env.sh
+  - source ci/travis-before_install.sh
   - source activate testing
 
 install:
+  - source ci/travis-install.sh
   - python setup.py install
-  - Rscript -e 'devtools::install_dev_deps("retixmp/source")'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

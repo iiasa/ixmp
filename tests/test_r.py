@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-from subprocess import CalledProcessError, check_call, run
+from subprocess import CalledProcessError, PIPE, check_call, run
 import sys
 
 import pytest
@@ -46,7 +46,7 @@ def test_r_testthat(retixmp_path, tmp_env, test_data_path):
     # Ensure reticulate uses the same Python as the pytest session
     tmp_env['RETICULATE_PYTHON'] = sys.executable
     tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
-    info = run(cmd, cwd=retixmp_path, stdout=subprocess.PIPE, env=tmp_env)
+    info = run(cmd, cwd=retixmp_path, stdout=PIPE, env=tmp_env)
 
     # Number of testthat tests that failed
     failures = int(re.findall(r'Failed:\s*(\d*)', str(info.stdout))[0])

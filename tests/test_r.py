@@ -29,7 +29,8 @@ def r_args(request, tmp_env, test_data_path):
     tmp_env['RETICULATE_PYTHON'] = sys.executable
     tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
 
-    yield dict(cwd=retixmp_path, env=tmp_env, stdout=subprocess.PIPE)
+    yield dict(cwd=retixmp_path, env=tmp_env, stdout=subprocess.PIPE,
+               stderr=subprocess.STDOUT)
 
 
 def test_r_build_and_check(r_args):
@@ -38,7 +39,14 @@ def test_r_build_and_check(r_args):
     subprocess.check_call(cmd, **r_args)
 
     cmd = ['R', 'CMD', 'check'] + list(r_args['cwd'].glob('*.tar.gz'))
-    subprocess.check_call(cmd, **r_args)
+    info = subprocess.run(cmd, **r_args)
+
+    try:
+        info.check_returncode()
+    except subprocess.CalledProcessError:
+        # Copy the log to stdout
+        sys.stdout.write(info.stdout)
+        raise
 
 
 def test_r_testthat(r_args):

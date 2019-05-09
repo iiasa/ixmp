@@ -39,9 +39,6 @@ install:
   - python setup.py install
   - Rscript -e 'devtools::install("retixmp/source", dep = T)'
 
-# Install the IR kernel for running Jupyter R notebooks
-before-script: Rscript -e 'IRkernel::installspec()'
-
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
   # Run tests

@@ -25,3 +25,7 @@ conda remove -n testing --force --yes ixmp
 
 # Show information
 conda info --all
+
+# Install R packages needed for testing
+Rscript -e 'install.packages(c("devtools", "IRkernel"))'
+Rscript -e 'IRkernel::installspec()'

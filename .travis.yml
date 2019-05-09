@@ -27,9 +27,8 @@ cache:
   # Travis ensures these directories are created if they do not already exist
   directories:
   - $HOME/.conda/pkgs
-  - $HOME/miniconda/pkgs
-  - $HOME/R/Library
   - $HOME/.cache/ixmp
+  - $HOME/miniconda/pkgs
 
 before_install:
   - source ci/env.sh
@@ -40,9 +39,13 @@ install:
   - python setup.py install
   - Rscript -e 'devtools::install("retixmp/source", dep = T)'
 
+# Install the IR kernel for running Jupyter R notebooks
+before-script: Rscript -e 'IRkernel::installspec()'
+
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
-  # Python tests; these include equivalent of the Travis R tests via test_r.py
+  # Run tests
+  # These include the equivalent of Travis R tests via test_r.py
   - >
     pytest
     --verbose

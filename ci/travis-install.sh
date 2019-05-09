@@ -25,6 +25,3 @@ conda remove -n testing --force --yes ixmp
 
 # Show information
 conda info --all
-
-# Install the IR kernel for running Jupyter R notebooks
-Rscript -e 'IRkernel::installspec()'

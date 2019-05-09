@@ -36,7 +36,7 @@ install:
 
   # r-appveyor
   - ps: Bootstrap
-  - Rscript -e "install.packages('IRkernel')"
+  - ps: TravisTool install_r IRkernel
   - Rscript -e "IRkernel::installspec()"
 
   - python setup.py install

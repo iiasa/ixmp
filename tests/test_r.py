@@ -12,7 +12,11 @@ from ixmp.testing import create_local_testdb
 
 
 def r_installed():
-    return subprocess.call(['R', '--version']) == 0
+    try:
+        return subprocess.call(['R', '--version']) == 0
+    except FileNotFoundError:
+        # Exception is raised on Windows
+        return False
 
 
 # Skip the entire file if R is not installed

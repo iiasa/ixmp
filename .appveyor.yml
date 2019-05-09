@@ -12,11 +12,9 @@ environment:
 
 init:
   - ps: |
-    # Install the r-appveyor tool
-    $ErrorActionPreference = "Stop"
-    Start-FileDownload 'http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1'
-    Import-Module appveyor-tool.ps1
-
+        $ErrorActionPreference = "Stop"
+        Invoke-WebRequest http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -OutFile '..\appveyor-tool.ps1'
+        Import-Module '..\appveyor-tool.ps1'
 install:
   - .\ci\appveyor-install.ps1
   - python setup.py install

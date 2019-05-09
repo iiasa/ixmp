@@ -30,7 +30,7 @@ def r_args(request, tmp_env, test_data_path):
     tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
 
     yield dict(cwd=retixmp_path, env=tmp_env, stdout=subprocess.PIPE,
-               stderr=subprocess.STDOUT)
+               stderr=subprocess.STDOUT, text=True)
 
 
 def test_r_build_and_check(r_args):
@@ -57,7 +57,7 @@ def test_r_testthat(r_args):
     info = subprocess.run(cmd, **r_args)
 
     # Number of testthat tests that failed
-    failures = int(re.findall(r'Failed:\s*(\d*)', str(info.stdout))[0])
+    failures = int(re.findall(r'Failed:\s*(\d*)', info.stdout)[0])
 
     if failures:
         # Pipe R output to stdout

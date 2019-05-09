@@ -3,7 +3,7 @@
 
 environment:
   matrix:
-      - PYTHON_VERSION: "2.7"	
+      - PYTHON_VERSION: "2.7"
         MINICONDA: "C:\\Miniconda-x64"
         PYTHON_ARCH: "64"
       - PYTHON_VERSION: "3.6"
@@ -12,7 +12,12 @@ environment:
 
 init:
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
-  
+  # r-appveyor
+  - ps: |
+        $ErrorActionPreference = "Stop"
+        Invoke-WebRequest http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -OutFile "..\appveyor-tool.ps1"
+        Import-Module '..\appveyor-tool.ps1'
+
 install:
   # these correspond to folder naming of miniconda installs on appveyor.  See
   # https://www.appveyor.com/docs/installed-software#python
@@ -28,7 +33,10 @@ install:
   - "SET PATH=%cd%\\gams;%PATH%"
   - conda install --yes -c conda-forge ixmp
   - conda remove --force --yes ixmp
-  
+
+  # r-appveyor
+  - ps: Bootstrap
+
   - python setup.py install
 
 build: false
@@ -39,3 +47,22 @@ test_script:
 
 on_success:
   - echo Build succesful!
+
+artifacts:
+  - path: '*.Rcheck\**\*.log'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.out'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.fail'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.Rout'
+    name: Logs
+
+  - path: '\*_*.tar.gz'
+    name: Bits
+
+  - path: '\*_*.zip'
+    name: Bits

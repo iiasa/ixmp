@@ -11,10 +11,10 @@ environment:
     PYTHON_ARCH: "64"
 
 init:
-  - ps: .\ci\appveyor-init.ps1
+  - .\ci\appveyor-init.ps1
 
 install:
-  - ps: .\ci\appveyor-install.ps1
+  - .\ci\appveyor-install.ps1
   - python setup.py install
   - Rscript -e 'devtools::install("retixmp/source", dep = T)'
 

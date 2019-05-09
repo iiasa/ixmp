@@ -36,6 +36,8 @@ install:
 
   # r-appveyor
   - ps: Bootstrap
+  - Rscript -e "install.packages('IRkernel')"
+  - Rscript -e "IRkernel::installspec()"
 
   - python setup.py install
 

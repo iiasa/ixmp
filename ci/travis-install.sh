@@ -1,5 +1,3 @@
-set +x
-
 # Install GAMS
 $CACHE/$GAMSFNAME > install.out
 
@@ -29,7 +27,5 @@ conda remove -n testing --force --yes ixmp
 conda info --all
 
 # Install R packages needed for testing
-Rscript -e 'install.packages(c("devtools", "IRkernel"), lib = "${R_LIBS_USER}")'
-Rscript -e 'IRkernel::installspec()'
-
-set -x
+Rscript -e "install.packages(c('devtools', 'IRkernel'), lib = '$R_LIBS_USER')"
+Rscript -e "IRkernel::installspec()"

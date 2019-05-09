@@ -1,0 +1,45 @@
+# Continuous integration procedure for AppVeyor
+# Based on https://github.com/rmcgibbo/python-appveyor-conda-example
+
+environment:
+  matrix:
+  - PYTHON_VERSION: "2.7"
+    PYTHON_ARCH: "64"
+  - PYTHON_VERSION: "3.6"
+    PYTHON_ARCH: "64"
+  - PYTHON_VERSION: "3.7"
+    PYTHON_ARCH: "64"
+
+init:
+  - ps: ci/appveyor-init.ps1
+
+install:
+  - ps: ci/appveyor-install.ps1
+  - python setup.py install
+  - Rscript -e 'devtools::install("retixmp/source", dep = T)'
+
+build: false
+
+test_script:
+  # Run tests
+  # These include the equivalent of Travis R tests via test_r.py
+  - pytest --verbose --win_ci_skip
+
+artifacts:
+  - path: '*.Rcheck\**\*.log'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.out'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.fail'
+    name: Logs
+
+  - path: '*.Rcheck\**\*.Rout'
+    name: Logs
+
+  - path: '\*_*.tar.gz'
+    name: Bits
+
+  - path: '\*_*.zip'
+    name: Bits

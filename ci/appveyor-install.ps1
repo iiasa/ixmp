@@ -1,3 +1,6 @@
+# Download GAMS
+Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
+
 # Install GAMS
 windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
 

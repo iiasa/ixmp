@@ -29,6 +29,7 @@ cache:
   - $HOME/.conda/pkgs
   - $HOME/.cache/ixmp
   - $HOME/miniconda/pkgs
+  - $HOME/R/Library
 
 before_install:
   - source ci/env.sh

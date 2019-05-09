@@ -14,8 +14,8 @@ from ixmp.testing import create_local_testdb
 def r_installed():
     try:
         return subprocess.call(['R', '--version']) == 0
-    except FileNotFoundError:
-        # Exception is raised on Windows
+    except OSError:
+        # FileNotFoundError (Python 3) or WindowsError (Python 2.7)
         return False
 
 

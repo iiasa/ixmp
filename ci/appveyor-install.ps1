@@ -17,7 +17,16 @@ Start-Process $GAMSInstaller $GAMSArgs -Wait
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-gams
+gams | Out-Default
+
+Write-Output '-----'
+
+Exec { gams }
+
+Write-Output '-----'
+
+Start-Process gams -Wait
+
 
 # Update conda
 

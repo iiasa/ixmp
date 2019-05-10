@@ -27,23 +27,29 @@ NULL
 ixmp <- NULL
 
 .onLoad <- function(libname, pkgname) {
-  # Set $XDG_DATA_HOME for ixmp.config.Config
+  # Force reticulate to pick up on e.g. RETICULATE_PYTHON environment variable
+  reticulate::py_config()
+
+  # If $IXMP_DATA and $XDG_DATA_HOME are not set, ixmp.config.Config uses
+  # $HOME/.local/ixmp for configuration and local databases. On Windows, $HOME
+  # is C:\Users\[Username]\Documents. Here, XDG_DATA_HOME is set for the
+  # session importing retixmp (and thus its embedded reticulate Python session)
+  # to instead place these files in C:\Users\[Username]\.local\share
+
   # If the user has aleady set $IXMP_DATA or $XDG_DATA_HOME, do nothing
   vars_set = any(nchar(Sys.getenv(c('IXMP_DATA', 'XDG_DATA_HOME'))))
   if ( Sys.info()['sysname'] == 'Windows' & ! vars_set ) {
     # Split $HOME to components
     home <- strsplit(Sys.getenv('HOME'), .Platform$file.sep)[[1]]
+
     # Filter out 'Documents' and add '.local\share'
     xdg_data_home <- file.path(Filter(function (s) s != 'Documents', home),
                                '.local', 'share')
-    print(xdg_data_home)
+
+    # Set $XDG_DATA_HOME
     Sys.setenv(XDG_DATA_HOME=xdg_data_home)
   }
 
-  ModelConfig <<- list(default = list(model_file = gsub("/","\\\\" , file.path( "." , "{model}.gms") ),
-                                      inp = gsub("/","\\\\" , file.path( ".", "{model}_in.gdx") ),
-                                      outp = gsub("/","\\\\" , file.path(".", "{model}_out.gdx") ),
-                                      args = gsub("/","\\\\" , paste('--in=',file.path( ".", "{model}_in.gdx"),' --out=',file.path(".", "{model}_out.gdx")))))
-
+  # Set 'ixmp' in the global namespace
   ixmp <<- reticulate::import('ixmp', delay_load = TRUE)
 }

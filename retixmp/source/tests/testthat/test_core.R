@@ -1,17 +1,9 @@
 context("Core")
 
-test_that('ixmp can be imported', {
-  library(reticulate)
-
-  # Force reticulate to pick up on e.g. RETICULATE_PYTHON environment variable
-  py_config()
-
-  expect(py_numpy_available(), 'reticulate reports numpy not available')
-  ixmp <- import('ixmp')
-})
+# Simulate 'library(retixmp)' without installing
+devtools::load_all(file.path('..', '..'))
 
 test_that('a local Platform can be instantiated', {
-  ixmp <- import('ixmp')
   mp <- ixmp$Platform(dbtype = 'HSQLDB')
   expect_equal(mp$dbtype, 'HSQLDB')
 })
@@ -28,7 +20,6 @@ test_that('parameter values can be set on a Scenario', {
 
 test_that('the canning problem can be solved', {
   # Create the Scenario
-  ixmp <- import('ixmp')
   mp <- ixmp$Platform(dbtype = 'HSQLDB')
   scen <- ixmp$testing$dantzig_transport(mp)
 

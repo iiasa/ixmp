@@ -14,11 +14,11 @@ Get-ExecutionPolicy -List
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
 & '..\windows_x64_64.exe' $GAMSArgs
-Start-Process '..\windows_x64_64.exe' $GAMSArgs
+Start-Process '..\windows_x64_64.exe' $GAMSArgs -Wait
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
-Get-ChildItem -Path 'C:' | Format-Table
+Get-ChildItem -Path 'C:\' | Format-Table
 
 Write-Output $env:PATH
 Get-ChildItem -Path $GAMSPath | Format-Table

@@ -17,17 +17,28 @@ NULL
 #' @import reticulate
 NULL
 
-.onAttach = function(libname, pkgname){
+.onAttach <- function(libname, pkgname) {
   packageStartupMessage(
-    sprintf("Loaded retixmp v%s. See ?retixmp for help, citation(\"retixmp\") for use in publication.\n",
-            utils::packageDescription(pkgname)$Version) )
+    sprintf(paste0("Loaded retixmp v%s. See ?retixmp for help, ",
+                   "citation(\"retixmp\") for use in publication.\n"),
+            utils::packageDescription(pkgname)$Version))
 }
-
-#utils::globalVariables(c("ixmp_path"))
 
 ixmp <- NULL
 
 .onLoad <- function(libname, pkgname) {
+  # Set $XDG_DATA_HOME for ixmp.config.Config
+  # If the user has aleady set $IXMP_DATA or $XDG_DATA_HOME, do nothing
+  vars_set = any(nchar(Sys.getenv(c('IXMP_DATA', 'XDG_DATA_HOME'))))
+  if ( Sys.info()['sysname'] == 'Windows' & ! vars_set ) {
+    # Split $HOME to components
+    home <- strsplit(Sys.getenv('HOME'), .Platform$file.sep)[[1]]
+    # Filter out 'Documents' and add '.local\share'
+    xdg_data_home <- file.path(Filter(function (s) s != 'Documents', home),
+                               '.local', 'share')
+    print(xdg_data_home)
+    Sys.setenv(XDG_DATA_HOME=xdg_data_home)
+  }
 
   ModelConfig <<- list(default = list(model_file = gsub("/","\\\\" , file.path( "." , "{model}.gms") ),
                                       inp = gsub("/","\\\\" , file.path( ".", "{model}_in.gdx") ),

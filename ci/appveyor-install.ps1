@@ -2,17 +2,19 @@
 $ErrorActionPreference = 'Stop'
 
 # For debugging, use -Trace 1 or -Trace 2.
-Set-PSDebug -Trace 0
+Set-PSDebug -Trace 2
 
 # Download GAMS
 Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile ..\windows_x64_64.exe
 
 Get-ChildItem -Path '..' | Format-Table
+Get-ExecutionPolicy -List
 
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
 & '..\windows_x64_64.exe' $GAMSArgs
+Start-Process '..\windows_x64_64.exe' $GAMSArgs
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
 

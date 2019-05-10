@@ -67,7 +67,8 @@ def test_r_build_and_check(r_args):
     subprocess.check_call(cmd, **r_args)
 
     # Path() here is required because of str() in r_args for Python 2.7 compat
-    cmd = ['R', 'CMD', 'check'] + list(Path(r_args['cwd']).glob('*.tar.gz'))
+    cmd = ['R', 'CMD', 'check']
+    cmd.extend(map(str, Path(r_args['cwd']).glob('*.tar.gz')))
     info = run(cmd, **r_args)
 
     try:
@@ -90,15 +91,14 @@ def test_r_testthat(r_args):
 
     info = run(cmd, **r_args)
 
-    # Number of testthat tests that failed
-
     try:
+        # Number of failing testthat tests
         failures = int(re.findall(r'Failed:\s*(\d*)', info.stdout)[0])
 
         if failures:
             # Pipe R output to stdout
             sys.stdout.write(info.stdout)
             pytest.fail('{} R tests'.format(failures))
-    except Exception:
+    except IndexError:
         sys.stdout.write(info.stdout)
         raise

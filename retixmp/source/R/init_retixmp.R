@@ -42,12 +42,11 @@ ixmp <- NULL
     # Split $HOME to components
     home <- strsplit(Sys.getenv('HOME'), .Platform$file.sep)[[1]]
 
-    # Filter out 'Documents' and add '.local\share'
-    xdg_data_home <- file.path(c(Filter(function (s) s != 'Documents', home),
-                                 '.local', 'share'))
+    # Filter out 'Documents' and add '.local' and 'share'
+    parts <- c(Filter(function (s) s != 'Documents', home), '.local', 'share'))
 
     # Set $XDG_DATA_HOME
-    Sys.setenv(XDG_DATA_HOME=xdg_data_home)
+    Sys.setenv(XDG_DATA_HOME=do.call('file.path', as.list(parts)))
   }
 
   # Set 'ixmp' in the global namespace

@@ -1,8 +1,4 @@
-step <- commandArgs(TRUE)
-
-print(step)
-
-step <- step[0]
+step <- commandArgs(TRUE)[1]
 
 if ( step == '1' ) {
 

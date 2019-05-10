@@ -8,10 +8,11 @@ Set-PSDebug -Trace 0
 Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile .\windows_x64_64.exe
 
 # Install GAMS
-$GAMSArgs = '/SP- /NORESTART /DIR=' + $(Get-Location).Path + '\gams /NOICONS'
-Exec { .\windows_x64_64.exe $GAMSArgs }
+$GAMSPath = 'C:\GAMS'
+$GAMSArgs = '/SP- /NORESTART /DIR=' + $GAMSPath + ' /NOICONS'
+& .\windows_x64_64.exe $GAMSArgs
 
-$env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
+$env:PATH = $GAMSPath + ';' + $env:PATH
 
 Write-Output $env:PATH
 

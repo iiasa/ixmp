@@ -4,6 +4,16 @@ except ImportError:
     from pathlib2 import Path
 import re
 import subprocess
+try:
+    from subprocess import run
+except ImportError:
+    # Python 2.7 compatibility
+    def run(*args, **kwargs):
+        popen = subprocess.Popen(*args, **kwargs)
+        popen.wait()
+        # Convert stream to sequence
+        popen.stdout = str(popen.stdout)
+        return popen
 import sys
 
 import pytest
@@ -58,7 +68,7 @@ def test_r_build_and_check(r_args):
 
     # Path() here is required because of str() in r_args for Python 2.7 compat
     cmd = ['R', 'CMD', 'check'] + list(Path(r_args['cwd']).glob('*.tar.gz'))
-    info = subprocess.run(cmd, **r_args)
+    info = run(cmd, **r_args)
 
     try:
         info.check_returncode()
@@ -66,21 +76,15 @@ def test_r_build_and_check(r_args):
         # Copy the log to stdout
         sys.stdout.write(info.stdout)
         raise
+    except AttributeError:
+        # Python 2.7
+        if info.returncode != 0:
+            sys.stdout.write(info.stdout)
+            raise
 
 
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
-    # Python 2.7 compatibility
-    try:
-        from subprocess import run
-    except ImportError:
-        def run(*args, **kwargs):
-            popen = subprocess.Popen(*args, **kwargs)
-            popen.wait()
-            # Convert stream to sequence
-            popen.stdout = str(popen.stdout)
-            return popen
-
     tests_path = Path('tests', 'testthat')
     cmd = ['R', '--quiet', '-e', 'testthat::test_dir("{}")'.format(tests_path)]
 

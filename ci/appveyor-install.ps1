@@ -2,30 +2,22 @@
 $ErrorActionPreference = 'Stop'
 
 # For debugging, use -Trace 1 or -Trace 2.
-Set-PSDebug -Trace 2
+Set-PSDebug -Trace 0
 
 # Download GAMS
-Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile ..\windows_x64_64.exe
-
-Get-ChildItem -Path '..' | Format-Table
-Get-ExecutionPolicy -List
+$GAMSFileName = '..\windows_x64_64.exe'
+Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile $GAMSFileName
 
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-& '..\windows_x64_64.exe' $GAMSArgs
-Start-Process '..\windows_x64_64.exe' $GAMSArgs -Wait
+Start-Process $GAMSFileName $GAMSArgs -Wait | Write-Host
 
+# Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
-Get-ChildItem -Path 'C:\' | Format-Table
-
-Write-Output $env:PATH
-Get-ChildItem -Path $GAMSPath | Format-Table
-
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors.
-Exec { gams }
+# Show information
+Start-Process gams -Wait | Write-Host
 
 # Update conda
 
@@ -43,6 +35,8 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
+# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
+# and errors.
 Exec { conda update --quiet --yes conda }
 
 # TODO create a 'testing' env, as on Travis.

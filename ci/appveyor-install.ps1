@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 Set-PSDebug -Trace 0
 
 # Download GAMS
-Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
+Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile .\windows_x64_64.exe
 
 # Install GAMS
 $GAMSArgs = '/SP- /NORESTART /DIR=' + $(Get-Location).Path + '\gams /NOICONS'

@@ -10,11 +10,11 @@ environment:
   - PYTHON_VERSION: "3.7"
     PYTHON_ARCH: "64"
 
-# init:
-#   - ps: |
-#         $ErrorActionPreference = "Stop"
-#         Invoke-WebRequest http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -OutFile '..\appveyor-tool.ps1'
-#         Import-Module '..\appveyor-tool.ps1'
+init:
+  - ps: |
+        $ErrorActionPreference = "Stop"
+        Invoke-WebRequest http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -OutFile '..\appveyor-tool.ps1'
+        Import-Module '..\appveyor-tool.ps1'
 
 install:
   - ps: . .\ci\appveyor-install.ps1

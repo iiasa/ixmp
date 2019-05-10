@@ -1,7 +1,10 @@
 $ErrorActionPreference = 'Stop'
 
 # Download GAMS
-Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile '.\windows_x64_64.exe'
+Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
+
+Get-Location
+Get-ChildItem -Recurse
 
 # Install GAMS
 & '.\windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'

@@ -19,10 +19,7 @@ init:
 install:
   - ps: . .\ci\appveyor-install.ps1
   - python setup.py install
-  - >
-    Rscript -e "devtools::install( ^
-      file.path('.', 'retixmp', 'source'), ^
-      args = '--no-multiarch', dep = TRUE)"
+  - Rscript .\ci\appveyor-install.R 2
 
 build: false
 

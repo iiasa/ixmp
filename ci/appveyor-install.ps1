@@ -47,6 +47,5 @@ Exec { conda info --all }
 # Set up r-appveyor
 Bootstrap
 
-# Install R packages needed for testing
-Exec { .\travis-tool.sh install_r devtools IRkernel }
-Exec { Rscript -e "IRkernel::installspec()" }
+# Install R packages needed for testing and the package itself
+Exec { Rscript .\cd\appveyor-install.R 1 }

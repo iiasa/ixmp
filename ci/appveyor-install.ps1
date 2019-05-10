@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
 
 # Install GAMS
-& 'windows_x64_64.exe' /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
+.\windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
 

@@ -28,15 +28,13 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-Write-Output $env:PATH
-
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
 Exec { conda update --yes conda }
 
 # TODO create a 'testing' env as on Travis?
 
-Exec { conda install -c conda-forge --yes ixmp[tests] pytest coveralls pytest-cov }
+Exec { conda install -c conda-forge --yes ixmp[tests] pytest coveralls pytest-cov "blas=*=openblas"}
 Exec { conda remove --force --yes ixmp }
 
 # Show information

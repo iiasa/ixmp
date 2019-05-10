@@ -91,9 +91,14 @@ def test_r_testthat(r_args):
     info = run(cmd, **r_args)
 
     # Number of testthat tests that failed
-    failures = int(re.findall(r'Failed:\s*(\d*)', info.stdout)[0])
 
-    if failures:
-        # Pipe R output to stdout
+    try:
+        failures = int(re.findall(r'Failed:\s*(\d*)', info.stdout)[0])
+
+        if failures:
+            # Pipe R output to stdout
+            sys.stdout.write(info.stdout)
+            pytest.fail('{} R tests'.format(failures))
+    except Exception:
         sys.stdout.write(info.stdout)
-        pytest.fail('{} R tests'.format(failures))
+        raise

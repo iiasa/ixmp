@@ -105,12 +105,12 @@ def create_local_testdb(db_path, data_path):
     are copied from *data_path*.
     """
     # Copy test database
-    dst = db_path / 'testdb'
+    dst = Path(db_path) / 'testdb'
     # str() here is for py2 compatibility
     shutil.copytree(str(data_path), str(dst))
 
     # Create properties file
-    props = (data_path / 'test.properties_template').read_text()
+    props = (Path(data_path) / 'test.properties_template').read_text()
     test_props = dst / 'test.properties'
     test_props.write_text(props.format(here=str(dst).replace("\\", "/")))
 

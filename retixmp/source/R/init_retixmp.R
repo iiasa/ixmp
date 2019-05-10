@@ -43,8 +43,8 @@ ixmp <- NULL
     home <- strsplit(Sys.getenv('HOME'), .Platform$file.sep)[[1]]
 
     # Filter out 'Documents' and add '.local\share'
-    xdg_data_home <- file.path(Filter(function (s) s != 'Documents', home),
-                               '.local', 'share')
+    xdg_data_home <- file.path(c(Filter(function (s) s != 'Documents', home),
+                                 '.local', 'share'))
 
     # Set $XDG_DATA_HOME
     Sys.setenv(XDG_DATA_HOME=xdg_data_home)

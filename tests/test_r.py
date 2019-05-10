@@ -24,14 +24,22 @@ pytestmark = pytest.mark.skipif(not r_installed(), reason='R not installed')
 
 
 @pytest.fixture
-def r_args(request, tmp_env, test_data_path):
+def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
     # Path to the retixmp source
     retixmp_path = Path(request.fspath).parent.parent / 'retixmp' / 'source'
 
     # Ensure reticulate uses the same Python as the pytest session
     tmp_env['RETICULATE_PYTHON'] = sys.executable
+
+    # Path to the files in tests/data
     tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
+
+    # Path to a directory for temporary databases
+    tmp_env['IXMP_TEST_TMP_PATH'] = str(tmp_path_factory.mktemp('test_mp'))
+
+    # Show all lines on tests failure
+    tmp_env['_R_CHECK_TESTS_NLINES_'] = '0'
 
     # str() here is for Python 2.7 compatibility on Windows
     args = dict(cwd=str(retixmp_path), env=tmp_env, stdout=subprocess.PIPE,
@@ -48,7 +56,8 @@ def test_r_build_and_check(r_args):
     cmd = ['R', 'CMD', 'build', '.']
     subprocess.check_call(cmd, **r_args)
 
-    cmd = ['R', 'CMD', 'check'] + list(r_args['cwd'].glob('*.tar.gz'))
+    # Path() here is required because of str() in r_args for Python 2.7 compat
+    cmd = ['R', 'CMD', 'check'] + list(Path(r_args['cwd']).glob('*.tar.gz'))
     info = subprocess.run(cmd, **r_args)
 
     try:

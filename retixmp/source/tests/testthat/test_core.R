@@ -3,6 +3,10 @@ context("Core")
 # Simulate 'library(retixmp)' without installing
 devtools::load_all(file.path('..', '..'))
 
+# Import fixtures
+source('conftest.R')
+
+
 test_that('a local Platform can be instantiated', {
   mp <- ixmp$Platform(dbtype = 'HSQLDB')
   expect_equal(mp$dbtype, 'HSQLDB')
@@ -20,7 +24,7 @@ test_that('parameter values can be set on a Scenario', {
 
 test_that('the canning problem can be solved', {
   # Create the Scenario
-  mp <- ixmp$Platform(dbtype = 'HSQLDB')
+  mp <- test_mp()
   scen <- ixmp$testing$dantzig_transport(mp)
 
   # Solve

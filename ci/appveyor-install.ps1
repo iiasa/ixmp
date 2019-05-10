@@ -10,11 +10,12 @@ Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/wi
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /NORESTART /DIR=' + $GAMSPath + ' /NOICONS'
-& .\windows_x64_64.exe $GAMSArgs
+& '.\windows_x64_64.exe' $GAMSArgs
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 Write-Output $env:PATH
+Get-ChildItem -Path $GAMSPath | Format-Table
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.

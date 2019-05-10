@@ -7,14 +7,16 @@ Set-PSDebug -Trace 0
 # Download GAMS
 Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile ..\windows_x64_64.exe
 
-Get-ChildItem -Path '.' | Format-Table
+Get-ChildItem -Path '..' | Format-Table
 
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
-$GAMSArgs = '/SP- /NORESTART /VERYSILENT /DIR=' + $GAMSPath + ' /NOICONS'
+$GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
 & '..\windows_x64_64.exe' $GAMSArgs
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
+
+Get-ChildItem -Path 'C:' | Format-Table
 
 Write-Output $env:PATH
 Get-ChildItem -Path $GAMSPath | Format-Table

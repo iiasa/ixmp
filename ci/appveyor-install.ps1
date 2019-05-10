@@ -9,7 +9,7 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 
 # Install GAMS
 $GAMSArgs = '/SP- /NORESTART /DIR=' + $(Get-Location).Path + '\gams /NOICONS'
-& '.\windows_x64_64.exe' $GAMSArgs
+Exec { .\windows_x64_64.exe $GAMSArgs }
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
 

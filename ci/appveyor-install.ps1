@@ -12,6 +12,10 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
 
+# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
+# and errors.
+Exec { gams }
+
 # Update conda
 
 # These correspond to folder naming of miniconda installs on appveyor
@@ -28,8 +32,6 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors.
 Exec { conda update --quiet --yes conda }
 
 # TODO create a 'testing' env, as on Travis.

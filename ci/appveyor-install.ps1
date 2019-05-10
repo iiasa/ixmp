@@ -5,19 +5,19 @@ $ErrorActionPreference = 'Stop'
 Set-PSDebug -Trace 0
 
 # Download GAMS
-$GAMSFileName = '..\windows_x64_64.exe'
-Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile $GAMSFileName
+$GAMSInstaller = '..\windows_x64_64.exe'
+Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
 
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSFileName $GAMSArgs -Wait | Out-Default
+Start-Process $GAMSInstaller $GAMSArgs -Wait
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-Start-Process gams -Wait | Out-Default
+gams
 
 # Update conda
 

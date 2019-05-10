@@ -13,8 +13,9 @@ environment:
 init:
   - ps: |
         $ErrorActionPreference = "Stop"
-        Invoke-WebRequest http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -OutFile '..\appveyor-tool.ps1'
-        Import-Module '..\appveyor-tool.ps1'
+        $Tool = '..\appveyor-tool.ps1'
+        Start-FileDownload http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -FileName $Tool
+        Import-Module $Tool
 
 install:
   - ps: . .\ci\appveyor-install.ps1

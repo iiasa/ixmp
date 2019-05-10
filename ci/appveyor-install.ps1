@@ -12,7 +12,7 @@ Get-ChildItem -Path '.' | Format-Table
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /NORESTART \VERYSILENT /DIR=' + $GAMSPath + ' /NOICONS'
-Exec { ..\windows_x64_64.exe $GAMSArgs }
+& '..\windows_x64_64.exe' $GAMSArgs
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
 

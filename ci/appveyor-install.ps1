@@ -48,4 +48,4 @@ Exec { conda info --all }
 Bootstrap
 
 # Install R packages needed for testing and the package itself
-Exec { Rscript .\cd\appveyor-install.R 1 }
+Exec { Rscript .\ci\appveyor-install.R 1 }

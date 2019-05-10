@@ -10,7 +10,7 @@ devtools::build(pkg = ".", path=rixmp_path,binary=T)
 
 # install the package from binary
 setwd(rixmp_path)
-install.packages("retixmp_0.0.1.zip", repos=NULL)
+install.packages("retixmp_0.2.0.9000.zip", repos=NULL)
 
 pkg = "retixmp"
 setwd(paste0(rixmp_path,"/source/"))

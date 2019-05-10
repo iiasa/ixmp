@@ -1,11 +1,16 @@
+# Halt instead of stalling on failure
 $ErrorActionPreference = 'Stop'
-Set-PSDebug -Trace 2
+
+# Echo commands. For debugging, use -Trace 2
+Set-PSDebug -Trace 1
 
 # Download GAMS
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
 
 # Install GAMS
-& ".\windows_x64_64.exe" "/SP- /NORESTART /DIR=.\gams /NOICONS"
+# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
+# and errors.
+Exec { .\windows_x64_64.exe /SP- /NORESTART /DIR=.\gams /NOICONS }
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
 
@@ -21,14 +26,12 @@ if ( $env:PYTHON_VERSION -eq '2.7' ) {
 if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
 
 $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
-
 $env:CONDA_ROOT = $CR
+
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 Write-Output $env:PATH
 
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors
 Exec { conda update --yes conda }
 
 # TODO create a 'testing' env as on Travis?
@@ -43,6 +46,6 @@ Exec { conda info --all }
 # Set up r-appveyor
 Bootstrap
 
-# # Install R packages needed for testing
-# travis-tool.sh install_r devtools IRkernel
-# Rscript -e "IRkernel::installspec()"
+# Install R packages needed for testing
+TravisTool { install_r devtools IRkernel }
+Exec { Rscript -e "IRkernel::installspec()" }

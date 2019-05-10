@@ -8,9 +8,12 @@ Set-PSDebug -Trace 0
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
 
 # Install GAMS
-& '.\windows_x64_64.exe' '/SP- /NORESTART /DIR=.\gams /NOICONS'
+$GAMSArgs = '/SP- /NORESTART /DIR=' + $(Get-Location).Path + '\gams /NOICONS'
+& '.\windows_x64_64.exe' $GAMSArgs
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
+
+Write-Output $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.

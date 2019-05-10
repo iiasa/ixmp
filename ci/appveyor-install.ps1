@@ -8,9 +8,7 @@ Set-PSDebug -Trace 1
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe'
 
 # Install GAMS
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors.
-Exec { '.\windows_x64_64.exe' '/SP- /NORESTART /DIR=.\gams /NOICONS' }
+& '.\windows_x64_64.exe' '/SP- /NORESTART /DIR=.\gams /NOICONS'
 
 $env:PATH = $(Get-Location).Path + '\gams;' + $env:PATH
 
@@ -32,6 +30,8 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 Write-Output $env:PATH
 
+# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
+# and errors.
 Exec { conda update --yes conda }
 
 # TODO create a 'testing' env as on Travis?

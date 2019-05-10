@@ -67,7 +67,8 @@ def test_r_build_and_check(r_args):
     subprocess.check_call(cmd, **r_args)
 
     # Path() here is required because of str() in r_args for Python 2.7 compat
-    cmd = ['R', 'CMD', 'check']
+    # --no-multiarch is for Windows/Appveyor
+    cmd = ['R', 'CMD', 'check', '--no-multiarch']
     cmd.extend(map(str, Path(r_args['cwd']).glob('*.tar.gz')))
     info = run(cmd, **r_args)
 
@@ -86,8 +87,8 @@ def test_r_build_and_check(r_args):
 
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
-    tests_path = Path('tests', 'testthat')
-    cmd = ['R', '--quiet', '-e', 'testthat::test_dir("{}")'.format(tests_path)]
+    tests_path = Path('.', 'tests', 'testthat')
+    cmd = ['Rscript', '-e', "testthat::test_dir('{}')".format(tests_path)]
 
     info = run(cmd, **r_args)
 

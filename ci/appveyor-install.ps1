@@ -11,13 +11,13 @@ Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/wi
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSFileName $GAMSArgs -Wait | Write-Host
+Start-Process $GAMSFileName $GAMSArgs -Wait | Out-Default
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-Start-Process gams -Wait | Write-Host
+Start-Process gams -Wait | Out-Default
 
 # Update conda
 

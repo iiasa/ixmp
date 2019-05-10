@@ -17,7 +17,7 @@ environment:
 #         Import-Module '..\appveyor-tool.ps1'
 
 install:
-  - .\ci\appveyor-install.ps1
+  - ps: . .\ci\appveyor-install.ps1
   - python setup.py install
 #  - Rscript -e 'devtools::install("retixmp/source", dep = T)'
 

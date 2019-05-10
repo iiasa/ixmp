@@ -32,9 +32,12 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 # and errors.
 Exec { conda update --yes conda }
 
-# TODO create a 'testing' env as on Travis?
-
-Exec { conda install -c conda-forge --yes ixmp[tests] pytest coveralls pytest-cov "blas=*=openblas"}
+# TODO create a 'testing' env, as on Travis.
+# TODO for PYTHON_VERSION = 2.7, this causes mkl and openjdk to be installed,
+# each about 150 MB. Enable Appveyor caching or tweak conda configuration to
+# speed up.
+Exec { conda install -c conda-forge --yes `
+       ixmp[tests] pytest coveralls pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
 # Show information

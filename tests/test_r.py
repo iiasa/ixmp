@@ -10,9 +10,9 @@ except ImportError:
     # Python 2.7 compatibility
     def run(*args, **kwargs):
         popen = subprocess.Popen(*args, **kwargs)
-        popen.wait()
+        stdout, _ = popen.communicate()
         # Convert stream to sequence
-        popen.stdout = str(popen.stdout)
+        popen.stdout = str(stdout)
         return popen
 import sys
 

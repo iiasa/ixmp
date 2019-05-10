@@ -47,5 +47,5 @@ Set-PSDebug -Trace 2
 Bootstrap
 
 # Install R packages needed for testing
-travis-tool.sh install_r devtools IRkernel
+Exec { travis-tool.sh install_r devtools IRkernel }
 Exec { Rscript -e "IRkernel::installspec()" }

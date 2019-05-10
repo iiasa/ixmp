@@ -5,14 +5,14 @@ $ErrorActionPreference = 'Stop'
 Set-PSDebug -Trace 0
 
 # Download GAMS
-Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile .\windows_x64_64.exe
+Invoke-WebRequest 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -OutFile ..\windows_x64_64.exe
 
 Get-ChildItem -Path '.' | Format-Table
 
 # Install GAMS
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /NORESTART /DIR=' + $GAMSPath + ' /NOICONS'
-& '.\windows_x64_64.exe' $GAMSArgs
+Exec { ..\windows_x64_64.exe }
 
 $env:PATH = $GAMSPath + ';' + $env:PATH
 

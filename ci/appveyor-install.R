@@ -1,7 +1,8 @@
 step <- commandArgs(TRUE)[1]
 
-if ( step == '1' ) {
+options(repos=c('https://cloud.r-project.org'))
 
+if ( step == '1' ) {
   install.packages(c('devtools', 'IRkernel'), quiet = TRUE)
 
   IRkernel::installspec()

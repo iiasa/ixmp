@@ -29,9 +29,9 @@ conda remove --force --yes ixmp
 conda info --all
 
 
-# Set up r-appveyor
-Bootstrap
-
-# Install R packages needed for testing
-travis-tool.sh install_r devtools IRkernel
-Rscript -e "IRkernel::installspec()"
+# # Set up r-appveyor
+# Bootstrap
+#
+# # Install R packages needed for testing
+# travis-tool.sh install_r devtools IRkernel
+# Rscript -e "IRkernel::installspec()"

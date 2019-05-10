@@ -33,7 +33,8 @@ def r_args(request, tmp_env, test_data_path):
     tmp_env['RETICULATE_PYTHON'] = sys.executable
     tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
 
-    args = dict(cwd=retixmp_path, env=tmp_env, stdout=subprocess.PIPE,
+    # str() here is for Python 2.7 compatibility on Windows
+    args = dict(cwd=str(retixmp_path), env=tmp_env, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
 
     arg = 'text' if sys.version_info[:2] >= (3, 7) else 'universal_newlines'

@@ -27,12 +27,12 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 Write-Output $env:PATH
 
-conda update --yes conda
+conda update --yes conda 2>&1
 
 # TODO create a 'testing' env as on Travis?
 
-conda install -c conda-forge --yes ixmp pytest coveralls pytest_cov
-conda remove --force --yes ixmp
+conda install -c conda-forge --yes ixmp pytest coveralls pytest_cov 2>&1
+conda remove --force --yes ixmp 2>&1
 
 # Show information
 conda info --all

@@ -27,20 +27,22 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 Write-Output $env:PATH
 
+# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
+# and errors
 Exec { conda update --yes conda }
 
 # TODO create a 'testing' env as on Travis?
 
-Exec { conda install -c conda-forge --yes ixmp pytest coveralls pytest_cov }
+Exec { conda install -c conda-forge --yes ixmp pytest coveralls pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
 # Show information
 Exec { conda info --all }
 
 
-# # Set up r-appveyor
-# Bootstrap
-#
+# Set up r-appveyor
+Bootstrap
+
 # # Install R packages needed for testing
 # travis-tool.sh install_r devtools IRkernel
 # Rscript -e "IRkernel::installspec()"

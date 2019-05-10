@@ -14,8 +14,8 @@ Write-Output $env:PATH
 
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
-$MC_PYTHON_VERSION = $PYTHON_VERSION.Replace('.', '')
-if ( $PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
+$MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
+if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
 
 $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
 

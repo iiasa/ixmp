@@ -1,7 +1,7 @@
 try:
-    from pathlib import Path, PurePosixPath
+    from pathlib import Path
 except ImportError:
-    from pathlib2 import Path, PurePosixPath
+    from pathlib2 import Path
 import re
 import subprocess
 try:
@@ -90,10 +90,8 @@ def test_r_build_and_check(r_args):
 
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
-    tests_path = Path('tests', 'testthat')
-    print(tests_path)
-    cmd = ['Rscript', '-e', "testthat::test_dir('{}')".format(tests_path)]
-    print(cmd)
+    tests_path = "file.path('tests', 'testthat')"
+    cmd = ['Rscript', '-e', "testthat::test_dir({})".format(tests_path)]
 
     info = run(cmd, **r_args)
 

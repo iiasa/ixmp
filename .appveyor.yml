@@ -11,6 +11,8 @@ environment:
     PYTHON_ARCH: "64"
 
 init:
+  # Download and install the R + Appveyor tool from
+  # https://github.com/krlmlr/r-appveyor
   - ps: |
         $ErrorActionPreference = "Stop"
         $Tool = '..\appveyor-tool.ps1'
@@ -27,4 +29,9 @@ build: false
 test_script:
   # Run tests
   # These include the equivalent of Travis R tests via test_r.py
-  - pytest --verbose
+  - >
+    pytest
+    --verbose
+    --cov=ixmp
+    --cov-config ci/.coveragerc
+    --cov-report term-missing

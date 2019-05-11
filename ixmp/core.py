@@ -14,7 +14,7 @@ from subprocess import check_call
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable
+from ixmp.utils import logger, islistable, harmonize_path
 
 # %% default settings for column headers
 
@@ -1307,6 +1307,8 @@ class Scenario(TimeSeries):
             that the user has forgotten a ``return`` statement, in which case
             the iteration will continue indefinitely.
         """
+        print(model)
+        model = str(harmonize_path(model))
         print(model)
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \

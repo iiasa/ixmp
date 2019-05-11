@@ -33,16 +33,6 @@ def r_installed():
 pytestmark = pytest.mark.skipif(not r_installed(), reason='R not installed')
 
 
-def to_str(path):
-    """Return *path* as str with / separators, regardless of platform.
-
-    On Windows, R's file.path(…) uses '/', not '\', as a path separator.
-    Python's str(WindowsPath(..)) uses '\'. Mixing outputs from the two
-    functions produces path strings with both kinds of separators.
-    """
-    return str(PurePosixPath(path))
-
-
 @pytest.fixture
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
@@ -53,10 +43,10 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     tmp_env['RETICULATE_PYTHON'] = sys.executable
 
     # Path to the files in tests/data
-    tmp_env['IXMP_TEST_DATA_PATH'] = to_str(test_data_path)
+    tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
 
     # Path to a directory for temporary databases
-    tmp_env['IXMP_TEST_TMP_PATH'] = to_str(tmp_path_factory.mktemp('test_mp'))
+    tmp_env['IXMP_TEST_TMP_PATH'] = str(tmp_path_factory.mktemp('test_mp'))
 
     # Show all lines on tests failure
     tmp_env['_R_CHECK_TESTS_NLINES_'] = '0'
@@ -100,7 +90,7 @@ def test_r_build_and_check(r_args):
 
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
-    tests_path = to_str(Path('tests', 'testthat').resolve())
+    tests_path = Path('tests', 'testthat')
     print(tests_path)
     cmd = ['Rscript', '-e', "testthat::test_dir('{}')".format(tests_path)]
     print(cmd)

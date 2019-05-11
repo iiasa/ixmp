@@ -27,4 +27,4 @@ build: false
 test_script:
   # Run tests
   # These include the equivalent of Travis R tests via test_r.py
-  - pytest --verbose --win_ci_skip
+  - pytest --verbose

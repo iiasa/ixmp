@@ -5,7 +5,7 @@ We appreciate contributions to the code base and development of new features for
 Please use the GitHub "Issues" feature to raise questions concerning potential bugs or to propose new features,
 but search for resolved/closed topics on similar subjects before raising a new issue.
 
-For contributions to the code base of the platform, please use GitHub "Pull Requests", 
+For contributions to the code base of the platform, please use GitHub "Pull Requests",
 including a detailed description of the new feature and unit tests to illustrate the intended functionality.
 All pull requests will be reviewed by the `message_ix` and `ixmp` maintainers and/or contributors.
 
@@ -16,6 +16,7 @@ The electronic signature is collected via the `cla-assistant`_ when issuing the 
 
 Code submitted via pull requests must adhere to the following style formats:
  - Python: `pep8`_
+   - Use the `numpydoc`_  format for docstrings.
  - R: please follow the style of the existing code base
  - other (file names, CLI, etc.): please follow the style of the existing code base
 
@@ -24,3 +25,5 @@ Code submitted via pull requests must adhere to the following style formats:
 .. _`cla-assistant` : https://github.com/cla-assistant/
 
 .. _`pep8`: https://www.python.org/dev/peps/pep-0008/
+
+.. _`numpydoc`: https://numpydoc.readthedocs.io/en/latest/format.html

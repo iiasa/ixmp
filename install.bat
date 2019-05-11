@@ -28,7 +28,7 @@ IF ERRORLEVEL 1 (
 
     cd retixmp/source
     R CMD build .
-    R CMD INSTALL --html retixmp_0.2.0.9000.tar.gz
+    R CMD INSTALL --html retixmp_0.1.3.9000.tar.gz
 )
 
 rem TODO remove?

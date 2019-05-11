@@ -1307,6 +1307,7 @@ class Scenario(TimeSeries):
             that the user has forgotten a ``return`` statement, in which case
             the iteration will continue indefinitely.
         """
+        print(model)
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
             else model_settings.model_config('default')
@@ -1322,6 +1323,7 @@ class Scenario(TimeSeries):
         outp = out_file or config.outp.format(model=model, case=case)
         args = solve_args or [arg.format(model=model, case=case, inp=inp,
                                          outp=outp) for arg in config.args]
+        print(args)
 
         ipth = os.path.dirname(inp)
         ingdx = os.path.basename(inp)
@@ -1612,6 +1614,8 @@ def run_gams(model_file, args, gams_args=['LogOption=4']):
     """
     cmd = ['gams', model_file] + args + gams_args
     cmd = cmd if os.name != 'nt' else ' '.join(cmd)
+    print(cmd)
     file_path = os.path.dirname(model_file).strip('"')
     file_path = None if file_path == '' else file_path
+    print(file_path)
     check_call(cmd, shell=os.name == 'nt', cwd=file_path)

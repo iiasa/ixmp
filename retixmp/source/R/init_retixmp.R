@@ -38,9 +38,9 @@ ixmp <- NULL
 
   # If the user has aleady set $IXMP_DATA or $XDG_DATA_HOME, do nothing
   vars_set = any(nchar(Sys.getenv(c('IXMP_DATA', 'XDG_DATA_HOME'))))
-  if ( .Platform$OS.type == 'Windows' & ! vars_set ) {
+  if ( .Platform$OS.type == 'windows' & ! vars_set ) {
     # Split $HOME to components
-    home <- strsplit(Sys.getenv('HOME'), .Platform$file.sep)[[1]]
+    home <- strsplit(gsub('\\\\', '/', Sys.getenv('HOME')), .Platform$file.sep)[[1]]
 
     # Filter out 'Documents' and add '.local' and 'share'
     parts <- c(Filter(function (s) s != 'Documents', home), '.local', 'share')

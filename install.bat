@@ -3,15 +3,15 @@ rem
 rem TODO if this script is to be kept/supported, describe it in the docs.
 
 rem TODO remove?
-cd > .foo
-set /p IXMP=<.foo
-del .foo
-echo %IXMP%
-
-python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())" > .foo
-set /p RPTH=<.foo
-del .foo
-echo %RPTH%
+rem cd > .foo
+rem set /p IXMP=<.foo
+rem del .foo
+rem echo %IXMP%
+rem
+rem python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())" > .foo
+rem set /p RPTH=<.foo
+rem del .foo
+rem echo %RPTH%
 
 @echo off
 
@@ -21,7 +21,7 @@ if %errorlevel% neq 0 GOTO InstallError
 
 where /q r
 IF ERRORLEVEL 1 (
-    ECHO No valid installation of R found, skipped build and installation of R package.
+  echo R not installed; skipping installation of retixmp.
 ) ELSE (
     rem TODO remove?
     rem rscript rixmp/build_rixmp.R [--verbose]
@@ -32,8 +32,8 @@ IF ERRORLEVEL 1 (
 )
 
 rem TODO remove?
-setx IXMP_PATH "%IXMP%"
-setx IXMP_R_PATH "%RPTH%/ixmp"
+rem setx IXMP_PATH "%IXMP%"
+rem setx IXMP_R_PATH "%RPTH%/ixmp"
 
 py.test tests/
 

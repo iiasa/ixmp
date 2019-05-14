@@ -29,7 +29,6 @@ test_that('the canning problem can be solved', {
 
   # Solve
   model_path = file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'transport_ixmp')
-  print(model_path)
   scen$solve(model = model_path)
 
   # Check value

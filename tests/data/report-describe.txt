@@ -8,61 +8,61 @@
 - <ixmp.core.Scenario object at {id}>
 
 'a:':
-- aggregate(dimensions=['i'], ...)
+- sum(dimensions=['i'], weights=None, ...)
 - 'a:i':
-  - data_for_quantity('a', 'par', 'value', ...)
+  - data_for_quantity('par', 'a', 'value', ...)
   - 'scenario' (above)
 
 'b:':
-- aggregate(dimensions=['j'], ...)
+- sum(dimensions=['j'], weights=None, ...)
 - 'b:j':
-  - data_for_quantity('b', 'par', 'value', ...)
+  - data_for_quantity('par', 'b', 'value', ...)
   - 'scenario' (above)
 
 'd:':
-- aggregate(dimensions=['i', 'j'], ...)
+- sum(dimensions=['i', 'j'], weights=None, ...)
 - 'd:i-j':
-  - data_for_quantity('d', 'par', 'value', ...)
+  - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario' (above)
 
 'd:i':
-- aggregate(dimensions=['j'], ...)
+- sum(dimensions=['j'], weights=None, ...)
 - 'd:i-j' (above)
 
 'd:j':
-- aggregate(dimensions=['i'], ...)
+- sum(dimensions=['i'], weights=None, ...)
 - 'd:i-j' (above)
 
 'demand-margin:j':
-- data_for_quantity('demand', 'equ', 'mrg', ...)
+- data_for_quantity('equ', 'demand', 'mrg', ...)
 - 'scenario' (above)
 
 'demand:':
-- aggregate(dimensions=['j'], ...)
+- sum(dimensions=['j'], weights=None, ...)
 - 'demand:j':
-  - data_for_quantity('demand', 'equ', 'lvl', ...)
+  - data_for_quantity('equ', 'demand', 'lvl', ...)
   - 'scenario' (above)
 
 'f:':
-- data_for_quantity('f', 'par', 'value', ...)
+- data_for_quantity('par', 'f', 'value', ...)
 - 'scenario' (above)
 
 'x:':
-- aggregate(dimensions=['i', 'j'], ...)
+- sum(dimensions=['i', 'j'], weights=None, ...)
 - 'x:i-j':
-  - data_for_quantity('x', 'var', 'lvl', ...)
+  - data_for_quantity('var', 'x', 'lvl', ...)
   - 'scenario' (above)
 
 'x:i':
-- aggregate(dimensions=['j'], ...)
+- sum(dimensions=['j'], weights=None, ...)
 - 'x:i-j' (above)
 
 'x:j':
-- aggregate(dimensions=['i'], ...)
+- sum(dimensions=['i'], weights=None, ...)
 - 'x:i-j' (above)
 
 'z:':
-- data_for_quantity('z', 'var', 'lvl', ...)
+- data_for_quantity('var', 'z', 'lvl', ...)
 - 'scenario' (above)
 
 'all':

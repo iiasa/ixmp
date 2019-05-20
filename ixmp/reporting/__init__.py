@@ -34,13 +34,6 @@ import xarray as xr
 
 from .utils import Key, keys_for_quantity, data_for_quantity, ureg
 from . import computations
-from .computations import (   # noqa:F401
-    aggregate,
-    aggregate2,
-    disaggregate_shares,
-    load_file,
-    write_report,
-)
 from .describe import describe_recursive
 
 
@@ -88,7 +81,7 @@ class Reporter(object):
         )
 
         for ix_type, name in quantities:
-            # List of computations for the quantity and its aggregates
+            # List of computations for the quantity and its partial sums
             comps = list(keys_for_quantity(ix_type, name, scenario))
 
             # Add to the graph
@@ -198,6 +191,7 @@ class Reporter(object):
         if strict and key in self.graph:
             raise KeyError(key)
         self.graph[key] = computation
+        return key
 
     def apply(self, generator, *keys):
         """Add computations from `generator` applied to `key`.
@@ -253,48 +247,44 @@ class Reporter(object):
         self.graph['scenario'] = scenario
 
     # ixmp data model manipulations
-    def aggregate(self, var, dim_or_dims, tag, weights):
-        """Add a computation that aggregates *var* using *weights*.
+    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True):
+        """Add a computation that aggregates *qty*.
 
         Parameters
         ----------
-        var: hashable
-            Key of the variable to be disaggregated.
-        dim_or_dims: str or iterable of str
-            Name(s) of the dimension(s) to sum over.
+        qty: :class:`Key` or str
+            Key of the quantity to be disaggregated.
         tag: str
-            Additional key tag to add to the end of the variable key.
+            Additional string to add to the end the key for the aggregated
+            quantity.
+        dims_or_groups: str or iterable of str or dict
+            Name(s) of the dimension(s) to sum over, or nested dict.
         weights : xr.DataArray
             Weights for weighted aggregation.
 
         Returns
         -------
-        Key
+        :class:`Key`
             The key of the newly-added node.
         """
-        dims = [dim_or_dims] if isinstance(dim_or_dims, str) else dim_or_dims
+        if isinstance(dims_or_groups, dict):
+            groups = dims_or_groups
+            if len(groups) > 1:
+                raise NotImplementedError('aggregate() along >1 dimension')
 
-        # Compute the new key
-        key = Key.from_str_or_key(var)
-        key._dims = list(filter(lambda d: d not in dims, key._dims))
-        key._tag = tag
+            key = Key.from_str_or_key(qty, tag=tag)
+            comp = (computations.aggregate, qty, groups, keep)
+        else:
+            dims = dims_or_groups
+            if isinstance(dims, str):
+                dims = [dims]
 
-        self.graph[key] = tuple([
-            partial(aggregate, dimensions=dims),
-            var,
-            weights])
+            key = Key.from_str_or_key(qty, drop=dims, tag=tag)
+            comp = (partial(computations.sum, dimensions=dims), qty, weights)
 
-        return key
+        return self.add(key, comp, True)
 
-    def aggregate2(self, var, tag, groups={}, keep=True):
-        if len(groups) > 1:
-            raise NotImplementedError('aggregate2() along >1 dimension')
-        key = Key.from_str_or_key(var)
-        key._tag = tag
-        self.graph[key] = (aggregate2, var, groups, keep)
-        return key
-
-    def disaggregate(self, var, new_dim, method='shares', args=[]):
+    def disaggregate(self, qty, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.
 
         Parameters
@@ -317,8 +307,7 @@ class Reporter(object):
             The key of the newly-added node.
         """
         # Compute the new key
-        key = Key.from_str_or_key(var)
-        key._dims.append(new_dim)
+        key = Key.from_str_or_key(qty, append=new_dim)
 
         # Get the method
         if isinstance(method, str):
@@ -331,9 +320,7 @@ class Reporter(object):
         if not callable(method):
             raise ValueError(method)
 
-        self.graph[key] = tuple([method, var] + args)
-
-        return key
+        return self.add(key, tuple([method, qty] + args), True)
 
     # Convenience methods
     def add_file(self, path, key=None):
@@ -347,8 +334,7 @@ class Reporter(object):
         ixmp.reporting.computations.load_file
         """
         key = key if key else 'file:{}'.format(path.name)
-        self.add(key, (partial(load_file, path),), strict=True)
-        return key
+        return self.add(key, (partial(computations.load_file, path),), True)
 
     def describe(self, key=None):
         """Return a string describing the computations that produce *key*.
@@ -375,7 +361,7 @@ class Reporter(object):
     def write(self, key, path):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
-        write_report(self.get(key), path)
+        computations.write_report(self.get(key), path)
 
 
 def configure(path=None, **config):

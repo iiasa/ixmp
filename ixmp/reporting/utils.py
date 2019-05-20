@@ -32,15 +32,25 @@ class Key:
     def __init__(self, name, dims=[], tag=None):
         self._name = name
         self._dims = list(dims)
-        self._tag = tag
+        self._tag = tag if isinstance(tag, str) and len(tag) else None
 
     @classmethod
-    def from_str_or_key(cls, value):
+    def from_str_or_key(cls, value, drop=None, append=None, tag=None):
+        """Return a new Key from *value*."""
         if isinstance(value, cls):
-            return deepcopy(value)
+            name = value._name
+            dims = value._dims.copy()
+            _tag = value._tag
         else:
-            name, dims = value.split(':')
-            return cls(name, dims.split('-'))
+            name, *dims = value.split(':')
+            _tag = dims[1] if len(dims) == 2 else None
+            dims = dims[0].split('-')
+        if drop:
+            dims = list(filter(lambda d: d not in drop, dims))
+        if append:
+            dims.append(append)
+        tag = '+'.join(filter(None, [_tag, tag]))
+        return cls(name, dims, tag)
 
     def __repr__(self):
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
@@ -61,13 +71,14 @@ class Key:
         if isinstance(other, (self.__class__, str)):
             return repr(self) > repr(other)
 
-    def aggregates(self):
-        """Yield (key, task) for all possible aggregations of the Key."""
-        from .computations import aggregate
+    def iter_sums(self):
+        """Yield (key, task) for all possible partial sums of the Key."""
+        from . import computations
 
         for agg_dims, others in combo_partition(self._dims):
             yield Key(self._name, agg_dims), \
-                (partial(aggregate, dimensions=others), self)
+                (partial(computations.sum, dimensions=others, weights=None),
+                 self)
 
 
 def clean_units(input_string):
@@ -119,7 +130,7 @@ def _find_dims(data, ix_type):
     return [rename_dims.get(d, d) for d in dims]
 
 
-def keys_for_quantity(ix_type, name, scenario, aggregates=True):
+def keys_for_quantity(ix_type, name, scenario):
     """Iterate over keys for *name* in *scenario."""
     # Retrieve at least one row of the data
     # TODO use the low-level/Java API to avoid retrieving all values at this
@@ -150,9 +161,8 @@ def keys_for_quantity(ix_type, name, scenario, aggregates=True):
         yield (mrg_key, (partial(data_for_quantity, ix_type, name, 'mrg'),
                         'scenario'))
 
-    if aggregates:
-        # Aggregates
-        yield from key.aggregates()
+    # Partial sums
+    yield from key.iter_sums()
 
 
 def _parse_units(units_series):

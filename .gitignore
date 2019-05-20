@@ -21,6 +21,7 @@
 #*
 *#
 *.Rproj
+*.Rcheck
 
 # Apple file system
 .DS_Store
@@ -43,7 +44,8 @@ tests/testdb/ixmptest.properties
 tests/testdb/ixmptest.lck
 
 # rixmp build folder and rhistory
-rixmp/rixmp*.zip
+r*ixmp_*.tar.gz
+r*ixmp_*.zip
 rixmp/source/inst/docum/*.html
 rixmp/source/.Rhistory
 !rixmp/source/*.Rproj

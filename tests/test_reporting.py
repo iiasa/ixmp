@@ -3,13 +3,17 @@ import subprocess
 
 import ixmp
 import ixmp.reporting
-from ixmp.reporting import Key, Reporter
+import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from xarray.testing import assert_equal as assert_xr_equal
+from xarray.testing import (
+    assert_allclose as assert_xr_allclose,
+    assert_equal as assert_xr_equal,
+)
 
 from ixmp.testing import dantzig_transport
+from ixmp.reporting import Key, Reporter
 from ixmp.reporting.computations import aggregate, product, ratio
 from ixmp.reporting.utils import ureg
 
@@ -348,3 +352,69 @@ def test_reporting_size():
 
     rep.add('test', (add_op, *[f'ds{i}:b-c-d-e-f' for i in range(N)]))
     print(rep.get('test'))
+
+
+def test_reporting_aggregate2(test_mp):
+    scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
+
+    # New sets
+    t_foo = ['foo{}'.format(i) for i in (1, 2, 3)]
+    t_bar = ['bar{}'.format(i) for i in (4, 5, 6)]
+    t = t_foo + t_bar
+    y = list(map(str, range(2000, 2051, 10)))
+
+    # Add to scenario
+    scen.init_set('t')
+    scen.add_set('t', t)
+    scen.init_set('y')
+    scen.add_set('y', y)
+
+    # Data
+    x = xr.DataArray(np.random.rand(len(t), len(y)),
+                     coords=[t, y], dims=['t', 'y'])
+
+    # As a pd.DataFrame with units
+    x_df = x.to_series().rename('value').reset_index()
+    x_df['unit'] = 'kg'
+
+    scen.init_par('x', ['t', 'y'])
+    scen.add_par('x', x_df)
+
+    # Reporter
+    rep = Reporter.from_scenario(scen)
+
+    # Define some groups
+    t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
+
+    # Add aggregates
+    key1 = rep.aggregate2('x:t-y', 'agg1', groups={'t': t_groups}, keep=True)
+
+    # Group has expected key
+    assert key1 == 'x:t-y:agg1'
+
+    # Aggregate is computed without error
+    agg1 = rep.get(key1)
+
+    # Expected set of keys along the aggregated dimension
+    assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
+
+    # Sums are as expected
+    assert_xr_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
+    assert_xr_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
+    assert_xr_allclose(agg1.sel(t='baz', drop=True),
+                       x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+
+    # Add aggregates, without keeping originals
+    key2 = rep.aggregate2('x:t-y', 'agg2', groups={'t': t_groups}, keep=False)
+
+    # Distinct keys
+    assert key2 != key1
+
+    # Only the aggregated and no original keys along the aggregated dimension
+    agg2 = rep.get(key2)
+    assert set(agg2.coords['t'].values) == set(t_groups.keys())
+
+    with pytest.raises(NotImplementedError):
+        # Not yet supported; requires two separate operations
+        key3 = rep.aggregate2('x:t-y', 'agg3',
+                              groups={'t': t_groups, 'y': [2000, 2010]})

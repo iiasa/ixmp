@@ -36,6 +36,7 @@ from .utils import Key, keys_for_quantity, data_for_quantity, ureg
 from . import computations
 from .computations import (   # noqa:F401
     aggregate,
+    aggregate2,
     disaggregate_shares,
     load_file,
     write_report,
@@ -283,6 +284,14 @@ class Reporter(object):
             var,
             weights])
 
+        return key
+
+    def aggregate2(self, var, tag, groups={}, keep=True):
+        if len(groups) > 1:
+            raise NotImplementedError('aggregate2() along >1 dimension')
+        key = Key.from_str_or_key(var)
+        key._tag = tag
+        self.graph[key] = (aggregate2, var, groups, keep)
         return key
 
     def disaggregate(self, var, new_dim, method='shares', args=[]):

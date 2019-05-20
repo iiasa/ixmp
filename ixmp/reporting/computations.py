@@ -34,6 +34,24 @@ def aggregate(quantity, weights=None, dimensions=None):
 
     return result
 
+
+def aggregate2(quantity, groups, keep):
+    """Aggregate *quantity* by *groups*."""
+    for dim, dim_groups in groups.items():
+        values = []
+        for group, members in dim_groups.items():
+            values.append(quantity.sel({dim: members})
+                                  .sum(dim=dim)
+                                  .assign_coords(**{dim: group}))
+        if keep:
+            # Prepend the original values
+            values.insert(0, quantity)
+
+        # Reassemble to a single dataarray
+        quantity = xr.concat(values, dim=dim)
+    return quantity
+
+
 def disaggregate_shares(quantity, shares):
     """Disaggregate *quantity* by *shares*."""
     return quantity * shares

@@ -257,14 +257,23 @@ def test_reporter_describe(test_mp, test_data_path):
     scen = dantzig_transport(test_mp)
     r = Reporter.from_scenario(scen)
 
+    # hexadecimal ID of *scen*
+    id_ = hex(id(scen))
+
+    # Describe one key
     expected = """'d:i':
 - aggregate(dimensions=['j'], ...)
 - 'd:i-j':
-  - <xarray.DataArray 'd' (i: 2, j: 3)>
-"""
+  - data_for_quantity('d', 'par', 'value', ...)
+  - 'scenario':
+    - <ixmp.core.Scenario object at {id}>
+""".format(id=id_)
     assert r.describe('d:i') == expected
 
-    assert r.describe() == (test_data_path / 'report-describe.txt').read_text()
+    # Describe all keys
+    expected = (test_data_path / 'report-describe.txt').read_text() \
+                                                       .format(id=id_)
+    assert r.describe() == expected
 
 
 def test_reporter_visualize(test_mp):
@@ -302,3 +311,40 @@ Coordinates:
   * i        (i) object 'san-diego' 'seattle'
   * j        (j) object 'chicago' 'new-york' 'topeka'
 """)
+
+
+@pytest.mark.skip('Slow.')
+def test_reporting_size():
+    # Attempt to trigger MemoryError
+    from itertools import zip_longest
+    from functools import reduce
+    from operator import add
+
+    import numpy as np
+
+    # 12,500,000 elements
+    dims = 'abcdef'
+    sizes = [1, 4, 10, 500, 25, 25]
+    coords = []
+    for d, N in zip(dims, sizes):
+        coords.append([f'{d}_{i:03d}' for i in range(N)])
+
+    def _make_values():
+        values = list(zip_longest(*coords, np.random.rand(500)))
+        return pd.DataFrame(values, columns=list(dims) + ['value']) \
+                 .ffill() \
+                 .set_index(list(dims))
+
+    N = 6
+    rep = Reporter()
+    for i in range(N):
+        base_data = xr.Dataset.from_dataframe(_make_values())
+        base_key = Key(f'ds{i}', base_data.coords.keys())
+        rep.add(base_key, base_data)
+        rep.graph.update(base_key.aggregates())
+
+    def add_op(*args):
+        return reduce(add, args)
+
+    rep.add('test', (add_op, *[f'ds{i}:b-c-d-e-f' for i in range(N)]))
+    print(rep.get('test'))

@@ -24,11 +24,15 @@ except ImportError:
 from warnings import warn
 
 import dask
-from dask.threaded import get as dask_get
+
+# FIXME this causes JPype to segfault
+# from dask.threaded import get as dask_get
+from dask import get as dask_get
+
 import yaml
 import xarray as xr
 
-from .utils import quantity_as_xr, Key
+from .utils import Key, keys_for_quantity, data_for_quantity, ureg
 from . import computations
 from .computations import (   # noqa:F401
     aggregate,
@@ -36,6 +40,7 @@ from .computations import (   # noqa:F401
     load_file,
     write_report,
 )
+from .describe import describe_recursive
 
 
 class Reporter(object):
@@ -71,42 +76,30 @@ class Reporter(object):
         # New Reporter
         rep = cls(**kwargs)
 
+        # List of top-level keys
         all_keys = []
 
-        # Add parameters, equations, and variables to the graph
+        # List of parameters, equations, and variables
         quantities = chain(
-            zip(scenario.par_list(), repeat('par')),
-            zip(scenario.equ_list(), repeat('equ')),
-            zip(scenario.var_list(), repeat('var')),
+            zip(repeat('par'), sorted(scenario.par_list())),
+            zip(repeat('equ'), sorted(scenario.equ_list())),
+            zip(repeat('var'), sorted(scenario.var_list())),
         )
 
-        for name, kind in quantities:
-            # Retrieve data
-            data = quantity_as_xr(scenario, name, kind)
+        for ix_type, name in quantities:
+            # List of computations for the quantity and its aggregates
+            comps = list(keys_for_quantity(ix_type, name, scenario))
 
-            # Add the full-resolution quantity
-            base_data = data['value' if kind == 'par' else 'lvl']
-            base_key = Key(name, base_data.coords.keys())
-            rep.add(base_key, base_data)
+            # Add to the graph
+            rep.graph.update(comps)
 
-            all_keys.append(base_key)
-
-            # Add aggregates
-            rep.graph.update(base_key.aggregates())
-
-            if kind == 'equ':
-                # Add the marginal values at full resolution
-                mrg_data = data['mrg'].rename('{}-margin'.format(name))
-                mrg_key = Key('{}-margin'.format(name),
-                              mrg_data.coords.keys())
-                rep.add(mrg_key, mrg_data)
-
-                all_keys.append(mrg_key)
-
-                # (No aggregates for marginals)
+            # Add first 1 or 2 (equ marginals) keys to the list of all
+            # quantities
+            full_comps = comps[:(2 if ix_type == 'equ' else 1)]
+            all_keys.extend(c[0] for c in full_comps)
 
         # Add a key which simply collects all quantities
-        rep.add('all', all_keys)
+        rep.add('all', sorted(all_keys))
 
         # Add sets
         for name in scenario.set_list():
@@ -117,6 +110,9 @@ class Reporter(object):
                 # pd.DataFrame for a multidimensional set; store as-is
                 pass
             rep.add(name, elements)
+
+        # Add the scenario itself
+        rep.add('scenario', scenario)
 
         return rep
 
@@ -129,8 +125,11 @@ class Reporter(object):
         with open(path, 'r') as f:
             self.configure(config_dir=path.parent, **yaml.load(f))
 
-    def configure(self, **config):
+    def configure(self, path=None, **config):
         """Configure the Reporter.
+
+        Accepts a *path* to a configuration file and/or keyword arguments.
+        Configuration keys loaded from file are replaced by keyword arguments.
 
         Valid configuration keys include:
 
@@ -143,13 +142,12 @@ class Reporter(object):
         UserWarning
             If *config* contains unrecognized keys.
         """
+        config = _config_args(path, config,
+                              sections={'default', 'files', 'alias'})
+
         config_dir = config.pop('config_dir', '.')
 
         # Read sections
-        extra_sections = set(config.keys()) - {'default', 'files', 'alias'}
-        if len(extra_sections):
-            warn(('Unrecognized sections {!r} in reporting configuration will '
-                  'have no effect').format(extra_sections))
 
         # Default report
         try:
@@ -169,6 +167,8 @@ class Reporter(object):
         # Aliases
         for alias, original in config.get('alias', {}).items():
             self.add(alias, original)
+
+        return self  # to allow chaining
 
     # Generic graph manipulations
     def add(self, key, computation, strict=False):
@@ -353,69 +353,7 @@ class Reporter(object):
                                       self.graph.keys())) + ['all'])
         else:
             key = (key,)
-        return self._describe(key) + '\n'
-
-    def _describe(self, comp, depth=0, seen=None):
-        """Recursive helper for :meth:`describe`.
-
-        Parameters
-        ----------
-        comp :
-            A dask computation.
-        depth : int
-            Recursion depth. Used for indentation.
-        seen : set
-            Keys that have already been described. Used to avoid
-            double-printing.
-        """
-        comp = comp if isinstance(comp, tuple) else (comp,)
-        seen = set() if seen is None else seen
-
-        indent = (' ' * 2 * (depth - 1)) + ('- ' if depth > 0 else '')
-
-        # Strings for arguments
-        result = []
-
-        for arg in comp:
-            # Don't fully reprint keys and their ancestors that have been seen
-            try:
-                if arg in seen:
-                    if depth > 0:
-                        # Don't print top-level items that have been seen
-                        result.append(f"{indent}'{arg}' (above)")
-                    continue
-            except TypeError:
-                pass
-
-            # Convert various types of arguments to string
-            if isinstance(arg, xr.DataArray):
-                # DataArray → just the first line of the string representation
-                item = str(arg).split('\n')[0]
-            elif isinstance(arg, partial):
-                # functools.partial → less verbose format
-                fn_name = arg.func.__name__
-                fn_args = ', '.join(chain(
-                    map(str, arg.args),
-                    map('{0[0]}={0[1]}'.format, arg.keywords.items())))
-                item = f'{fn_name}({fn_args}, ...)'
-            elif isinstance(arg, (str, Key)) and arg in self.graph:
-                # key that exists in the graph → recurse
-                item = "'{}':\n{}".format(
-                    arg,
-                    self._describe(self.graph[arg], depth + 1, seen))
-                seen.add(arg)
-            elif isinstance(arg, list) and arg[0] in self.graph:
-                # list → collection of items
-                item = "list of:\n{}".format(
-                    self._describe(tuple(arg), depth + 1, seen))
-                seen.update(arg)
-            else:
-                item = str(arg)
-
-            result.append(indent + item)
-
-        # Combine items
-        return ('\n' if depth > 0 else '\n\n').join(result)
+        return describe_recursive(self.graph, key) + '\n'
 
     def visualize(self, filename, **kwargs):
         """Generate an image describing the reporting structure.
@@ -429,3 +367,46 @@ class Reporter(object):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
         write_report(self.get(key), path)
+
+
+def configure(path=None, **config):
+    """Configure reporting globally.
+
+    Valid configuration keys include:
+
+    - *units*: a string, passed to :meth:`pint.UnitRegistry.define`.
+
+    Warns
+    -----
+    UserWarning
+        If *config* contains unrecognized keys.
+    """
+    config = _config_args(path, config)
+
+    # Units
+    units = config.get('units', '').strip()
+    if units:
+        ureg.define(units)
+
+
+def _config_args(path, keys, sections={}):
+    """Handle configuration arguments."""
+    if path:
+        path = Path(path)
+        with open(path, 'r') as f:
+            result = yaml.load(f)
+
+        # Also store the directory where the configuration file was located
+        result['config_dir'] = path.parent
+    else:
+        result = {}
+
+    result.update(keys)
+
+    if sections:
+        extra_sections = set(result.keys()) - sections - {'config_dir'}
+        if len(extra_sections):
+            warn(('Unrecognized sections {!r} in reporting configuration will '
+                  'have no effect').format(extra_sections))
+
+    return result

@@ -1,4 +1,8 @@
 """Elementary computations for reporting."""
+# Notes:
+# - To avoid ambiguity, computations should not have default arguments. Define
+#   default values for the corresponding methods on the Reporter class.
+#
 # TODO:
 # - Accept pd.DataFrame user input by casting to xr.DataArray with a pd_to_xr()
 #   method that is a no-op for xr objects.
@@ -13,6 +17,7 @@ __all__ = [
     'disaggregate_shares',
     'make_dataframe',
     'load_file',
+    'sum',
     'write_report',
 ]
 
@@ -22,8 +27,8 @@ xr.set_options(keep_attrs=True)
 
 
 # Calculation
-def aggregate(quantity, weights=None, dimensions=None):
-    """Aggregate *quantity* over *dimensions*, with optional *weights*."""
+def sum(quantity, weights, dimensions):
+    """Sum *quantity* over *dimensions*, with optional *weights*."""
     if weights is not None:
         result = ((quantity * weights).sum(dim=dimensions) /
                    weights.sum(dim=dimensions))
@@ -35,7 +40,7 @@ def aggregate(quantity, weights=None, dimensions=None):
     return result
 
 
-def aggregate2(quantity, groups, keep):
+def aggregate(quantity, groups, keep):
     """Aggregate *quantity* by *groups*."""
     for dim, dim_groups in groups.items():
         values = []

@@ -13,8 +13,7 @@ from xarray.testing import (
 )
 
 from ixmp.testing import dantzig_transport
-from ixmp.reporting import Key, Reporter
-from ixmp.reporting.computations import aggregate, product, ratio
+from ixmp.reporting import Key, Reporter, computations
 from ixmp.reporting.utils import ureg
 
 
@@ -48,8 +47,8 @@ def test_reporting_key():
     # Key compares equal to its string representation
     assert k1 == 'foo:a-b-c'
 
-    # Number of aggregates for a 3-dimensional quantity
-    assert sum(1 for a in k1.aggregates()) == 7
+    # Number of partial sums for a 3-dimensional quantity
+    assert sum(1 for a in k1.iter_sums()) == 7
 
 
 def test_reporter(scenario):
@@ -66,17 +65,17 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)
 
-    # Aggregates are available automatically (d is defined over i and j)
+    # Partial sums are available automatically (d is defined over i and j)
     d_i = rep.get('d:i')
 
     # Units pass through summation
     assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
-    # Aggregation with weights
+    # Weighted sum
     weights = xr.DataArray([1, 2, 3],
                            coords=['chicago new-york topeka'.split()],
                            dims=['j'])
-    new_key = rep.aggregate('d:i-j', 'j', 'weighted', weights)
+    new_key = rep.aggregate('d:i-j', 'weighted', 'j', weights)
 
     # …produces the expected new key with the summed dimension removed and
     # tag added
@@ -128,13 +127,13 @@ def test_reporter_apply():
     r.add('bar', 11)
 
     # A computation
-    def product(a, b):
+    def _product(a, b):
         return a * b
 
     # A generator method that yields keys and computations
     def baz_qux(key):
-        yield key + ':baz', (product, key, 0.5)
-        yield key + ':qux', (product, key, 1.1)
+        yield key + ':baz', (_product, key, 0.5)
+        yield key + ':qux', (_product, key, 1.1)
 
     # Apply the generator to two targets
     r.apply(baz_qux, 'foo')
@@ -149,7 +148,7 @@ def test_reporter_apply():
 
     # A generator that takes two arguments
     def twoarg(key1, key2):
-        yield key1 + '__' + key2, (product, key1, key2)
+        yield key1 + '__' + key2, (_product, key1, key2)
 
     r.apply(twoarg, 'foo:baz', 'bar:qux')
 
@@ -174,7 +173,7 @@ def test_reporter_disaggregate():
     r.disaggregate(foo, 'd', args=['d_shares'])
 
     assert 'foo:a-b-c-d' in r.graph
-    assert r.graph['foo:a-b-c-d'] == (ixmp.reporting.disaggregate_shares,
+    assert r.graph['foo:a-b-c-d'] == (computations.disaggregate_shares,
                                       'foo:a-b-c', 'd_shares')
 
     # Invalid method
@@ -245,15 +244,15 @@ def test_reporting_units():
     r.add('efficiency', xr.DataArray([0.9, 0.8, 0.95], **dims))
 
     # Aggregation preserves units
-    r.add('energy', (aggregate, 'energy:x', None, ['x']))
+    r.add('energy', (computations.sum, 'energy:x', None, ['x']))
     assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
 
     # Units are derived for a ratio of two quantities
-    r.add('power', (ratio, 'energy:x', 'time'))
+    r.add('power', (computations.ratio, 'energy:x', 'time'))
     assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
 
     # Product of dimensioned and dimensionless quantities keeps the former
-    r.add('energy2', (product, 'energy:x', 'efficiency'))
+    r.add('energy2', (computations.product, 'energy:x', 'efficiency'))
     assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
 
 
@@ -266,9 +265,9 @@ def test_reporter_describe(test_mp, test_data_path):
 
     # Describe one key
     expected = """'d:i':
-- aggregate(dimensions=['j'], ...)
+- sum(dimensions=['j'], weights=None, ...)
 - 'd:i-j':
-  - data_for_quantity('d', 'par', 'value', ...)
+  - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario':
     - <ixmp.core.Scenario object at {id}>
 """.format(id=id_)
@@ -345,7 +344,7 @@ def test_reporting_size():
         base_data = xr.Dataset.from_dataframe(_make_values())
         base_key = Key(f'ds{i}', base_data.coords.keys())
         rep.add(base_key, base_data)
-        rep.graph.update(base_key.aggregates())
+        rep.graph.update(base_key.iter_sums())
 
     def add_op(*args):
         return reduce(add, args)
@@ -354,7 +353,7 @@ def test_reporting_size():
     print(rep.get('test'))
 
 
-def test_reporting_aggregate2(test_mp):
+def test_reporting_aggregate(test_mp):
     scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
 
     # New sets
@@ -387,9 +386,9 @@ def test_reporting_aggregate2(test_mp):
     t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
 
     # Add aggregates
-    key1 = rep.aggregate2('x:t-y', 'agg1', groups={'t': t_groups}, keep=True)
+    key1 = rep.aggregate('x:t-y', 'agg1', {'t': t_groups}, keep=True)
 
-    # Group has expected key
+    # Group has expected key and contents
     assert key1 == 'x:t-y:agg1'
 
     # Aggregate is computed without error
@@ -405,7 +404,7 @@ def test_reporting_aggregate2(test_mp):
                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
 
     # Add aggregates, without keeping originals
-    key2 = rep.aggregate2('x:t-y', 'agg2', groups={'t': t_groups}, keep=False)
+    key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)
 
     # Distinct keys
     assert key2 != key1
@@ -416,5 +415,5 @@ def test_reporting_aggregate2(test_mp):
 
     with pytest.raises(NotImplementedError):
         # Not yet supported; requires two separate operations
-        key3 = rep.aggregate2('x:t-y', 'agg3',
-                              groups={'t': t_groups, 'y': [2000, 2010]})
+        key3 = rep.aggregate('x:t-y', 'agg3',
+                             {'t': t_groups, 'y': [2000, 2010]})

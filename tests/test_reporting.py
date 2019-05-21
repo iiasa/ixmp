@@ -107,6 +107,9 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     names = set('a b d f demand demand-margin z x'.split())
     assert names == {da.name for da in rep.get('all')}
 
+    # Shorthand for retrieving a full key name
+    assert rep.full_key('d') == 'd:i-j' and isinstance(rep.full_key('d'), Key)
+
 
 def test_reporter_read_config(test_mp, test_data_path):
     scen = dantzig_transport(test_mp)

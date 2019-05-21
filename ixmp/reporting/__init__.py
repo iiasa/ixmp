@@ -49,6 +49,9 @@ class Reporter(object):
     #: The default reporting key.
     default_key = None
 
+    # An index of ixmp names → full keys
+    _index = {}
+
     def __init__(self, **kwargs):
         self.graph = {}
         self.configure(**kwargs)
@@ -91,6 +94,9 @@ class Reporter(object):
             # quantities
             full_comps = comps[:(2 if ix_type == 'equ' else 1)]
             all_keys.extend(c[0] for c in full_comps)
+
+            # Index the variable name
+            rep._index[name] = full_comps[0][0]
 
         # Add a key which simply collects all quantities
         rep.add('all', sorted(all_keys))
@@ -236,6 +242,14 @@ class Reporter(object):
 
     def keys(self):
         return self.graph.keys()
+
+    def full_key(self, name):
+        """Return the full-dimensionality key for *name*.
+
+        An ixmp variable 'foo' indexed by a, c, n, q, and x is available in the
+        Reporter at 'foo:a-c-n-q-x'. `full_key('foo')` retrieves this key.
+        """
+        return self._index[name]
 
     def finalize(self, scenario):
         """Prepare the Reporter to act on *scenario*.

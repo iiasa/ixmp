@@ -30,9 +30,8 @@ import dask
 from dask import get as dask_get
 
 import yaml
-import xarray as xr
 
-from .utils import Key, keys_for_quantity, data_for_quantity, ureg
+from .utils import Key, keys_for_quantity, ureg
 from . import computations
 from .describe import describe_recursive
 

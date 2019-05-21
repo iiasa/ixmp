@@ -30,8 +30,8 @@ xr.set_options(keep_attrs=True)
 def sum(quantity, weights, dimensions):
     """Sum *quantity* over *dimensions*, with optional *weights*."""
     if weights is not None:
-        result = ((quantity * weights).sum(dim=dimensions) /
-                   weights.sum(dim=dimensions))
+        result = ((quantity * weights).sum(dim=dimensions)
+                  / weights.sum(dim=dimensions))
     else:
         result = quantity.sum(dim=dimensions)
 

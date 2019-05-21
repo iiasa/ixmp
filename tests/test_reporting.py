@@ -85,7 +85,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert_xr_equal(
         rep.get(new_key),
         (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-        )
+    )
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
@@ -228,8 +228,8 @@ def test_reporting_file_formats(test_data_path, tmp_path):
     r.write(k, p2)
 
     # Output is identical to input file, except for order
-    assert (sorted(p1.read_text().split('\n')) ==
-            sorted(p2.read_text().split('\n')))
+    assert (sorted(p1.read_text().split('\n'))
+            == sorted(p2.read_text().split('\n')))
 
     # Write to Excel
     p3 = tmp_path / 'report-output.xlsx'
@@ -418,5 +418,4 @@ def test_reporting_aggregate(test_mp):
 
     with pytest.raises(NotImplementedError):
         # Not yet supported; requires two separate operations
-        key3 = rep.aggregate('x:t-y', 'agg3',
-                             {'t': t_groups, 'y': [2000, 2010]})
+        rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})

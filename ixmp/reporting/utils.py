@@ -1,19 +1,14 @@
-from copy import deepcopy
-from functools import partial, reduce
+from functools import partial
 from itertools import compress
 from logging import getLogger
-from math import ceil
-from operator import mul
 
 import pandas as pd
 import pint
-import sparse
 import xarray as xr
 
 log = getLogger(__name__)
 
 ureg = pint.UnitRegistry()
-
 
 
 def combo_partition(iterable):
@@ -54,8 +49,8 @@ class Key:
 
     def __repr__(self):
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
-        return ':'.join([self._name, '-'.join(self._dims)] +
-                        ([self._tag] if self._tag is not None else []))
+        return ':'.join([self._name, '-'.join(self._dims)]
+                        + ([self._tag] if self._tag is not None else []))
 
     def __hash__(self):
         return hash(repr(self))
@@ -159,7 +154,7 @@ def keys_for_quantity(ix_type, name, scenario):
         # Add the marginal values at full resolution, but no aggregates
         mrg_key = Key('{}-margin'.format(name), dims)
         yield (mrg_key, (partial(data_for_quantity, ix_type, name, 'mrg'),
-                        'scenario'))
+                         'scenario'))
 
     # Partial sums
     yield from key.iter_sums()

@@ -266,7 +266,7 @@ def test_reporter_describe(test_mp, test_data_path):
 
     # hexadecimal ID of *scen*
     id_ = hex(id(scen)) if os.name != 'nt' else \
-        '{:#018X}'.format(id(scen)).upper()
+        '{:#018X}'.format(id(scen)).replace('X', 'x')
 
     # Describe one key
     expected = """'d:i':

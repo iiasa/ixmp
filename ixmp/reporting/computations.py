@@ -29,12 +29,12 @@ xr.set_options(keep_attrs=True)
 # Calculation
 def sum(quantity, weights, dimensions):
     """Sum *quantity* over *dimensions*, with optional *weights*."""
-    if weights is not None:
-        result = ((quantity * weights).sum(dim=dimensions)
-                  / weights.sum(dim=dimensions))
+    if weights is None:
+        weights, w_total = 1, 1
     else:
-        result = quantity.sum(dim=dimensions)
+        w_total = weights.sum(dim=dimensions)
 
+    result = (quantity * weights).sum(dim=dimensions) / w_total
     result.attrs['_unit'] = collect_units(result)[0]
 
     return result

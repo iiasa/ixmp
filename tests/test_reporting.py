@@ -127,8 +127,8 @@ def test_reporter_read_config(test_mp, test_data_path):
 def test_reporter_apply():
     # Reporter with two scalar values
     r = Reporter()
-    r.add('foo', 42)
-    r.add('bar', 11)
+    r.add('foo', (lambda x: x, 42))
+    r.add('bar', (lambda x: x, 11))
 
     # A computation
     def _product(a, b):

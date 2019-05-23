@@ -306,6 +306,7 @@ intersphinx_mapping = {
     'dask': ('http://docs.dask.org/en/stable/', None),
     'jpype': ('https://jpype.readthedocs.io/en/latest', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
+    'pint': ('https://pint.readthedocs.io/en/stable/', None),
     'xarray': ('https://xarray.pydata.org/en/stable/', None),
 }
 

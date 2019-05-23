@@ -3,6 +3,8 @@
 Reporting
 =========
 
+.. automethod:: ixmp.reporting.configure
+
 .. autoclass:: ixmp.reporting.Reporter
    :members:
    :exclude-members: graph, add
@@ -29,7 +31,22 @@ Reporting
    calculation that multiplies two quantities to create a third. The graph
    allows :meth:`get` to perform *only* the requested computations. Advanced
    users may manipulate the graph directly; but common reporting tasks can be
-   handled by using Reporter methods
+   handled by using Reporter methods:
+
+   .. autosummary::
+      add
+      add_file
+      aggregate
+      apply
+      configure
+      describe
+      disaggregate
+      finalize
+      full_key
+      get
+      read_config
+      visualize
+      write
 
    .. autoattribute:: graph
 
@@ -64,8 +81,6 @@ Computations
 .. automodule:: ixmp.reporting.computations
    :members:
 
-
-
    Calculations:
 
    .. autosummary::
@@ -73,6 +88,7 @@ Computations
       disaggregate_shares
       product
       ratio
+      sum
 
    Input and output:
 
@@ -117,4 +133,4 @@ Utilities
 
 .. automodule:: ixmp.reporting.utils
    :members:
-   :exclude-members: Key
+   :exclude-members: Key, combo_partition

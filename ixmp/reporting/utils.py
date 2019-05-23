@@ -94,6 +94,7 @@ def clean_units(input_string):
 
 
 def collect_units(*args):
+    """Return an list of '_unit' attributes for *args*."""
     for arg in args:
         if '_unit' in arg.attrs:
             # Convert units if necessary
@@ -126,7 +127,7 @@ def _find_dims(data, ix_type):
 
 
 def keys_for_quantity(ix_type, name, scenario):
-    """Iterate over keys for *name* in *scenario."""
+    """Iterate over keys for *name* in *scenario*."""
     # Retrieve at least one row of the data
     # TODO use the low-level/Java API to avoid retrieving all values at this
     # point

@@ -17,6 +17,7 @@
 
 from functools import partial
 from itertools import chain, repeat
+import logging
 try:
     from pathlib import Path
 except ImportError:
@@ -28,12 +29,16 @@ import dask
 # FIXME this causes JPype to segfault
 # from dask.threaded import get as dask_get
 from dask import get as dask_get
+from dask.optimization import cull
 
 import yaml
 
 from .utils import Key, keys_for_quantity, ureg
 from . import computations
 from .describe import describe_recursive
+
+
+log = logging.getLogger(__name__)
 
 
 class Reporter(object):
@@ -237,7 +242,12 @@ class Reporter(object):
                 key = self.default_key
             else:
                 raise ValueError('no default reporting key set')
-        return dask_get(self.graph, key)
+
+        # Cull the graph, leaving only those needed to compute *key*
+        dsk, deps = cull(self.graph, key)
+        log.debug('Cull {} → {} keys'.format(len(self.graph), len(dsk)))
+
+        return dask_get(dsk, key)
 
     def keys(self):
         return self.graph.keys()

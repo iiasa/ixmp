@@ -55,6 +55,7 @@ rixmp/source/.Rhistory
 .env
 
 # pytest
+.coverage
 .pytest_cache/
 
 # idea

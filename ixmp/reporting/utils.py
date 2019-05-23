@@ -111,9 +111,13 @@ def collect_units(*args):
 rename_dims = {}
 
 
-def _find_dims(data, ix_type):
-    # List of the dimensions
-    dims = data.columns.tolist()
+def _find_dims(data):
+    """Return the list of dimensions for *data*."""
+    if isinstance(data, pd.DataFrame):
+        # List of the dimensions
+        dims = data.columns.tolist()
+    else:
+        dims = list(data)
 
     # Remove columns containing values or units; dimensions are the remainder
     for col in 'value', 'lvl', 'mrg', 'unit':
@@ -128,20 +132,10 @@ def _find_dims(data, ix_type):
 
 def keys_for_quantity(ix_type, name, scenario):
     """Iterate over keys for *name* in *scenario*."""
-    # Retrieve at least one row of the data
-    # TODO use the low-level/Java API to avoid retrieving all values at this
-    # point
-    data = scenario.element(ix_type, name)
-
-    if isinstance(data, dict):
-        # ixmp/GAMS scalar is not returned as pd.DataFrame
-        data = pd.DataFrame.from_records([data])
-
-    # List of the dimensions
-    dims = _find_dims(data, ix_type)
-
-    # Data not used further
-    del data
+    # Retrieve names of the indices of the low-level/Java object
+    # NB this is used instead of .getIdxSets, since the same set may index more
+    #    than one dimension of the same variable.
+    dims = _find_dims(scenario.item(ix_type, name).getIdxNames().toArray())
 
     # Column for retrieving data
     column = 'value' if ix_type == 'par' else 'lvl'
@@ -151,11 +145,10 @@ def keys_for_quantity(ix_type, name, scenario):
     yield (key, (partial(data_for_quantity, ix_type, name, column),
                  'scenario'))
 
+    # Add the marginal values at full resolution, but no aggregates
     if ix_type == 'equ':
-        # Add the marginal values at full resolution, but no aggregates
-        mrg_key = Key('{}-margin'.format(name), dims)
-        yield (mrg_key, (partial(data_for_quantity, ix_type, name, 'mrg'),
-                         'scenario'))
+        yield (Key('{}-margin'.format(name), dims),
+               (partial(data_for_quantity, ix_type, name, 'mrg'), 'scenario'))
 
     # Partial sums
     yield from key.iter_sums()
@@ -186,30 +179,33 @@ def _parse_units(units_series):
 
 
 def data_for_quantity(ix_type, name, column, scenario):
-    """Retrieve *name* from *scenario* as a :class:`xarray.Dataset`.
+    """Retrieve data from *scenario*.
 
     Parameters
     ----------
+    ix_type : 'equ' or 'par' or 'var'
+        Type of the ixmp object.
+    name : str
+        Name of the ixmp object.
+    column : 'mrg' or 'lvl' or 'value'
+        Data to retrieve. 'mrg' and 'lvl' are valid only for ix_type='equ', and
+        'level' otherwise.
     scenario : ixmp.Scenario
-        Source
-    kind : 'par' or 'equ'
-        Type of quantity to be retrieved.
+        Scenario containing data to be retrieved
 
     Returns
     -------
-    dict of xarray.DataArray
-        Dictionary keys are 'value' (kind='par') or ('lvl', 'mrg')
-        (kind='equ').
+    xr.DataArray
     """
-    # NB this could be moved to ixmp.Scenario
+    # Retrieve quantity data
     data = scenario.element(ix_type, name)
 
+    # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):
-        # ixmp/GAMS scalar is not returned as pd.DataFrame
         data = pd.DataFrame.from_records([data])
 
     # List of the dimensions
-    dims = _find_dims(data, ix_type)
+    dims = _find_dims(data)
 
     # Remove the unit from the DataFrame
     try:

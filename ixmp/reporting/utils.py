@@ -1,12 +1,12 @@
 from functools import partial
 from itertools import compress
-from logging import getLogger
+import logging
 
 import pandas as pd
 import pint
 import xarray as xr
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 ureg = pint.UnitRegistry()
 
@@ -197,6 +197,7 @@ def data_for_quantity(ix_type, name, column, scenario):
     -------
     xr.DataArray
     """
+    log.debug('Retrieving data for {}'.format(name))
     # Retrieve quantity data
     data = scenario.element(ix_type, name)
 
@@ -221,6 +222,7 @@ def data_for_quantity(ix_type, name, column, scenario):
         data.set_index(dims, inplace=True)
 
     # Convert to a Dataset, assign attrbutes and name
+    log.debug(data[column])
     ds = xr.Dataset.from_dataframe(data)[column] \
            .assign_attrs(attrs) \
            .rename(name + ('-margin' if column == 'mrg' else ''))

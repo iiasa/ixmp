@@ -51,8 +51,10 @@ ixmp <- NULL
     print(parts)
 
     # Set $XDG_DATA_HOME
-    Sys.setenv(XDG_DATA_HOME=do.call('file.path', as.list(parts)))
-    print(Sys.getenv())
+    reticulate::py_run_string(paste0(
+      "import os; os.environ['XDG_DATA_HOME'] = '",
+      do.call('file.path', as.list(parts)), "'"))
+    print(py_eval("os.environ['XDG_DATA_HOME']"))
   }
 
   # Set 'ixmp' in the global namespace

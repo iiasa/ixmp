@@ -15,7 +15,9 @@
 import sys
 import os
 
+# Import so that autodoc can find code
 import ixmp
+import ixmp.testing
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

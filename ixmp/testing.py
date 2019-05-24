@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from .config import _config as ixmp_config
-from .core import Scenario
+from .core import Platform, Scenario
 
 
 # pytest hooks and fixtures
@@ -59,8 +59,6 @@ def test_mp(tmp_path_factory, test_data_path):
     *test_mp* is used across the entire test session, so the contents of the
     database may reflect other tests already run.
     """
-    import ixmp
-
     # casting to Path(str()) is a hotfix due to errors upstream in pytest on
     # Python 3.5 (at least, perhaps others), there is an implicit cast to
     # python2's pathlib which is incompatible with python3's pathlib Path
@@ -70,7 +68,7 @@ def test_mp(tmp_path_factory, test_data_path):
     test_props = create_local_testdb(db_path, test_data_path / 'testdb')
 
     # launch Platform and connect to testdb (reconnect if closed)
-    mp = ixmp.Platform(test_props)
+    mp = Platform(test_props)
     mp.open_db()
 
     yield mp
@@ -119,21 +117,17 @@ def create_local_testdb(db_path, data_path):
     return test_props
 
 
-def dantzig_transport(mp, solve=False):
-    """Define and optionally solve Dantzig's transport problem.
+def make_dantzig(mp, solve=False):
+    """Return an :class:`ixmp.Scenario` for Dantzig's canning/transport problem.
 
     Parameters
     ----------
-    mp: :class:`ixmp.Platform`
-        Platform to add the
-    solve: False or path-like
-        If not False, then *solve* is interpreted as a path, and the model
-        'transport_ixmp' in the indicated directory is run on the Scenario.
-
-    Returns
-    -------
-    :class:`ixmp.Scenario`
-        A scenario containing the transport problem.
+    mp : ixmp.Platform
+        Platform on which to create the scenario.
+    solve : bool or os.PathLike
+        If not :obj:`False`, then *solve* is interpreted as a path to a
+        directory, and the model ``transport_ixmp.gms`` in the directory is run
+        for the scenario.
     """
     # add custom units and region for timeseries data
     mp.add_unit('USD_per_km')

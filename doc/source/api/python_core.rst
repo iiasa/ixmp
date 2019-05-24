@@ -3,7 +3,7 @@
 ixmp core
 =========
 
-This page is generated from documentation strings (docstrings) 
+This page is generated from documentation strings (docstrings)
 in ``ixmp\core.py``.
 
 See `this guide`_ for guidelines on NumPy/SciPy Documentation conventions.
@@ -18,12 +18,20 @@ Class ixmp.Platform
 
 Class ixmp.TimeSeries
 ---------------------
-   
+
 .. autoclass:: TimeSeries
    :members:
 
 Class ixmp.Scenario
 -------------------
-   
+
 .. autoclass:: Scenario
    :members:
+
+
+Testing utilities
+-----------------
+
+.. currentmodule:: ixmp.testing
+
+.. automethod:: ixmp.testing.make_dantzig

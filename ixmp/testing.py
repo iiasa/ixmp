@@ -2,11 +2,11 @@
 
 These include:
 
-- pytest fixtures: tmp_env, test_mp, and test_mp_props.
+- pytest hooks, and 3 fixtures: tmp_env, test_mp, and test_mp_props.
 - Methods for setting up and populating test ixmp databases:
-  create_local_testdb() and dantzig_transport()
+  create_local_testdb() and dantzig_transport().
 - Methods to run and retrieve values from Jupyter notebooks:
-  run_notebook() and get_cell_output()
+  run_notebook() and get_cell_output().
 
 """
 import io
@@ -22,10 +22,21 @@ import subprocess
 import pandas as pd
 import pytest
 
+from .config import _config as ixmp_config
 from .core import Scenario
 
 
-# pytest fixtures
+# pytest hooks and fixtures
+
+def pytest_sessionstart(session):
+    """Unset any configuration read from the user's directory."""
+    ixmp_config.clear()
+
+
+def pytest_report_header(config, startdir):
+    """Add the ixmp configuration to the pytest report header."""
+    return 'ixmp config: {!r}'.format(ixmp_config.values)
+
 
 @pytest.fixture(scope='session')
 def tmp_env(tmp_path_factory):

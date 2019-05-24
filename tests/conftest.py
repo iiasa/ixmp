@@ -7,16 +7,22 @@ except ImportError:
 import ixmp
 import pytest
 
-# pytest hooks
 
 pytest_plugins = ['ixmp.testing']
 
+
+# Hooks
 
 def pytest_addoption(parser):
     parser.addoption(
         "--win_ci_skip", action="store_true", default=False,
         help="weird skips for windows ci"
     )
+
+
+def pytest_report_header(config, startdir):
+    """Add the ixmp import path to the pytest report header."""
+    return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
 
 
 def pytest_collection_modifyitems(config, items):
@@ -27,16 +33,7 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_win_ci)
 
 
-def pytest_report_header(config, startdir):
-    """Add the ixmp import path to the pytest report header."""
-    return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
-
-
-def pytest_sessionstart(session):
-    """Unset any configuration read from the user's directory."""
-    ixmp.config._config.clear()
-    print(ixmp.config._config.values)
-
+# Fixtures
 
 @pytest.fixture(scope='session')
 def test_data_path(request):
@@ -44,7 +41,7 @@ def test_data_path(request):
     return Path(__file__).parent / 'data'
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def tutorial_path(request):
-    """Path to the directory containing tutorials."""
+    """Path to the directory containing the tutorials."""
     return Path(__file__).parent / '..' / 'tutorial'

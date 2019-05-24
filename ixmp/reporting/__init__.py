@@ -273,6 +273,41 @@ class Reporter(object):
         self.graph['scenario'] = scenario
 
     # ixmp data model manipulations
+    def add_product(self, name, *quantities, sums=True):
+        """Add a computation that takes the product of *quantities*.
+
+        Parameters
+        ----------
+        name : str
+            Name of the new quantity.
+        sums : bool, optional
+            If :obj:`True`, all partial sums of the new quantity are also
+            added.
+
+        Returns
+        -------
+        Key
+            The full key of the new quantity.
+        """
+        # Fetch the full key for each quantity
+        try:
+            base_keys = [self.full_key(q) for q in quantities]
+        except KeyError:
+            return None
+
+        # Compute a key for the result
+        key = Key.product(name, *base_keys)
+
+        # Add the basic product to the graph and index
+        self.add(key, tuple([computations.product] + base_keys))
+        self._index[name] = key
+
+        if sums:
+            # Add partial sums of the product
+            self.apply(key.iter_sums)
+
+        return key
+
     def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True):
         """Add a computation that aggregates *qty*.
 

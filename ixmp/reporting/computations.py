@@ -2,10 +2,6 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
-#
-# TODO:
-# - Accept pd.DataFrame user input by casting to xr.DataArray with a pd_to_xr()
-#   method that is a no-op for xr objects.
 
 import pandas as pd
 import xarray as xr
@@ -75,7 +71,7 @@ def product(*quantities):
 
     # Iterate over remaining entries
     for q, u in items:
-        result *= q
+        result = result * q
         u_result *= u
 
     result.attrs['_unit'] = u_result

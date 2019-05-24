@@ -1,6 +1,11 @@
+import io
+import os
 import shutil
+import sys
+import subprocess
 
 import pandas as pd
+import pytest
 
 from .core import Scenario
 
@@ -30,6 +35,88 @@ def create_local_testdb(db_path, data_path):
     test_props.write_text(props.format(here=str(dst).replace("\\", "/")))
 
     return test_props
+
+
+# taken from the execellent example here:
+# https://blog.thedataincubator.com/2016/06/testing-jupyter-notebooks/
+
+nbformat = pytest.importorskip('nbformat')
+
+
+def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
+    """Execute a Jupyter notebook via nbconvert and collect output.
+
+    Parameters
+    ----------
+    nb_path : path-like
+        The notebook file to execute.
+    tmp_path : path-like
+        A directory in which to create temporary output.
+    env : dict-like
+        Execution environment for `nbconvert`.
+    kernel : str
+        Jupyter kernel to use. Default: `python2` or `python3`, matching the
+        current Python version.
+
+    Returns
+    -------
+    nb : :class:`nbformat.NotebookNode`
+        Parsed and executed notebook.
+    errors : list
+        Any execution errors.
+    """
+    major_version = sys.version_info[0]
+    kernel = kernel or 'python{}'.format(major_version)
+    # str() here is for python2 compatibility
+    os.chdir(str(nb_path.parent))
+    fname = tmp_path / 'test.ipynb'
+    args = [
+        "jupyter", "nbconvert", "--to", "notebook", "--execute",
+        "--ExecutePreprocessor.timeout=60",
+        "--ExecutePreprocessor.kernel_name={}".format(kernel),
+        "--output", str(fname), str(nb_path)]
+    subprocess.check_call(args, env=env)
+
+    # str() here is for python2 compatibility
+    nb = nbformat.read(io.open(str(fname), encoding='utf-8'),
+                       nbformat.current_nbformat)
+
+    errors = [
+        output for cell in nb.cells if "outputs" in cell
+        for output in cell["outputs"] if output.output_type == "error"
+    ]
+
+    fname.unlink()
+
+    return nb, errors
+
+
+def get_cell_output(nb, name_or_index):
+    """Retrieve a cell from *nb* according to its metadata *name_or_index*:
+
+    The Jupyter notebook format allows specifying a document-wide unique 'name'
+    metadata attribute for each cell:
+
+    https://nbformat.readthedocs.io/en/latest/format_description.html
+    #cell-metadata
+
+    Return the cell matching *name_or_index* if a string; or the cell at the
+    int index; or raise ValueError.
+    """
+    if isinstance(name_or_index, int):
+        cell = nb.cells[name_or_index]
+    else:
+        for i, cell in enumerate(nb.cells):
+            try:
+                cell_name = cell.metadata.jupyter.name
+                if cell_name == name_or_index:
+                    break
+            except AttributeError:
+                continue
+
+        raise ValueError('no cell named {!r}'.format(name_or_index))
+
+    return eval(cell['outputs'][0]['data']['text/plain'])
 
 
 def dantzig_transport(mp, solve=False):

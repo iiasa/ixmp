@@ -47,6 +47,23 @@ class Key:
         tag = '+'.join(filter(None, [_tag, tag]))
         return cls(name, dims, tag)
 
+    @classmethod
+    def product(cls, new_name, *keys):
+        """Return a new key that has the union of dimensions on *keys*.
+
+        Dimensions are ordered by their first appearance.
+        """
+        # Dimensions of first key appear first
+        base_dims = keys[0]._dims
+
+        # Accumulate additional dimensions from subsequent keys
+        new_dims = []
+        for key in keys[1:]:
+            new_dims.extend(set(key._dims) - set(base_dims) - set(new_dims))
+
+        # Return new key
+        return cls(new_name, base_dims + new_dims)
+
     def __repr__(self):
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
         return ':'.join([self._name, '-'.join(self._dims)]

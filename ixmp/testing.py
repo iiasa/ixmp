@@ -276,14 +276,15 @@ def get_cell_output(nb, name_or_index):
     if isinstance(name_or_index, int):
         cell = nb.cells[name_or_index]
     else:
-        for i, cell in enumerate(nb.cells):
+        for i, _cell in enumerate(nb.cells):
             try:
-                cell_name = cell.metadata.jupyter.name
-                if cell_name == name_or_index:
+                if _cell.metadata.jupyter.name == name_or_index:
+                    cell = _cell
                     break
             except AttributeError:
                 continue
 
+    try:
+        return eval(cell['outputs'][0]['data']['text/plain'])
+    except NameError:
         raise ValueError('no cell named {!r}'.format(name_or_index))
-
-    return eval(cell['outputs'][0]['data']['text/plain'])

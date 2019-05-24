@@ -148,7 +148,7 @@ class Config(object):
         # Set 'DEFAULT_LOCAL_DB_PATH'
         # Use the first identifiable path
         _, config_dir = next(self._iter_paths())
-        self.values['DEFAULT_LOCAL_DB_PATH'] = (config_dir / 'localdb'
+        self.values['DEFAULT_LOCAL_DB_PATH'] = (config_dir / 'localdb' /
                                                 'default')
 
     def save(self):

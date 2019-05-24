@@ -260,6 +260,9 @@ class Reporter(object):
         """
         return self._index[name]
 
+    def __contains__(self, name):
+        return name in self.graph
+
     def finalize(self, scenario):
         """Prepare the Reporter to act on *scenario*.
 

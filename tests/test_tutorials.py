@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from ixmp.testing import get_cell_output, run_notebook
-from .test_r import r_installed
+from test_r import r_installed
 
 
 @pytest.mark.skip_win_ci

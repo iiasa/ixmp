@@ -26,7 +26,7 @@ IF ERRORLEVEL 1 (
     rem TODO remove?
     rem rscript rixmp/build_rixmp.R [--verbose]
 
-    cd retixmp/source
+    cd retixmp
     R CMD build .
     R CMD INSTALL --html retixmp_0.1.3.9000.tar.gz
 )
@@ -35,7 +35,7 @@ rem TODO remove?
 rem setx IXMP_PATH "%IXMP%"
 rem setx IXMP_R_PATH "%RPTH%/ixmp"
 
-py.test tests/
+pytest
 
 pause
 exit

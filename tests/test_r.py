@@ -18,8 +18,6 @@ import sys
 
 import pytest
 
-from ixmp.testing import create_local_testdb
-
 
 def r_installed():
     try:
@@ -37,7 +35,7 @@ pytestmark = pytest.mark.skipif(not r_installed(), reason='R not installed')
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
     # Path to the retixmp source
-    retixmp_path = Path(request.fspath).parent.parent / 'retixmp' / 'source'
+    retixmp_path = Path(request.fspath).parent.parent / 'retixmp'
 
     # Ensure reticulate uses the same Python as the pytest session
     tmp_env['RETICULATE_PYTHON'] = sys.executable

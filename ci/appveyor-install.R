@@ -9,7 +9,7 @@ if ( step == '1' ) {
 
 } else if ( step == '2') {
 
-  devtools::install(file.path('.', 'retixmp', 'source'),
+  devtools::install(file.path('.', 'retixmp'),
                     args = '--no-multiarch', dependencies = TRUE)
 
 }

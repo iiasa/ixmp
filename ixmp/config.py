@@ -58,8 +58,6 @@ class Config(object):
 
     def _iter_paths(self):
         """Yield recognized paths, in order of priority."""
-        print('Config._iter_paths', os.environ, Path.home())
-
         try:
             yield 'environment (IXMP_DATA)', Path(os.environ['IXMP_DATA'])
         except KeyError:

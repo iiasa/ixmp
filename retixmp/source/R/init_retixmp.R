@@ -33,28 +33,25 @@ ixmp <- NULL
   # If $IXMP_DATA and $XDG_DATA_HOME are not set, ixmp.config.Config uses
   # $HOME/.local/ixmp for configuration and local databases. On Windows, $HOME
   # is C:\Users\[Username]\Documents. Here, XDG_DATA_HOME is set for the
-  # session importing retixmp (and thus its embedded reticulate Python session)
-  # to instead place these files in C:\Users\[Username]\.local\share
+  # reticulate Python process that imports ixmp, so that these files are
+  # placed in C:\Users\[Username]\.local\share
 
   # If the user has aleady set $IXMP_DATA or $XDG_DATA_HOME, do nothing
   vars_set = any(nchar(Sys.getenv(c('IXMP_DATA', 'XDG_DATA_HOME'))))
-  print(vars_set)
-  print(.Platform$OS.type)
   if ( .Platform$OS.type == 'windows' & ! vars_set ) {
     # Split $HOME to components
     home <- strsplit(gsub('\\\\', '/', Sys.getenv('HOME')),
                      .Platform$file.sep)[[1]]
-    print(home)
 
     # Filter out 'Documents' and add '.local' and 'share'
     parts <- c(Filter(function (s) s != 'Documents', home), '.local', 'share')
-    print(parts)
 
-    # Set $XDG_DATA_HOME
+    # Set $XDG_DATA_HOME within the reticulate Python process
+    # NB R's Sys.setenv() does not work here if reticulate has already started
+    #    Python
     reticulate::py_run_string(paste0(
       "import os; os.environ['XDG_DATA_HOME'] = '",
       do.call('file.path', as.list(parts)), "'"))
-    print(py_eval("os.environ['XDG_DATA_HOME']"))
   }
 
   # Set 'ixmp' in the global namespace

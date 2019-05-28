@@ -6,7 +6,7 @@ import pytest
 from numpy import testing as npt
 
 import ixmp
-from ixmp.testing import dantzig_transport
+from ixmp.testing import make_dantzig
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -283,7 +283,7 @@ def test_solve_callback(test_mp, test_data_path):
     'converged'.
     """
     # Set up the Dantzig problem
-    scen = dantzig_transport(test_mp)
+    scen = make_dantzig(test_mp)
 
     # Solve the scenario as configured
     solve_args = dict(model=str(test_data_path / 'transport_ixmp'),

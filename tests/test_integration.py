@@ -2,7 +2,7 @@ import numpy as np
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import dantzig_transport, TS_DF
+from ixmp.testing import make_dantzig, TS_DF
 
 
 def test_run_gams_api(tmpdir, test_data_path):
@@ -12,7 +12,7 @@ def test_run_gams_api(tmpdir, test_data_path):
     # - reads back the solution from the output
     # - performs the test on the objective value
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
-    scen = dantzig_transport(mp, solve=test_data_path)
+    scen = make_dantzig(mp, solve=test_data_path)
 
     # test it
     obs = scen.var('z')['lvl']
@@ -30,7 +30,7 @@ def assert_multi_db(mp1, mp2):
 
 def test_multi_db_run(tmpdir, test_data_path):
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = dantzig_transport(mp1, solve=test_data_path)
+    scen1 = make_dantzig(mp1, solve=test_data_path)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     # add other unit to make sure that the mapping is correct during clone
@@ -52,7 +52,7 @@ def test_multi_db_run(tmpdir, test_data_path):
 
 def test_multi_db_edit_source(tmpdir):
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = dantzig_transport(mp1)
+    scen1 = make_dantzig(mp1)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     scen2 = scen1.clone(platform=mp2)
@@ -86,7 +86,7 @@ def test_multi_db_edit_source(tmpdir):
 
 def test_multi_db_edit_target(tmpdir):
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = dantzig_transport(mp1)
+    scen1 = make_dantzig(mp1)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     scen2 = scen1.clone(platform=mp2)

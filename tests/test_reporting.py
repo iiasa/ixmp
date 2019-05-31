@@ -327,41 +327,62 @@ Coordinates:
 """)
 
 
-@pytest.mark.skip('Slow.')
-def test_reporting_size():
-    # Attempt to trigger MemoryError
+@pytest.mark.skip('Slow; >30 seconds.')  # comment this line to enable
+@pytest.mark.xfail(raises=MemoryError)
+def test_report_size(test_mp):
+    """Stress-test reporting of large, sparse quantities."""
     from itertools import zip_longest
-    from functools import reduce
-    from operator import add
 
     import numpy as np
 
-    # 12,500,000 elements
+    # test_mp.add_unit('kg')
+    scen = ixmp.Scenario(test_mp, 'size test', 'base', version='new')
+
+    # Dimensions and their lengths
     dims = 'abcdef'
-    sizes = [1, 4, 10, 500, 25, 25]
+    sizes = [1, 5, 21, 21, 89, 377]  # Fibonacci #s; next 1597, 6765
+
+    # commented: "377 / 73984365 elements = 0.00051% full"
+    # from functools import reduce
+    # from operator import mul
+    # size = reduce(mul, sizes)
+    # print('{} / {} elements = {:.5f}% full'
+    #       .format(max(sizes), size, 100 * max(sizes) / size))
+
+    # Names like f_0000 … f_1596 along each dimension
     coords = []
     for d, N in zip(dims, sizes):
-        coords.append([f'{d}_{i:03d}' for i in range(N)])
+        coords.append([f'{d}_{i:04d}' for i in range(N)])
+        # Add to Scenario
+        scen.init_set(d)
+        scen.add_set(d, coords[-1])
 
     def _make_values():
-        values = list(zip_longest(*coords, np.random.rand(500)))
-        return pd.DataFrame(values, columns=list(dims) + ['value']) \
-                 .ffill() \
-                 .set_index(list(dims))
+        """Make a DataFrame containing each label in *coords* at least once."""
+        values = list(zip_longest(*coords, np.random.rand(max(sizes))))
+        result = pd.DataFrame(values, columns=list(dims) + ['value']) \
+                   .ffill()
+        result['unit'] = 'kg'
+        return result
 
-    N = 6
-    rep = Reporter()
-    for i in range(N):
-        base_data = xr.Dataset.from_dataframe(_make_values())
-        base_key = Key(f'ds{i}', base_data.coords.keys())
-        rep.add(base_key, base_data)
-        rep.graph.update(base_key.iter_sums())
+    # Fill the Scenario with quantities named q_01 … q_09
+    N = 10
+    names = []
+    for i in range(10):
+        name = f'q_{i:02d}'
+        scen.init_par(name, list(dims))
+        scen.add_par(name, _make_values())
+        names.append(name)
 
-    def add_op(*args):
-        return reduce(add, args)
+    # Create the reporter
+    rep = Reporter.from_scenario(scen)
 
-    rep.add('test', (add_op, *[f'ds{i}:b-c-d-e-f' for i in range(N)]))
-    print(rep.get('test'))
+    # Add an operation that takes the product, i.e. requires all the q_*
+    keys = [rep.full_key(name) for name in names]
+    rep.add('bigmem', tuple([computations.product] + keys))
+
+    # Trigger MemoryError
+    rep.get('bigmem')
 
 
 def test_reporting_aggregate(test_mp):

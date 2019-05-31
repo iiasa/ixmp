@@ -52,6 +52,12 @@ def test_reporting_key():
     assert sum(1 for a in k1.iter_sums()) == 7
 
 
+def test_reporting_configure():
+    # TODO test: All supported configuration keys can be handled
+    # TODO test: Unsupported keys raise warnings or errors
+    pass
+
+
 def test_reporter(scenario):
     r = Reporter.from_scenario(scenario)
 

@@ -33,7 +33,7 @@ from dask.optimization import cull
 
 import yaml
 
-from .utils import Key, keys_for_quantity, replace_units, ureg
+from .utils import Key, keys_for_quantity, rename_dims, replace_units, ureg
 from . import computations
 from .describe import describe_recursive
 
@@ -453,6 +453,9 @@ def configure(path=None, **config):
     # Add replacements
     for old, new in units.get('replace', {}).items():
         replace_units[old] = new
+
+    # Dimensions to be renamed
+    rename_dims.update(config.get('rename_dims', {}))
 
 
 def _config_args(path, keys, sections={}):

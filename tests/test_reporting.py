@@ -13,7 +13,7 @@ from xarray.testing import (
     assert_equal as assert_xr_equal,
 )
 
-from ixmp.testing import dantzig_transport
+from ixmp.testing import make_dantzig
 from ixmp.reporting import Key, Reporter, computations
 from ixmp.reporting.utils import ureg
 
@@ -61,7 +61,7 @@ def test_reporter(scenario):
 
 
 def test_reporter_from_dantzig(test_mp, test_data_path):
-    scen = dantzig_transport(test_mp, solve=test_data_path)
+    scen = make_dantzig(test_mp, solve=test_data_path)
 
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)
@@ -113,7 +113,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
 
 def test_reporter_read_config(test_mp, test_data_path):
-    scen = dantzig_transport(test_mp)
+    scen = make_dantzig(test_mp)
 
     rep = Reporter.from_scenario(scen)
     with pytest.warns(UserWarning,
@@ -261,7 +261,7 @@ def test_reporting_units():
 
 
 def test_reporter_describe(test_mp, test_data_path):
-    scen = dantzig_transport(test_mp)
+    scen = make_dantzig(test_mp)
     r = Reporter.from_scenario(scen)
 
     # hexadecimal ID of *scen*
@@ -285,7 +285,7 @@ def test_reporter_describe(test_mp, test_data_path):
 
 
 def test_reporter_visualize(test_mp):
-    scen = dantzig_transport(test_mp)
+    scen = make_dantzig(test_mp)
     r = Reporter.from_scenario(scen)
 
     r.visualize('visualize.png')
@@ -296,7 +296,7 @@ def test_reporter_visualize(test_mp):
 def test_reporting_cli(test_mp_props, test_data_path):
     # Put something in the database
     mp = ixmp.Platform(dbprops=test_mp_props)
-    dantzig_transport(mp)
+    make_dantzig(mp)
     mp.close_db()
     del mp
 

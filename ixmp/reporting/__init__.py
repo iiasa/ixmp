@@ -33,7 +33,7 @@ from dask.optimization import cull
 
 import yaml
 
-from .utils import Key, keys_for_quantity, ureg
+from .utils import Key, keys_for_quantity, replace_units, ureg
 from . import computations
 from .describe import describe_recursive
 
@@ -430,7 +430,11 @@ def configure(path=None, **config):
 
     Valid configuration keys include:
 
-    - *units*: a string, passed to :meth:`pint.UnitRegistry.define`.
+    - *units*:
+
+      - *define*: a string, passed to :meth:`pint.UnitRegistry.define`.
+      - *replace*: a mapping from str to str, used to replace units before they
+        are parsed by pints
 
     Warns
     -----
@@ -440,9 +444,15 @@ def configure(path=None, **config):
     config = _config_args(path, config)
 
     # Units
-    units = config.get('units', '').strip()
-    if units:
-        ureg.define(units)
+    units = config.get('units', {})
+
+    # Define units
+    if 'define' in units:
+        ureg.define(units['define'].strip())
+
+    # Add replacements
+    for old, new in units.get('replace', {}).items():
+        replace_units[old] = new
 
 
 def _config_args(path, keys, sections={}):

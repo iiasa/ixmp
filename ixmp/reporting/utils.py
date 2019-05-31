@@ -11,6 +11,12 @@ log = logging.getLogger(__name__)
 ureg = pint.UnitRegistry()
 
 
+# Replacements to apply to quantity units before parsing by pint
+replace_units = {
+    '%': 'percent',
+}
+
+
 def combo_partition(iterable):
     """Yield pairs of lists with all possible subsets of *iterable*."""
     # Format string for binary conversion, e.g. '04b'
@@ -103,10 +109,9 @@ def clean_units(input_string):
       operator; it is translated to 'percent'.
 
     """
-    input_string = input_string.strip('[]').replace('%', 'percent')
-    # For MESSAGE-GLOBIOM
-    # TODO make this configurable
-    input_string = input_string.replace('???', '')
+    input_string = input_string.strip('[]')
+    for old, new in replace_units.items():
+        input_string = input_string.replace(old, new)
     return input_string
 
 

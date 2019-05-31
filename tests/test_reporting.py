@@ -284,13 +284,13 @@ def test_reporter_describe(test_mp, test_data_path):
     assert r.describe() == expected
 
 
-def test_reporter_visualize(test_mp):
+def test_reporter_visualize(test_mp, tmp_path):
     scen = make_dantzig(test_mp)
     r = Reporter.from_scenario(scen)
 
-    r.visualize('visualize.png')
+    r.visualize(str(tmp_path / 'visualize.png'))
 
-    # TODO compare to a specimen; place in a temporary directory
+    # TODO compare to a specimen
 
 
 def test_reporting_cli(test_mp_props, test_data_path):

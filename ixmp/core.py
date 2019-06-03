@@ -661,8 +661,10 @@ class Scenario(TimeSeries):
         # constructor for `message_ix.Scenario.__init__` or `clone()` function
         elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
             self._jobj = version
-        else:
+        elif version is None:
             self._jobj = mp._jobj.getScenario(model, scenario)
+        else:
+            raise ValueError('Invalid `version` arg: `{}`'.format(version))
 
         self.platform = mp
         self.model = model

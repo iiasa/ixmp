@@ -106,7 +106,9 @@ def test_multi_db_run(tmpdir, test_data_path):
     scen2 = scen1.clone(platform=mp2)
     assert_multi_db(mp1, mp2)
 
+    # check that (empty) variable was initialized and parameter was copied
     assert np.isnan(scen2.var('z')['lvl'])
+    pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
 
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par('f')['value'] == 90.0

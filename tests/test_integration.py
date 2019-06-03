@@ -92,7 +92,7 @@ def get_distance(scen):
 def test_multi_db_run(tmpdir, test_data_path):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = make_dantzig(mp1)
+    scen1 = make_dantzig(mp1, solve=test_data_path)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     # add other unit to make sure that the mapping is correct during clone
@@ -102,12 +102,12 @@ def test_multi_db_run(tmpdir, test_data_path):
     # check that cloning across platforms must copy the full solution
     pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
-    # clone un-solved model across platforms (with default settings)
-    scen2 = scen1.clone(platform=mp2)
+    # clone solved model across platforms (with default settings)
+    scen2 = scen1.clone(platform=mp2, keep_solution=True)
     assert_multi_db(mp1, mp2)
 
-    # check that (empty) variable was initialized and parameter was copied
-    assert np.isnan(scen2.var('z')['lvl'])
+    # check that variable amd parameter were copied
+    assert np.isclose(scen2.var('z')['lvl'], 153.675)
     pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
 
     # check that custom unit, region and timeseries are migrated correctly

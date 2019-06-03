@@ -79,6 +79,16 @@ def assert_multi_db(mp1, mp2):
     pdt.assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
 
 
+def get_distance(scen):
+    return (
+        scen
+        .par('d')
+        .set_index(['i', 'j'])
+        .loc['san-diego', 'topeka']
+        ['value']
+    )
+
+
 def test_multi_db_run(tmpdir, test_data_path):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
@@ -94,6 +104,8 @@ def test_multi_db_run(tmpdir, test_data_path):
 
     # clone un-solved model across platforms (with default settings)
     scen2 = scen1.clone(platform=mp2)
+    assert_multi_db(mp1, mp2)
+
     assert np.isnan(scen2.var('z')['lvl'])
 
     # check that custom unit, region and timeseries are migrated correctly
@@ -116,21 +128,11 @@ def test_multi_db_edit_source(tmpdir):
     scen1.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
     scen1.commit('foo')
 
-    obs = (scen1
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen1)
     exp = 1.5
     assert np.isclose(obs, exp)
 
-    obs = (scen2
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen2)
     exp = 1.4
     assert np.isclose(obs, exp)
 
@@ -151,21 +153,11 @@ def test_multi_db_edit_target(tmpdir):
     scen2.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
     scen2.commit('foo')
 
-    obs = (scen2
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen2)
     exp = 1.5
     assert np.isclose(obs, exp)
 
-    obs = (scen1
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen1)
     exp = 1.4
     assert np.isclose(obs, exp)
 

@@ -3,7 +3,7 @@ import numpy as np
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import dantzig_transport, TS_DF, HIST_DF
+from ixmp.testing import make_dantzig, TS_DF, HIST_DF
 
 TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
@@ -16,7 +16,7 @@ def test_run_clone(tmpdir, test_data_path):
     # - reads back the solution from the output
     # - performs the test on the objective value
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
-    scen = dantzig_transport(mp, solve=test_data_path)
+    scen = make_dantzig(mp, solve=test_data_path)
     assert np.isclose(scen.var('z')['lvl'], 153.675)
     pdt.assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
 
@@ -47,7 +47,7 @@ def test_run_clone(tmpdir, test_data_path):
 def test_run_remove_solution(tmpdir, test_data_path):
     # create a new instance of the transport problem and solve it
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
-    scen = dantzig_transport(mp, solve=test_data_path)
+    scen = make_dantzig(mp, solve=test_data_path)
     assert np.isclose(scen.var('z')['lvl'], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists
@@ -92,7 +92,7 @@ def get_distance(scen):
 def test_multi_db_run(tmpdir, test_data_path):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
-    scen1 = dantzig_transport(mp1)
+    scen1 = make_dantzig(mp1)
 
     mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     # add other unit to make sure that the mapping is correct during clone

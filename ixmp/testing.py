@@ -23,8 +23,7 @@ import pandas as pd
 import pytest
 
 from .config import _config as ixmp_config
-from .core import Platform, Scenario
-from .core import Scenario, IAMC_IDX
+from .core import Platform, Scenario, IAMC_IDX
 
 
 # pytest hooks and fixtures
@@ -126,7 +125,7 @@ def create_local_testdb(db_path, data_path):
 
 
 def make_dantzig(mp, solve=False):
-    """Return an :class:`ixmp.Scenario` for Dantzig's canning/transport problem.
+    """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters
     ----------

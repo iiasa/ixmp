@@ -66,7 +66,7 @@ class Reporter(object):
 
         Returns
         -------
-        Reporter
+        :class:`Reporter <ixmp.reporting.Reporter>`
           …containing:
 
           - A 'scenario' key referring to the *scenario* object.

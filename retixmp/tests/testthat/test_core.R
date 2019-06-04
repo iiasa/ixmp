@@ -25,7 +25,7 @@ test_that('parameter values can be set on a Scenario', {
 test_that('the canning problem can be solved', {
   # Create the Scenario
   mp <- test_mp()
-  scen <- ixmp$testing$dantzig_transport(mp)
+  scen <- ixmp$testing$make_dantzig(mp)
 
   # Solve
   model_path = file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'transport_ixmp')

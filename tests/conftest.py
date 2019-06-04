@@ -35,8 +35,7 @@ def pytest_sessionstart(session):
 
 def pytest_report_header(config):
     """Add the ixmp import path to the pytest report header."""
-    return ['ixmp location: {}'.format(os.path.dirname(ixmp.__file__)),
-            'ixmp config: {}'.format(ixmp.config._config.values)]
+    return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
 
 
 # Fixtures

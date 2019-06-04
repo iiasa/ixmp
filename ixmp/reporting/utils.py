@@ -1,6 +1,7 @@
-from functools import partial
+from functools import partial, reduce
 from itertools import compress
 import logging
+from operator import mul
 
 import pandas as pd
 import pint
@@ -242,6 +243,13 @@ def data_for_quantity(ix_type, name, column, scenario):
         # First rename, then set index
         data.rename(columns=rename_dims, inplace=True)
         data.set_index(dims, inplace=True)
+
+    # Check sparseness
+    shape = list(map(len, data.index.levels))
+    size = reduce(mul, shape)
+    filled = 100 * len(data) / size
+    need_to_chunk = size > 1e7 and filled < 1
+    log.debug(' '.join(map(str, (name, shape, filled, size, need_to_chunk))))
 
     # Convert to a Dataset, assign attrbutes and name
     log.debug(data[column])

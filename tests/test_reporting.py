@@ -381,7 +381,11 @@ def test_report_size(test_mp):
     keys = [rep.full_key(name) for name in names]
     rep.add('bigmem', tuple([computations.product] + keys))
 
-    # Trigger MemoryError
+    # One quantity fits in memory
+    rep.get(keys[0])
+    # assert False
+
+    # All quantities together trigger MemoryError
     rep.get('bigmem')
 
 

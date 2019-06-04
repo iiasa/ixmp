@@ -244,13 +244,16 @@ def data_for_quantity(ix_type, name, column, scenario):
         data.rename(columns=rename_dims, inplace=True)
         data.set_index(dims, inplace=True)
 
-        # Check sparseness
+    # Check sparseness
+    try:
         shape = list(map(len, data.index.levels))
-        size = reduce(mul, shape)
-        filled = 100 * len(data) / size
-        need_to_chunk = size > 1e7 and filled < 1
-        info = (name, shape, filled, size, need_to_chunk)
-        log.debug(' '.join(map(str, info)))
+    except AttributeError:
+        shape = [data.index.size]
+    size = reduce(mul, shape)
+    filled = 100 * len(data) / size
+    need_to_chunk = size > 1e7 and filled < 1
+    info = (name, shape, filled, size, need_to_chunk)
+    log.debug(' '.join(map(str, info)))
 
     # Convert to a Dataset, assign attrbutes and name
     ds = xr.Dataset.from_dataframe(data)[column] \

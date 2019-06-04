@@ -3,6 +3,12 @@
 Reporting
 =========
 
+.. warning::
+
+   :mod:`ixmp.reporting` is **experimental** in ixmp 0.2. The API and
+   functionality may change without advance notice or a deprecation period in
+   subsequent releases.
+
 .. automethod:: ixmp.reporting.configure
 
 .. autoclass:: ixmp.reporting.Reporter
@@ -12,22 +18,24 @@ Reporting
    A Reporter is used to postprocess data from from one or more
    :class:`ixmp.Scenario` objects. The :meth:`get` method can be used to:
 
+   - Retrieve individual **quantities**. A quantity has zero or more
+     dimensions and optional units. Quantities include the ‘parameters’,
+     ‘variables’, ‘equations’, and ‘scalars’ available in an
+     :class:`ixmp.Scenario`.
+
    - Generate an entire **report** composed of multiple quantities. A report
      may:
 
        - Read in non-model or exogenous data,
-       - Trigger output to files(s) or a database, or have other external
-         side effects.
-
-   - Retrieve individual **quantities**. A quantity has zero or more
-     dimensions and optional units.
+       - Trigger output to files(s) or a database, or
+       - Execute user-defined methods.
 
    Every report and quantity (including the results of intermediate steps) is
    identified by a :class:`utils.Key`; all the keys in a Reporter can be
    listed with :meth:`keys`.
 
    Reporter uses a :doc:`graph <graphs>` data structure to keep track of
-   *computations*, the atomic steps in postprocessing: for example, a single
+   **computations**, the atomic steps in postprocessing: for example, a single
    calculation that multiplies two quantities to create a third. The graph
    allows :meth:`get` to perform *only* the requested computations. Advanced
    users may manipulate the graph directly; but common reporting tasks can be

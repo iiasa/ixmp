@@ -12,10 +12,11 @@ TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 def test_run_clone(tmpdir, test_data_path):
     # this test is designed to cover the full functionality of the GAMS API
+    # - initialize a new platform instance
     # - creates a new scenario and exports a gdx file
     # - runs the tutorial transport model
     # - reads back the solution from the output
-    # - performs the test on the objective value
+    # - performs the test on the objective value and the timeseries data
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
     scen = make_dantzig(mp, solve=test_data_path)
     assert np.isclose(scen.var('z')['lvl'], 153.675)
@@ -24,8 +25,6 @@ def test_run_clone(tmpdir, test_data_path):
     # cloning with `keep_solution=True` keeps all timeseries and the solution
     scen2 = scen.clone(keep_solution=True)
     assert np.isclose(scen2.var('z')['lvl'], 153.675)
-    pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
-
     pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
     # cloning with `keep_solution=True` and `first_model_year` raises an error

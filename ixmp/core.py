@@ -1241,8 +1241,7 @@ class Scenario(TimeSeries):
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
 
-        If ``has_solution() == True``, model solution data is exists in the
-        database.
+        If ``has_solution() == True``, model solution data exists in the db.
         """
         return self._jobj.hasSolution()
 

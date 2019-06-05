@@ -105,7 +105,7 @@ TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path):
+def create_local_testdb(db_path, data_path, db='ixmptest'):
     """Create a local database for testing in the directory *db_path*.
 
     Returns the path to a database properties file in the directory. Contents
@@ -119,7 +119,8 @@ def create_local_testdb(db_path, data_path):
     # Create properties file
     props = (data_path / 'test.properties_template').read_text()
     test_props = dst / 'test.properties'
-    test_props.write_text(props.format(here=str(dst).replace("\\", "/")))
+    test_props.write_text(props.format(here=str(dst).replace("\\", "/"),
+                          db=db))
 
     return test_props
 

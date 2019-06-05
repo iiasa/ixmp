@@ -14,7 +14,7 @@ from subprocess import check_call
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable
+from ixmp.utils import logger, islistable, is_year
 
 # %% default settings for column headers
 
@@ -1642,10 +1642,3 @@ def run_gams(model_file, args, gams_args=['LogOption=4']):
     file_path = os.path.dirname(model_file).strip('"')
     file_path = None if file_path == '' else file_path
     check_call(cmd, shell=os.name == 'nt', cwd=file_path)
-
-
-def is_year(y, s):
-    if y is not None:
-        if not isinstance(y, int):
-            raise ValueError('arg `{}` must be an integer!'.format(s))
-        return True

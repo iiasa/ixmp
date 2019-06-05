@@ -28,7 +28,7 @@ from .core import Platform, Scenario, IAMC_IDX
 
 models = {
     'dantzig': {
-        'model': 'Canning problem (MESSAGE scheme)',
+        'model': 'canning problem',
         'scenario': 'standard',
     },
 }

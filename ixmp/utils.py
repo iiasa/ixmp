@@ -34,7 +34,7 @@ def islistable(x):
     return isinstance(x, collections.Iterable) and not isstr(x)
 
 
-def is_year(y, s):
+def isyear(y, s):
     if y is not None:
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))

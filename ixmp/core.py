@@ -247,7 +247,11 @@ class Platform(object):
             Annotation describing the unit or why it was added. The current
             database user and timestamp are appended automatically.
         """
-        self._jobj.addUnitToDB(unit, comment)
+        if unit not in self.units():
+            self._jobj.addUnitToDB(unit, comment)
+        else:
+            msg = 'unit `{}` is already defined in the platform database'
+            logger().info(msg.format(unit))
 
     def regions(self):
         """Return all regions defined for the IAMC-style timeseries format

@@ -625,7 +625,7 @@ class Scenario(TimeSeries):
     version : str or int or at.ac.iiasa.ixmp.objects.Scenario, optional
         If omitted, load the default version of the (`model`, `scenario`).
         If :class:`int`, load the specified version.
-        If ``'new'``, initialize a new TimeSeries.
+        If ``'new'``, initialize a new Scenario.
     scheme : str, optional
         Use an explicit scheme for initializing a new scenario.
     annotation : str, optional
@@ -633,7 +633,6 @@ class Scenario(TimeSeries):
     cache : bool, optional
         Store data in memory and return cached values instead of repeatedly
         querying the database.
-
     """
     # Name of the model associated with the Scenario
     model = None

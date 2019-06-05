@@ -26,6 +26,14 @@ from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
 
 
+models = {
+    'dantzig': {
+        'model': 'Canning problem (MESSAGE scheme)',
+        'scenario': 'standard',
+    },
+}
+
+
 # pytest hooks and fixtures
 
 def pytest_sessionstart(session):
@@ -142,10 +150,9 @@ def make_dantzig(mp, solve=False):
     mp.add_region('DantzigLand', 'country')
 
     # initialize a new (empty) instance of an `ixmp.Scenario`
-    model = 'canning problem'
-    scenario = 'standard'
     annot = "Dantzig's transportation problem for illustration and testing"
-    scen = Scenario(mp, model, scenario, version='new', annotation=annot)
+    args = models['dantzig'].copy()
+    scen = Scenario(mp, version='new', annotation=annot, **args)
 
     # define sets
     scen.init_set('i')

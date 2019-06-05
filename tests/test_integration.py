@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from numpy import testing as npt
 import pandas.util.testing as pdt
 
 import ixmp
@@ -106,9 +107,11 @@ def test_multi_db_run(tmpdir, test_data_path):
     scen2 = scen1.clone(platform=mp2, keep_solution=True)
     assert_multi_db(mp1, mp2)
 
-    # check that variable amd parameter were copied
-    assert np.isclose(scen2.var('z')['lvl'], 153.675)
+    # check that sets, variables and parameter were copied correctly
+    npt.assert_array_equal(scen1.set('i'), scen2.set('i'))
     pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
+    assert np.isclose(scen2.var('z')['lvl'], 153.675)
+    pdt.assert_frame_equal(scen1.var('x'), scen2.var('x'))
 
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par('f')['value'] == 90.0

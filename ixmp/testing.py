@@ -130,8 +130,12 @@ def make_dantzig(mp, solve=False):
         for the scenario.
     """
     # add custom units and region for timeseries data
-    mp.add_unit('USD_per_km')
-    mp.add_region('DantzigLand', 'country')
+    unit = 'USD_per_km'
+    if unit not in mp.units():
+        mp.add_unit('USD_per_km')
+    region = 'DantzigLand'
+    if region not in mp.regions()['region']:
+        mp.add_region(region, 'country')
 
     # initialize a new (empty) instance of an `ixmp.Scenario`
     model = 'canning problem'

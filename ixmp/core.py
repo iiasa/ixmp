@@ -250,7 +250,7 @@ class Platform(object):
         if unit not in self.units():
             self._jobj.addUnitToDB(unit, comment)
         else:
-            msg = 'unit `{}` is already defined in the platform database'
+            msg = 'unit `{}` is already defined in the platform instance'
             logger().info(msg.format(unit))
 
     def regions(self):
@@ -287,7 +287,11 @@ class Platform(object):
         parent : str, default 'World'
             Assign a 'parent' region.
         """
-        self._jobj.addNode(region, parent, hierarchy)
+        _regions = self.regions()
+        if region not in list(_regions['region']):
+            self._jobj.addNode(region, parent, hierarchy)
+        else:
+            _logger_region_exists(_regions, region)
 
     def add_region_synomym(self, region, mapped_to):
         """Define a synomym for a `region`.
@@ -302,7 +306,21 @@ class Platform(object):
         mapped_to : str
             Name of the region to which the synonym should be mapped.
         """
-        self._jobj.addNodeSynonym(mapped_to, region)
+        _regions = self.regions()
+        if region not in list(_regions['region']):
+            self._jobj.addNodeSynonym(mapped_to, region)
+        else:
+            _logger_region_exists(_regions, region)
+
+
+def _logger_region_exists(_regions, r):
+    region = _regions.set_index('region').loc[r]
+    msg = 'region `{}` is already defined in the platform instance'
+    if region.mapped_to is not None:
+        msg += ' as synomym for region `{}`'.format(region.mapped_to)
+    if region.parent is not None:
+        msg += ', as subregion of `{}`'.format(region.parent)
+    logger().info(msg.format(r))
 
 # %% class TimeSeries
 

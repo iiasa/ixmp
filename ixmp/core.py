@@ -14,7 +14,7 @@ from subprocess import check_call
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable, isyear
+from ixmp.utils import logger, islistable, check_year
 
 # %% default settings for column headers
 
@@ -1210,7 +1210,7 @@ class Scenario(TimeSeries):
         model = model or self.model
         scenario = scenario or self.scenario
         args = [platform._jobj, model, scenario, annotation, keep_solution]
-        if isyear(first_model_year, 'first_model_year'):
+        if check_year(first_model_year, 'first_model_year'):
             args.append(first_model_year)
 
         scenario_class = self.__class__
@@ -1280,7 +1280,7 @@ class Scenario(TimeSeries):
         """
         if self.has_solution():
             self.clear_cache()  # reset Python data cache
-            if isyear(first_model_year, 'first_model_year'):
+            if check_year(first_model_year, 'first_model_year'):
                 self._jobj.removeSolution(first_model_year)
             else:
                 self._jobj.removeSolution()

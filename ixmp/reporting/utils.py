@@ -220,7 +220,8 @@ class AttrSeries(pd.Series):
 
     def sum(self, *args, **kwargs):
         if 'dim' in kwargs:
-            kwargs['level'] = kwargs.pop('dim')
+            names = self.index.names
+            kwargs['level'] = tuple(set(names) - set(kwargs.pop('dim')))
         return super().sum(*args, **kwargs)
 
     def squeeze(self, *args, **kwargs):

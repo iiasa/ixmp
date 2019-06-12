@@ -1,3 +1,5 @@
+import collections
+
 from functools import partial, reduce
 from itertools import compress
 import logging
@@ -31,6 +33,7 @@ def combo_partition(iterable):
 class Key:
     """A hashable key for a quantity that includes its dimensionality."""
     # TODO cache repr() and only recompute when name/dims changed
+
     def __init__(self, name, dims=[], tag=None):
         self._name = name
         self._dims = list(dims)
@@ -201,6 +204,34 @@ def _parse_units(units_series):
     return unit
 
 
+class AttrSeries(pd.Series):
+
+    # normal properties
+    _metadata = ['attrs']
+
+    def __init__(self, *args, **kwargs):
+        attrs = kwargs.pop('attrs', collections.OrderedDict())
+        super().__init__(*args, **kwargs)
+        self.attrs = attrs
+
+    def assign_attrs(self, d):
+        self.attrs.update(d)
+        return self
+
+    def sum(self, *args, **kwargs):
+        if 'dim' in kwargs:
+            kwargs['level'] = kwargs.pop('dim')
+        return super().sum(*args, **kwargs)
+
+    def squeeze(self, *args, **kwargs):
+        kwargs.pop('drop')
+        return super().squeeze(*args, **kwargs)
+
+    @property
+    def _constructor(self):
+        return AttrSeries
+
+
 def data_for_quantity(ix_type, name, column, scenario):
     """Retrieve data from *scenario*.
 
@@ -256,13 +287,20 @@ def data_for_quantity(ix_type, name, column, scenario):
     log.debug(' '.join(map(str, info)))
 
     # Convert to a Dataset, assign attrbutes and name
-    ds = xr.Dataset.from_dataframe(data)[column] \
-           .assign_attrs(attrs) \
-           .rename(name + ('-margin' if column == 'mrg' else ''))
-    try:
-        # Remove length-1 dimensions for scalars
-        ds = ds.squeeze('index', drop=True)
-    except KeyError:
-        pass
+    # ds = xr.Dataset.from_dataframe(data)[column]
+    # or to a new "Attribute Series"
+    ds = AttrSeries(data[column])
+
+    ds = ds \
+        .assign_attrs(attrs) \
+        .rename(name + ('-margin' if column == 'mrg' else ''))
+
+    # squeeze on pd.Series returns a scalar without a 'name' attribute
+    if not isinstance(ds, AttrSeries):
+        try:
+            # Remove length-1 dimensions for scalars
+            ds = ds.squeeze('index', drop=True)
+        except KeyError:
+            pass
 
     return ds

@@ -15,8 +15,9 @@ from xarray.testing import (
 
 from ixmp.testing import make_dantzig
 from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg
+from ixmp.reporting.utils import ureg, AttrSeries
 
+from pandas.testing import assert_series_equal
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -82,6 +83,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     weights = xr.DataArray([1, 2, 3],
                            coords=['chicago new-york topeka'.split()],
                            dims=['j'])
+    weights = AttrSeries(weights.to_dataframe(name='weights')['weights'])
     new_key = rep.aggregate('d:i-j', 'weighted', 'j', weights)
 
     # …produces the expected new key with the summed dimension removed and
@@ -89,14 +91,17 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert new_key == 'd:i:weighted'
 
     # …produces the expected new value
-    assert_xr_equal(
-        rep.get(new_key),
-        (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    )
+    obs = rep.get(new_key)
+    exp = (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
+    # TODO: attrs has to be explicitly copied here because math is done which
+    # returns a pd.Series
+    exp = AttrSeries(exp, attrs=rep.get('d:i-j').attrs)
+    assert_series_equal(obs.sort_index(), exp.sort_index())
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+    shares = AttrSeries(shares.to_dataframe(name='shares')['shares'])
     new_key = rep.disaggregate('b:j', 'p', args=[shares])
 
     # …produces the expected key with new dimension added
@@ -111,8 +116,9 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert rep.get('j') == ['new-york', 'chicago', 'topeka']
 
     # 'all' key retrieves all quantities
-    names = set('a b d f demand demand-margin z x'.split())
-    assert names == {da.name for da in rep.get('all')}
+    obs = {da.name for da in rep.get('all')}
+    exp = set('a b d f demand demand-margin z x'.split())
+    assert obs == exp
 
     # Shorthand for retrieving a full key name
     assert rep.full_key('d') == 'd:i-j' and isinstance(rep.full_key('d'), Key)

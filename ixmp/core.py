@@ -316,9 +316,9 @@ class Platform(object):
 def _logger_region_exists(_regions, r):
     region = _regions.set_index('region').loc[r]
     msg = 'region `{}` is already defined in the platform instance'
-    if region.mapped_to is not None:
+    if region['mapped_to'] is not None:
         msg += ' as synomym for region `{}`'.format(region.mapped_to)
-    if region.parent is not None:
+    if region['parent'] is not None:
         msg += ', as subregion of `{}`'.format(region.parent)
     logger().info(msg.format(r))
 

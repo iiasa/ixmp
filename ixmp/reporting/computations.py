@@ -41,17 +41,23 @@ def sum(quantity, weights, dimensions):
 
 def aggregate(quantity, groups, keep):
     """Aggregate *quantity* by *groups*."""
+    idx = pd.IndexSlice
     for dim, dim_groups in groups.items():
         values = []
         for group, members in dim_groups.items():
-            values.append(quantity.sel({dim: members})
-                                  .sum(dim=dim)
-                                  .assign_coords(**{dim: group}))
+            slices = [slice(None) if name != dim else tuple(members)
+                      for name in quantity.index.names]
+            value = quantity.loc[tuple(idx[x] for x in slices)]
+            value = value.sum(dim=dim)
+            # values.append(quantity.sel({dim: members})
+            #                       .sum(dim=dim)
+            #                       .assign_coords(**{dim: group}))
         if keep:
             # Prepend the original values
             values.insert(0, quantity)
 
         # Reassemble to a single dataarray
+        print(values)
         quantity = xr.concat(values, dim=dim)
     return quantity
 

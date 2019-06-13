@@ -266,6 +266,9 @@ class AttrSeries(pd.Series):
     def as_xarray(self):
         return xr.DataArray.from_series(self)
 
+    def to_series(self):
+        return self
+
     @property
     def _constructor(self):
         return AttrSeries

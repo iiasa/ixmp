@@ -64,12 +64,12 @@ def test_r_build_and_check(r_args):
     cmd = ['R', 'CMD', 'build', '.']
     subprocess.check_call(cmd, **r_args)
 
-    # Path() here is required because of str() in r_args for Python 2.7 compat
-    cmd = ['R', 'CMD', 'check']
+    cmd = ['R', 'CMD', 'check', '--no-examples']
     if 'APPVEYOR' in r_args['env']:
         # - Do not cross-build/-check e.g. i386 on x64 Appveyor workers
         # - Do not build manual (avoids overhead of LaTeX install)
         cmd.extend(['--no-multiarch', '--no-manual'])
+    # Path() here is required because of str() in r_args for Python 2.7 compat
     cmd.extend(map(str, Path(r_args['cwd']).glob('*.tar.gz')))
     info = run(cmd, **r_args)
 

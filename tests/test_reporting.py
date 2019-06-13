@@ -15,8 +15,9 @@ from xarray.testing import (
 
 from ixmp.testing import make_dantzig
 from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg
+from ixmp.reporting.utils import ureg, Quantity
 
+from pandas.testing import assert_series_equal
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -79,9 +80,10 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
     # Weighted sum
-    weights = xr.DataArray([1, 2, 3],
-                           coords=['chicago new-york topeka'.split()],
-                           dims=['j'])
+    weights = Quantity(xr.DataArray(
+        [1, 2, 3],
+        coords=['chicago new-york topeka'.split()],
+        dims=['j']))
     new_key = rep.aggregate('d:i-j', 'weighted', 'j', weights)
 
     # …produces the expected new key with the summed dimension removed and
@@ -89,15 +91,18 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert new_key == 'd:i:weighted'
 
     # …produces the expected new value
-    assert_xr_equal(
-        rep.get(new_key),
-        (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    )
+    obs = rep.get(new_key)
+    exp = (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
+    # TODO: attrs has to be explicitly copied here because math is done which
+    # returns a pd.Series
+    exp = Quantity(exp, attrs=rep.get('d:i-j').attrs)
+
+    assert_series_equal(obs.sort_index(), exp.sort_index())
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    new_key = rep.disaggregate('b:j', 'p', args=[shares])
+    new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
 
     # …produces the expected key with new dimension added
     assert new_key == 'b:j-p'
@@ -111,8 +116,9 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert rep.get('j') == ['new-york', 'chicago', 'topeka']
 
     # 'all' key retrieves all quantities
-    names = set('a b d f demand demand-margin z x'.split())
-    assert names == {da.name for da in rep.get('all')}
+    obs = {da.name for da in rep.get('all')}
+    exp = set('a b d f demand demand-margin z x'.split())
+    assert obs == exp
 
     # Shorthand for retrieving a full key name
     assert rep.full_key('d') == 'd:i-j' and isinstance(rep.full_key('d'), Key)
@@ -249,9 +255,12 @@ def test_reporting_units():
 
     # Create some dummy data
     dims = dict(coords=['a b c'.split()], dims=['x'])
-    r.add('energy:x', xr.DataArray([1., 3, 8], **dims, attrs={'_unit': 'MJ'}))
-    r.add('time', xr.DataArray([5., 6, 8], **dims, attrs={'_unit': 'hour'}))
-    r.add('efficiency', xr.DataArray([0.9, 0.8, 0.95], **dims))
+    r.add('energy:x',
+          Quantity(xr.DataArray([1., 3, 8], **dims, attrs={'_unit': 'MJ'})))
+    r.add('time',
+          Quantity(xr.DataArray([5., 6, 8], **dims, attrs={'_unit': 'hour'})))
+    r.add('efficiency',
+          Quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
@@ -327,8 +336,6 @@ Coordinates:
 """)
 
 
-@pytest.mark.skip('Slow; >30 seconds.')  # comment this line to enable
-@pytest.mark.xfail(raises=MemoryError)
 def test_report_size(test_mp):
     """Stress-test reporting of large, sparse quantities."""
     from itertools import zip_longest
@@ -434,10 +441,14 @@ def test_reporting_aggregate(test_mp):
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    assert_xr_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
-    assert_xr_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
-    assert_xr_allclose(agg1.sel(t='baz', drop=True),
-                       x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+    def assert_allclose(a, b):
+        """Shim for AttrSeries."""
+        assert_xr_allclose(a.as_xarray(), b)
+
+    assert_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
+    assert_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
+    assert_allclose(agg1.sel(t='baz', drop=True),
+                    x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
 
     # Add aggregates, without keeping originals
     key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)

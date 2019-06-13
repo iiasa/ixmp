@@ -1,3 +1,5 @@
+import collections
+
 from functools import partial, reduce
 from itertools import compress
 import logging
@@ -31,6 +33,7 @@ def combo_partition(iterable):
 class Key:
     """A hashable key for a quantity that includes its dimensionality."""
     # TODO cache repr() and only recompute when name/dims changed
+
     def __init__(self, name, dims=[], tag=None):
         self._name = name
         self._dims = list(dims)
@@ -201,6 +204,85 @@ def _parse_units(units_series):
     return unit
 
 
+class AttrSeries(pd.Series):
+    """pandas.Series that imitates xarray.DataArray."""
+
+    # normal properties
+    _metadata = ['attrs']
+
+    def __init__(self, *args, **kwargs):
+        if isinstance(args[0], xr.DataArray):
+            # Use attrs from an xarray object
+            attrs = args[0].attrs.copy()
+
+            # pre-convert an pd.Series to preserve names and labels
+            args = list(args)
+            args[0] = args[0].to_series()
+        else:
+            # Use provided attrs
+            attrs = kwargs.pop('attrs', collections.OrderedDict())
+
+        super().__init__(*args, **kwargs)
+
+        self.attrs = attrs
+
+    def assign_attrs(self, d):
+        self.attrs.update(d)
+        return self
+
+    def assign_coords(self, **kwargs):
+        return pd.concat([self], keys=kwargs.values(), names=kwargs.keys())
+
+    @property
+    def coords(self):
+        """Read-only."""
+        return dict(zip(self.index.names, self.index.levels))
+
+    def sel(self, indexers=None, **indexers_kwargs):
+        indexers = indexers or {}
+        indexers.update(indexers_kwargs)
+        idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
+        return AttrSeries(self.loc[idx])
+
+    def sum(self, *args, **kwargs):
+        try:
+            dim = kwargs.pop('dim')
+            if isinstance(self.index, pd.MultiIndex):
+                obj = self.unstack(dim)
+                kwargs['axis'] = 1
+            else:
+                if dim != [self.index.name]:
+                    raise ValueError(dim, self.index.name, self)
+                obj = super()
+                kwargs['level'] = dim
+        except KeyError:
+            obj = super()
+        return AttrSeries(obj.sum(*args, **kwargs))
+
+    def squeeze(self, *args, **kwargs):
+        kwargs.pop('drop')
+        return super().squeeze(*args, **kwargs) if len(self) > 1 else self
+
+    def as_xarray(self):
+        return xr.DataArray.from_series(self)
+
+    @property
+    def _constructor(self):
+        return AttrSeries
+
+
+# Quantity = xr.DataArray
+Quantity = AttrSeries
+
+
+def concat(*args, **kwargs):
+    if Quantity is AttrSeries:
+        kwargs.pop('dim')
+        return pd.concat(*args, **kwargs)
+    elif Quantity is xr.DataArray:
+        return xr.concat(*args, **kwargs)
+
+
 def data_for_quantity(ix_type, name, column, scenario):
     """Retrieve data from *scenario*.
 
@@ -256,9 +338,14 @@ def data_for_quantity(ix_type, name, column, scenario):
     log.debug(' '.join(map(str, info)))
 
     # Convert to a Dataset, assign attrbutes and name
-    ds = xr.Dataset.from_dataframe(data)[column] \
-           .assign_attrs(attrs) \
-           .rename(name + ('-margin' if column == 'mrg' else ''))
+    # ds = xr.Dataset.from_dataframe(data)[column]
+    # or to a new "Attribute Series"
+    ds = AttrSeries(data[column])
+
+    ds = ds \
+        .assign_attrs(attrs) \
+        .rename(name + ('-margin' if column == 'mrg' else ''))
+
     try:
         # Remove length-1 dimensions for scalars
         ds = ds.squeeze('index', drop=True)

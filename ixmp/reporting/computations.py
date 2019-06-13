@@ -6,7 +6,7 @@
 import pandas as pd
 import xarray as xr
 
-from .utils import collect_units, AttrSeries
+from .utils import collect_units, Quantity, concat
 
 __all__ = [
     'aggregate',
@@ -30,11 +30,8 @@ def sum(quantity, weights, dimensions):
     else:
         w_total = weights.sum(dim=dimensions)
 
-    result = (quantity * weights).sum(dim=dimensions) / w_total
-    # TODO: can we override comps on AttrSeries instead?
-    if isinstance(quantity, AttrSeries):
-        result = AttrSeries(result, attrs=quantity.attrs)
-    result.attrs['_unit'] = collect_units(result)[0]
+    result = Quantity(quantity * weights).sum(dim=dimensions) / w_total
+    result.attrs['_unit'] = collect_units(quantity)[0]
 
     return result
 
@@ -60,19 +57,15 @@ def aggregate(quantity, groups, keep):
             values.insert(0, quantity)
 
         # Reassemble to a single dataarray
-        print(values)
-        quantity = xr.concat(values, dim=dim)
+        quantity = concat(values, dim=dim)
+
     return quantity
 
 
 def disaggregate_shares(quantity, shares):
     """Disaggregate *quantity* by *shares*."""
-    result = quantity * shares
-    # TODO: can we override comps on AttrSeries instead?
-    if isinstance(quantity, AttrSeries):
-        result = AttrSeries(result, attrs=quantity.attrs)
-    result.attrs['_unit'] = collect_units(result)[0]
-    return result
+    return Quantity(quantity * shares,
+                    attrs={'_unit': collect_units(quantity)[0]})
 
 
 def product(*quantities):

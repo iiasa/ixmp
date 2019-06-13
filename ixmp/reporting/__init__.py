@@ -5,12 +5,18 @@
 # The core design pattern uses dask graphs; see
 # http://docs.dask.org/en/latest/spec.html
 # - Reporter.graph is a dictionary where:
-#   - keys are strings or ixmp.reporting.Key objects, and
+#   - keys are strings or ixmp.reporting.util.Key objects (which compare/hash
+#     equal to their str() representation), and
 #   - values are 'computations' (the Reporter.add() docstring repeats the
 #     definition of computations from the above URL).
-# - The results of many internal computations are xarray.DataArray objects,
-#   with:
-#   - an optional attribute 'unit' describing the units of the object.
+# - The results of 'internal' computations are ixmp.reporting.utils.Quantity
+#   objects.
+#   - These resemble xarray.DataArray, but currently are ixmp.reporting.utils.
+#     AttrSeries, which duck-types DataArray. This is because many ixmp/
+#     message_ix quantities are large and sparse, and creating sparse
+#     DataArrays is non-trivial; see https://stackoverflow.com/q/56396122/
+#   - Internal computations have .attr['_unit'] describing the units of the
+#     quantity, to carry these through calculations.
 #
 # TODO meet the requirements:
 # A11. Callable through `retixmp`.

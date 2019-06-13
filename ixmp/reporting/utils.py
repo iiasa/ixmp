@@ -274,6 +274,7 @@ class AttrSeries(pd.Series):
         return AttrSeries
 
 
+# commented: see description in reporting/__init__.py
 # Quantity = xr.DataArray
 Quantity = AttrSeries
 

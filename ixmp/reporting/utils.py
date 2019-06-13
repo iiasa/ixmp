@@ -205,31 +205,82 @@ def _parse_units(units_series):
 
 
 class AttrSeries(pd.Series):
+    """pandas.Series that imitates xarray.DataArray."""
 
     # normal properties
     _metadata = ['attrs']
 
     def __init__(self, *args, **kwargs):
-        attrs = kwargs.pop('attrs', collections.OrderedDict())
+        if isinstance(args[0], xr.DataArray):
+            # Use attrs from an xarray object
+            attrs = args[0].attrs.copy()
+
+            # pre-convert an pd.Series to preserve names and labels
+            args = list(args)
+            args[0] = args[0].to_series()
+        else:
+            # Use provided attrs
+            attrs = kwargs.pop('attrs', collections.OrderedDict())
+
         super().__init__(*args, **kwargs)
+
         self.attrs = attrs
 
     def assign_attrs(self, d):
         self.attrs.update(d)
         return self
 
+    def assign_coords(self, **kwargs):
+        return pd.concat([self], keys=kwargs.values(), names=kwargs.keys())
+
+    @property
+    def coords(self):
+        """Read-only."""
+        return dict(zip(self.index.names, self.index.levels))
+
+    def sel(self, indexers=None, **indexers_kwargs):
+        indexers = indexers or {}
+        indexers.update(indexers_kwargs)
+        idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
+        return AttrSeries(self.loc[idx])
+
     def sum(self, *args, **kwargs):
-        if 'dim' in kwargs:
-            kwargs['level'] = kwargs.pop('dim')
-        return super().sum(*args, **kwargs)
+        try:
+            dim = kwargs.pop('dim')
+            if isinstance(self.index, pd.MultiIndex):
+                obj = self.unstack(dim)
+                kwargs['axis'] = 1
+            else:
+                if dim != [self.index.name]:
+                    raise ValueError(dim, self.index.name, self)
+                obj = super()
+                kwargs['level'] = dim
+        except KeyError:
+            obj = super()
+        return AttrSeries(obj.sum(*args, **kwargs))
 
     def squeeze(self, *args, **kwargs):
         kwargs.pop('drop')
-        return super().squeeze(*args, **kwargs)
+        return super().squeeze(*args, **kwargs) if len(self) > 1 else self
+
+    def as_xarray(self):
+        return xr.DataArray.from_series(self)
 
     @property
     def _constructor(self):
         return AttrSeries
+
+
+# Quantity = xr.DataArray
+Quantity = AttrSeries
+
+
+def concat(*args, **kwargs):
+    if Quantity is AttrSeries:
+        kwargs.pop('dim')
+        return pd.concat(*args, **kwargs)
+    elif Quantity is xr.DataArray:
+        return xr.concat(*args, **kwargs)
 
 
 def data_for_quantity(ix_type, name, column, scenario):
@@ -295,12 +346,10 @@ def data_for_quantity(ix_type, name, column, scenario):
         .assign_attrs(attrs) \
         .rename(name + ('-margin' if column == 'mrg' else ''))
 
-    # squeeze on pd.Series returns a scalar without a 'name' attribute
-    if not isinstance(ds, AttrSeries):
-        try:
-            # Remove length-1 dimensions for scalars
-            ds = ds.squeeze('index', drop=True)
-        except KeyError:
-            pass
+    try:
+        # Remove length-1 dimensions for scalars
+        ds = ds.squeeze('index', drop=True)
+    except KeyError:
+        pass
 
     return ds

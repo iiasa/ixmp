@@ -2,18 +2,18 @@
 require(devtools)
 
 # set in Github/local folder
-rixmp_path=paste0(getwd(),"/rixmp/")
-setwd(paste0(rixmp_path,"/source/"))
+rixmp.legacy_path=paste0(getwd(),"/rixmp.legacy/")
+setwd(paste0(rixmp.legacy_path,"/source/"))
 
 # Build binary
-devtools::build(pkg = ".", path=rixmp_path,binary=T)
+devtools::build(pkg = ".", path=rixmp.legacy_path,binary=T)
 
 # install the package from binary
-setwd(rixmp_path)
-install.packages("rixmp_0.0.0.9000.zip", repos=NULL)
+setwd(rixmp.legacy_path)
+install.packages("rixmp.legacy_0.0.0.9000.zip", repos=NULL)
 
-pkg = "rixmp"
-setwd(paste0(rixmp_path,"/source/"))
+pkg = "rixmp.legacy"
+setwd(paste0(rixmp.legacy_path,"/source/"))
 
 static_help = function(pkg, links = tools::findHTMLlinks()) {
   pkgRdDB = tools:::fetchRdDB(file.path(find.package(pkg), 'help', pkg))

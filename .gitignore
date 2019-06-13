@@ -42,12 +42,12 @@ tests/testdb/test.properties
 tests/testdb/ixmptest.properties
 tests/testdb/ixmptest.lck
 
-# rixmp build folder and rhistory
-rixmp/rixmp*.zip
-r*ixmp/**/r*ixmp_*.tar.gz
-rixmp/source/inst/docum/*.html
-rixmp/source/.Rhistory
-!rixmp/source/*.Rproj
+# rixmp.legacy build folder and rhistory
+rixmp*/**/rixmp*_*.tar.gz
+rixmp*/**/rixmp*_*.zip
+rixmp.legacy/source/inst/docum/*.html
+rixmp.legacy/source/.Rhistory
+!rixmp.legacy/source/*.Rproj
 .Rproj.user
 *.Rcheck
 

@@ -1,6 +1,6 @@
 context('Core')
 
-# Simulate 'library(retixmp)' without installing
+# Simulate 'library(rixmp)' without installing
 devtools::load_all(file.path('..', '..'))
 
 # Import fixtures

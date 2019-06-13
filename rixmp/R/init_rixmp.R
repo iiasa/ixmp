@@ -11,7 +11,7 @@
 #'    and other numerical models
 #'
 #'  - for full documentation of the Python functions, use py_help(<package>$<class>)
-#' @name retixmp
+#' @name rixmp
 NULL
 
 #' @import reticulate
@@ -19,8 +19,8 @@ NULL
 
 .onAttach <- function(libname, pkgname) {
   packageStartupMessage(
-    sprintf(paste0("Loaded retixmp v%s. See ?retixmp for help, ",
-                   "citation(\"retixmp\") for use in publication.\n"),
+    sprintf(paste0("Loaded rixmp v%s. See ?rixmp for help, ",
+                   "citation(\"rixmp\") for use in publication.\n"),
             utils::packageDescription(pkgname)$Version))
 }
 

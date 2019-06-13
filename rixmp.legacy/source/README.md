@@ -1,4 +1,4 @@
-# rixmp
+# rixmp.legacy
 R package for ix modeling platform (ixmp)
 
 The ix modeling platform (ixmp) is a data warehouse for high-powered scenario analysis, with 

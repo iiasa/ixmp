@@ -1,5 +1,5 @@
 library(testthat)
-library(retixmp)
+library(rixmp)
 
-test_check("retixmp")
+test_check("rixmp")
 ixmp <- import('ixmp')

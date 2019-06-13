@@ -1,4 +1,4 @@
-rem Install ixmp and retixmp from source on Windows
+rem Install ixmp and rixmp from source on Windows
 rem
 rem TODO if this script is to be kept/supported, describe it in the docs.
 
@@ -21,14 +21,14 @@ if %errorlevel% neq 0 GOTO InstallError
 
 where /q r
 IF ERRORLEVEL 1 (
-  echo R not installed; skipping installation of retixmp.
+  echo R not installed; skipping installation of rixmp.
 ) ELSE (
     rem TODO remove?
-    rem rscript rixmp/build_rixmp.R [--verbose]
+    rem rscript rixmp.legacy/build_rixmp.legacy.R [--verbose]
 
-    cd retixmp
+    cd rixmp
     R CMD build .
-    R CMD INSTALL --html retixmp_0.1.3.9000.tar.gz
+    R CMD INSTALL --html rixmp_0.1.3.9000.tar.gz
     cd ..
 )
 

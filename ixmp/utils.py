@@ -109,7 +109,7 @@ def harmonize_path(path_or_str):
 
     On Windows, R's file.path(...) uses '/', not '\', as a path separator.
     Python's str(WindowsPath(...)) uses '\'. Mixing outputs from the two
-    functions (e.g. through retixmp) produces path strings with both kinds of
+    functions (e.g. through rixmp) produces path strings with both kinds of
     separators.
     """
     args = ('/', '\\') if os.name == 'nt' else ('\\', '/')

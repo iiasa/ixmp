@@ -8,14 +8,14 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
 
    api-python
 
-R (``retixmp`` package)
+R (``rixmp`` package)
 -----------------------
 
-An R interface to the `ixmp` is provided by the ``retixmp`` package.
-``retixmp`` uses the `reticulate <https://rstudio.github.io/reticulate/>`_ R-to-Python adapter to provide all the features of the :mod:`ixmp` *Python* package::
+An R interface to the `ixmp` is provided by the ``rixmp`` package.
+``rixmp`` uses the `reticulate <https://rstudio.github.io/reticulate/>`_ R-to-Python adapter to provide all the features of the :mod:`ixmp` *Python* package::
 
-    # Load the retixmp package
-    library(retixmp)
+    # Load the rixmp package
+    library(rixmp)
 
     # An 'ixmp' object is added to the global namespace.
     # It can be used in the same way as the Python ixmp package.
@@ -26,35 +26,35 @@ An R interface to the `ixmp` is provided by the ``retixmp`` package.
 
 One additional method, ``adapt_to_ret()`` is provided. Access its documentation with::
 
-    ?retixmp::adapt_to_ret
+    ?rixmp::adapt_to_ret
 
 .. warning::
-   The *ixmp* source also contains an older R package called ``rixmp`` that provided reduced-functionality versions of :class:`ixmp.Platform` and :class:`ixmp.Scenario`.
-   This code is unmaintained and untested, and users are strongly advised to use or migrate to ``retixmp``.
+   The *ixmp* source also contains an older R package, now called ``rixmp.legacy`` that provided reduced-functionality versions of :class:`ixmp.Platform` and :class:`ixmp.Scenario`.
+   This code is unmaintained and untested, and users are strongly advised to use or migrate to ``rixmp``.
    
-Major syntax differences between ``rixmp`` and ``retixmp`` (see tutorial for practical examples):
+Major syntax differences between ``rixmp.legacy`` and the new ``rixmp`` (see tutorial for practical examples):
 
 Initialization:
 
-``rixmp``::
+``rixmp.legacy``::
 
-    library("rixmp")
+    library("rixmp.legacy")
     # launch the ix modeling platform using a local HSQL database instance
     mp <- ixmp.Platform(dbtype="HSQLDB")
    
-``retixmp``::
+``rixmp``::
 
-    library("retixmp")
+    library("rixmp")
     ixmp <- import('ixmp')
     mp <- ixmp$Platform(dbtype="HSQLDB")
 
-To load sets and parameter on the oracle database with ``rixmp`` the user need to load each data entry indipendently::
+To load sets and parameter on the oracle database with ``rixmp.legacy`` the user need to load each data entry indipendently::
 
     scen$init_set("i")
     scen$add_set("i", "seattle")
     scen$add_set("i", "san-diego") 
 
-With ``retixmp`` the user can load entire sets of strings or dataframes, which require the additional function 'adapt_to_ret()'::
+With ``rixmp`` the user can load entire sets of strings or dataframes, which require the additional function 'adapt_to_ret()'::
 
     scen$init_set("i")
     i.set = c("seattle","san-diego")

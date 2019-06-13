@@ -121,9 +121,9 @@ the ix modeling platform for scientific publications or technical reports:
 
 1. Two alternative options are available:
 
-    - use the package developed in Python, requires the `reticulate` R package (it will allow to install/use `retixmp`)
+    - use the package developed in Python, requires the `reticulate` R package (it will allow to install/use `rixmp`)
 
-    - use specific R packages (less available functionalities), requires the `rJava` R package (it will allow to install/use `rixmp`)
+    - use specific R packages (less functionality), requires the `rJava` R package (it will allow to install/use `rixmp.legacy`)
 
 1. Install Rtools and add the path to the environment variables
 

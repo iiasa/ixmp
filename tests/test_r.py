@@ -34,8 +34,8 @@ pytestmark = pytest.mark.skipif(not r_installed(), reason='R not installed')
 @pytest.fixture
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
-    # Path to the retixmp source
-    retixmp_path = Path(request.fspath).parent.parent / 'retixmp'
+    # Path to the rixmp source
+    rixmp_path = Path(request.fspath).parent.parent / 'rixmp'
 
     # Ensure reticulate uses the same Python as the pytest session
     tmp_env['RETICULATE_PYTHON'] = sys.executable
@@ -50,7 +50,7 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     tmp_env['_R_CHECK_TESTS_NLINES_'] = '0'
 
     # str() here is for Python 2.7 compatibility on Windows
-    args = dict(cwd=str(retixmp_path), env=tmp_env, stdout=subprocess.PIPE,
+    args = dict(cwd=str(rixmp_path), env=tmp_env, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
 
     arg = 'text' if sys.version_info[:2] >= (3, 7) else 'universal_newlines'

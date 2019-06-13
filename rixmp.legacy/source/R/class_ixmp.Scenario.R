@@ -1,6 +1,6 @@
 #' @title Class ixmp.Scenario
 #' @name ixmp.Scenario
-#' @include init_rixmp.R
+#' @include init_rixmp.legacy.R
 #'
 #' @description The class 'ixmp.Scenario' is a generic collection
 #' of all data for a model instance (sets and parameters), as well as

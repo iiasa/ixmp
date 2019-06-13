@@ -1,6 +1,6 @@
 #' @title Class ixmp.Platform
 #' @name ixmp.Platform
-#' @include init_rixmp.R
+#' @include init_rixmp.legacy.R
 #'
 #' @description The class 'ixmp.Platform' is the central access point to
 #' and accessing dataobjects (timeseries and reference data)

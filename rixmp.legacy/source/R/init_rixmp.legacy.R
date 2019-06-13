@@ -8,7 +8,7 @@
 #'
 #'  - integration with the |MESSAGEix| Integrated Assessment model
 #'    and other numerical models
-#' @name rixmp
+#' @name rixmp.legacy
 NULL
 
 #' @import rJava
@@ -18,7 +18,7 @@ NULL
 
 .onAttach = function(libname, pkgname){
   packageStartupMessage(
-    sprintf("Loaded rixmp v%s. See ?rixmp for help, citation(\"rixmp\") for use in publication.\n",
+    sprintf("Loaded rixmp.legacy v%s. See ?rixmp.legacy for help, citation(\"rixmp.legacy\") for use in publication.\n",
             utils::packageDescription(pkgname)$Version) )
 }
 

@@ -23,7 +23,7 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
 
   # Initialize a new ixmp.Scenario
   # The parameter version='new' indicates that this is a new scenario instance
-  scen <- mp$Scenario(model, scenario, 'new', annotation = annot)
+  scen <- ixmp$Scenario(mp, model, scenario, 'new', annotation = annot)
   expect_silent(scen)
 
   # Define the sets of locations of canning plants

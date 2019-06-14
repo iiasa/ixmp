@@ -26,6 +26,7 @@ import xarray as xr
 from pandas.testing import assert_series_equal
 from xarray.testing import (
     assert_equal as assert_xr_equal,
+    assert_allclose as assert_xr_allclose,
 )
 
 from .config import _config as ixmp_config
@@ -307,6 +308,21 @@ def assert_qty_equal(a, b, **kwargs):
         assert_series_equal(a, b, **kwargs)
     elif Quantity is xr.DataArray:
         assert_xr_equal(a, b, **kwargs)
+
+    # check attributes are equal
+    assert a.attrs == b.attrs
+
+
+def assert_qty_allclose(a, b, **kwargs):
+    a = Quantity(a)
+    b = Quantity(b)
+
+    # check type-specific allclose
+    if Quantity is AttrSeries:
+        # we may
+        assert_series_equal(a, b, **kwargs)
+    elif Quantity is xr.DataArray:
+        assert_xr_allclose(a, b, **kwargs)
 
     # check attributes are equal
     assert a.attrs == b.attrs

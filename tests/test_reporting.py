@@ -8,16 +8,16 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+
+from pandas.testing import assert_series_equal
 from xarray.testing import (
-    assert_allclose as assert_xr_allclose,
     assert_equal as assert_xr_equal,
 )
 
-from ixmp.testing import make_dantzig, assert_qty_equal
+from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
 from ixmp.reporting import Key, Reporter, computations
 from ixmp.reporting.utils import ureg, Quantity, AttrSeries
 
-from pandas.testing import assert_series_equal
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -485,14 +485,15 @@ def test_reporting_aggregate(test_mp):
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    def assert_allclose(a, b):
-        """Shim for AttrSeries."""
-        assert_xr_allclose(a.as_xarray(), b)
-
-    assert_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
-    assert_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
-    assert_allclose(agg1.sel(t='baz', drop=True),
-                    x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries, should
+    # that be made default in assert_qty_allclose?
+    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'),
+                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'),
+                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='baz', drop=True),
+                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'),
+                        check_dtype=False)
 
     # Add aggregates, without keeping originals
     key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)

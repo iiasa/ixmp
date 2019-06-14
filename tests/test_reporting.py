@@ -16,7 +16,7 @@ from xarray.testing import (
 
 from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
 from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg, Quantity, AttrSeries
+from ixmp.reporting.utils import ureg, Quantity
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -481,8 +481,8 @@ def test_reporting_aggregate(test_mp):
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries, should
-    # that be made default in assert_qty_allclose?
+    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries,
+    # should that be made default in assert_qty_allclose?
     assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'),
                         check_dtype=False)
     assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'),

@@ -56,8 +56,13 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
   print(a)
   print(a.df)
 
-  # expect_equivalent() here is for py2 compatibility; otherwise expect_equal
-  expect_equivalent(a, a.df)
+  # Python 2.7: column order in the returned data.frame is different
+  a <- a[, c('i', 'value', 'unit')]
+
+  print(a)
+  print(a.df)
+
+  expect_equal(a, a.df)
 })
 
 

@@ -211,7 +211,10 @@ class AttrSeries(pd.Series):
     _metadata = ['attrs']
 
     def __init__(self, *args, **kwargs):
-        if hasattr(args[0], 'attrs'):
+        if 'attrs' in kwargs:
+            # Use provided attrs
+            attrs = kwargs.pop('attrs')
+        elif hasattr(args[0], 'attrs'):
             # Use attrs from an xarray object
             attrs = args[0].attrs.copy()
 
@@ -219,8 +222,8 @@ class AttrSeries(pd.Series):
             args = list(args)
             args[0] = args[0].to_series()
         else:
-            # Use provided attrs
-            attrs = kwargs.pop('attrs', collections.OrderedDict())
+            # default empty
+            attrs = collections.OrderedDict()
 
         super().__init__(*args, **kwargs)
 

@@ -4,7 +4,7 @@ from numpy import testing as npt
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import make_dantzig, TS_DF, HIST_DF
+from ixmp.testing import make_dantzig, models, TS_DF, HIST_DF
 
 TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
@@ -104,18 +104,28 @@ def test_multi_db_run(tmpdir, test_data_path):
 
     # clone solved model across platforms (with default settings)
     scen2 = scen1.clone(platform=mp2, keep_solution=True)
-    assert_multi_db(mp1, mp2)
+
+    # close mp2 and reopen to confirm all data saved correctly
+    mp2.close_db()
+    del scen2
+    del mp2
+
+    # reopen mp2 and scen2
+    mp2new = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
+    assert_multi_db(mp1, mp2new)
+    info = models['dantzig']
+    scen2new = ixmp.Scenario(mp2new, info['model'], info['scenario'])
 
     # check that sets, variables and parameter were copied correctly
-    npt.assert_array_equal(scen1.set('i'), scen2.set('i'))
-    pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
-    assert np.isclose(scen2.var('z')['lvl'], 153.675)
-    pdt.assert_frame_equal(scen1.var('x'), scen2.var('x'))
+    npt.assert_array_equal(scen1.set('i'), scen2new.set('i'))
+    pdt.assert_frame_equal(scen1.par('d'), scen2new.par('d'))
+    assert np.isclose(scen2new.var('z')['lvl'], 153.675)
+    pdt.assert_frame_equal(scen1.var('x'), scen2new.var('x'))
 
     # check that custom unit, region and timeseries are migrated correctly
-    assert scen2.par('f')['value'] == 90.0
-    assert scen2.par('f')['unit'] == 'USD_per_km'
-    pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+    assert scen2new.par('f')['value'] == 90.0
+    assert scen2new.par('f')['unit'] == 'USD_per_km'
+    pdt.assert_frame_equal(scen2new.timeseries(iamc=True), TS_DF)
 
 
 def test_multi_db_edit_source(tmpdir):

@@ -73,14 +73,6 @@ def test_assert_qty_equal_attrs():
     assert_qty_equal(b, a)
 
 
-def test_assert_qty_equal():
-    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    b = a.to_series()
-
-    assert_qty_equal(a, b)
-    assert_qty_equal(b, a)
-
-
 def test_reporting_key():
     k1 = Key('foo', ['a', 'b', 'c'])
 

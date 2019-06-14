@@ -42,21 +42,24 @@ def scenario(test_mp):
 # the backend for testing both xr and pd.
 # I have done this by hand (swapping the Quantity class and running tests) on
 # commit df1ec6f of #147.
-def test_assert_qty_equal():
+def test_assert_qty():
     # tests without `attr` property, in which case direct pd.Series and
     # xr.DataArray comparisons are possible
     a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
     b = a.to_series()
-
     assert_qty_equal(a, b)
     assert_qty_equal(b, a)
+    assert_qty_allclose(a, b)
+    assert_qty_allclose(b, a)
 
     c = Quantity(a)
     assert_qty_equal(a, c)
     assert_qty_equal(c, a)
+    assert_qty_allclose(a, c)
+    assert_qty_allclose(c, a)
 
 
-def test_assert_qty_equal_attrs():
+def test_assert_qty_attrs():
     # tests *with* `attr` property, in which case direct pd.Series and
     # xr.DataArray comparisons *not* are possible
     a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
@@ -67,10 +70,11 @@ def test_assert_qty_equal_attrs():
     # make sure it has the correct property
     assert a.attrs == attrs
     assert b.attrs == attrs
-    assert a.attrs == b.attrs
 
     assert_qty_equal(a, b)
     assert_qty_equal(b, a)
+    assert_qty_allclose(a, b)
+    assert_qty_allclose(b, a)
 
 
 def test_reporting_key():

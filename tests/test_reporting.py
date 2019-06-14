@@ -76,6 +76,9 @@ def test_assert_qty_attrs():
     assert_qty_allclose(a, b)
     assert_qty_allclose(b, a)
 
+    a.attrs = {'bar': 'foo'}
+    assert_qty_equal(a, b, check_attrs=False)
+
 
 def test_reporting_key():
     k1 = Key('foo', ['a', 'b', 'c'])

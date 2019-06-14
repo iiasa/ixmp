@@ -26,13 +26,13 @@ def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')
 def test_R_transport(tutorial_path, tmp_path, tmp_env):
-    fname = tutorial_path / 'transport' / 'R_transport_ret.ipynb'
+    fname = tutorial_path / 'transport' / 'R_transport.ipynb'
     nb, errors = run_notebook(fname, tmp_path, tmp_env, kernel='IR')
     assert errors == []
 
 
 @pytest.mark.skipif(not r_installed(), reason='requires R to be installed')
 def test_R_transport_scenario(tutorial_path, tmp_path, tmp_env):
-    fname = tutorial_path / 'transport' / 'R_transport_scenario_ret.ipynb'
+    fname = tutorial_path / 'transport' / 'R_transport_scenario.ipynb'
     nb, errors = run_notebook(fname, tmp_path, tmp_env, kernel='IR')
     assert errors == []

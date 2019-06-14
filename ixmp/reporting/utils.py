@@ -211,7 +211,7 @@ class AttrSeries(pd.Series):
     _metadata = ['attrs']
 
     def __init__(self, *args, **kwargs):
-        if isinstance(args[0], xr.DataArray):
+        if hasattr(args[0], 'attrs'):
             # Use attrs from an xarray object
             attrs = args[0].attrs.copy()
 

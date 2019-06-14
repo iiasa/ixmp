@@ -299,11 +299,14 @@ def get_cell_output(nb, name_or_index):
 
 
 def assert_qty_equal(a, b, **kwargs):
-    print(Quantity)
     a = Quantity(a)
     b = Quantity(b)
 
+    # check type-specific equal
     if Quantity is AttrSeries:
         assert_series_equal(a, b, **kwargs)
     elif Quantity is xr.DataArray:
         assert_xr_equal(a, b, **kwargs)
+
+    # check attributes are equal
+    assert a.attrs == b.attrs

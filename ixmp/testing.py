@@ -299,7 +299,7 @@ def get_cell_output(nb, name_or_index):
 # special ixmp-based assertions
 
 
-def assert_qty_equal(a, b, **kwargs):
+def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     a = Quantity(a)
     b = Quantity(b)
 
@@ -310,10 +310,11 @@ def assert_qty_equal(a, b, **kwargs):
         assert_xr_equal(a, b, **kwargs)
 
     # check attributes are equal
-    assert a.attrs == b.attrs
+    if check_attrs:
+        assert a.attrs == b.attrs
 
 
-def assert_qty_allclose(a, b, **kwargs):
+def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
     a = Quantity(a)
     b = Quantity(b)
 
@@ -325,4 +326,5 @@ def assert_qty_allclose(a, b, **kwargs):
         assert_xr_allclose(a, b, **kwargs)
 
     # check attributes are equal
-    assert a.attrs == b.attrs
+    if check_attrs:
+        assert a.attrs == b.attrs

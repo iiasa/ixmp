@@ -183,6 +183,10 @@ def keys_for_quantity(ix_type, name, scenario):
 def _parse_units(units_series):
     unit = pd.unique(units_series)
 
+    # TODO remove these two lines, it completely overrides all unit knowledge
+    import numpy as np
+    unit = np.array(['-'] * len(unit))
+
     if len(unit) > 1:
         log.info(f'Mixed units {unit} discarded')
         unit = ['']

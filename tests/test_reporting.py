@@ -13,9 +13,9 @@ from xarray.testing import (
     assert_equal as assert_xr_equal,
 )
 
-from ixmp.testing import make_dantzig
+from ixmp.testing import make_dantzig, assert_qty_equal
 from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg, Quantity
+from ixmp.reporting.utils import ureg, Quantity, AttrSeries
 
 from pandas.testing import assert_series_equal
 
@@ -35,6 +35,16 @@ def scenario(test_mp):
     scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
     return scen
+
+
+# TODO: we would need to revamp the quantity interface to be able to custom set
+# the backend for testing both xr and pd
+def test_assert_qty_equal():
+    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+    b = a.to_series()
+
+    assert_qty_equal(a, b)
+    assert_qty_equal(b, a)
 
 
 def test_reporting_key():

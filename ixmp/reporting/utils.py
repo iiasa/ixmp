@@ -274,19 +274,6 @@ class AttrSeries(pd.Series):
         return AttrSeries
 
 
-# commented: see description in reporting/__init__.py
-# Quantity = xr.DataArray
-Quantity = AttrSeries
-
-
-def concat(*args, **kwargs):
-    if Quantity is AttrSeries:
-        kwargs.pop('dim')
-        return pd.concat(*args, **kwargs)
-    elif Quantity is xr.DataArray:
-        return xr.concat(*args, **kwargs)
-
-
 def data_for_quantity(ix_type, name, column, scenario):
     """Retrieve data from *scenario*.
 
@@ -357,3 +344,15 @@ def data_for_quantity(ix_type, name, column, scenario):
         pass
 
     return ds
+
+
+# Quantity = xr.DataArray
+Quantity = AttrSeries
+
+
+def concat(*args, **kwargs):
+    if Quantity is AttrSeries:
+        kwargs.pop('dim')
+        return pd.concat(*args, **kwargs)
+    elif Quantity is xr.DataArray:
+        return xr.concat(*args, **kwargs)

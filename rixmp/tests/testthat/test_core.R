@@ -53,6 +53,9 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
   a = scen$par('a')
   attributes(a)$pandas.index = NULL
 
+  print(a)
+  print(a.df)
+
   # expect_equivalent() here is for py2 compatibility; otherwise expect_equal
   expect_equivalent(a, a.df)
 })

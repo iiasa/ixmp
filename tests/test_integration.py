@@ -102,16 +102,16 @@ def test_multi_db_run(tmpdir, test_data_path):
     # check that cloning across platforms must copy the full solution
     pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
-    # clone solved model across platforms (with default settings)
+    # clone solved model across platforms (with default settings), close the db
     scen1.clone(platform=mp2, keep_solution=True)
 
     mp2.close_db()
     del mp2
 
+    # reopen the connection to the second platform and reload scenario
     _mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
     assert_multi_db(mp1, _mp2)
-    info = models['dantzig']
-    scen2 = ixmp.Scenario(_mp2, info['model'], info['scenario'])
+    scen2 = ixmp.Scenario(_mp2, **models['dantzig'])
 
     # check that sets, variables and parameter were copied correctly
     npt.assert_array_equal(scen1.set('i'), scen2.set('i'))

@@ -1173,7 +1173,7 @@ class Scenario(TimeSeries):
             New scenario name. If not given, use the existing scenario name.
         annotation : str, optional
             Explanatory comment for the clone commit message to the database.
-        keep_solution : bool, default True
+        keep_solution : bool, optional
             If :py:const:`True`, include all timeseries data and the solution
             (vars and equs) from the source scenario in the clone.
             If :py:const:`False`, only include timeseries data marked
@@ -1264,8 +1264,11 @@ class Scenario(TimeSeries):
         return self._jobj.hasSolution()
 
     def remove_solution(self, first_model_year=None):
-        """Delete the model solution (variables and equations) and timeseries
-        data marked as `meta=False` (see :meth:`TimeSeries.add_timeseries`).
+        """Remove the solution from the scenario
+
+        This function removes the solution (variables and equations) and
+        timeseries data marked as `meta=False` from the scenario
+        (see :meth:`TimeSeries.add_timeseries`).
 
         Parameters
         ----------

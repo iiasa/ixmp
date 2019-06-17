@@ -151,8 +151,7 @@ def make_dantzig(mp, solve=False):
 
     # initialize a new (empty) instance of an `ixmp.Scenario`
     annot = "Dantzig's transportation problem for illustration and testing"
-    args = models['dantzig'].copy()
-    scen = Scenario(mp, version='new', annotation=annot, **args)
+    scen = Scenario(mp, version='new', annotation=annot, **models['dantzig'])
 
     # define sets
     scen.init_set('i')

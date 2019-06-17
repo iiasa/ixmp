@@ -15,15 +15,23 @@ try:
     from pathlib import Path
 except ImportError:
     from pathlib2 import Path
+import pytest
 import shutil
 import sys
 import subprocess
 
 import pandas as pd
-import pytest
+import xarray as xr
+
+from pandas.testing import assert_series_equal
+from xarray.testing import (
+    assert_equal as assert_xr_equal,
+    assert_allclose as assert_xr_allclose,
+)
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
+from .reporting.utils import Quantity, AttrSeries
 
 
 models = {
@@ -35,6 +43,7 @@ models = {
 
 
 # pytest hooks and fixtures
+
 
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
@@ -305,3 +314,37 @@ def get_cell_output(nb, name_or_index):
         return eval(cell['outputs'][0]['data']['text/plain'])
     except NameError:
         raise ValueError('no cell named {!r}'.format(name_or_index))
+
+
+# special ixmp-based assertions
+
+
+def assert_qty_equal(a, b, check_attrs=True, **kwargs):
+    a = Quantity(a)
+    b = Quantity(b)
+
+    # check type-specific equal
+    if Quantity is AttrSeries:
+        assert_series_equal(a, b, **kwargs)
+    elif Quantity is xr.DataArray:
+        assert_xr_equal(a, b, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs
+
+
+def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+    a = Quantity(a)
+    b = Quantity(b)
+
+    # check type-specific allclose
+    if Quantity is AttrSeries:
+        # we may
+        assert_series_equal(a, b, **kwargs)
+    elif Quantity is xr.DataArray:
+        assert_xr_allclose(a, b, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs

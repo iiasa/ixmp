@@ -2,11 +2,12 @@ Package: rixmp
 Type: Package
 Title: R package for ix modeling platform (ixmp)
 Version: 0.1.3.9000
-Date: 2019-05-11
+Date: 2019-06-17
 Authors@R: c(
   person("Adriano", "Vinca", email = "vinca@iiasa.ac.at", role = c("aut", "cre")),
   person("Matthew", "Gidden", role = "aut"),
-  person("Paul", "Kishimoto", email = "kishimot@iiasa.ac.at", role = "ctb")
+  person(c("Paul", "Natsuo"), "Kishimoto", email = "kishimot@iiasa.ac.at",
+         role = "ctb")
   )
 Description: The ix modeling platform (ixmp) is a data warehouse for high-powered scenario analysis,
  with interfaces to Python and R for efficient scientific workflows and effective data pre- and

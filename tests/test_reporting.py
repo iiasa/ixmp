@@ -8,16 +8,16 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+
+from pandas.testing import assert_series_equal
 from xarray.testing import (
-    assert_allclose as assert_xr_allclose,
     assert_equal as assert_xr_equal,
 )
 
-from ixmp.testing import make_dantzig
+from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
 from ixmp.reporting import Key, Reporter, computations
 from ixmp.reporting.utils import ureg, Quantity
 
-from pandas.testing import assert_series_equal
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -35,6 +35,49 @@ def scenario(test_mp):
     scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
     return scen
+
+
+# TODO:
+# we would need to revamp the quantity interface to be able to custom set
+# the backend for testing both xr and pd.
+# I have done this by hand (swapping the Quantity class and running tests) on
+# commit df1ec6f of #147.
+def test_assert_qty():
+    # tests without `attr` property, in which case direct pd.Series and
+    # xr.DataArray comparisons are possible
+    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+    b = a.to_series()
+    assert_qty_equal(a, b)
+    assert_qty_equal(b, a)
+    assert_qty_allclose(a, b)
+    assert_qty_allclose(b, a)
+
+    c = Quantity(a)
+    assert_qty_equal(a, c)
+    assert_qty_equal(c, a)
+    assert_qty_allclose(a, c)
+    assert_qty_allclose(c, a)
+
+
+def test_assert_qty_attrs():
+    # tests *with* `attr` property, in which case direct pd.Series and
+    # xr.DataArray comparisons *not* are possible
+    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+    attrs = {'foo': 'bar'}
+    a.attrs = attrs
+    b = Quantity(a)
+
+    # make sure it has the correct property
+    assert a.attrs == attrs
+    assert b.attrs == attrs
+
+    assert_qty_equal(a, b)
+    assert_qty_equal(b, a)
+    assert_qty_allclose(a, b)
+    assert_qty_allclose(b, a)
+
+    a.attrs = {'bar': 'foo'}
+    assert_qty_equal(a, b, check_attrs=False)
 
 
 def test_reporting_key():
@@ -441,14 +484,15 @@ def test_reporting_aggregate(test_mp):
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    def assert_allclose(a, b):
-        """Shim for AttrSeries."""
-        assert_xr_allclose(a.as_xarray(), b)
-
-    assert_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
-    assert_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
-    assert_allclose(agg1.sel(t='baz', drop=True),
-                    x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries,
+    # should that be made default in assert_qty_allclose?
+    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'),
+                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'),
+                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='baz', drop=True),
+                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'),
+                        check_dtype=False)
 
     # Add aggregates, without keeping originals
     key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)

@@ -211,7 +211,10 @@ class AttrSeries(pd.Series):
     _metadata = ['attrs']
 
     def __init__(self, *args, **kwargs):
-        if isinstance(args[0], xr.DataArray):
+        if 'attrs' in kwargs:
+            # Use provided attrs
+            attrs = kwargs.pop('attrs')
+        elif hasattr(args[0], 'attrs'):
             # Use attrs from an xarray object
             attrs = args[0].attrs.copy()
 
@@ -219,8 +222,8 @@ class AttrSeries(pd.Series):
             args = list(args)
             args[0] = args[0].to_series()
         else:
-            # Use provided attrs
-            attrs = kwargs.pop('attrs', collections.OrderedDict())
+            # default empty
+            attrs = collections.OrderedDict()
 
         super().__init__(*args, **kwargs)
 
@@ -272,19 +275,6 @@ class AttrSeries(pd.Series):
     @property
     def _constructor(self):
         return AttrSeries
-
-
-# commented: see description in reporting/__init__.py
-# Quantity = xr.DataArray
-Quantity = AttrSeries
-
-
-def concat(*args, **kwargs):
-    if Quantity is AttrSeries:
-        kwargs.pop('dim')
-        return pd.concat(*args, **kwargs)
-    elif Quantity is xr.DataArray:
-        return xr.concat(*args, **kwargs)
 
 
 def data_for_quantity(ix_type, name, column, scenario):
@@ -357,3 +347,15 @@ def data_for_quantity(ix_type, name, column, scenario):
         pass
 
     return ds
+
+
+# Quantity = xr.DataArray
+Quantity = AttrSeries
+
+
+def concat(*args, **kwargs):
+    if Quantity is AttrSeries:
+        kwargs.pop('dim')
+        return pd.concat(*args, **kwargs)
+    elif Quantity is xr.DataArray:
+        return xr.concat(*args, **kwargs)

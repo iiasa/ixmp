@@ -29,11 +29,6 @@ build: false
 test_script:
   # Run tests
   # These include the equivalent of Travis R tests via test_r.py
-  - cmd: |
-         R CMD build rixmp
-         R CMD check --no-examples rixmp*.tar.gz
-         type C:/projects/ixmp/rixmp.Rcheck/00install.out
-         type C:/projects/ixmp/rixmp.Rcheck/00check.log
   - >
     pytest
     --verbose

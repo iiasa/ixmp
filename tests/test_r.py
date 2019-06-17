@@ -1,3 +1,4 @@
+import os
 try:
     from pathlib import Path
 except ImportError:
@@ -59,6 +60,9 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     yield args
 
 
+@pytest.mark.skipif(os.environ.get('APPVEYOR', '') == 'True' and
+                    sys.version_info[0] == 2,
+                    reason='Test times out on Appveyor / Python 2.7')
 def test_r_build_and_check(r_args):
     """R package can be built and R CMD check succeeds on the built package."""
     cmd = ['R', 'CMD', 'build', '.']

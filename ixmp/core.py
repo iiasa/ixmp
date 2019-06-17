@@ -1307,9 +1307,7 @@ class Scenario(TimeSeries):
             that the user has forgotten a ``return`` statement, in which case
             the iteration will continue indefinitely.
         """
-        print(model)
         model = str(harmonize_path(model))
-        print(model)
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
             else model_settings.model_config('default')

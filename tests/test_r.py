@@ -30,10 +30,11 @@ def r_installed():
 
 pytestmark = [
     pytest.mark.skipif(not r_installed(), reason='R not installed'),
-    pytest.mark.skipif(os.environ.get('APPVEYOR', '') == 'True' and
-                       sys.version_info[0] == 2,
-                       reason='Timeout on Appveyor / Python 2.7'),
-    ]
+    pytest.mark.skipif(
+        os.environ.get('APPVEYOR', '') == 'True' and sys.version_info[0] == 2,
+        reason='Timeout on Appveyor / Python 2.7',
+    ),
+]
 
 
 @pytest.fixture

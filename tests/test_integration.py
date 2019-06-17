@@ -4,7 +4,7 @@ from numpy import testing as npt
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import make_dantzig, TS_DF, HIST_DF
+from ixmp.testing import make_dantzig, models, TS_DF, HIST_DF
 
 TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
@@ -103,8 +103,15 @@ def test_multi_db_run(tmpdir, test_data_path):
     pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
     # clone solved model across platforms (with default settings)
-    scen2 = scen1.clone(platform=mp2, keep_solution=True)
-    assert_multi_db(mp1, mp2)
+    scen1.clone(platform=mp2, keep_solution=True)
+
+    mp2.close_db()
+    del mp2
+
+    _mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
+    assert_multi_db(mp1, _mp2)
+    info = models['dantzig']
+    scen2 = ixmp.Scenario(_mp2, info['model'], info['scenario'])
 
     # check that sets, variables and parameter were copied correctly
     npt.assert_array_equal(scen1.set('i'), scen2.set('i'))

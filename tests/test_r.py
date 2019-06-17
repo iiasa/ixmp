@@ -28,8 +28,12 @@ def r_installed():
         return False
 
 
-# Skip the entire file if R is not installed
-pytestmark = pytest.mark.skipif(not r_installed(), reason='R not installed')
+pytestmark = [
+    pytest.mark.skipif(not r_installed(), reason='R not installed'),
+    pytest.mark.skipif(os.environ.get('APPVEYOR', '') == 'True' and
+                       sys.version_info[0] == 2,
+                       reason='Timeout on Appveyor / Python 2.7'),
+    ]
 
 
 @pytest.fixture
@@ -60,9 +64,6 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     yield args
 
 
-@pytest.mark.skipif(os.environ.get('APPVEYOR', '') == 'True' and
-                    sys.version_info[0] == 2,
-                    reason='Test times out on Appveyor / Python 2.7')
 def test_r_build_and_check(r_args):
     """R package can be built and R CMD check succeeds on the built package."""
     cmd = ['R', 'CMD', 'build', '.']

@@ -53,7 +53,7 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
   a = scen$par('a')
   attributes(a)$pandas.index = NULL
 
-  # Python 2.7: ensure consistnet column order in the returned data.frame
+  # Python 2.7: ensure consistent column order in the returned data.frame
   a <- a[, c('i', 'value', 'unit')]
 
   expect_equal(a, a.df)

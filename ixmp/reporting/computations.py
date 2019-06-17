@@ -23,7 +23,8 @@ xr.set_options(keep_attrs=True)
 
 
 # Calculation
-def sum(quantity, weights, dimensions):
+# TODO: should we call this weighted sum?
+def sum(quantity, weights=None, dimensions=None):
     """Sum *quantity* over *dimensions*, with optional *weights*."""
     if weights is None:
         weights, w_total = 1, 1
@@ -60,7 +61,7 @@ def disaggregate_shares(quantity, shares):
                     attrs={'_unit': collect_units(quantity)[0]})
 
 
-def product(*quantities):
+def product(*quantities, drop=True):
     """Return the product of any number of *quantities*."""
     if len(quantities) == 1:
         quantities = [quantities]
@@ -78,16 +79,22 @@ def product(*quantities):
 
     result.attrs['_unit'] = u_result
 
+    if drop:
+        result.dropna(inplace=True)
+
     return result
 
 
-def ratio(numerator, denominator):
+def ratio(numerator, denominator, drop=True):
     """Return the ratio *numerator* / *denominator*."""
     # Handle units
     u_num, u_denom = collect_units(numerator, denominator)
 
     result = numerator / denominator
     result.attrs['_unit'] = u_num / u_denom
+
+    if drop:
+        result.dropna(inplace=True)
 
     return result
 

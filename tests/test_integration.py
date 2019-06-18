@@ -1,23 +1,74 @@
+import pytest
 import numpy as np
+from numpy import testing as npt
 import pandas.util.testing as pdt
 
 import ixmp
-from ixmp.testing import make_dantzig, TS_DF
+from ixmp.testing import make_dantzig, models, TS_DF, HIST_DF
+
+TS_DF_CLEARED = TS_DF.copy()
+TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_gams_api(tmpdir, test_data_path):
+def test_run_clone(tmpdir, test_data_path):
     # this test is designed to cover the full functionality of the GAMS API
+    # - initialize a new platform instance
     # - creates a new scenario and exports a gdx file
     # - runs the tutorial transport model
     # - reads back the solution from the output
-    # - performs the test on the objective value
+    # - performs the test on the objective value and the timeseries data
     mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
     scen = make_dantzig(mp, solve=test_data_path)
+    assert np.isclose(scen.var('z')['lvl'], 153.675)
+    pdt.assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
 
-    # test it
-    obs = scen.var('z')['lvl']
-    exp = 153.675
-    assert np.isclose(obs, exp)
+    # cloning with `keep_solution=True` keeps all timeseries and the solution
+    scen2 = scen.clone(keep_solution=True)
+    assert np.isclose(scen2.var('z')['lvl'], 153.675)
+    pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+
+    # cloning with `keep_solution=True` and `first_model_year` raises an error
+    pytest.raises(ValueError, scen.clone, first_model_year=2005)
+
+    # cloning with `keep_solution=False` drops the solution and only keeps
+    # timeseries set as `meta=True`
+    scen3 = scen.clone(keep_solution=False)
+    assert np.isnan(scen3.var('z')['lvl'])
+    pdt.assert_frame_equal(scen3.timeseries(iamc=True), HIST_DF)
+
+    # cloning with `keep_solution=False` and `first_model_year`
+    # drops the solution and removes all timeseries not marked `meta=True`
+    # in the model horizon (i.e, `year >= first_model_year`)
+    scen4 = scen.clone(keep_solution=False, first_model_year=2005)
+    assert np.isnan(scen4.var('z')['lvl'])
+    pdt.assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
+
+
+def test_run_remove_solution(tmpdir, test_data_path):
+    # create a new instance of the transport problem and solve it
+    mp = ixmp.Platform(tmpdir, dbtype='HSQLDB')
+    scen = make_dantzig(mp, solve=test_data_path)
+    assert np.isclose(scen.var('z')['lvl'], 153.675)
+
+    # check that re-solving the model will raise an error if a solution exists
+    pytest.raises(ValueError, scen.solve,
+                  model=str(test_data_path / 'transport_ixmp'), case='fail')
+
+    # remove the solution, check that variables are empty
+    # and timeseries not marked `meta=True` are removed
+    scen2 = scen.clone()
+    scen2.remove_solution()
+    assert not scen2.has_solution()
+    assert np.isnan(scen2.var('z')['lvl'])
+    pdt.assert_frame_equal(scen2.timeseries(iamc=True), HIST_DF)
+
+    # remove the solution with a specific year as first model year, check that
+    # variables are empty and timeseries not marked `meta=True` are removed
+    scen3 = scen.clone()
+    scen3.remove_solution(first_model_year=2005)
+    assert not scen3.has_solution()
+    assert np.isnan(scen3.var('z')['lvl'])
+    pdt.assert_frame_equal(scen3.timeseries(iamc=True), TS_DF_CLEARED)
 
 
 def scenario_list(mp):
@@ -28,7 +79,18 @@ def assert_multi_db(mp1, mp2):
     pdt.assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
 
 
+def get_distance(scen):
+    return (
+        scen
+        .par('d')
+        .set_index(['i', 'j'])
+        .loc['san-diego', 'topeka']
+        ['value']
+    )
+
+
 def test_multi_db_run(tmpdir, test_data_path):
+    # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = make_dantzig(mp1, solve=test_data_path)
 
@@ -37,20 +99,34 @@ def test_multi_db_run(tmpdir, test_data_path):
     mp2.add_unit('wrong_unit')
     mp2.add_region('wrong_region', 'country')
 
-    scen2 = scen1.clone(platform=mp2, keep_solution=False)
-    assert np.isnan(scen2.var('z')['lvl'])
-    scen2.solve(model=str(test_data_path / 'transport_ixmp'))
-    assert scen1.var('z') == scen2.var('z')
-    assert_multi_db(mp1, mp2)
+    # check that cloning across platforms must copy the full solution
+    pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
-    # check that custom unit and region are migrated correctly
+    # clone solved model across platforms (with default settings), close the db
+    scen1.clone(platform=mp2, keep_solution=True)
+
+    mp2.close_db()
+    del mp2
+
+    # reopen the connection to the second platform and reload scenario
+    _mp2 = ixmp.Platform(tmpdir / 'mp2', dbtype='HSQLDB')
+    assert_multi_db(mp1, _mp2)
+    scen2 = ixmp.Scenario(_mp2, **models['dantzig'])
+
+    # check that sets, variables and parameter were copied correctly
+    npt.assert_array_equal(scen1.set('i'), scen2.set('i'))
+    pdt.assert_frame_equal(scen1.par('d'), scen2.par('d'))
+    assert np.isclose(scen2.var('z')['lvl'], 153.675)
+    pdt.assert_frame_equal(scen1.var('x'), scen2.var('x'))
+
+    # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par('f')['value'] == 90.0
     assert scen2.par('f')['unit'] == 'USD_per_km'
-    obs = scen2.timeseries(iamc=True)
-    pdt.assert_frame_equal(obs, TS_DF, check_dtype=False)
+    pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
 
 def test_multi_db_edit_source(tmpdir):
+    # create a new instance of the transport problem
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = make_dantzig(mp1)
 
@@ -63,21 +139,11 @@ def test_multi_db_edit_source(tmpdir):
     scen1.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
     scen1.commit('foo')
 
-    obs = (scen1
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen1)
     exp = 1.5
     assert np.isclose(obs, exp)
 
-    obs = (scen2
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen2)
     exp = 1.4
     assert np.isclose(obs, exp)
 
@@ -85,6 +151,7 @@ def test_multi_db_edit_source(tmpdir):
 
 
 def test_multi_db_edit_target(tmpdir):
+    # create a new instance of the transport problem
     mp1 = ixmp.Platform(tmpdir / 'mp1', dbtype='HSQLDB')
     scen1 = make_dantzig(mp1)
 
@@ -97,21 +164,11 @@ def test_multi_db_edit_target(tmpdir):
     scen2.add_par('d', ['san-diego', 'topeka'], 1.5, 'km')
     scen2.commit('foo')
 
-    obs = (scen2
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen2)
     exp = 1.5
     assert np.isclose(obs, exp)
 
-    obs = (scen1
-           .par('d')
-           .set_index(['i', 'j'])
-           .loc['san-diego', 'topeka']
-           ['value']
-           )
+    obs = get_distance(scen1)
     exp = 1.4
     assert np.isclose(obs, exp)
 

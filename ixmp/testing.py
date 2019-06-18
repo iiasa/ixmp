@@ -23,7 +23,15 @@ import pandas as pd
 import pytest
 
 from .config import _config as ixmp_config
-from .core import Platform, Scenario
+from .core import Platform, Scenario, IAMC_IDX
+
+
+models = {
+    'dantzig': {
+        'model': 'canning problem',
+        'scenario': 'standard',
+    },
+}
 
 
 # pytest hooks and fixtures
@@ -92,13 +100,20 @@ def test_mp_props(tmp_path_factory, test_data_path):
 
 MODEL = "canning problem"
 SCENARIO = "standard"
-TS_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 900], ],
-    columns=['model', 'scenario', 'region', 'variable', 'unit', 2005],
+HIST_DF = pd.DataFrame(
+    [[MODEL, SCENARIO, 'DantzigLand', 'GDP', 'USD', 850., 900., 950.], ],
+    columns=IAMC_IDX + [2000, 2005, 2010],
 )
+INP_DF = pd.DataFrame(
+    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 850., 900.], ],
+    columns=IAMC_IDX + [2000, 2005],
+)
+TS_DF = pd.concat([HIST_DF, INP_DF], sort=False)
+TS_DF.sort_values(by='variable', inplace=True)
+TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path):
+def create_local_testdb(db_path, data_path, db='ixmptest'):
     """Create a local database for testing in the directory *db_path*.
 
     Returns the path to a database properties file in the directory. Contents
@@ -112,13 +127,14 @@ def create_local_testdb(db_path, data_path):
     # Create properties file
     props = (data_path / 'test.properties_template').read_text()
     test_props = dst / 'test.properties'
-    test_props.write_text(props.format(here=str(dst).replace("\\", "/")))
+    test_props.write_text(props.format(here=str(dst).replace("\\", "/"),
+                          db=db))
 
     return test_props
 
 
 def make_dantzig(mp, solve=False):
-    """Return an :class:`ixmp.Scenario` for Dantzig's canning/transport problem.
+    """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters
     ----------
@@ -134,10 +150,8 @@ def make_dantzig(mp, solve=False):
     mp.add_region('DantzigLand', 'country')
 
     # initialize a new (empty) instance of an `ixmp.Scenario`
-    model = 'canning problem'
-    scenario = 'standard'
     annot = "Dantzig's transportation problem for illustration and testing"
-    scen = Scenario(mp, model, scenario, version='new', annotation=annot)
+    scen = Scenario(mp, version='new', annotation=annot, **models['dantzig'])
 
     # define sets
     scen.init_set('i')
@@ -183,9 +197,7 @@ def make_dantzig(mp, solve=False):
     scen.init_var('x', idx_sets=['i', 'j'])
     scen.init_equ('demand', idx_sets=['j'])
 
-    # add timeseries data for testing the clone across platforms
-    scen.add_timeseries(TS_DF)
-
+    # commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")
 
     # set this new scenario as the default version for the model/scenario name
@@ -195,6 +207,13 @@ def make_dantzig(mp, solve=False):
         # Solve the model using the GAMS code provided in the `tests` folder
         scen.solve(model=str(solve / 'transport_ixmp'),
                    case='transport_standard')
+
+    # add timeseries data for testing `clone(keep_solution=False)`
+    # and `remove_solution()`
+    scen.check_out(timeseries_only=True)
+    scen.add_timeseries(HIST_DF, meta=True)
+    scen.add_timeseries(INP_DF)
+    scen.commit("Import Dantzig's transport problem for testing.")
 
     return scen
 

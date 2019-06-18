@@ -14,7 +14,7 @@ from subprocess import check_call
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable
+from ixmp.utils import logger, islistable, check_year
 
 # %% default settings for column headers
 
@@ -89,7 +89,6 @@ class Platform(object):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
-
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -248,7 +247,11 @@ class Platform(object):
             Annotation describing the unit or why it was added. The current
             database user and timestamp are appended automatically.
         """
-        self._jobj.addUnitToDB(unit, comment)
+        if unit not in self.units():
+            self._jobj.addUnitToDB(unit, comment)
+        else:
+            msg = 'unit `{}` is already defined in the platform instance'
+            logger().info(msg.format(unit))
 
     def regions(self):
         """Return all regions defined for the IAMC-style timeseries format
@@ -284,7 +287,11 @@ class Platform(object):
         parent : str, default 'World'
             Assign a 'parent' region.
         """
-        self._jobj.addNode(region, parent, hierarchy)
+        _regions = self.regions()
+        if region not in list(_regions['region']):
+            self._jobj.addNode(region, parent, hierarchy)
+        else:
+            _logger_region_exists(_regions, region)
 
     def add_region_synomym(self, region, mapped_to):
         """Define a synomym for a `region`.
@@ -299,7 +306,21 @@ class Platform(object):
         mapped_to : str
             Name of the region to which the synonym should be mapped.
         """
-        self._jobj.addNodeSynonym(mapped_to, region)
+        _regions = self.regions()
+        if region not in list(_regions['region']):
+            self._jobj.addNodeSynonym(mapped_to, region)
+        else:
+            _logger_region_exists(_regions, region)
+
+
+def _logger_region_exists(_regions, r):
+    region = _regions.set_index('region').loc[r]
+    msg = 'region `{}` is already defined in the platform instance'
+    if region['mapped_to'] is not None:
+        msg += ' as synomym for region `{}`'.format(region.mapped_to)
+    if region['parent'] is not None:
+        msg += ', as subregion of `{}`'.format(region.parent)
+    logger().info(msg.format(r))
 
 # %% class TimeSeries
 
@@ -626,7 +647,7 @@ class Scenario(TimeSeries):
     version : str or int or at.ac.iiasa.ixmp.objects.Scenario, optional
         If omitted, load the default version of the (`model`, `scenario`).
         If :class:`int`, load the specified version.
-        If ``'new'``, initialize a new TimeSeries.
+        If ``'new'``, initialize a new Scenario.
     scheme : str, optional
         Use an explicit scheme for initializing a new scenario.
     annotation : str, optional
@@ -634,7 +655,6 @@ class Scenario(TimeSeries):
     cache : bool, optional
         Store data in memory and return cached values instead of repeatedly
         querying the database.
-
     """
     # Name of the model associated with the Scenario
     model = None
@@ -662,8 +682,10 @@ class Scenario(TimeSeries):
         # constructor for `message_ix.Scenario.__init__` or `clone()` function
         elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
             self._jobj = version
-        else:
+        elif version is None:
             self._jobj = mp._jobj.getScenario(model, scenario)
+        else:
+            raise ValueError('Invalid `version` arg: `{}`'.format(version))
 
         self.platform = mp
         self.model = model
@@ -1135,13 +1157,13 @@ class Scenario(TimeSeries):
         If the (`model`, `scenario`) given already exist on the
         :class:`Platform`, the `version` for the cloned Scenario follows the
         last existing version. Otherwise, the `version` for the cloned Scenario
-        is 0.
+        is 1.
 
         .. note::
             :meth:`clone` does not set or alter default versions. This means
             that a clone to new (`model`, `scenario`) names has no default
             version, and will not be returned by
-            :meth:`Platform.scenarios_list` unless ``default=False`` is given.
+            :meth:`Platform.scenario_list` unless `default=False` is given.
 
         Parameters
         ----------
@@ -1150,16 +1172,18 @@ class Scenario(TimeSeries):
         scenario : str, optional
             New scenario name. If not given, use the existing scenario name.
         annotation : str, optional
-            Explanatory comment for the clone operation.
-        keep_solution : bool
-            If :py:const:`True`, include data from an existing model solution
-            in the clone.
-        first_model_year: int
-            If given, all time series data in the Scenario is omitted from the
-            clone for years from `first_model_year` onwards. Time series data
+            Explanatory comment for the clone commit message to the database.
+        keep_solution : bool, optional
+            If :py:const:`True`, include all timeseries data and the solution
+            (vars and equs) from the source scenario in the clone.
+            If :py:const:`False`, only include timeseries data marked
+            `meta=True` (see :meth:`TimeSeries.add_timeseries`).
+        first_model_year: int, optional
+            If given, all timeseries data in the Scenario is omitted from the
+            clone for years from `first_model_year` onwards. Timeseries data
             with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
             cloned for all years.
-        platform : :class:`Platform`
+        platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
@@ -1174,19 +1198,24 @@ class Scenario(TimeSeries):
                 ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
-        first_model_year = first_model_year or 0
+        if keep_solution and first_model_year is not None:
+            raise ValueError('Use `keep_solution=False` when cloning with '
+                             '`first_model_year`!')
 
-        platform = self.platform if not platform else platform
-        model = self.model if not model else model
-        scenario = self.scenario if not scenario else scenario
+        if platform is not None and not keep_solution:
+            raise ValueError('Cloning across platforms is only possible '
+                             'with `keep_solution=True`!')
+
+        platform = platform or self.platform
+        model = model or self.model
+        scenario = scenario or self.scenario
+        args = [platform._jobj, model, scenario, annotation, keep_solution]
+        if check_year(first_model_year, 'first_model_year'):
+            args.append(first_model_year)
 
         scenario_class = self.__class__
-        return scenario_class(platform, model, scenario,
-                              version=self._jobj.clone(platform._jobj, model,
-                                                       scenario, annotation,
-                                                       keep_solution,
-                                                       first_model_year),
-                              cache=self._cache)
+        return scenario_class(platform, model, scenario, cache=self._cache,
+                              version=self._jobj.clone(*args))
 
     def to_gdx(self, path, filename, include_var_equ=False):
         """export the scenario data to GAMS gdx
@@ -1230,24 +1259,36 @@ class Scenario(TimeSeries):
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
 
-        If ``has_solution() == True``, model solution data is exists in the
-        database.
+        If ``has_solution() == True``, model solution data exists in the db.
         """
         return self._jobj.hasSolution()
 
-    def remove_solution(self):
-        """Delete the model solution.
+    def remove_solution(self, first_model_year=None):
+        """Remove the solution from the scenario
+
+        This function removes the solution (variables and equations) and
+        timeseries data marked as `meta=False` from the scenario
+        (see :meth:`TimeSeries.add_timeseries`).
+
+        Parameters
+        ----------
+        first_model_year: int, optional
+            If given, timeseries data marked as `meta=False` is removed
+            only for years from `first_model_year` onwards.
 
         Raises
         ------
         ValueError
-            If Scenario has no solution.
+            If Scenario has no solution or if `first_model_year` is not `int`.
         """
         if self.has_solution():
             self.clear_cache()  # reset Python data cache
-            self._jobj.removeSolution()
+            if check_year(first_model_year, 'first_model_year'):
+                self._jobj.removeSolution(first_model_year)
+            else:
+                self._jobj.removeSolution()
         else:
-            raise ValueError('this Scenario does not have a solution')
+            raise ValueError('This Scenario does not have a solution!')
 
     def solve(self, model, case=None, model_file=None, in_file=None,
               out_file=None, solve_args=None, comment=None, var_list=None,
@@ -1306,7 +1347,16 @@ class Scenario(TimeSeries):
             If `callback` is given and returns :obj:`None`. This may indicate
             that the user has forgotten a ``return`` statement, in which case
             the iteration will continue indefinitely.
+
+        Raises
+        ------
+        ValueError
+            If the Scenario has already been solved.
         """
+        if self.has_solution():
+            raise ValueError('This Scenario has already been solved, ',
+                             'use `remove_solution()` first!')
+
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
             else model_settings.model_config('default')

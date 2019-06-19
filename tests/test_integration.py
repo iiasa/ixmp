@@ -102,9 +102,10 @@ def test_multi_db_run(tmpdir, test_data_path):
     # check that cloning across platforms must copy the full solution
     pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
 
-    # clone solved model across platforms (with default settings), close the db
+    # clone solved model across platforms (with default settings)
     scen1.clone(platform=mp2, keep_solution=True)
 
+    # close the db to ensure that data and solution of the clone are saved
     mp2.close_db()
     del mp2
 

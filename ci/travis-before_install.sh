@@ -10,3 +10,11 @@ maybe_download () {
 
 maybe_download $GAMSURL $GAMSFNAME
 maybe_download $CONDAURL $CONDAFNAME
+
+
+# Install graphiz on OS X (requires updating homebrew)
+if [ `uname` -eq "Darwin" ];
+then
+  brew update
+  brew install graphviz
+fi

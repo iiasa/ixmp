@@ -73,7 +73,7 @@ class Reporter(object):
         Returns
         -------
         :class:`Reporter <ixmp.reporting.Reporter>`
-          …containing:
+          ...containing:
 
           - A 'scenario' key referring to the *scenario* object.
           - Each parameter, equation, and variable in the *scenario*.
@@ -251,7 +251,7 @@ class Reporter(object):
 
         # Cull the graph, leaving only those needed to compute *key*
         dsk, deps = cull(self.graph, key)
-        log.debug('Cull {} → {} keys'.format(len(self.graph), len(dsk)))
+        log.debug('Cull {} -> {} keys'.format(len(self.graph), len(dsk)))
 
         return dask_get(dsk, key)
 

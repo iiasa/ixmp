@@ -36,7 +36,7 @@ addons:
     - graphviz
 
 before_install:
-  - if [ `uname` = "Darwin" ]; then brew update; fi
+  - if [ `uname` = "Darwin" ]; then brew update && brew install graphviz; fi
   - source ci/env.sh
   - source ci/travis-before_install.sh
 

@@ -7,7 +7,7 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
    :maxdepth: 2
 
    api-python
-   api/python_reporting
+   reporting
 
 R (``rixmp`` package)
 -----------------------

@@ -1,6 +1,7 @@
 """Tests for ixmp.reporting."""
 import os
 import subprocess
+import sys
 
 import ixmp
 import ixmp.reporting
@@ -17,6 +18,12 @@ from xarray.testing import (
 from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
 from ixmp.reporting import Key, Reporter, computations
 from ixmp.reporting.utils import ureg, Quantity
+
+
+pytestmark = pytest.mark.skipif(
+    sys.version_info[0] == 2,
+    reason='Experimental reporting does not support Python 2.7.',
+)
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')

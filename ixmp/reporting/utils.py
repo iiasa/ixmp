@@ -136,7 +136,7 @@ def collect_units(*args):
     return [arg.attrs['_unit'] for arg in args]
 
 
-# Mapping from raw → preferred dimension names
+# Mapping from raw -> preferred dimension names
 rename_dims = {}
 
 

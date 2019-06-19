@@ -174,7 +174,7 @@ def keys_for_quantity(ix_type, name, scenario):
     # A computation to retrieve the data
     key = Key(name, dims)
     yield (key, (partial(data_for_quantity, ix_type, name, column),
-                 'scenario'))
+                 'scenario', 'filters'))
 
     # Add the marginal values at full resolution, but no aggregates
     if ix_type == 'equ':

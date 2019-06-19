@@ -452,9 +452,7 @@ def test_report_size(test_mp):
     rep.get('bigmem')
 
 
-def test_reporting_aggregate(test_mp):
-    scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
-
+def add_test_data(scen):
     # New sets
     t_foo = ['foo{}'.format(i) for i in (1, 2, 3)]
     t_bar = ['bar{}'.format(i) for i in (4, 5, 6)]
@@ -477,6 +475,13 @@ def test_reporting_aggregate(test_mp):
 
     scen.init_par('x', ['t', 'y'])
     scen.add_par('x', x_df)
+
+    return t, t_foo, t_bar, x
+
+
+def test_reporting_aggregate(test_mp):
+    scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
+    t, t_foo, t_bar, x = add_test_data(scen)
 
     # Reporter
     rep = Reporter.from_scenario(scen)
@@ -520,3 +525,28 @@ def test_reporting_aggregate(test_mp):
     with pytest.raises(NotImplementedError):
         # Not yet supported; requires two separate operations
         rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})
+
+
+def test_reporting_filters(test_mp):
+    """Reporting can be filtered ex ante."""
+    scen = ixmp.Scenario(test_mp, 'Reporting filters', 'Reporting filters',
+                         'new')
+    t, t_foo, t_bar, x = add_test_data(scen)
+
+    rep = Reporter.from_scenario(scen)
+
+    x_key = rep.full_key('x')
+
+    def assert_t_indices(labels):
+        assert set(rep.get(x_key).index.levels[0]) == set(labels)
+
+    # 1. Set filters directly
+    rep.graph['filters'] = {'t': t_foo}
+    assert_t_indices(t_foo)
+
+    # Reporter can be re-used by changing filters
+    rep.graph['filters'] = {'t': t_bar}
+    assert_t_indices(t_bar)
+
+    rep.graph['filters'] = {}
+    assert_t_indices(t)

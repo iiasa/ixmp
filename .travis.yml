@@ -54,6 +54,7 @@ script:
   # These include the equivalent of Travis R tests via test_r.py
   - >
     pytest
+    --testr
     --verbose
     --cov=ixmp
     --cov-config ci/.coveragerc

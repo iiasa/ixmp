@@ -47,7 +47,10 @@ class Key:
             dims = value._dims.copy()
             _tag = value._tag
         else:
-            name, *dims = value.split(':')
+            # TODO after py2.7 compatibility is dropped, use:
+            # name, *dims = value.split(':')
+            dims = value.split(':')
+            name = dims.pop(0)
             _tag = dims[1] if len(dims) == 2 else None
             dims = dims[0].split('-')
         if drop:

@@ -699,8 +699,17 @@ class Scenario(TimeSeries):
         self._cache = cache
         self._pycache = {}
 
-    def item(self, ix_type, name):
-        """internal function to retrieve the Java instance of an item"""
+    def _item(self, ix_type, name, load=True):
+        """Return the Java object for item *name* of *ix_type*.
+
+        Parameters
+        ----------
+        load : bool, optional
+            If *ix_type* is 'par', 'var', or 'equ', the elements of the item
+            are loaded from the database before :meth:`_item` returns. If
+            :const:`False`, the elements can be loaded later using
+            ``item.loadItemElementsfromDB()``.
+        """
         funcs = {
             'item': self._jobj.getItem,
             'set': self._jobj.getSet,
@@ -708,7 +717,9 @@ class Scenario(TimeSeries):
             'var': self._jobj.getVar,
             'equ': self._jobj.getEqu,
         }
-        return funcs[ix_type](name)
+        # getItem is not overloaded to accept a second bool argument
+        args = [name] + ([load] if ix_type != 'item' else [])
+        return funcs[ix_type](*args)
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.
@@ -732,9 +743,9 @@ class Scenario(TimeSeries):
             for item in list_func():
                 get_func(item)
 
-    def element(self, ix_type, name, filters=None, cache=None):
-        """internal function to retrieve a dataframe of item elements"""
-        item = self.item(ix_type, name)
+    def _element(self, ix_type, name, filters=None, cache=None):
+        """Return a pd.DataFrame of item elements."""
+        item = self._item(ix_type, name)
         cache_key = (ix_type, name)
 
         # if dataframe in python cache, retrieve from there
@@ -762,7 +773,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self.item('item', name).getIdxSets())
+        return to_pylist(self._item('item', name).getIdxSets())
 
     def idx_names(self, name):
         """return the list of index names for an item (set, par, var, equ)
@@ -772,7 +783,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self.item('item', name).getIdxNames())
+        return to_pylist(self._item('item', name).getIdxNames())
 
     def cat_list(self, name):
         raise DeprecationWarning('function was migrated to `message_ix` class')
@@ -827,7 +838,7 @@ class Scenario(TimeSeries):
         -------
         pandas.DataFrame
         """
-        return self.element('set', name, filters, **kwargs)
+        return self._element('set', name, filters, **kwargs)
 
     def add_set(self, name, key, comment=None):
         """Add elements to an existing set.
@@ -851,7 +862,7 @@ class Scenario(TimeSeries):
         """
         self.clear_cache(name=name, ix_type='set')
 
-        jSet = self.item('set', name)
+        jSet = self._item('set', name)
 
         if sys.version_info[0] > 2 and isinstance(key, range):
             key = list(key)
@@ -939,7 +950,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self.element('par', name, filters, **kwargs)
+        return self._element('par', name, filters, **kwargs)
 
     def add_par(self, name, key, val=None, unit=None, comment=None):
         """Set the values of a parameter.
@@ -959,7 +970,7 @@ class Scenario(TimeSeries):
         """
         self.clear_cache(name=name, ix_type='par')
 
-        jPar = self.item('par', name)
+        jPar = self._item('par', name)
 
         if sys.version_info[0] > 2 and isinstance(key, range):
             key = list(key)
@@ -1062,7 +1073,7 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.clear_cache(name=name, ix_type='par')
-        self.item('par', name).addElement(_jdouble(val), unit, comment)
+        self._item('par', name).addElement(_jdouble(val), unit, comment)
 
     def remove_par(self, name, key=None):
         """Remove parameter values or an entire parameter.
@@ -1113,7 +1124,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self.element('var', name, filters, **kwargs)
+        return self._element('var', name, filters, **kwargs)
 
     def equ_list(self):
         """List all defined equations."""
@@ -1147,7 +1158,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self.element('equ', name, filters, **kwargs)
+        return self._element('equ', name, filters, **kwargs)
 
     def clone(self, model=None, scenario=None, annotation=None,
               keep_solution=True, first_model_year=None, platform=None,

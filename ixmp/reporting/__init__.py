@@ -59,7 +59,7 @@ class Reporter(object):
     #: The default reporting key.
     default_key = None
 
-    # An index of ixmp names → full keys
+    # An index of ixmp names -> full keys
     _index = {}
 
     def __init__(self, **kwargs):

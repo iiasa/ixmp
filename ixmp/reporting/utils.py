@@ -279,7 +279,7 @@ class AttrSeries(pd.Series):
         return AttrSeries
 
 
-def data_for_quantity(ix_type, name, column, scenario):
+def data_for_quantity(ix_type, name, column, scenario, filters=None):
     """Retrieve data from *scenario*.
 
     Parameters
@@ -300,7 +300,7 @@ def data_for_quantity(ix_type, name, column, scenario):
     """
     log.debug('Retrieving data for {}'.format(name))
     # Retrieve quantity data
-    data = scenario._element(ix_type, name)
+    data = scenario._element(ix_type, name, filters)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):

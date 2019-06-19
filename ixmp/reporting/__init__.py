@@ -54,7 +54,7 @@ class Reporter(object):
     # A7. Renaming of outputs.
 
     #: A dask-format :doc:`graph <graphs>`.
-    graph = {}
+    graph = {'filters': None}
 
     #: The default reporting key.
     default_key = None
@@ -63,7 +63,7 @@ class Reporter(object):
     _index = {}
 
     def __init__(self, **kwargs):
-        self.graph = {}
+        self.graph = {'filters': None}
         self.configure(**kwargs)
 
     @classmethod

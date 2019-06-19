@@ -192,6 +192,8 @@ def test_reporter_apply():
     r.add('foo', (lambda x: x, 42))
     r.add('bar', (lambda x: x, 11))
 
+    N = len(r.keys())
+
     # A computation
     def _product(a, b):
         return a * b
@@ -206,7 +208,8 @@ def test_reporter_apply():
     r.apply(baz_qux, 'bar')
 
     # Four computations were added to the reporter
-    assert len(r.keys()) == 6
+    N += 4
+    assert len(r.keys()) == N
     assert r.get('foo:baz') == 42 * 0.5
     assert r.get('foo:qux') == 42 * 1.1
     assert r.get('bar:baz') == 11 * 0.5
@@ -219,14 +222,17 @@ def test_reporter_apply():
     r.apply(twoarg, 'foo:baz', 'bar:qux')
 
     # One computation added to the reporter
-    assert len(r.keys()) == 7
+    N += 1
+    assert len(r.keys()) == N
     assert r.get('foo:baz__bar:qux') == 42 * 0.5 * 11 * 1.1
 
     # A useless generator that does nothing
     def useless(key):
         return
     r.apply(useless, 'foo:baz__bar:qux')
-    assert len(r.keys()) == 7
+
+    # Nothing added to the reporter
+    assert len(r.keys()) == N
 
 
 def test_reporter_disaggregate():

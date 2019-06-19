@@ -1,3 +1,18 @@
+"""Test configuration.
+
+Notes:
+
+- For tests that fail strangely on Appveyor (Windows continuous integration),
+  use a pattern like::
+
+    import os
+
+    @pytest.mark.xfail('APPVEYOR' in os.environ, strict=True
+                       reason='Description of the issue.')
+    def test_something(...):
+        # etc.
+
+"""
 import os
 try:
     from pathlib import Path
@@ -13,24 +28,14 @@ pytest_plugins = ['ixmp.testing']
 
 # Hooks
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--win_ci_skip", action="store_true", default=False,
-        help="weird skips for windows ci"
-    )
+def pytest_sessionstart(session):
+    """Unset any configuration read from the user's directory."""
+    ixmp.config._config.clear()
 
 
-def pytest_report_header(config, startdir):
+def pytest_report_header(config):
     """Add the ixmp import path to the pytest report header."""
     return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
-
-
-def pytest_collection_modifyitems(config, items):
-    if config.getoption("--win_ci_skip"):
-        skip_win_ci = pytest.mark.skip(reason="weird effects on windows ci")
-        for item in items:
-            if "skip_win_ci" in item.keywords:
-                item.add_marker(skip_win_ci)
 
 
 # Fixtures

@@ -4,7 +4,7 @@ The |ixmp|
 .. figure:: _static/ix_features.png
    :width: 320px
    :align: right
-   
+
    Key features of the |ixmp| (source: :cite:`huppmann_messageix_2018`)
 
 The |ixmp| (ixmp) is a data warehouse for high-powered numerical scenario analysis.
@@ -12,7 +12,7 @@ It is designed to provide an effective framework
 for integrated and cross-cutting analysis (hence the abbreviation *ix*).
 
 The framework allows an efficient workflow between original input data sources
-and the implementation of the mathematical model formulation, via both 
+and the implementation of the mathematical model formulation, via both
 a web-based user interface and application programming interfaces (API)
 with the scientific programming languages Python and R.
 The platform also includes an API with the mathematical programming
@@ -26,7 +26,7 @@ For the scientific reference, see Huppmann et al. (2019)
 License and user guidelines
 ---------------------------
 
-| |MESSAGEix| and the |ixmp| are licensed under an `APACHE 2.0 open-source license`_. 
+| |MESSAGEix| and the |ixmp| are licensed under an `APACHE 2.0 open-source license`_.
 | See the `LICENSE`_ file included in this repository for the full text.
 
 .. _`APACHE 2.0 open-source license`: http://www.apache.org/licenses/LICENSE-2.0
@@ -54,11 +54,11 @@ and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user c
 An overview of the |ixmp|
 -------------------------
 
-.. figure:: _static/ix_components.png 
+.. figure:: _static/ix_components.png
 
-   Components and their interlinkages in the |ixmp| (source :cite:`huppmann_messageix_2018`): 
-   web-based user interface, scientific programming interface,  
-   modeling platform, database backend, 
+   Components and their interlinkages in the |ixmp| (source :cite:`huppmann_messageix_2018`):
+   web-based user interface, scientific programming interface,
+   modeling platform, database backend,
    implementation of the |MESSAGEix| mathematical model formulation
 
 Getting started
@@ -91,12 +91,12 @@ in the source respective source codes.
 .. toctree::
    :maxdepth: 2
 
-   scientific_programming_api
+   api
 
 Bibliography
 ------------
 
 .. toctree::
    :maxdepth: 2
-   
-   bibliography  
+
+   bibliography

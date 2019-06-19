@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#135](https://github.com/iiasa/ixmp/pull/135): Test `rixmp` (former `retixmp`) using the R `testthat` package.
 - [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSSAGEix release 1.2 in Java core
 - [#115](https://github.com/iiasa/ixmp/pull/115): Support iterating with user-supplied callbacks.
 - [#130](https://github.com/iiasa/ixmp/pull/130): Recognize `IXMP_DATA` environment variable for configuration and local databases.

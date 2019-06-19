@@ -14,7 +14,7 @@ from subprocess import check_call
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable, check_year
+from ixmp.utils import logger, islistable, check_year, harmonize_path
 
 # %% default settings for column headers
 
@@ -1357,6 +1357,7 @@ class Scenario(TimeSeries):
             raise ValueError('This Scenario has already been solved, ',
                              'use `remove_solution()` first!')
 
+        model = str(harmonize_path(model))
         config = model_settings.model_config(model) \
             if model_settings.model_registered(model) \
             else model_settings.model_config('default')
@@ -1662,6 +1663,8 @@ def run_gams(model_file, args, gams_args=['LogOption=4']):
     """
     cmd = ['gams', model_file] + args + gams_args
     cmd = cmd if os.name != 'nt' else ' '.join(cmd)
+
     file_path = os.path.dirname(model_file).strip('"')
     file_path = None if file_path == '' else file_path
+
     check_call(cmd, shell=os.name == 'nt', cwd=file_path)

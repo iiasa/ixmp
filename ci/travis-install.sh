@@ -1,30 +1,31 @@
-#!/bin/bash
-set -x
-set -e
+# Install GAMS
+$CACHE/$GAMSFNAME > install.out
 
-# install gams
-echo "Starting download from $GAMSURL"
-wget $GAMSURL
-echo "Download complete from $GAMSURL"
-chmod u+x $GAMSFNAME
-./$GAMSFNAME > install.out
+# Show location
 which gams
 
-# install and update conda
-echo "Starting download from $CONDAURL"
-wget $CONDAURL -O miniconda.sh
-echo "Download complete from $CONDAURL"
-chmod +x miniconda.sh
-./miniconda.sh -b -p $HOME/miniconda
+
+# Install and update conda
+$CACHE/$CONDAFNAME -b -u -p $HOME/miniconda
 conda update --yes conda
 
-# create named env
+# Create named env
 conda create -n testing python=$PYVERSION --yes
 
-# install deps
+# Install deps
 conda install -n testing -c conda-forge --yes \
       ixmp \
       pytest \
       coveralls \
-      pytest-cov 
+      pytest-cov
 conda remove -n testing --force --yes ixmp
+
+# Use '.' (POSIX) instead of 'source' (a bashism)
+. activate testing
+
+# Show information
+conda info --all
+
+# Install R packages needed for testing
+Rscript -e "install.packages(c('devtools', 'IRkernel'), lib = '$R_LIBS_USER')"
+Rscript -e "IRkernel::installspec()"

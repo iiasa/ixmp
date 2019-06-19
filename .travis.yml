@@ -1,34 +1,56 @@
-language: minimal
+dist: xenial
+
+language: r
+
+r: release
 
 matrix:
-    include:
-        - os: linux
-          env: PYENV=py37
-        - os: linux
-          env: PYENV=py27
-        - os: osx
-          env: PYENV=py37
-        - os: osx
-          env: PYENV=py27
+  include:
+  - os: linux
+    env: PYENV=py37
+  - os: linux
+    env: PYENV=py27
+  - os: osx
+    env: PYENV=py37
+  - os: osx
+    env: PYENV=py27
 # turn these on once travis support gets a little better, see pyam for example
-#        - os: windows
-#          env: PYENV=py37
-#        - os: windows
-#          env: PYENV=py27
+#  - os: windows
+#    env: PYENV=py37
+#  - os: windows
+#    env: PYENV=py27
+
+r_packages:
+- IRkernel
+
+cache:
+  # Travis ensures these directories are created if they do not already exist
+  directories:
+  - $HOME/.conda/pkgs
+  - $HOME/.cache/ixmp
+  - $HOME/miniconda/pkgs
+  - $HOME/R/Library
 
 before_install:
-  - source ./ci/env.sh
-  - bash ./ci/travis-install.sh
-  - source activate testing
+  - source ci/env.sh
+  - source ci/travis-before_install.sh
 
 install:
+  - source ci/travis-install.sh
   - python setup.py install
+  - Rscript -e 'devtools::install("rixmp", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
-  - cd tests
-  - py.test --verbose --cov=ixmp --cov-config ../ci/.coveragerc --cov-report term-missing
-  - cd ..
+  # Run tests
+  # These include the equivalent of Travis R tests via test_r.py
+  - >
+    pytest
+    --verbose
+    --cov=ixmp
+    --cov-config ci/.coveragerc
+    --cov-report term-missing
+  # Test that documentation can be built
   - cd doc
   - pip install -r requirements.txt
   - make html

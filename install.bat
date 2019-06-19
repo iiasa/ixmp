@@ -1,12 +1,6 @@
-cd > .foo
-set /p IXMP=<.foo
-del .foo
-echo %IXMP%
-
-python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())" > .foo
-set /p RPTH=<.foo
-del .foo
-echo %RPTH%
+rem Install ixmp and rixmp from source on Windows
+rem
+rem TODO if this script is to be kept/supported, describe it in the docs.
 
 @echo off
 
@@ -16,17 +10,16 @@ if %errorlevel% neq 0 GOTO InstallError
 
 where /q r
 IF ERRORLEVEL 1 (
-    ECHO No valid installation of R found, skipped build and installation of R package.
+  echo R not installed; skipping installation of rixmp.
 ) ELSE (
-    rscript rixmp/build_rixmp.R [--verbose]
-    rscript retixmp/build_retixmp.R [--verbose]
+  cd rixmp
+  R CMD build .
+  R CMD INSTALL --html rixmp_0.1.3.9000.tar.gz
+  cd ..
 )
 
-setx IXMP_PATH "%IXMP%"
-setx IXMP_R_PATH "%RPTH%/ixmp"
-py.test tests/
+pytest
 
-pause
 exit
 
 @rem install error

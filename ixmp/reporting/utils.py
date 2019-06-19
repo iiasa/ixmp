@@ -158,10 +158,12 @@ def _find_dims(data):
 
 def keys_for_quantity(ix_type, name, scenario):
     """Iterate over keys for *name* in *scenario*."""
-    # Retrieve names of the indices of the low-level/Java object
+    # Retrieve names of the indices of the low-level/Java object, *without*
+    # loading the associated data
     # NB this is used instead of .getIdxSets, since the same set may index more
     #    than one dimension of the same variable.
-    dims = _find_dims(scenario.item(ix_type, name).getIdxNames().toArray())
+    dims = _find_dims(scenario._item(ix_type, name, load=False)
+                      .getIdxNames().toArray())
 
     # Column for retrieving data
     column = 'value' if ix_type == 'par' else 'lvl'
@@ -298,7 +300,7 @@ def data_for_quantity(ix_type, name, column, scenario):
     """
     log.debug('Retrieving data for {}'.format(name))
     # Retrieve quantity data
-    data = scenario.element(ix_type, name)
+    data = scenario._element(ix_type, name)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):

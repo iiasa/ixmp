@@ -527,14 +527,13 @@ def test_reporting_aggregate(test_mp):
         rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})
 
 
-def test_reporting_filters(test_mp):
+def test_reporting_filters(test_mp, tmp_path):
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, 'Reporting filters', 'Reporting filters',
                          'new')
     t, t_foo, t_bar, x = add_test_data(scen)
 
     rep = Reporter.from_scenario(scen)
-
     x_key = rep.full_key('x')
 
     def assert_t_indices(labels):
@@ -552,9 +551,28 @@ def test_reporting_filters(test_mp):
     assert_t_indices(t)
 
     # 2. Set filters using a convenience method
+    rep = Reporter.from_scenario(scen)
     rep.filter(t=t_foo)
     assert_t_indices(t_foo)
 
     # Clear filters using the convenience method
     rep.filter(t=None)
     assert_t_indices(t)
+
+    # 3. Set filters via configuration keys
+    # NB passes through from_scenario() -> __init__() -> configure()
+    rep = Reporter.from_scenario(scen, filters={'t': t_foo})
+    assert_t_indices(t_foo)
+
+    # Configuration key can also be read from file
+    rep = Reporter.from_scenario(scen)
+
+    # Write a temporary file containing the desired labels
+    config_file = tmp_path / 'config.yaml'
+    config_file.write_text('\n'.join([
+        'filters:',
+        '  t: {!r}'.format(t_bar),
+    ]))
+
+    rep.configure(config_file)
+    assert_t_indices(t_bar)

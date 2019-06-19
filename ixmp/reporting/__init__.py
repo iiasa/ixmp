@@ -152,8 +152,8 @@ class Reporter(object):
         UserWarning
             If *config* contains unrecognized keys.
         """
-        config = _config_args(path, config,
-                              sections={'default', 'files', 'alias'})
+        sections = {'default', 'files', 'alias', 'filters'}
+        config = _config_args(path, config, sections=sections)
 
         config_dir = config.pop('config_dir', '.')
 
@@ -177,6 +177,9 @@ class Reporter(object):
         # Aliases
         for alias, original in config.get('alias', {}).items():
             self.add(alias, original)
+
+        # Filters
+        self.filter(**config.pop('filters', {}))
 
         return self  # to allow chaining
 

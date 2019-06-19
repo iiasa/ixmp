@@ -39,20 +39,12 @@ def sum(quantity, weights=None, dimensions=None):
 
 def aggregate(quantity, groups, keep):
     """Aggregate *quantity* by *groups*."""
-    idx = pd.IndexSlice
     for dim, dim_groups in groups.items():
         values = []
         for group, members in dim_groups.items():
-            slices = [slice(None) if name != dim else tuple(members)
-                      for name in quantity.index.names]
-            value = quantity.loc[tuple(idx[x] for x in slices)]
-            value.to_csv('test.csv', index=True)
-            value = value.sum(dim=dim)
-            value[dim]
-            print(value)
-            # values.append(quantity.sel({dim: members})
-            #                       .sum(dim=dim)
-            #                       .assign_coords(**{dim: group}))
+            values.append(quantity.sel({dim: members})
+                                  .sum(dim=dim)
+                                  .assign_coords(**{dim: group}))
         if keep:
             # Prepend the original values
             values.insert(0, quantity)

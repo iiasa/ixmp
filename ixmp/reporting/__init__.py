@@ -279,7 +279,8 @@ class Reporter(object):
         self.graph['scenario'] = scenario
 
     # ixmp data model manipulations
-    def add_product(self, name, *quantities, sums=True):
+    # NB 'quantities' following 'sums' is for py2 compat; reverse when dropped
+    def add_product(self, name, sums=True, *quantities):
         """Add a computation that takes the product of *quantities*.
 
         Parameters

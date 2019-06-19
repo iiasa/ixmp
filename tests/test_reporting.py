@@ -550,3 +550,11 @@ def test_reporting_filters(test_mp):
 
     rep.graph['filters'] = {}
     assert_t_indices(t)
+
+    # 2. Set filters using a convenience method
+    rep.filter(t=t_foo)
+    assert_t_indices(t_foo)
+
+    # Clear filters using the convenience method
+    rep.filter(t=None)
+    assert_t_indices(t)

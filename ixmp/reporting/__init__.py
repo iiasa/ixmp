@@ -278,6 +278,24 @@ class Reporter(object):
         """
         self.graph['scenario'] = scenario
 
+    def filter(self, **filters):
+        """Apply *filters* ex ante (before computations occur).
+
+        *filters* has the same form as for :meth:`Scenario.par` and analogous
+        methods. A value of :const:`None` clear the filter for the named
+        dimension.
+        """
+        if self.graph['filters'] is None:
+            self.graph['filters'] = {}
+
+        # Update
+        self.graph['filters'].update(filters)
+
+        # Clear
+        for key, value in filters.items():
+            if value is None:
+                self.graph['filters'].pop(key, None)
+
     # ixmp data model manipulations
     # NB 'quantities' following 'sums' is for py2 compat; reverse when dropped
     def add_product(self, name, sums=True, *quantities):

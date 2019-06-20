@@ -179,7 +179,8 @@ def keys_for_quantity(ix_type, name, scenario):
     # Add the marginal values at full resolution, but no aggregates
     if ix_type == 'equ':
         yield (Key('{}-margin'.format(name), dims),
-               (partial(data_for_quantity, ix_type, name, 'mrg'), 'scenario'))
+               (partial(data_for_quantity, ix_type, name, 'mrg'),
+                'scenario', 'filters'))
 
     # Partial sums
     yield from key.iter_sums()

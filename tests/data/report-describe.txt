@@ -1,5 +1,5 @@
 'filters':
-- None
+- {{}}
 
 'i':
 - ['seattle', 'san-diego']
@@ -15,18 +15,21 @@
 - 'a:i':
   - data_for_quantity('par', 'a', 'value', ...)
   - 'scenario' (above)
+  - 'filters' (above)
 
 'b:':
 - sum(dimensions=['j'], weights=None, ...)
 - 'b:j':
   - data_for_quantity('par', 'b', 'value', ...)
   - 'scenario' (above)
+  - 'filters' (above)
 
 'd:':
 - sum(dimensions=['i', 'j'], weights=None, ...)
 - 'd:i-j':
   - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario' (above)
+  - 'filters' (above)
 
 'd:i':
 - sum(dimensions=['j'], weights=None, ...)
@@ -39,22 +42,26 @@
 'demand-margin:j':
 - data_for_quantity('equ', 'demand', 'mrg', ...)
 - 'scenario' (above)
+- 'filters' (above)
 
 'demand:':
 - sum(dimensions=['j'], weights=None, ...)
 - 'demand:j':
   - data_for_quantity('equ', 'demand', 'lvl', ...)
   - 'scenario' (above)
+  - 'filters' (above)
 
 'f:':
 - data_for_quantity('par', 'f', 'value', ...)
 - 'scenario' (above)
+- 'filters' (above)
 
 'x:':
 - sum(dimensions=['i', 'j'], weights=None, ...)
 - 'x:i-j':
   - data_for_quantity('var', 'x', 'lvl', ...)
   - 'scenario' (above)
+  - 'filters' (above)
 
 'x:i':
 - sum(dimensions=['j'], weights=None, ...)
@@ -67,6 +74,7 @@
 'z:':
 - data_for_quantity('var', 'z', 'lvl', ...)
 - 'scenario' (above)
+- 'filters' (above)
 
 'all':
 - list of:

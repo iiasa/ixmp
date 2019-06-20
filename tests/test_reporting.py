@@ -346,6 +346,8 @@ def test_reporter_describe(test_mp, test_data_path):
   - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario':
     - <ixmp.core.Scenario object at {id}>
+  - 'filters':
+    - {{}}
 """.format(id=id_)
     assert r.describe('d:i') == expected
 

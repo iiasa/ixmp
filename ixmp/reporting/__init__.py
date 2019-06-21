@@ -297,8 +297,7 @@ class Reporter(object):
                 self.graph['filters'].pop(key, None)
 
     # ixmp data model manipulations
-    # NB 'quantities' following 'sums' is for py2 compat; reverse when dropped
-    def add_product(self, name, sums=True, *quantities):
+    def add_product(self, name, quantities, sums=True):
         """Add a computation that takes the product of *quantities*.
 
         Parameters
@@ -314,6 +313,9 @@ class Reporter(object):
         Key
             The full key of the new quantity.
         """
+        # TODO when py2 support is dropped, convert 'quantities' to
+        #      '*quantities' in the signature.
+
         # Fetch the full key for each quantity
         try:
             base_keys = [self.full_key(q) for q in quantities]

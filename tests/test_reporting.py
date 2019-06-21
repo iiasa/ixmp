@@ -471,7 +471,8 @@ def test_report_size(test_mp):
     # Names like f_0000 ... f_1596 along each dimension
     coords = []
     for d, N in zip(dims, sizes):
-        coords.append([f'{d}_{i:04d}' for i in range(N)])
+        # py2 compat: could use an f-string here
+        coords.append(['{}_{:04d}'.format(d, i) for i in range(N)])
         # Add to Scenario
         scen.init_set(d)
         scen.add_set(d, coords[-1])
@@ -488,7 +489,8 @@ def test_report_size(test_mp):
     N = 10
     names = []
     for i in range(10):
-        name = f'q_{i:02d}'
+        # py2 compat: could use an f-string here
+        name = 'q_{:02d}'.format(i)
         scen.init_par(name, list(dims))
         scen.add_par(name, _make_values())
         names.append(name)

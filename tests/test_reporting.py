@@ -307,6 +307,7 @@ def test_reporting_file_formats(test_data_path, tmp_path):
 
 
 def test_reporting_units():
+    """Test handling of units within Reporter computations."""
     r = Reporter()
 
     # Create some dummy data
@@ -329,6 +330,55 @@ def test_reporting_units():
     # Product of dimensioned and dimensionless quantities keeps the former
     r.add('energy2', (computations.product, 'energy:x', 'efficiency'))
     assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
+
+
+def test_reporting_platform_units(test_mp, caplog):
+    """Test handling of units from ixmp.Platform.
+
+    test_mp is loaded with some units includig '-', '???', 'G$', etc. which are
+    not parseable with pint; and others which are not defined in a default
+    pint.UnitRegistry. These tests check the handling of those units.
+    """
+
+    # Prepare a Scenario with test data
+    scen = ixmp.Scenario(test_mp, 'reporting_platform_units',
+                         'reporting_platform_units', 'new')
+    t, *_, x = add_test_data(scen)
+    rep = Reporter.from_scenario(scen)
+    x_key = rep.full_key('x')
+
+    # Convert 'x' to dataframe
+    x = x.to_series().rename('value').reset_index()
+
+    # Exception message, formatted as a regular expression
+    msg = r"unit '{}' cannot be parsed; contains invalid character\(s\) '{}'"
+
+    # Unit and components for the regex
+    bad_units = [
+        ('-', '-', '-'),
+        ('???', r'\?\?\?', r'\?'),
+        ('G$', r'G\$', r'\$')
+    ]
+    for unit, expr, chars in bad_units:
+        # Overwrite the parameter
+        x['unit'] = unit
+        scen.add_par('x', x)
+
+        # Parsing units with invalid chars raises an intelligible exception
+        with pytest.raises(ValueError, match=msg.format(expr, chars)):
+            rep.get(x_key)
+
+    # Now using parseable but unrecognized units
+    x['unit'] = 'USD/kWa'
+    scen.add_par('x', x)
+
+    # Unrecognized units are added automatically, with log messages emitted
+    caplog.clear()
+    rep.get(x_key)
+    assert [rec.message for rec in caplog.records] == [
+        'Add unit definition: USD = [USD]',
+        'Add unit definition: kWa = [kWa]',
+    ]
 
 
 def test_reporter_describe(test_mp, test_data_path):

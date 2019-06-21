@@ -187,11 +187,18 @@ def keys_for_quantity(ix_type, name, scenario):
 
 
 def _parse_units(units_series):
+    """Return a :class:`pint.Unit` for a :class:`pd.Series` of strings."""
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
         log.info(f'Mixed units {unit} discarded')
         unit = ['']
+
+    # Helper method to return an intelligible exception
+    def invalid(unit):
+        chars = ''.join(c for c in '-?$' if c in unit)
+        return ValueError(("unit {!r} cannot be parsed; contains invalid "
+                           "character(s) {!r}").format(unit, chars))
 
     # Parse units
     try:
@@ -201,11 +208,27 @@ def _parse_units(units_series):
         # Quantity has no unit
         unit = ureg.parse_units('')
     except pint.UndefinedUnitError:
-        # Units do not exist; define them in the UnitRegistry
-        definition = f'{unit} = [{unit}]'
-        log.info(f'Add unit definition: {definition}')
-        ureg.define(definition)
-        unit = ureg.parse_units(unit)
+        # Unit(s) do not exist; define them in the UnitRegistry
+
+        # Split possible compound units
+        for u in unit.split('/'):
+            definition = f'{u} = [{u}]'
+            log.info(f'Add unit definition: {definition}')
+
+            # This line will fail silently for units like 'G$'
+            ureg.define(definition)
+
+        # Try to parse again
+        try:
+            unit = ureg.parse_units(unit)
+        except pint.UndefinedUnitError:
+            # Handle the silent failure of define(), above
+            raise invalid(unit) from None
+    except AttributeError:
+        # Unit contains a character like '-' that throws off pint
+        # NB this 'except' clause must be *after* UndefinedUnitError, since
+        #    that is a subclass of AttributeError.
+        raise invalid(unit) from None
 
     return unit
 

@@ -31,7 +31,6 @@ from xarray.testing import (
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
-from .reporting.utils import Quantity, AttrSeries
 
 
 models = {
@@ -320,6 +319,9 @@ def get_cell_output(nb, name_or_index):
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
+    # py2 compat: import here instead of top of file
+    from .reporting.utils import Quantity, AttrSeries
+
     a = Quantity(a)
     b = Quantity(b)
 
@@ -335,6 +337,8 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
 
 
 def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+    from .reporting.utils import Quantity, AttrSeries
+
     a = Quantity(a)
     b = Quantity(b)
 

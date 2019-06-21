@@ -139,11 +139,11 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
         dims=['j']))
     new_key = rep.aggregate('d:i-j', 'weighted', 'j', weights)
 
-    # …produces the expected new key with the summed dimension removed and
+    # ...produces the expected new key with the summed dimension removed and
     # tag added
     assert new_key == 'd:i:weighted'
 
-    # …produces the expected new value
+    # ...produces the expected new value
     obs = rep.get(new_key)
     exp = (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
     # TODO: attrs has to be explicitly copied here because math is done which
@@ -157,7 +157,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
     new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
 
-    # …produces the expected key with new dimension added
+    # ...produces the expected key with new dimension added
     assert new_key == 'b:j-p'
 
     b_jp = rep.get('b:j-p')
@@ -468,7 +468,7 @@ def test_report_size(test_mp):
     # print('{} / {} elements = {:.5f}% full'
     #       .format(max(sizes), size, 100 * max(sizes) / size))
 
-    # Names like f_0000 … f_1596 along each dimension
+    # Names like f_0000 ... f_1596 along each dimension
     coords = []
     for d, N in zip(dims, sizes):
         coords.append([f'{d}_{i:04d}' for i in range(N)])
@@ -484,7 +484,7 @@ def test_report_size(test_mp):
         result['unit'] = 'kg'
         return result
 
-    # Fill the Scenario with quantities named q_01 … q_09
+    # Fill the Scenario with quantities named q_01 ... q_09
     N = 10
     names = []
     for i in range(10):

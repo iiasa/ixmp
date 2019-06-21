@@ -17,9 +17,6 @@
 #     DataArrays is non-trivial; see https://stackoverflow.com/q/56396122/
 #   - Internal computations have .attr['_unit'] describing the units of the
 #     quantity, to carry these through calculations.
-#
-# TODO meet the requirements:
-# A11. Callable through `retixmp`.
 
 from functools import partial
 from itertools import chain, repeat
@@ -179,7 +176,7 @@ class Reporter(object):
             self.add(alias, original)
 
         # Filters
-        self.filter(**config.pop('filters', {}))
+        self.set_filters(**config.pop('filters', {}))
 
         return self  # to allow chaining
 
@@ -281,7 +278,7 @@ class Reporter(object):
         """
         self.graph['scenario'] = scenario
 
-    def filter(self, **filters):
+    def set_filters(self, **filters):
         """Apply *filters* ex ante (before computations occur).
 
         *filters* has the same form as for :meth:`Scenario.par` and analogous

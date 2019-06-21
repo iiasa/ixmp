@@ -604,11 +604,11 @@ def test_reporting_filters(test_mp, tmp_path):
 
     # 2. Set filters using a convenience method
     rep = Reporter.from_scenario(scen)
-    rep.filter(t=t_foo)
+    rep.set_filters(t=t_foo)
     assert_t_indices(t_foo)
 
     # Clear filters using the convenience method
-    rep.filter(t=None)
+    rep.set_filters(t=None)
     assert_t_indices(t)
 
     # 3. Set filters via configuration keys

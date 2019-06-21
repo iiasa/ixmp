@@ -7,12 +7,8 @@ import ixmp
 import numpy as np
 import pandas as pd
 import pytest
-import xarray as xr
 
 from pandas.testing import assert_series_equal
-from xarray.testing import (
-    assert_equal as assert_xr_equal,
-)
 
 from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
 
@@ -24,6 +20,11 @@ pytestmark = pytest.mark.skipif(
 
 
 if sys.version_info[0] == 3:
+    import xarray as xr
+    from xarray.testing import (
+        assert_equal as assert_xr_equal,
+    )
+
     import ixmp.reporting
     from ixmp.reporting import Key, Reporter, computations
     from ixmp.reporting.utils import ureg, Quantity

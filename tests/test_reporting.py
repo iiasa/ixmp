@@ -316,9 +316,9 @@ def test_reporting_units():
     # Create some dummy data
     dims = dict(coords=['a b c'.split()], dims=['x'])
     r.add('energy:x',
-          Quantity(xr.DataArray([1., 3, 8], **dims, attrs={'_unit': 'MJ'})))
+          Quantity(xr.DataArray([1., 3, 8], attrs={'_unit': 'MJ'}, **dims)))
     r.add('time',
-          Quantity(xr.DataArray([5., 6, 8], **dims, attrs={'_unit': 'hour'})))
+          Quantity(xr.DataArray([5., 6, 8], attrs={'_unit': 'hour'}, **dims)))
     r.add('efficiency',
           Quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
 

@@ -1,3 +1,4 @@
+import sys
 
 from ._version import get_versions
 __version__ = get_versions()['version']
@@ -10,7 +11,10 @@ from ixmp import (
     utils,
 )
 
-from ixmp.reporting import Reporter  # noqa: F401
+
+if sys.version_info[0] == 3:
+    from ixmp.reporting import Reporter  # noqa: F401
+
 
 model_settings.register_model(
     'default',

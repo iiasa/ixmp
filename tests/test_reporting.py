@@ -4,7 +4,6 @@ import subprocess
 import sys
 
 import ixmp
-import ixmp.reporting
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,14 +15,18 @@ from xarray.testing import (
 )
 
 from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
-from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg, Quantity
 
 
 pytestmark = pytest.mark.skipif(
     sys.version_info[0] == 2,
     reason='Experimental reporting does not support Python 2.7.',
 )
+
+
+if sys.version_info[0] == 3:
+    import ixmp.reporting
+    from ixmp.reporting import Key, Reporter, computations
+    from ixmp.reporting.utils import ureg, Quantity
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')

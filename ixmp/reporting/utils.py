@@ -62,7 +62,7 @@ class Key:
 
     @classmethod
     def product(cls, new_name, *keys):
-        """Return a new key that has the union of dimensions on *keys*.
+        """Return a new Key that has the union of dimensions on *keys*.
 
         Dimensions are ordered by their first appearance.
         """
@@ -240,7 +240,16 @@ def _parse_units(units_series):
 
 
 class AttrSeries(pd.Series):
-    """pandas.Series that imitates xarray.DataArray."""
+    """:class:`pandas.Series` subclass imitating :class:`xarray.DataArray`.
+
+    Future versions of :mod:`ixmp.reporting` will use :class:`xarray.DataArray`
+    as :class:`Quantity`; however, because :mod:`xarray` currently lacks sparse
+    matrix support, ixmp quantities may be too large for memory.
+
+    The AttrSeries class provides similar methods and behaviour to
+    :class:`xarray.DataArray`, such as an `attrs` dictionary for metadata, so
+    that :mod:`ixmp.reporting.computations` methods can use xarray-like syntax.
+    """
 
     # normal properties
     _metadata = ['attrs']
@@ -322,14 +331,18 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     name : str
         Name of the ixmp object.
     column : 'mrg' or 'lvl' or 'value'
-        Data to retrieve. 'mrg' and 'lvl' are valid only for ix_type='equ', and
-        'level' otherwise.
+        Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,
+        and 'level' otherwise.
     scenario : ixmp.Scenario
-        Scenario containing data to be retrieved
+        Scenario containing data to be retrieved.
+    filters : dict, optional
+        Mapping from dimensions to iterables of allowed values along each
+        dimension.
 
     Returns
     -------
-    xr.DataArray
+    :class:`Quantity`
+        Data for *name*.
     """
     log.debug('Retrieving data for {}'.format(name))
     # Retrieve quantity data

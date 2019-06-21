@@ -5,9 +5,9 @@ Reporting
 
 .. warning::
 
-   :mod:`ixmp.reporting` is **experimental** in ixmp 0.2. The API and
-   functionality may change without advance notice or a deprecation period in
-   subsequent releases.
+   :mod:`ixmp.reporting` is **experimental** in ixmp 0.2, and only supports
+   Python 3. The API and functionality may change without advance notice or a
+   deprecation period in subsequent releases.
 
 .. automethod:: ixmp.reporting.configure
 
@@ -139,6 +139,8 @@ Utilities
    >>> foo('a b')
    foo:a-b
 
+.. autoclass:: ixmp.reporting.utils.AttrSeries
+
 .. automodule:: ixmp.reporting.utils
    :members:
-   :exclude-members: Key, combo_partition
+   :exclude-members: AttrSeries, Key, combo_partition

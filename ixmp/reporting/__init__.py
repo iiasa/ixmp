@@ -67,15 +67,22 @@ class Reporter(object):
     def from_scenario(cls, scenario, **kwargs):
         """Create a Reporter by introspecting *scenario*.
 
+        Parameters
+        ----------
+        scenario : ixmp.Scenario
+            Scenario to introspect in creating the Reporter.
+        kwargs : optional
+            Passed to :meth:`Scenario.configure`.
+
         Returns
         -------
         :class:`Reporter <ixmp.reporting.Reporter>`
-          ...containing:
+            A Reporter instance containing:
 
-          - A 'scenario' key referring to the *scenario* object.
-          - Each parameter, equation, and variable in the *scenario*.
-          - All possible aggregations across different sets of dimensions.
-          - Each set in the *scenario*.
+            - A 'scenario' key referring to the *scenario* object.
+            - Each parameter, equation, and variable in the *scenario*.
+            - All possible aggregations across different sets of dimensions.
+            - Each set in the *scenario*.
         """
         # New Reporter
         rep = cls(**kwargs)
@@ -141,6 +148,7 @@ class Reporter(object):
         Valid configuration keys include:
 
         - *default*: the default reporting key; sets :attr:`default_key`.
+        - *filters*: a :class:`dict`, passed to :meth:`set_filters`.
         - *files*: a :class:`dict` mapping keys to file paths.
         - *alias*: a :class:`dict` mapping aliases to original keys.
 
@@ -262,7 +270,8 @@ class Reporter(object):
         """Return the full-dimensionality key for *name*.
 
         An ixmp variable 'foo' indexed by a, c, n, q, and x is available in the
-        Reporter at 'foo:a-c-n-q-x'. `full_key('foo')` retrieves this key.
+        Reporter at ``'foo:a-c-n-q-x'``. ``full_key('foo')`` retrieves this
+        :class:`Key <ixmp.reporting.utils.Key>`.
         """
         return self._index[name]
 
@@ -281,9 +290,9 @@ class Reporter(object):
     def set_filters(self, **filters):
         """Apply *filters* ex ante (before computations occur).
 
-        *filters* has the same form as for :meth:`Scenario.par` and analogous
-        methods. A value of :const:`None` clear the filter for the named
-        dimension.
+        *filters* has the same form as the argument of the same name to
+        :meth:`ixmp.Scenario.par` and analogous methods. A value of
+        :const:`None` will clear the filter for the named dimension.
         """
         if self.graph['filters'] is None:
             self.graph['filters'] = {}

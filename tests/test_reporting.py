@@ -479,7 +479,8 @@ def test_report_size(test_mp):
 
     def _make_values():
         """Make a DataFrame containing each label in *coords* at least once."""
-        values = list(zip_longest(*coords, np.random.rand(max(sizes))))
+        # py2 compat: *( + [ ])
+        values = list(zip_longest(*(coords + [np.random.rand(max(sizes))])))
         result = pd.DataFrame(values, columns=list(dims) + ['value']) \
                    .ffill()
         result['unit'] = 'kg'

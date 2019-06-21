@@ -375,10 +375,11 @@ def test_reporting_platform_units(test_mp, caplog):
     # Unrecognized units are added automatically, with log messages emitted
     caplog.clear()
     rep.get(x_key)
-    assert [rec.message for rec in caplog.records] == [
+    expected = [
         'Add unit definition: USD = [USD]',
         'Add unit definition: kWa = [kWa]',
     ]
+    assert all(e in [rec.message for rec in caplog.records] for e in expected)
 
 
 def test_reporter_describe(test_mp, test_data_path):

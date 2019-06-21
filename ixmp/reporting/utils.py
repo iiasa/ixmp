@@ -183,7 +183,10 @@ def keys_for_quantity(ix_type, name, scenario):
                 'scenario', 'filters'))
 
     # Partial sums
-    yield from key.iter_sums()
+    # py2 compat: would prefer to do:
+    # yield from key.iter_sums()
+    for k in key.iter_sums():
+        yield k
 
 
 def _parse_units(units_series):

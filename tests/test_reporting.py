@@ -346,7 +346,7 @@ def test_reporting_platform_units(test_mp, caplog):
     # Prepare a Scenario with test data
     scen = ixmp.Scenario(test_mp, 'reporting_platform_units',
                          'reporting_platform_units', 'new')
-    t, *_, x = add_test_data(scen)
+    t, t_foo, t_bar, x = add_test_data(scen)
     rep = Reporter.from_scenario(scen)
     x_key = rep.full_key('x')
 

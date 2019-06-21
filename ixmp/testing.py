@@ -21,13 +21,7 @@ import sys
 import subprocess
 
 import pandas as pd
-import xarray as xr
-
 from pandas.testing import assert_series_equal
-from xarray.testing import (
-    assert_equal as assert_xr_equal,
-    assert_allclose as assert_xr_allclose,
-)
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
@@ -320,6 +314,9 @@ def get_cell_output(nb, name_or_index):
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     # py2 compat: import here instead of top of file
+    from xarray import DataArray
+    from xarray.testing import assert_equal as assert_xr_equal
+
     from .reporting.utils import Quantity, AttrSeries
 
     a = Quantity(a)
@@ -328,7 +325,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     # check type-specific equal
     if Quantity is AttrSeries:
         assert_series_equal(a, b, **kwargs)
-    elif Quantity is xr.DataArray:
+    elif Quantity is DataArray:
         assert_xr_equal(a, b, **kwargs)
 
     # check attributes are equal
@@ -337,6 +334,9 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
 
 
 def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+    from xarray import DataArray
+    from xarray.testing import assert_allclose as assert_xr_allclose
+
     from .reporting.utils import Quantity, AttrSeries
 
     a = Quantity(a)
@@ -346,7 +346,7 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
     if Quantity is AttrSeries:
         # we may
         assert_series_equal(a, b, **kwargs)
-    elif Quantity is xr.DataArray:
+    elif Quantity is DataArray:
         assert_xr_allclose(a, b, **kwargs)
 
     # check attributes are equal

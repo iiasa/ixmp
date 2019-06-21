@@ -194,7 +194,8 @@ def _parse_units(units_series):
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
-        log.info(f'Mixed units {unit} discarded')
+        # py2 compat: could use an f-string here
+        log.info('Mixed units {} discarded'.format(unit))
         unit = ['']
 
     # Helper method to return an intelligible exception

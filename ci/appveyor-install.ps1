@@ -59,6 +59,8 @@ Exec { conda remove --force --yes ixmp }
 # Show information
 Exec { conda info --all }
 
+# Install graphviz (for dask.visualize)
+Exec { choco install graphviz }
 
 # Set up r-appveyor
 Bootstrap

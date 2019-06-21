@@ -21,6 +21,7 @@
 #*
 *#
 *.Rproj
+*.Rcheck
 
 # Apple file system
 .DS_Store
@@ -42,12 +43,12 @@ tests/testdb/test.properties
 tests/testdb/ixmptest.properties
 tests/testdb/ixmptest.lck
 
-# rixmp.legacy build folder and rhistory
-rixmp*/**/rixmp*_*.tar.gz
-rixmp*/**/rixmp*_*.zip
-rixmp.legacy/source/inst/docum/*.html
-rixmp.legacy/source/.Rhistory
-!rixmp.legacy/source/*.Rproj
+# rixmp build folder and rhistory
+r*ixmp_*.tar.gz
+r*ixmp_*.zip
+rixmp/source/inst/docum/*.html
+rixmp/source/.Rhistory
+!rixmp/source/*.Rproj
 .Rproj.user
 *.Rcheck
 
@@ -55,6 +56,7 @@ rixmp.legacy/source/.Rhistory
 .env
 
 # pytest
+.coverage
 .pytest_cache/
 
 # idea

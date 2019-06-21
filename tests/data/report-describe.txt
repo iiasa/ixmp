@@ -1,0 +1,88 @@
+'filters':
+- {{}}
+
+'i':
+- ['seattle', 'san-diego']
+
+'j':
+- ['new-york', 'chicago', 'topeka']
+
+'scenario':
+- <ixmp.core.Scenario object at {id}>
+
+'a:':
+- sum(dimensions=['i'], weights=None, ...)
+- 'a:i':
+  - data_for_quantity('par', 'a', 'value', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
+'b:':
+- sum(dimensions=['j'], weights=None, ...)
+- 'b:j':
+  - data_for_quantity('par', 'b', 'value', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
+'d:':
+- sum(dimensions=['i', 'j'], weights=None, ...)
+- 'd:i-j':
+  - data_for_quantity('par', 'd', 'value', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
+'d:i':
+- sum(dimensions=['j'], weights=None, ...)
+- 'd:i-j' (above)
+
+'d:j':
+- sum(dimensions=['i'], weights=None, ...)
+- 'd:i-j' (above)
+
+'demand-margin:j':
+- data_for_quantity('equ', 'demand', 'mrg', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
+'demand:':
+- sum(dimensions=['j'], weights=None, ...)
+- 'demand:j':
+  - data_for_quantity('equ', 'demand', 'lvl', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
+'f:':
+- data_for_quantity('par', 'f', 'value', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
+'x:':
+- sum(dimensions=['i', 'j'], weights=None, ...)
+- 'x:i-j':
+  - data_for_quantity('var', 'x', 'lvl', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
+'x:i':
+- sum(dimensions=['j'], weights=None, ...)
+- 'x:i-j' (above)
+
+'x:j':
+- sum(dimensions=['i'], weights=None, ...)
+- 'x:i-j' (above)
+
+'z:':
+- data_for_quantity('var', 'z', 'lvl', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
+'all':
+- list of:
+  - 'a:i' (above)
+  - 'b:j' (above)
+  - 'd:i-j' (above)
+  - 'demand-margin:j' (above)
+  - 'demand:j' (above)
+  - 'f:' (above)
+  - 'x:i-j' (above)
+  - 'z:' (above)

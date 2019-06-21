@@ -1,10 +1,14 @@
 JPype1>=0.6.2
+dask[array]
+graphviz
 jupyter
 numpydoc
 pandas
 pytest>=3.9
+PyYAML
 sphinx
 sphinx_rtd_theme
 sphinxcontrib-bibtex
+xarray<0.12
 xlsxwriter
 xlrd

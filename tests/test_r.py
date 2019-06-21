@@ -20,23 +20,6 @@ import sys
 import pytest
 
 
-def r_installed():
-    try:
-        return subprocess.call(['R', '--version']) == 0
-    except OSError:
-        # FileNotFoundError (Python 3) or WindowsError (Python 2.7)
-        return False
-
-
-pytestmark = [
-    pytest.mark.skipif(not r_installed(), reason='R not installed'),
-    pytest.mark.skipif(
-        os.environ.get('APPVEYOR', '') == 'True' and sys.version_info[0] == 2,
-        reason='Timeout on Appveyor / Python 2.7',
-    ),
-]
-
-
 @pytest.fixture
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
@@ -65,6 +48,7 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     yield args
 
 
+@pytest.mark.testr
 def test_r_build_and_check(r_args):
     """R package can be built and R CMD check succeeds on the built package."""
     cmd = ['R', 'CMD', 'build', '.']
@@ -92,6 +76,7 @@ def test_r_build_and_check(r_args):
             raise
 
 
+@pytest.mark.testr
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
     # NB previously used file.path('tests', 'testthat'), which produces an

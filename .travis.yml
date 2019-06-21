@@ -31,6 +31,14 @@ cache:
   - $HOME/miniconda/pkgs
   - $HOME/R/Library
 
+addons:
+  apt:
+    packages:
+    - graphviz
+  homebrew:
+    packages:
+    - graphviz
+
 before_install:
   - source ci/env.sh
   - source ci/travis-before_install.sh
@@ -46,6 +54,7 @@ script:
   # These include the equivalent of Travis R tests via test_r.py
   - >
     pytest
+    --testr
     --verbose
     --cov=ixmp
     --cov-config ci/.coveragerc

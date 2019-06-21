@@ -4,12 +4,18 @@ from __future__ import print_function
 import glob
 import versioneer
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 INSTALL_REQUIRES = [
     'JPype1>=0.6.2',
+    'click',
+    'dask[array]',
+    'graphviz',
     'pandas',
+    'pint',
+    'PyYAML',
+    'xarray<0.12',
     'xlsxwriter',
     'xlrd',
 ]
@@ -22,9 +28,6 @@ EXTRAS_REQUIRE = {
 
 
 def main():
-    packages = [
-        'ixmp',
-    ]
     pack_dir = {
         'ixmp': 'ixmp',
     }
@@ -32,6 +35,7 @@ def main():
         'console_scripts': [
             'import-timeseries=ixmp.cli:import_timeseries',
             'ixmp-config=ixmp.cli:config',
+            'ixmp=ixmp.cli:main',
         ],
     }
     lib_files = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/lib/*')]
@@ -53,7 +57,7 @@ def main():
         "url": 'http://github.com/iiasa/message_ix',
         "install_requires": INSTALL_REQUIRES,
         "extras_require": EXTRAS_REQUIRE,
-        "packages": packages,
+        "packages": find_packages(),
         "package_dir": pack_dir,
         "package_data": pack_data,
         "entry_points": entry_points,

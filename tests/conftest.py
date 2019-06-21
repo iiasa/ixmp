@@ -26,7 +26,19 @@ import pytest
 pytest_plugins = ['ixmp.testing']
 
 
+# CLI
+
+def pytest_addoption(parser):
+    parser.addoption("--testr", action="store_true", default=False,
+                     help="run the tests associated with the R interface")
+
+
+def pytest_runtest_setup(item):
+    if 'testr' in item.keywords and not item.config.getoption("--testr"):
+        pytest.skip("need --testr option to run this test")
+
 # Hooks
+
 
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""

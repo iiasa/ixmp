@@ -15,12 +15,13 @@ try:
     from pathlib import Path
 except ImportError:
     from pathlib2 import Path
+import pytest
 import shutil
 import sys
 import subprocess
 
 import pandas as pd
-import pytest
+from pandas.testing import assert_series_equal
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
@@ -35,6 +36,7 @@ models = {
 
 
 # pytest hooks and fixtures
+
 
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
@@ -146,7 +148,11 @@ def make_dantzig(mp, solve=False):
         for the scenario.
     """
     # add custom units and region for timeseries data
-    mp.add_unit('USD_per_km')
+    try:
+        mp.add_unit('USD_per_km')
+    except Exception:
+        # Unit already exists. Pending bugfix from zikolach
+        pass
     mp.add_region('DantzigLand', 'country')
 
     # initialize a new (empty) instance of an `ixmp.Scenario`
@@ -301,3 +307,48 @@ def get_cell_output(nb, name_or_index):
         return eval(cell['outputs'][0]['data']['text/plain'])
     except NameError:
         raise ValueError('no cell named {!r}'.format(name_or_index))
+
+
+# special ixmp-based assertions
+
+
+def assert_qty_equal(a, b, check_attrs=True, **kwargs):
+    # py2 compat: import here instead of top of file
+    from xarray import DataArray
+    from xarray.testing import assert_equal as assert_xr_equal
+
+    from .reporting.utils import Quantity, AttrSeries
+
+    a = Quantity(a)
+    b = Quantity(b)
+
+    # check type-specific equal
+    if Quantity is AttrSeries:
+        assert_series_equal(a, b, **kwargs)
+    elif Quantity is DataArray:
+        assert_xr_equal(a, b, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs
+
+
+def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+    from xarray import DataArray
+    from xarray.testing import assert_allclose as assert_xr_allclose
+
+    from .reporting.utils import Quantity, AttrSeries
+
+    a = Quantity(a)
+    b = Quantity(b)
+
+    # check type-specific allclose
+    if Quantity is AttrSeries:
+        # we may
+        assert_series_equal(a, b, **kwargs)
+    elif Quantity is DataArray:
+        assert_xr_allclose(a, b, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs

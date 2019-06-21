@@ -228,12 +228,13 @@ def _parse_units(units_series):
             unit = ureg.parse_units(unit)
         except pint.UndefinedUnitError:
             # Handle the silent failure of define(), above
-            raise invalid(unit) from None
+            # py2 compat: would prefer to raise 'from None'
+            raise invalid(unit)
     except AttributeError:
         # Unit contains a character like '-' that throws off pint
         # NB this 'except' clause must be *after* UndefinedUnitError, since
         #    that is a subclass of AttributeError.
-        raise invalid(unit) from None
+        raise invalid(unit)
 
     return unit
 

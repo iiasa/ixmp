@@ -9,6 +9,6 @@ PyYAML
 sphinx
 sphinx_rtd_theme
 sphinxcontrib-bibtex
-xarray
+xarray<0.12
 xlsxwriter
 xlrd

@@ -18,26 +18,47 @@ Copyright © 2017–2019 IIASA Energy Program
 
 The platform package is licensed under the Apache License, Version 2.0 (the
 "License"); you may not use the files in this repository except in compliance
-with the License.  You may obtain a copy of the License at
+with the License. You may obtain a copy of the License at
 <http://www.apache.org/licenses/LICENSE-2.0>.
 
-Please refer to the [NOTICE](NOTICE.rst) for details and the user guidelines.
+Please refer to the [NOTICE](NOTICE.rst) for details and user guidelines.
 
 
-## Documentation and tutorial
+## Getting started
 
-[Documentation of ixmp and the MESSAGEix framework](http://MESSAGEix.iiasa.ac.at/) is automatically created from the
-documentation of the Python and R API packages.  The online documentation is
-synchronyzed with the contents of the master branch of the repositories
-[www.github.com/iiasa/ixmp](http://www.github.com/iiasa/ixmp) and
-[www.github.com/iiasa/message_ix](http://www.github.com/iiasa/message_ix).
+### Documentation
 
-There are a number of tutorials to get started with ixmp.  You may want to try
-the [tutorial/transport](tutorial/transport/README.md)...
+Documentation of ixmp and the MESSAGEix framework is available in two forms:
 
-Follow the instructions in [doc/README](doc/README.md) for building the ixmp
-documentation including the scientific programming API manuals on your local
-machine.
+- The [MESSAGEix framework documentation](https://message.iiasa.ac.at/)
+  includes documentation of the
+  [ixmp Python API](http://message.iiasa.ac.at/en/stable/api/ixmp.html), which
+  is extended by the framework.
+- The [stand-alone ixmp
+  documentation](https://message.iiasa.ac.at/projects/ixmp/) contains
+  additional information on installing ixmp from source, the R API, etc.
+
+The online documentation is built automatically from the contents of the
+[ixmp Github repository](https://github.com/iiasa/ixmp).
+
+For offline use, the documentation can be built from the source code.
+See [`doc/README.rst`](doc/README.rst) for further details.
+
+
+### Installation
+
+Most users will have ixmp installed automatically as a dependency when
+[installing MESSAGEix](https://message.iiasa.ac.at/en/stable/getting_started.html).
+
+To install the ixmp R API, or to install ixmp from source code, see
+[‘Installation’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/).
+
+
+### Tutorials
+
+Introductory tutorials are provided in both Python and R.
+See `tutorial/README.md`.
+
 
 ## Scientific reference
 
@@ -46,10 +67,10 @@ the ix modeling platform for scientific publications or technical reports:
 
 > Daniel Huppmann, Matthew Gidden, Oliver Fricko, Peter Kolp, Clara Orthofer,
   Michael Pimmer, Nikolay Kushin, Adriano Vinca, Alessio Mastrucci,
-  Keywan Riahi, and Volker Krey.  
-  "The |MESSAGEix| Integrated Assessment Model and the ix modeling platform".  
-  *Environmental Modelling & Software* 112:143-156, 2019.   
-  doi: [10.1016/j.envsoft.2018.11.012](https://doi.org/10.1016/j.envsoft.2018.11.012)  
+  Keywan Riahi, and Volker Krey.
+  "The |MESSAGEix| Integrated Assessment Model and the ix modeling platform".
+  *Environmental Modelling & Software* 112:143-156, 2019.
+  doi: [10.1016/j.envsoft.2018.11.012](https://doi.org/10.1016/j.envsoft.2018.11.012)
   electronic pre-print available at
   [pure.iiasa.ac.at/15157/](https://pure.iiasa.ac.at/15157/)
 
@@ -164,17 +185,3 @@ the ix modeling platform for scientific publications or technical reports:
     ```   
 
    are all part of the PATH system variable. If they are not there, add them.
-
-### Building Documentation
-
-1. Install dependencies for the documentation:
-
-       $ pip install .[doc]
-
-2. Navigate to the `doc` directory and build the documentation:
-
-       $ cd doc
-       $ make html
-
-The built documentation appears in `doc/build/html/index.html`; open this file
-using a web browser.

@@ -51,13 +51,13 @@ Most users will have ixmp installed automatically as a dependency when
 [installing MESSAGEix](https://message.iiasa.ac.at/en/stable/getting_started.html).
 
 To install the ixmp R API, or to install ixmp from source code, see
-[‘Installation’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/).
+[‘Installation’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/install.html).
 
 
 ### Tutorials
 
 Introductory tutorials are provided in both Python and R.
-See `tutorial/README.md`.
+See [‘Tutorials’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/tutorials.html) or [`tutorial/README.rst`[tutorial/README.rst].
 
 
 ## Scientific reference

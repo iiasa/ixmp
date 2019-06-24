@@ -18,6 +18,8 @@ On this page:
    :depth: 3
 
 
+.. _rixmp:
+
 R (``rixmp`` package)
 ---------------------
 
@@ -73,6 +75,42 @@ With ``rixmp`` the user can load entire sets of strings or dataframes, which req
     scen$init_par("a", c("i"))
     a.df = data.frame( i = i.set, value = c(350 , 600) , unit = 'cases')
     scen$add_par("a", adapt_to_ret(a.df))
+
+
+.. _gams-api:
+
+GAMS
+----
+
+The *ixmp* :doc:`tutorials <tutorials>` use a common example problem from
+Dantzig :cite:`dantzig-1963`, implemented in GAMS and available
+`from the GAMS website <https://www.gams.com/mccarl/trnsport.gms>`_.
+The file ``tutorial/transport/transport_ixmp.gms`` illustrates how such an
+existing GAMS model can be simply adapted to work with the |ixmp|.
+
+The steps are:
+
+1. The GAMS definitions of sets ``i`` and ``j``, and parameters ``a``, ``b``,
+   ``d``, and ``f``, are modified to **remove explicit values**.
+2. The following lines are added **before** the model definition and solution::
+
+    $if not set in  $setglobal in  'ix_transport_data.gdx'
+    $if not set out $setglobal out 'ix_transport_results.gdx'
+
+    $gdxin '%in%'
+    $load i, j, a, b, d, f
+    $gdxin
+
+3. The following line is added **after** the model's ``solve ...;`` statement::
+
+    execute_unload '%out%';
+
+*ixmp* uses GAMS command-line options to pass the values of the compile-time
+variables ``in`` and ``out``. This causes the model to read its input data from
+a GDX-format file created by *ixmp*, and write its output data to a GDX file
+specified by *ixmp*. *ixmp* then automatically retrieves the model solution and
+other information from the output file, updating the :class:`ixmp.Scenario` and
+database.
 
 
 Java

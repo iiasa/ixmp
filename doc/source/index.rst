@@ -9,8 +9,8 @@ The |ixmp|
 
 The |ixmp| (ixmp) is a data warehouse for high-powered numerical scenario
 analysis.
-It is designed to provide an effective framework for **i**ntegrated and
-**cross**-cutting analysis (hence the abbreviation *ix*).
+It is designed to provide an effective framework for integrated and
+cross-cutting analysis (hence the abbreviation *ix*).
 
 The platform allows an efficient workflow between original input data sources
 and implementations of mathematical models, via application programming
@@ -18,14 +18,10 @@ interfaces (API) with the scientific programming languages Python and R.
 The platform also includes an API with the mathematical programming
 software `GAMS`_.
 
-For the scientific reference, see Huppmann et al. (2019)
-:cite:`huppmann_messageix_2018`.
-
 .. _`GAMS` : http://www.gams.com
 
-
-Getting started
----------------
+For the scientific reference, see Huppmann et al. (2019)
+:cite:`huppmann_messageix_2018`.
 
 .. figure:: _static/ix_components.png
 
@@ -34,11 +30,14 @@ Getting started
    modeling platform, database backend,
    implementation of the |MESSAGEix| mathematical model formulation
 
+Platform documentation
+----------------------
+
 .. toctree::
    :maxdepth: 2
 
    install
-   Introductory tutorials <tutorials>
+   tutorials
    Scientific programming API reference <api>
    bibliography
 
@@ -46,17 +45,15 @@ Getting started
 License and user guidelines
 ---------------------------
 
-| |MESSAGEix| and the |ixmp| are licensed under an `APACHE 2.0 open-source license`_.
-| See the `LICENSE`_ file included in this repository for the full text.
+The |ixmp| is licensed under an `APACHE 2.0 open-source license`_.
 
 .. _`APACHE 2.0 open-source license`: http://www.apache.org/licenses/LICENSE-2.0
-
 .. _`LICENSE`: https://github.com/iiasa/ixmp/blob/master/LICENSE
 
-Please read the `NOTICE`_ included in this repository for the user guidelines
-and further information.
+Please see the :doc:`notice` for using the platform in scientific research.
+Contributions to the platform itself are also welcome.
 
-The community mailing list for questions and discussions on new features is hosted using Googlegroups.
+The community mailing list for questions and discussions on new features is hosted using Google Groups.
 Please join at `groups.google.com/d/forum/message_ix`_
 and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user community.
 
@@ -66,7 +63,5 @@ and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user c
    notice
    contributing
    contributor_license
-
-.. _`NOTICE`: notice.html
 
 .. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix

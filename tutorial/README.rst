@@ -1,5 +1,5 @@
-Tutorials for the  |ixmp|
-=========================
+Tutorials
+=========
 
 The tutorials provided in the ``tutorial`` directory of the *ixmp* repository walk through the first steps of working with :mod:`ixmp`.
 You will learn how to create a :class:`ixmp.Scenario` as a structured data collection for sets, parameters and the numerical solution to the associated optimization problem.
@@ -7,27 +7,28 @@ You will learn how to create a :class:`ixmp.Scenario` as a structured data colle
 Dantzig's transportation problem
 --------------------------------
 
-We use Dantzig's transport problem, which is also used as the standard GAMS tutorial.
+We use Dantzig's transport problem :cite:`dantzig-1963`, which is also used as the standard GAMS tutorial :cite:`rosenthal-1988`.
 This problem finds a least cost shipping schedule that meets demand requirements at markets and supply capacity constraints at multiple factories.
 
-For reference of the transport problem, see :cite:`dantzig-1963`.
-This formulation is described in detail in :cite:`rosenthal-1988`.
-
-> see http://www.gams.com/mccarl/trnsport.gms
-
-The tutorials are provided as Jupyter notebooks for both Python and R,
-and they are identical as far as possible.
+The tutorials are provided as Jupyter notebooks for both Python and R, and are identical as far as possible.
 
 - Tutorial 1:
-  `Python <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/py_transport.ipynb>`__
-  `R <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/R_transport.ipynb>`__
+  in `Python <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/py_transport.ipynb>`__,
+  or in `R <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/R_transport.ipynb>`__.
 
-  Solve Dantzig's Transport Problem
+  This tutorial walks through the following steps:
+
+  1. Launch an :class:`ixmp.Platform` instance and initialize a new :class:`ixmp.Scenario`.
+  2. Define the sets and parameters in the scenario, and commit the data to the platform.
+  3. Check out the scenario and initialize variables and equations (necessary for ixmp to import the solution).
+  4. Solve the scenario (export to GAMS input gdx, execute, read solution from output gdx).
+  5. Display the solution (variables and equation).
 
 - Tutorial 2:
-  `Python <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/py_transport_scenario.ipynb>`__
-  `R <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/R_transport_scenario.ipynb>`__
+  in `Python <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/py_transport_scenario.ipynb>`__,
+  or in `R <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/R_transport_scenario.ipynb>`__.
 
-  Create an alternate or ‘counterfactual’ scenario of the transport problem; solve it; and compare the results to the original or reference scenario.
+  This tutorial creates an alternate or ‘counterfactual’ scenario of the transport problem; solve it; and compare the results to the original or reference scenario.
 
-If you are not familiar with GAMS, please take a minute to look at the [transport.gms](transport.gms) code.
+
+See :ref:`the GAMS API description <gams-api>` for an explanation of how the standard GAMS transport problem code is easily adapted for use with *ixmp*.

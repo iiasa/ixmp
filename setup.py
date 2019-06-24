@@ -2,9 +2,13 @@
 from __future__ import print_function
 
 import glob
-import versioneer
 
 from setuptools import find_packages, setup
+import versioneer
+
+
+with open('README.md', 'r') as f:
+    LONG_DESCRIPTION = f.read()
 
 
 INSTALL_REQUIRES = [
@@ -51,10 +55,12 @@ def main():
         "version": versioneer.get_version(),
         "cmdclass": versioneer.get_cmdclass(),
         "description": 'ix modeling platform',
+        "long_description": LONG_DESCRIPTION,
+        "long_description_content_type": 'text/markdown',
         "author": 'Daniel Huppmann, Matthew Gidden, Volker Krey, '
                   'Oliver Fricko, Peter Kolp',
         "author_email": 'message_ix@iiasa.ac.at',
-        "url": 'http://github.com/iiasa/message_ix',
+        "url": 'https://github.com/iiasa/ixmp',
         "install_requires": INSTALL_REQUIRES,
         "extras_require": EXTRAS_REQUIRE,
         "packages": find_packages(),

@@ -385,6 +385,19 @@ def test_reporting_platform_units(test_mp, caplog):
     ]
     assert all(e in [rec.message for rec in caplog.records] for e in expected)
 
+    # Mix of recognized/unrecognized units can be added: USD is already in the
+    # unit registry, so is not re-added
+    x['unit'] = 'USD/pkm'
+    test_mp.add_unit('USD/pkm')
+    scen.add_par('x', x)
+
+    caplog.clear()
+    rep.get(x_key)
+    assert not any('Add unit definition: USD = [USD]' in
+                   rec.message for rec in caplog.records)
+    assert any('Add unit definition: pkm = [pkm]' in
+               rec.message for rec in caplog.records)
+
 
 def test_reporter_describe(test_mp, test_data_path):
     scen = make_dantzig(test_mp)

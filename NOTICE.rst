@@ -1,97 +1,51 @@
 User Guidelines and Notice
 ==========================
 
-   Copyright © 2017–2019 IIASA Energy Program
+We ask that you take the following four actions whenever you:
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+- **use** the |ixmp|, the |MESSAGEix| framework, or any model(s) you have built using these tools
+- to **produce** any scientific publication, technical report, website, or other **publicly-available material**.
 
-       http://www.apache.org/licenses/LICENSE-2.0
+The aim of this request is to ensure good scientific practice and collaborative development of the platform.
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+1. Understand the code license
+------------------------------
 
+Use the most recent version of the *ixmp* from the Github repository.
+Specify clearly which version (e.g. release tag, such as ``v1.1.0``, or commit hash, such as ``26cc08f``) you have used, and whether you have made any modifications to the code.
 
-Introduction
-------------
+Read and understand the file ``LICENSE``; in particular, clause 7 (“Disclaimer of Warranty”), which states:
 
-This document specifies the guidelines for using the |MESSAGEix| framework and the ix modeling platform.
-The aim of these guidelines is to ensure best scientific practice and collaborative development of the platform.
-
-Documentation and further information is available at http://ene.software.iiasa.ac.at/ixmp/.
-The framework is available for download at http://github.com/iiasa/ixmp.
-Please refer to the website and repository for the most up-to-date version of the code base.
-
-The community mailing list for questions and discussions on new features is hosted using Googlegroups.
-Please join at `groups.google.com/d/forum/message_ix`_
-and use <message_ix@googlegroups.com> to send an email to the MESSAGEix and ixmp user community.
-
-.. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix
+    Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
 
 
-User Guidelines
----------------
+2. Cite the scientific publication
+----------------------------------
 
-A) Reference to the scientific publication and online resources
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Cite Huppmann *et al.*—the full citation is given at :cite:`huppmann_messageix_2018`.
 
-Please cite the following manuscript when using the |MESSAGEix| framework and/or
-the ix modeling platform  for scientific publications or technical reports:
-
-  Daniel Huppmann, Matthew Gidden, Oliver Fricko, Peter Kolp, Clara Orthofer,
-  Michael Pimmer, Nikolay Kushin, Adriano Vinca, Alessio Mastrucci,
-  Keywan Riahi, and Volker Krey.
-  "The MESSAGEix Integrated Assessment Model and the ix modeling platform".
-  *Environmental Modelling & Software* 112:143-156, 2019.
-  doi: `10.1016/j.envsoft.2018.11.012`_
-  electronic pre-print available at `pure.iiasa.ac.at/15157/`_.
-
-Also, please include a hyperlink to the online resource `MESSAGEix.iiasa.ac.at`_
-in any publication/report, or on a website describing your model
-or scientific analysis using the MESSAGEix framework.
-
-..  _`10.1016/j.envsoft.2018.11.012` : https://doi.org/10.1016/j.envsoft.2018.11.012
-
-.. _`pure.iiasa.ac.at/15157/` : https://pure.iiasa.ac.at/15157/
-
-.. _`MESSAGEix.iiasa.ac.at` : http://MESSAGEix.iiasa.ac.at
-
-B) Developing new model instances
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Researchers are welcome to develop new model instances using the |MESSAGEix| framework
-for their own research interests. However, any such model must be named "MESSAGEix xxx" or "MESSAGEix-xxx",
-where 'xxx' is replaced by the name of the country/region, institutional affiliation or a similar identifying name.
-For example, the national model for South Africa developed by Orthofer et al. [1] is called "MESSAGEix South Africa".
-
-Furthermore, please ensure that there is no naming conflict with existing versions of the |MESSAGEix| model family.
-When in doubt, please contact the IIASA Energy Program at <message_ix@iiasa.ac.at>.
-
-C) Notice of new publications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-We would appreciate a notice of publications using the |MESSAGEix| framework and the ix modeling platform.
-Please send an e-mail to <message_ix@iiasa.ac.at>.
+In addition, include a hyperlink to the online documentation: https://message.iiasa.ac.at.
 
 
-Contributor Guidelines
-----------------------
+3. Use the naming convention for new model instances
+----------------------------------------------------
 
-We appreciate contributions to the code base and development of new features for the framework.
-Please refer to `CONTRIBUTING.rst`_ for details.
+For any new model instance under the |MESSAGEix| framework, choose a name of
+the form "MESSAGEix [xxx]" or "MESSAGEix-[xxx]", where [xxx] is replaced by:
 
-.. _`CONTRIBUTING.rst` : CONTRIBUTING.rst
+- the institution or organization developing the model,
+- the name of a country/region represented in the model, or
+- a similar identifier.
+
+For example, the national model for South Africa developed by Orthofer *et al.* :cite:`orthofer-2019` is named "MESSAGEix South Africa".
+
+For models built on the |ixmp| but unrelated to |MESSAGEix|, we recommend using a name of the form "[NAME]ix".
+
+Ensure there is no naming conflict with existing versions of the *ixmp*/|MESSAGEix| model family.
+When in doubt, contact the IIASA Energy Program at <message_ix@iiasa.ac.at> for a list of existing model instances.
 
 
-References
-----------
+4. Give notice of publication
+-----------------------------
 
-[1] Clara Orthofer, Daniel Huppmann, and Volker Krey.
-"South Africa after Paris - Fracking its Way to the NDCs?"
-2018, in review. Electronic pre-print available at `pure.iiasa.ac.at/15085/`_.
-
-.. _`pure.iiasa.ac.at/15085/` : https://pure.iiasa.ac.at/15085/
+E-mail <message_ix@iiasa.ac.at> with notice of notice of any new or pending publication.

@@ -1,7 +1,9 @@
-Scientific Programming APIs
-============================
+API reference
+=============
 
 The `ixmp` has application programming interfaces (API) for efficient scientific workflows and data processing.
+
+On separate pages:
 
 .. toctree::
    :maxdepth: 2
@@ -9,8 +11,17 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
    api-python
    reporting
 
+On this page:
+
+.. contents::
+   :local:
+   :depth: 3
+
+
+.. _rixmp:
+
 R (``rixmp`` package)
------------------------
+---------------------
 
 An R interface to the `ixmp` is provided by the ``rixmp`` package.
 ``rixmp`` uses the `reticulate <https://rstudio.github.io/reticulate/>`_ R-to-Python adapter to provide all the features of the :mod:`ixmp` *Python* package::
@@ -66,9 +77,44 @@ With ``rixmp`` the user can load entire sets of strings or dataframes, which req
     scen$add_par("a", adapt_to_ret(a.df))
 
 
+.. _gams-api:
+
+GAMS
+----
+
+The *ixmp* :doc:`tutorials <tutorials>` use a common example problem from
+Dantzig :cite:`dantzig-1963`, implemented in GAMS and available
+`from the GAMS website <https://www.gams.com/mccarl/trnsport.gms>`_.
+The file ``tutorial/transport/transport_ixmp.gms`` illustrates how such an
+existing GAMS model can be simply adapted to work with the |ixmp|.
+
+The steps are:
+
+1. The GAMS definitions of sets ``i`` and ``j``, and parameters ``a``, ``b``,
+   ``d``, and ``f``, are modified to **remove explicit values**.
+2. The following lines are added **before** the model definition and solution::
+
+    $if not set in  $setglobal in  'ix_transport_data.gdx'
+    $if not set out $setglobal out 'ix_transport_results.gdx'
+
+    $gdxin '%in%'
+    $load i, j, a, b, d, f
+    $gdxin
+
+3. The following line is added **after** the model's ``solve ...;`` statement::
+
+    execute_unload '%out%';
+
+*ixmp* uses GAMS command-line options to pass the values of the compile-time
+variables ``in`` and ``out``. This causes the model to read its input data from
+a GDX-format file created by *ixmp*, and write its output data to a GDX file
+specified by *ixmp*. *ixmp* then automatically retrieves the model solution and
+other information from the output file, updating the :class:`ixmp.Scenario` and
+database.
+
+
 Java
 ----
 
-The `ixmp` is powered by a Java interface to connect a database instance
-with the scientific programming interfaces and the web user interface.
-The full documentation of the ixmp Java source will be available shortly.
+The `ixmp` is powered by a Java interface to connect a database instance with
+the scientific programming interfaces.

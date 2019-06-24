@@ -216,6 +216,10 @@ def _parse_units(units_series):
 
         # Split possible compound units
         for u in unit.split('/'):
+            if u in dir(ureg):
+                # Unit already defined
+                continue
+
             # py2 compat: could use f-strings here
             definition = '{0} = [{0}]'.format(u)
             log.info('Add unit definition: {}'.format(definition))

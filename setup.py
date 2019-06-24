@@ -30,8 +30,6 @@ EXTRAS_REQUIRE = {
 }
 
 LIB_FILES = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/lib/*')]
-DB_FILES = [x.split('ixmp/')[-1] for x in glob.glob('ixmp/db/migration/*/*')]
-
 
 setup(
     name='ixmp',
@@ -48,7 +46,7 @@ setup(
     extras_require=EXTRAS_REQUIRE,
     packages=find_packages(),
     package_dir={'ixmp': 'ixmp'},
-    package_data={'ixmp': ['ixmp.jar'] + LIB_FILES + DB_FILES},
+    package_data={'ixmp': ['ixmp.jar'] + LIB_FILES},
     entry_points={
         'console_scripts': [
             'import-timeseries=ixmp.cli:import_timeseries',

@@ -57,7 +57,7 @@ To install the ixmp R API, or to install ixmp from source code, see
 ### Tutorials
 
 Introductory tutorials are provided in both Python and R.
-See [‘Tutorials’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/tutorials.html) or [`tutorial/README.rst`[tutorial/README.rst].
+See [‘Tutorials’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/tutorials.html) or [`tutorial/README.rst`](tutorial/README.rst).
 
 
 ## Scientific reference

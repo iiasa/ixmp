@@ -1,7 +1,9 @@
-Scientific Programming APIs
-============================
+API reference
+=============
 
 The `ixmp` has application programming interfaces (API) for efficient scientific workflows and data processing.
+
+On separate pages:
 
 .. toctree::
    :maxdepth: 2
@@ -9,8 +11,15 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
    api-python
    reporting
 
+On this page:
+
+.. contents::
+   :local:
+   :depth: 3
+
+
 R (``rixmp`` package)
------------------------
+---------------------
 
 An R interface to the `ixmp` is provided by the ``rixmp`` package.
 ``rixmp`` uses the `reticulate <https://rstudio.github.io/reticulate/>`_ R-to-Python adapter to provide all the features of the :mod:`ixmp` *Python* package::
@@ -69,6 +78,5 @@ With ``rixmp`` the user can load entire sets of strings or dataframes, which req
 Java
 ----
 
-The `ixmp` is powered by a Java interface to connect a database instance
-with the scientific programming interfaces and the web user interface.
-The full documentation of the ixmp Java source will be available shortly.
+The `ixmp` is powered by a Java interface to connect a database instance with
+the scientific programming interfaces.

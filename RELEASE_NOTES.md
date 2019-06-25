@@ -1,8 +1,20 @@
 
-# Next Release
+# v0.2.0
+
+Release 0.2.0 provides full support for Scenario.clone() across platforms (database instances), e.g. from a remote database to a local HSQL database.
+IAMC-style timeseries data is better supported, and can be used to store processed results, together with model variables and equations.
+
+Other improvements include a new, dedicated `ixmp.testing` module, user-supplied
+callbacks in Scenario.solve(). The `retixmp` package using reticulate to access
+the ixmp API is renamed to `rixmp` and now has its own unit tests (the former
+`rixmp` package can be accessed as `rixmp.legacy`).
+
+Release 0.2.0 coincides with MESSAGEix release 1.2.0.
+
+## All changes
 
 - [#135](https://github.com/iiasa/ixmp/pull/135): Test `rixmp` (former `retixmp`) using the R `testthat` package.
-- [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSSAGEix release 1.2 in Java core
+- [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core.
 - [#115](https://github.com/iiasa/ixmp/pull/115): Support iterating with user-supplied callbacks.
 - [#130](https://github.com/iiasa/ixmp/pull/130): Recognize `IXMP_DATA` environment variable for configuration and local databases.
 - [#129](https://github.com/iiasa/ixmp/pull/129), [#132](https://github.com/iiasa/ixmp/pull/132): Fully implement `Scenario.clone()` across platforms (databases).
@@ -11,9 +23,9 @@
 - [#125](https://github.com/iiasa/ixmp/pull/125): Add functions to view and add regions for IAMC-style timeseries data.
 - [#123](https://github.com/iiasa/ixmp/pull/123): Return absolute path from `find_dbprops()`.
 - [#118](https://github.com/iiasa/ixmp/pull/118): Switch to RTD Sphinx theme.
-- [#116](https://github.com/iiasa/ixmp/pull/116): Bugfix and extend functionality for working with IAMC-style timeseries data
-- [#111](https://github.com/iiasa/ixmp/pull/111): Add functions to check if a Scenario has an item (set, par, var, equ)
-- [#110](https://github.com/iiasa/ixmp/pull/110): Generalize the internal functions to format index dimensions for mapping sets and parameters
+- [#116](https://github.com/iiasa/ixmp/pull/116): Bugfix and extend functionality for working with IAMC-style timeseries data.
+- [#111](https://github.com/iiasa/ixmp/pull/111): Add functions to check if a Scenario has an item (set, par, var, equ).
+- [#110](https://github.com/iiasa/ixmp/pull/110): Generalize the internal functions to format index dimensions for mapping sets and parameters.
 - [#108](https://github.com/iiasa/ixmp/pull/105): Improve documentation.
 - [#105](https://github.com/iiasa/ixmp/pull/105): Replace [deprecated](http://pandas.pydata.org/pandas-docs/stable/indexing.html#ix-indexer-is-deprecated) pandas `.ix` indexer with `.iloc`.
 - [#103](https://github.com/iiasa/ixmp/pull/103): Specify dependencies in setup.py.

@@ -35,8 +35,7 @@ setup(
     name='ixmp',
     version=versioneer.get_version(),
     description='ix modeling platform',
-    author='Daniel Huppmann, Matthew Gidden, Volker Krey, '
-           'Oliver Fricko, Peter Kolp',
+    author='IIASA Energy Program',
     author_email='message_ix@iiasa.ac.at',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',

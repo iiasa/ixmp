@@ -1,4 +1,6 @@
 
+# Next Release
+
 # v0.2.0
 
 Release 0.2.0 provides full support for Scenario.clone() across platforms (database instances), e.g. from a remote database to a local HSQL database.

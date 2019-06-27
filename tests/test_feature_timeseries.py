@@ -6,7 +6,6 @@ import ixmp
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
-
 # string columns and dataframe for timeseries checks
 iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
 cols_str = ['region', 'variable', 'unit', 'year']
@@ -62,7 +61,7 @@ def test_new_timeseries_error(test_mp):
     df = pd.DataFrame.from_dict(df)
     df['region'] = 'World'
     df['variable'] = 'Testing'
-    # colum `unit` is missing
+    # column `unit` is missing
     pytest.raises(ValueError, scen.add_timeseries, df)
 
 
@@ -101,6 +100,50 @@ def test_timeseries_edit(test_mp_props):
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
+
+
+def test_timeseries_edit_iamc(test_mp_props):
+    args_all = ('Douglas Adams 1', 'test_remove_all')
+    mp = ixmp.Platform(test_mp_props)
+    scen = ixmp.TimeSeries(mp, *args_all, version='new', annotation='nk')
+
+    df = pd.DataFrame.from_dict({'region': ['World'],
+                                 'variable': ['Testing'],
+                                 'unit': ['???'],
+                                 '2010': [23.7],
+                                 '2020': [23.8]})
+    scen.add_timeseries(df)
+    scen.commit('updating timeseries in IAMC format')
+
+    scen = ixmp.TimeSeries(mp, *args_all)
+    obs = scen.timeseries()
+    exp = pd.DataFrame.from_dict({'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
+                                  'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]})
+    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(exp['value'], obs['value'])
+
+    scen.check_out(timeseries_only=True)
+    df = pd.DataFrame.from_dict({'region': ['World'],
+                                 'variable': ['Testing'],
+                                 'unit': ['???'],
+                                 '2000': [21.7],
+                                 '2010': [22.7],
+                                 '2020': [23.7],
+                                 '2030': [24.7],
+                                 '2040': [25.7],
+                                 '2050': [25.8]})
+    scen.add_timeseries(df)
+    scen.commit('updating timeseries in IAMC format')
+
+    exp = pd.DataFrame.from_dict({'region': ['World', 'World', 'World', 'World', 'World', 'World'],
+                                  'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing', 'Testing'],
+                                  'unit': ['???', '???', '???', '???', '???', '???'],
+                                  'year': [2000, 2010, 2020, 2030, 2040, 2050],
+                                  'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
+    obs = scen.timeseries()
+    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(exp['value'], obs['value'])
+    mp.close_db()
 
 
 def test_timeseries_remove_single_entry(test_mp):

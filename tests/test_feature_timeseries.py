@@ -117,8 +117,11 @@ def test_timeseries_edit_iamc(test_mp_props):
 
     scen = ixmp.TimeSeries(mp, *args_all)
     obs = scen.timeseries()
-    exp = pd.DataFrame.from_dict({'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
-                                  'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]})
+    exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
+                                  'variable': ['Testing', 'Testing'],
+                                  'unit': ['???', '???'],
+                                  'year': [2010, 2020],
+                                  'value': [23.7, 23.8]})
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
@@ -135,11 +138,13 @@ def test_timeseries_edit_iamc(test_mp_props):
     scen.add_timeseries(df)
     scen.commit('updating timeseries in IAMC format')
 
-    exp = pd.DataFrame.from_dict({'region': ['World', 'World', 'World', 'World', 'World', 'World'],
-                                  'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing', 'Testing'],
-                                  'unit': ['???', '???', '???', '???', '???', '???'],
-                                  'year': [2000, 2010, 2020, 2030, 2040, 2050],
-                                  'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
+    exp = pd.DataFrame.from_dict(
+        {'region': ['World', 'World', 'World', 'World', 'World', 'World'],
+         'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing',
+                      'Testing'],
+         'unit': ['???', '???', '???', '???', '???', '???'],
+         'year': [2000, 2010, 2020, 2030, 2040, 2050],
+         'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
     obs = scen.timeseries()
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])

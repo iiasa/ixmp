@@ -151,6 +151,58 @@ def test_timeseries_edit_iamc(test_mp_props):
     mp.close_db()
 
 
+def test_timeseries_edit_with_region_synonyms(test_mp_props):
+    args_all = ('Douglas Adams 1', 'test_remove_all')
+    mp = ixmp.Platform(test_mp_props)
+    mp.set_log_level('DEBUG')
+    mp.add_region_synomym('Hell', 'World')
+    scen = ixmp.TimeSeries(mp, *args_all, version='new', annotation='nk')
+
+    df = pd.DataFrame.from_dict({'region': ['World'],
+                                 'variable': ['Testing'],
+                                 'unit': ['???'],
+                                 '2010': [23.7],
+                                 '2020': [23.8]})
+    scen.add_timeseries(df)
+    scen.commit('updating timeseries in IAMC format')
+
+    scen = ixmp.TimeSeries(mp, *args_all)
+    obs = scen.timeseries()
+    exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
+                                  'variable': ['Testing', 'Testing'],
+                                  'unit': ['???', '???'],
+                                  'year': [2010, 2020],
+                                  'value': [23.7, 23.8]})
+    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(exp['value'], obs['value'])
+
+    scen.check_out(timeseries_only=True)
+    df = pd.DataFrame.from_dict({'region': ['Hell'],
+                                 'variable': ['Testing'],
+                                 'unit': ['???'],
+                                 '2000': [21.7],
+                                 '2010': [22.7],
+                                 '2020': [23.7],
+                                 '2030': [24.7],
+                                 '2040': [25.7],
+                                 '2050': [25.8]})
+    scen.preload_timeseries()
+    scen.add_timeseries(df)
+    scen.commit('updating timeseries in IAMC format')
+
+    exp = pd.DataFrame.from_dict(
+        {'region': ['World', 'World', 'World', 'World', 'World', 'World'],
+         'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing',
+                      'Testing'],
+         'unit': ['???', '???', '???', '???', '???', '???'],
+         'year': [2000, 2010, 2020, 2030, 2040, 2050],
+         'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
+    obs = scen.timeseries()
+    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_almost_equal(exp['value'], obs['value'])
+    mp.close_db()
+
+
 def test_timeseries_remove_single_entry(test_mp):
     args_single = ('Douglas Adams', 'test_remove_single')
 

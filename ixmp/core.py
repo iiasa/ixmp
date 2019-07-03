@@ -439,6 +439,12 @@ class TimeSeries(object):
 
     # functions for importing and retrieving timeseries data
 
+    def preload_timeseries(self):
+        """Preload Timeseries data to in-memory cache. Useful for bulk updates.
+        """
+
+        self._jobj.preloadAllTimeseries()
+
     def add_timeseries(self, df, meta=False):
         """Add data to the TimeSeries.
 

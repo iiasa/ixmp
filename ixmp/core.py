@@ -739,7 +739,7 @@ class TimeSeries:
                 geodata['value'].append(year_value.getValue())
                 for (java_key, python_key) in auto_cols.items():
                     geodata[python_key].append(str(java_geodata.get(i).get(
-                                                java_key)))
+                        java_key)))
 
         geodata['meta'] = [int(_meta) for _meta in geodata['meta']]
         geodata['time'] = [self._get_timespan_name(time) for time in

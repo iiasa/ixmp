@@ -20,6 +20,7 @@ Release 0.2.0 coincides with MESSAGEix release 1.2.0.
 
 ## All changes
 
+- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
 - [#135](https://github.com/iiasa/ixmp/pull/135): Test `rixmp` (former `retixmp`) using the R `testthat` package.
 - [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core.
 - [#115](https://github.com/iiasa/ixmp/pull/115): Support iterating with user-supplied callbacks.

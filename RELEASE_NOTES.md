@@ -5,6 +5,7 @@
 - [#175](https://github.com/iiasa/ixmp/pull/175): Drop support for Python 2.
 - [#174](https://github.com/iiasa/ixmp/pull/174): Set `convertStrings=True` for JPype >= 0.7; see the [JPype changelog](https://jpype.readthedocs.io/en/latest/CHANGELOG.html).
 - [#173](https://github.com/iiasa/ixmp/pull/173): Make AppVeyor CI more robust; support pandas 0.25.0.
+- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
 
 # v0.2.0
 
@@ -20,7 +21,6 @@ Release 0.2.0 coincides with MESSAGEix release 1.2.0.
 
 ## All changes
 
-- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
 - [#135](https://github.com/iiasa/ixmp/pull/135): Test `rixmp` (former `retixmp`) using the R `testthat` package.
 - [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core.
 - [#115](https://github.com/iiasa/ixmp/pull/115): Support iterating with user-supplied callbacks.

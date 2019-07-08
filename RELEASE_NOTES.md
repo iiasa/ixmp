@@ -1,6 +1,8 @@
 
 # Next Release
 
+- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
+
 # v0.2.0
 
 Release 0.2.0 provides full support for Scenario.clone() across platforms (database instances), e.g. from a remote database to a local HSQL database.
@@ -15,7 +17,6 @@ Release 0.2.0 coincides with MESSAGEix release 1.2.0.
 
 ## All changes
 
-- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
 - [#135](https://github.com/iiasa/ixmp/pull/135): Test `rixmp` (former `retixmp`) using the R `testthat` package.
 - [#142](https://github.com/iiasa/ixmp/pull/142): Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core.
 - [#115](https://github.com/iiasa/ixmp/pull/115): Support iterating with user-supplied callbacks.

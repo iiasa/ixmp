@@ -65,10 +65,9 @@ def test_new_timeseries_error(test_mp):
     pytest.raises(ValueError, scen.add_timeseries, df)
 
 
-def test_timeseries_edit(test_mp_props):
-    mp = ixmp.Platform(test_mp_props)
-    scen = ixmp.TimeSeries(mp, *test_args)
-    df = {'region': ['World', 'World'], 'variable': ['Testing', 'Testing'],
+def test_timeseries_edit(test_mp):
+    scen = ixmp.TimeSeries(test_mp, *test_args)
+    df = {'region': ['World'] * 2, 'variable': ['Testing'] * 2,
           'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
     exp = pd.DataFrame.from_dict(df)
     obs = scen.timeseries()
@@ -76,8 +75,8 @@ def test_timeseries_edit(test_mp_props):
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
     scen.check_out(timeseries_only=True)
-    df = {'region': ['World', 'World'],
-          'variable': ['Testing', 'Testing'],
+    df = {'region': ['World'] * 2,
+          'variable': ['Testing'] * 2,
           'unit': ['???', '???'], 'year': [2010, 2020],
           'value': [23.7, 23.8]}
     df = pd.DataFrame.from_dict(df)
@@ -85,27 +84,26 @@ def test_timeseries_edit(test_mp_props):
     scen.commit('testing of editing timeseries (same years)')
 
     scen.check_out(timeseries_only=True)
-    df = {'region': ['World', 'World', 'World'],
+    df = {'region': ['World'] * 3,
           'variable': ['Testing', 'Testing', 'Testing2'],
           'unit': ['???', '???', '???'], 'year': [2020, 2030, 2030],
           'value': [24.8, 24.9, 25.1]}
     df = pd.DataFrame.from_dict(df)
     scen.add_timeseries(df)
     scen.commit('testing of editing timeseries (other years)')
-    mp.close_db()
+    test_mp.close_db()
 
-    mp = ixmp.Platform(test_mp_props)
-    scen = ixmp.TimeSeries(mp, *test_args)
+    test_mp.open_db()
+    scen = ixmp.TimeSeries(test_mp, *test_args)
     obs = scen.timeseries().sort_values(by=['year'])
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
-def test_timeseries_edit_iamc(test_mp_props):
+def test_timeseries_edit_iamc(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    mp = ixmp.Platform(test_mp_props)
-    scen = ixmp.TimeSeries(mp, *args_all, version='new', annotation='nk')
+    scen = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 
     df = pd.DataFrame.from_dict({'region': ['World'],
                                  'variable': ['Testing'],
@@ -115,7 +113,7 @@ def test_timeseries_edit_iamc(test_mp_props):
     scen.add_timeseries(df)
     scen.commit('updating timeseries in IAMC format')
 
-    scen = ixmp.TimeSeries(mp, *args_all)
+    scen = ixmp.TimeSeries(test_mp, *args_all)
     obs = scen.timeseries()
     exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
                                   'variable': ['Testing', 'Testing'],
@@ -139,24 +137,22 @@ def test_timeseries_edit_iamc(test_mp_props):
     scen.commit('updating timeseries in IAMC format')
 
     exp = pd.DataFrame.from_dict(
-        {'region': ['World', 'World', 'World', 'World', 'World', 'World'],
-         'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing',
-                      'Testing'],
-         'unit': ['???', '???', '???', '???', '???', '???'],
+        {'region': ['World'] * 6,
+         'variable': ['Testing'] * 6,
+         'unit': ['???'] * 6,
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
     obs = scen.timeseries()
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
-    mp.close_db()
+    test_mp.close_db()
 
 
-def test_timeseries_edit_with_region_synonyms(test_mp_props):
+def test_timeseries_edit_with_region_synonyms(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    mp = ixmp.Platform(test_mp_props)
-    mp.set_log_level('DEBUG')
-    mp.add_region_synomym('Hell', 'World')
-    scen = ixmp.TimeSeries(mp, *args_all, version='new', annotation='nk')
+    test_mp.set_log_level('DEBUG')
+    test_mp.add_region_synomym('Hell', 'World')
+    scen = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 
     df = pd.DataFrame.from_dict({'region': ['World'],
                                  'variable': ['Testing'],
@@ -166,10 +162,10 @@ def test_timeseries_edit_with_region_synonyms(test_mp_props):
     scen.add_timeseries(df)
     scen.commit('updating timeseries in IAMC format')
 
-    scen = ixmp.TimeSeries(mp, *args_all)
+    scen = ixmp.TimeSeries(test_mp, *args_all)
     obs = scen.timeseries()
-    exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
-                                  'variable': ['Testing', 'Testing'],
+    exp = pd.DataFrame.from_dict({'region': ['World'] * 2,
+                                  'variable': ['Testing'] * 2,
                                   'unit': ['???', '???'],
                                   'year': [2010, 2020],
                                   'value': [23.7, 23.8]})
@@ -191,16 +187,15 @@ def test_timeseries_edit_with_region_synonyms(test_mp_props):
     scen.commit('updating timeseries in IAMC format')
 
     exp = pd.DataFrame.from_dict(
-        {'region': ['World', 'World', 'World', 'World', 'World', 'World'],
-         'variable': ['Testing', 'Testing', 'Testing', 'Testing', 'Testing',
-                      'Testing'],
-         'unit': ['???', '???', '???', '???', '???', '???'],
+        {'region': ['World'] * 6,
+         'variable': ['Testing'] * 6,
+         'unit': ['???'] * 6,
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
     obs = scen.timeseries()
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
-    mp.close_db()
+    test_mp.close_db()
 
 
 def test_timeseries_remove_single_entry(test_mp):

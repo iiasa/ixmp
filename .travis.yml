@@ -45,7 +45,7 @@ before_install:
 
 install:
   - source ci/travis-install.sh
-  - python setup.py install
+  - pip install .[docs,tests,tutorial]
   - Rscript -e 'devtools::install("rixmp", dep = T)'
 
 script:

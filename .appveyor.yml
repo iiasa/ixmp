@@ -21,7 +21,7 @@ init:
 
 install:
   - ps: . .\ci\appveyor-install.ps1
-  - python setup.py install
+  - pip install .[docs,tests,tutorial]
   - Rscript .\ci\appveyor-install.R 2
 
 build: false

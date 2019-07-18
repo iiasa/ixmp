@@ -24,6 +24,7 @@ INSTALL_REQUIRES = [
 ]
 
 EXTRAS_REQUIRE = {
+    'ci': ['teamcity-messages'],
     'tests': ['pytest>=3.9', 'jupyter', 'pretenders>=1.4.4'],
     'docs': ['numpydoc', 'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-bibtex'],
     'tutorial': ['jupyter'],

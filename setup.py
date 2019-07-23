@@ -11,7 +11,7 @@ with open('README.md', 'r') as f:
     LONG_DESCRIPTION = f.read()
 
 INSTALL_REQUIRES = [
-    'JPype1>=0.6.2',
+    'JPype1>=0.7',
     'click',
     'dask[array]',
     'graphviz',

@@ -1,4 +1,4 @@
-JPype1>=0.6.2
+JPype1>=0.7
 dask[array]
 graphviz
 jupyter

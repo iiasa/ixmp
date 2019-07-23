@@ -120,19 +120,20 @@ First, read the :ref:`rixmp documentation <rixmp>` to understand the difference 
    - (Windows) Run the script ``install.bat`` included with ixmp.
 
    - (Linux and macOS) Enter the directory ``rixmp/`` and use R to build and
-     install the package::
+     install the package and its dependencies, including reticulate_::
 
       $ cd rixmp
+      $ Rscript -e "install.packages(c('knitr', 'reticulate'))"
       $ R CMD build .
       $ R CMD INSTALL *.tar.gz
-
-   This will also install `reticulate <https://rstudio.github.io/reticulate/>`_.
 
 3. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_
    and add the path to the environment variables.
 
 4. (Optional) For working with Jupyter notebooks using R, install the
    `IR kernel <https://irkernel.github.io>`_.
+
+.. _reticulate: https://rstudio.github.io/reticulate/
 
 
 Install development tools

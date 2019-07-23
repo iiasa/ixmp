@@ -62,7 +62,7 @@ def tmp_env(tmp_path_factory):
     yield os.environ
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def test_mp(tmp_path_factory, test_data_path):
     """An ixmp.Platform connected to a temporary, local database.
 

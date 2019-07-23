@@ -108,9 +108,8 @@ def test_init_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add set on a locked scenario
-    with pytest.raises(jpype.JavaException,
-                       match="at.ac.iiasa.ixmp.exceptions.IxException: This "
-                             "Scenario cannot be edited, do a checkout "
+    with pytest.raises(jpype.JException,
+                       match="This Scenario cannot be edited, do a checkout "
                              "first!"):
         scen.init_set('foo')
 
@@ -119,9 +118,8 @@ def test_init_set(test_mp):
     scen.init_set('foo')
 
     # Initialize an already-existing set
-    with pytest.raises(jpype.JavaException,
-                       match="at.ac.iiasa.ixmp.exceptions.IxException: "
-                             "An Item with the name 'foo' already exists!"):
+    with pytest.raises(jpype.JException,
+                       match="An Item with the name 'foo' already exists!"):
         scen.init_set('foo')
 
 
@@ -130,9 +128,8 @@ def test_add_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add element to a non-existent set
-    with pytest.raises(jpype.JavaException,
-                       match="at.ac.iiasa.ixmp.exceptions.IxException: "
-                             "No Set 'foo' exists in this Scenario!"):
+    with pytest.raises(jpype.JException,
+                       match="No Set 'foo' exists in this Scenario!"):
         scen.add_set('foo', 'bar')
 
 

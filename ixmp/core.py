@@ -314,12 +314,17 @@ class Platform(object):
         else:
             _logger_region_exists(_regions, region)
 
-    def check_access(self, user, models, access="view"):
+    def check_access(self, user, models, access='view'):
         """Check access to specific model
 
-        :param user: registered user name
-        :param models: model(s) name
-        :param access: access type (view/edit)
+        Parameters
+        ----------
+        user: str
+            Registered user name
+        models : str or list of str
+            Model(s) name
+        access : str, optional
+            Access type - view or edit
         """
 
         if isinstance(models, str):
@@ -461,9 +466,8 @@ class TimeSeries(object):
     # functions for importing and retrieving timeseries data
 
     def preload_timeseries(self):
-        """Preload Timeseries data to in-memory cache. Useful for bulk updates.
+        """Preload timeseries data to in-memory cache. Useful for bulk updates.
         """
-
         self._jobj.preloadAllTimeseries()
 
     def add_timeseries(self, df, meta=False):

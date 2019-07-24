@@ -134,7 +134,7 @@ def collect_units(*args):
             log.debug('assuming {} is unitless'.format(arg))
             arg.attrs['_unit'] = ureg.parse_units('')
 
-    return [copy(arg.attrs['_unit']) for arg in args]
+    return [arg.attrs['_unit'] for arg in args]
 
 
 # Mapping from raw -> preferred dimension names

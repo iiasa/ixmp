@@ -90,8 +90,12 @@ def ratio(numerator, denominator, drop=True):
     # Handle units
     u_num, u_denom = collect_units(numerator, denominator)
 
+    print('ratio 1', id(numerator.attrs), numerator.attrs)
     result = numerator / denominator
+    print('ratio 2', id(result.attrs), result.attrs)
     result.attrs['_unit'] = u_num / u_denom
+    print('ratio 3', id(numerator.attrs), numerator.attrs)
+    print('ratio 4', id(result.attrs), result.attrs)
 
     if drop:
         result.dropna(inplace=True)

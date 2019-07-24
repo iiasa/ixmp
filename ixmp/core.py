@@ -55,7 +55,7 @@ def start_jvm(jvmargs=None):
 
     # Explicitly set the convertStrings option for JPype 0.7
     # TODO set to False, fix code, and deprecate for JPype 0.8
-    kwargs = dict(convertStrings=False)
+    kwargs = dict(convertStrings=True)
 
     jpype.startJVM(*args, **kwargs)
 

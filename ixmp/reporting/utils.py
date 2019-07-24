@@ -1,5 +1,5 @@
 import collections
-from copy import copy
+from copy import deepcopy
 
 from functools import partial, reduce
 from itertools import compress
@@ -7,6 +7,7 @@ import logging
 from operator import mul
 
 import pandas as pd
+from pandas.core.generic import NDFrame
 import pint
 import xarray as xr
 
@@ -257,7 +258,7 @@ class AttrSeries(pd.Series):
     """
 
     # normal properties
-    _metadata = ['attrs']
+    _metadata = ('attrs', )
 
     def __init__(self, *args, **kwargs):
         if 'attrs' in kwargs:
@@ -324,6 +325,18 @@ class AttrSeries(pd.Series):
     @property
     def _constructor(self):
         return AttrSeries
+
+    def __finalize__(self, other, method=None, **kwargs):
+        """Propagate metadata from other to self.
+
+        This is identical to the version in pandas, except deepcopy() is added
+        so that the 'attrs' OrderedDict is not double-referenced.
+        """
+        if isinstance(other, NDFrame):
+            for name in self._metadata:
+                object.__setattr__(self, name,
+                                   deepcopy(getattr(other, name, None)))
+        return self
 
 
 def data_for_quantity(ix_type, name, column, scenario, filters=None):

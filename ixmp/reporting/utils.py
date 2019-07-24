@@ -1,4 +1,5 @@
 import collections
+from copy import copy
 
 from functools import partial, reduce
 from itertools import compress
@@ -133,7 +134,7 @@ def collect_units(*args):
             log.debug('assuming {} is unitless'.format(arg))
             arg.attrs['_unit'] = ureg.parse_units('')
 
-    return [arg.attrs['_unit'] for arg in args]
+    return [copy(arg.attrs['_unit']) for arg in args]
 
 
 # Mapping from raw -> preferred dimension names

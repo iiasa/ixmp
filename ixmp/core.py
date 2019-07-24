@@ -1,15 +1,17 @@
 # coding=utf-8
 import os
 import sys
+from pathlib import Path
+from subprocess import check_call
 import warnings
-import jpype
 
+import jpype
+from jpype import (
+    JClass,
+    JPackage as java,
+)
 import numpy as np
 import pandas as pd
-
-from jpype import JPackage as java
-from jpype import JClass
-from subprocess import check_call
 
 import ixmp as ix
 from ixmp import model_settings
@@ -21,30 +23,49 @@ from ixmp.utils import logger, islistable, check_year, harmonize_path
 IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
 
 
-# %% Java Virtual Machine start-up
-
 def start_jvm(jvmargs=None):
+    """Start the Java Virtual Machine via JPype.
+
+    Parameters
+    ----------
+    jvmargs : str or list of str, optional
+        Additional arguments to pass to :meth:`jpype.startJVM`.
+    """
+    # TODO change the jvmargs default to [] instead of None
     if jpype.isJVMStarted():
         return
 
-    module_root = os.path.dirname(__file__)
-    jarfile = os.path.join(module_root, 'ixmp.jar')
-    module_lib = os.path.join(module_root, 'lib')
-    module_jars = [os.path.join(module_lib, f) for f in os.listdir(module_lib)]
+    jvmargs = jvmargs or []
+
+    # Arguments
+    args = [jpype.getDefaultJVMPath()]
+
+    # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
+    # the classpath
+    module_root = Path(__file__).parent
+    jarfile = module_root / 'ixmp.jar'
+    module_jars = list(module_root.glob('lib/*'))
+    classpath = map(str, [module_root, jarfile] + list(module_jars))
+
     sep = ';' if os.name == 'nt' else ':'
-    classpath = sep.join([module_root, jarfile] + module_jars)
-    args = ["-Djava.class.path={}".format(classpath)]
-    if jvmargs is not None:
-        args += jvmargs if isinstance(jvmargs, list) else [jvmargs]
-    jpype.startJVM(jpype.getDefaultJVMPath(), *args)
+    args.append('-Djava.class.path={}'.format(sep.join(classpath)))
+
+    # Add user args
+    args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
+
+    # Explicitly set the convertStrings option for JPype 0.7
+    # TODO set to False, fix code, and deprecate for JPype 0.8
+    kwargs = dict(convertStrings=False)
+
+    jpype.startJVM(*args, **kwargs)
 
     # define auxiliary references to Java classes
-    java.ixmp = java("at.ac.iiasa.ixmp")
-    java.Integer = java("java.lang").Integer
-    java.Double = java("java.lang").Double
-    java.LinkedList = java("java.util").LinkedList
-    java.HashMap = java("java.util").HashMap
-    java.LinkedHashMap = java("java.util").LinkedHashMap
+    java.ixmp = java('at.ac.iiasa.ixmp')
+    java.Integer = java('java.lang').Integer
+    java.Double = java('java.lang').Double
+    java.LinkedList = java('java.util').LinkedList
+    java.HashMap = java('java.util').HashMap
+    java.LinkedHashMap = java('java.util').LinkedHashMap
 
 
 class Platform(object):

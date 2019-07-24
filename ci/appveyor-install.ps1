@@ -53,14 +53,14 @@ Exec { conda update --quiet --yes conda }
 # each about 150 MB. Enable Appveyor caching or tweak conda configuration to
 # speed up.
 Exec { conda install --channel conda-forge  --quiet --yes `
-       ixmp[tests] pytest coveralls pytest-cov }
+       ixmp[tests] "pytest>=3.9" coveralls pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
 # Show information
 Exec { conda info --all }
 
 # Install graphviz (for dask.visualize)
-Exec { choco install graphviz }
+Exec { choco install --no-progress graphviz }
 
 # Set up r-appveyor
 Bootstrap

@@ -13,6 +13,7 @@ IF ERRORLEVEL 1 (
   echo R not installed; skipping installation of rixmp.
 ) ELSE (
   cd rixmp
+  Rscript -e "install.packages(c('knitr', 'reticulate'))"
   R CMD build .
   R CMD INSTALL --html rixmp_0.1.3.9000.tar.gz
   cd ..

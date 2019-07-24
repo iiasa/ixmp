@@ -327,11 +327,9 @@ def test_reporting_units():
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
     assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
 
-    print([r.graph[k].attrs for k in ('energy:x', 'time', 'efficiency')])
     # Units are derived for a ratio of two quantities
     r.add('power', (computations.ratio, 'energy:x', 'time'))
     assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
-    print([r.graph[k].attrs for k in ('energy:x', 'time', 'efficiency')])
 
     # Product of dimensioned and dimensionless quantities keeps the former
     r.add('energy2', (computations.product, 'energy:x', 'efficiency'))

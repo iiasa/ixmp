@@ -49,10 +49,7 @@ class Key:
             dims = value._dims.copy()
             _tag = value._tag
         else:
-            # TODO after py2.7 compatibility is dropped, use:
-            # name, *dims = value.split(':')
-            dims = value.split(':')
-            name = dims.pop(0)
+            name, *dims = value.split(':')
             _tag = dims[1] if len(dims) == 2 else None
             dims = dims[0].split('-')
         if drop:
@@ -185,10 +182,7 @@ def keys_for_quantity(ix_type, name, scenario):
                 'scenario', 'filters'))
 
     # Partial sums
-    # py2 compat: would prefer to do:
-    # yield from key.iter_sums()
-    for k in key.iter_sums():
-        yield k
+    yield from key.iter_sums()
 
 
 def _parse_units(units_series):
@@ -196,7 +190,7 @@ def _parse_units(units_series):
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
-        # py2 compat: could use an f-string here
+        # py3.5 compat: could use an f-string here
         log.info('Mixed units {} discarded'.format(unit))
         unit = ['']
 
@@ -222,7 +216,7 @@ def _parse_units(units_series):
                 # Unit already defined
                 continue
 
-            # py2 compat: could use f-strings here
+            # py3.5 compat: could use f-strings here
             definition = '{0} = [{0}]'.format(u)
             log.info('Add unit definition: {}'.format(definition))
 
@@ -234,8 +228,7 @@ def _parse_units(units_series):
             unit = ureg.parse_units(unit)
         except pint.UndefinedUnitError:
             # Handle the silent failure of define(), above
-            # py2 compat: would prefer to raise 'from None'
-            raise invalid(unit)
+            raise invalid(unit) from None
     except AttributeError:
         # Unit contains a character like '-' that throws off pint
         # NB this 'except' clause must be *after* UndefinedUnitError, since

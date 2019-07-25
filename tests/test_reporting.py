@@ -485,7 +485,7 @@ def test_report_size(test_mp):
     # Names like f_0000 ... f_1596 along each dimension
     coords = []
     for d, N in zip(dims, sizes):
-        # py2 compat: could use an f-string here
+        # py3.5 compat: could use an f-string here
         coords.append(['{}_{:04d}'.format(d, i) for i in range(N)])
         # Add to Scenario
         scen.init_set(d)
@@ -493,8 +493,7 @@ def test_report_size(test_mp):
 
     def _make_values():
         """Make a DataFrame containing each label in *coords* at least once."""
-        # py2 compat: *( + [ ])
-        values = list(zip_longest(*(coords + [np.random.rand(max(sizes))])))
+        values = list(zip_longest(*coords, np.random.rand(max(sizes))))
         result = pd.DataFrame(values, columns=list(dims) + ['value']) \
                    .ffill()
         result['unit'] = 'kg'
@@ -504,7 +503,7 @@ def test_report_size(test_mp):
     N = 10
     names = []
     for i in range(10):
-        # py2 compat: could use an f-string here
+        # py3.5 compat: could use an f-string here
         name = 'q_{:02d}'.format(i)
         scen.init_par(name, list(dims))
         scen.add_par(name, _make_values())

@@ -340,6 +340,7 @@ class Platform:
                 result[model] = access_map.get(model) == 1
             return result
 
+
 def _logger_region_exists(_regions, r):
     region = _regions.set_index('region').loc[r]
     msg = 'region `{}` is already defined in the platform instance'
@@ -1381,6 +1382,9 @@ class Scenario(TimeSeries):
             Method to execute arbitrary non-model code. Must accept a single
             argument, the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
+        gams_args : list of str, optional
+            additional arguments for the CLI call to gams
+            - `LogOption=4` prints output to stdout (not console) and the log file
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
 

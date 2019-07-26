@@ -46,7 +46,7 @@ def start_jvm(jvmargs=None):
     java.LinkedHashMap = java("java.util").LinkedHashMap
 
 
-class Platform(object):
+class Platform:
     """Database-backed instance of the ixmp.
 
     Each Platform connects three components:
@@ -351,7 +351,7 @@ def _logger_region_exists(_regions, r):
 # %% class TimeSeries
 
 
-class TimeSeries(object):
+class TimeSeries:
     """Generic collection of data in time series format.
 
     TimeSeries is the parent/super-class of :class:`Scenario`.

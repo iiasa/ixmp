@@ -22,9 +22,12 @@ import subprocess
 
 import pandas as pd
 from pandas.testing import assert_series_equal
+from xarray import DataArray
+from xarray.testing import assert_equal as assert_xr_equal
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
+from .reporting.utils import Quantity, AttrSeries
 
 
 models = {
@@ -123,8 +126,7 @@ def create_local_testdb(db_path, data_path, db='ixmptest'):
     """
     # Copy test database
     dst = Path(db_path) / 'testdb'
-    # str() here is for py2 compatibility
-    shutil.copytree(str(data_path), str(dst))
+    shutil.copytree(data_path, str(dst))
 
     # Create properties file
     props = (Path(data_path) / 'test.properties_template').read_text()
@@ -313,12 +315,6 @@ def get_cell_output(nb, name_or_index):
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
-    # py2 compat: import here instead of top of file
-    from xarray import DataArray
-    from xarray.testing import assert_equal as assert_xr_equal
-
-    from .reporting.utils import Quantity, AttrSeries
-
     a = Quantity(a)
     b = Quantity(b)
 

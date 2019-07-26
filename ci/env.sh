@@ -42,9 +42,6 @@ case "${TRAVIS_OS_NAME}" in
 esac
 
 case "${PYENV}" in
-    py27)
-        export PYVERSION=2
-    ;;
     py37)
         export PYVERSION=3
     ;;

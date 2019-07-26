@@ -3,12 +3,13 @@ dask[array]
 graphviz
 jupyter
 numpydoc
-pandas
+pandas==0.24.2
 pytest>=3.9
 PyYAML
 sphinx
 sphinx_rtd_theme
 sphinxcontrib-bibtex
 xarray<0.12
-xlsxwriter
-xlrd
+XlsxWriter==1.1.8
+xlrd==1.2.0
+pretenders>=1.4.4

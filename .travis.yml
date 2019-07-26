@@ -8,17 +8,11 @@ matrix:
   include:
   - os: linux
     env: PYENV=py37
-  - os: linux
-    env: PYENV=py27
   - os: osx
     env: PYENV=py37
-  - os: osx
-    env: PYENV=py27
 # turn these on once travis support gets a little better, see pyam for example
 #  - os: windows
 #    env: PYENV=py37
-#  - os: windows
-#    env: PYENV=py27
 
 r_packages:
 - IRkernel
@@ -45,7 +39,7 @@ before_install:
 
 install:
   - source ci/travis-install.sh
-  - python setup.py install
+  - pip install .[docs,tests,tutorial]
   - Rscript -e 'devtools::install("rixmp", dep = T)'
 
 script:

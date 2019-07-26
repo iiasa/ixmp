@@ -88,6 +88,7 @@ class Platform:
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -1335,7 +1336,7 @@ class Scenario(TimeSeries):
     def solve(self, model, case=None, model_file=None, in_file=None,
               out_file=None, solve_args=None, comment=None, var_list=None,
               equ_list=None, check_solution=True, callback=None,
-              cb_kwargs={}):
+              gams_args=['LogOption=4'], cb_kwargs={}):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1437,7 +1438,7 @@ class Scenario(TimeSeries):
             self.to_gdx(ipth, ingdx)
 
             # Invoke GAMS
-            run_gams(model_file, args)
+            run_gams(model_file, args, gams_args=gams_args)
 
             # Read model solution
             self.read_sol_from_gdx(opth, outgdx, comment,

@@ -284,7 +284,7 @@ def test_solve_callback(test_mp, test_data_path):
 
     # Solve the scenario as configured
     solve_args = dict(model=str(test_data_path / 'transport_ixmp'),
-                      case='transport_standard')
+                      case='transport_standard', gams_args=['LogOption=2'])
     scen.solve(**solve_args)
 
     # Store the expected value of the decision variable, x

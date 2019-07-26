@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#177](https://github.com/iiasa/ixmp/pull/177): add ability to pass `gams_args` through `Scenario.solve()`
 - [#175](https://github.com/iiasa/ixmp/pull/175): Drop support for Python 2.
 - [#173](https://github.com/iiasa/ixmp/pull/173): Make AppVeyor CI more robust; support pandas 0.25.0.
 

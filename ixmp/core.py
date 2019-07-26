@@ -1384,7 +1384,8 @@ class Scenario(TimeSeries):
             indicate convergence.
         gams_args : list of str, optional
             additional arguments for the CLI call to gams
-            - `LogOption=4` prints output to stdout (not console) and the log file
+            - `LogOption=4` prints output to stdout (not console) and the log
+              file
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
 

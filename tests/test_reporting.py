@@ -133,6 +133,10 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     # Units pass through summation
     assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
+    d = rep.get('d:')
+    assert len(d) == 1
+    assert np.isclose(d.iloc[0], 11.7)
+
     # Weighted sum
     weights = Quantity(xr.DataArray(
         [1, 2, 3],

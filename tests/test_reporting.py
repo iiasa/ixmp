@@ -1,33 +1,18 @@
 """Tests for ixmp.reporting."""
 import os
 import subprocess
-import sys
 
 import ixmp
 import numpy as np
 import pandas as pd
-import pytest
-
 from pandas.testing import assert_series_equal
+import pytest
+import xarray as xr
 
-from ixmp.testing import make_dantzig, assert_qty_equal, assert_qty_allclose
-
-
-pytestmark = pytest.mark.skipif(
-    sys.version_info[0] == 2,
-    reason='Experimental reporting does not support Python 2.7.',
-)
-
-
-if sys.version_info[0] == 3:
-    import xarray as xr
-    from xarray.testing import (
-        assert_equal as assert_xr_equal,
-    )
-
-    import ixmp.reporting
-    from ixmp.reporting import Key, Reporter, computations
-    from ixmp.reporting.utils import ureg, Quantity
+import ixmp.reporting
+from ixmp.reporting import Key, Reporter, computations
+from ixmp.reporting.utils import ureg, Quantity
+from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -46,65 +31,6 @@ def scenario(test_mp):
     scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
     return scen
-
-
-# TODO:
-# we would need to revamp the quantity interface to be able to custom set
-# the backend for testing both xr and pd.
-# I have done this by hand (swapping the Quantity class and running tests) on
-# commit df1ec6f of #147.
-def test_assert_qty():
-    # tests without `attr` property, in which case direct pd.Series and
-    # xr.DataArray comparisons are possible
-    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    b = a.to_series()
-    assert_qty_equal(a, b)
-    assert_qty_equal(b, a)
-    assert_qty_allclose(a, b)
-    assert_qty_allclose(b, a)
-
-    c = Quantity(a)
-    assert_qty_equal(a, c)
-    assert_qty_equal(c, a)
-    assert_qty_allclose(a, c)
-    assert_qty_allclose(c, a)
-
-
-def test_assert_qty_attrs():
-    # tests *with* `attr` property, in which case direct pd.Series and
-    # xr.DataArray comparisons *not* are possible
-    a = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    attrs = {'foo': 'bar'}
-    a.attrs = attrs
-    b = Quantity(a)
-
-    # make sure it has the correct property
-    assert a.attrs == attrs
-    assert b.attrs == attrs
-
-    assert_qty_equal(a, b)
-    assert_qty_equal(b, a)
-    assert_qty_allclose(a, b)
-    assert_qty_allclose(b, a)
-
-    a.attrs = {'bar': 'foo'}
-    assert_qty_equal(a, b, check_attrs=False)
-
-
-def test_reporting_key():
-    k1 = Key('foo', ['a', 'b', 'c'])
-
-    # Representation
-    assert repr(k1) == 'foo:a-b-c'
-
-    # Key hashes the same as its string representation
-    assert hash(k1) == hash('foo:a-b-c')
-
-    # Key compares equal to its string representation
-    assert k1 == 'foo:a-b-c'
-
-    # Number of partial sums for a 3-dimensional quantity
-    assert sum(1 for a in k1.iter_sums()) == 7
 
 
 def test_reporting_configure():
@@ -133,6 +59,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     # Units pass through summation
     assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
+    # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
     assert len(d) == 1
     assert np.isclose(d.iloc[0], 11.7)
@@ -298,7 +225,7 @@ def test_reporting_file_formats(test_data_path, tmp_path):
     # CSV file is automatically parsed to xr.DataArray
     p1 = test_data_path / 'report-input.csv'
     k = r.add_file(p1)
-    assert_xr_equal(r.get(k), expected)
+    assert_qty_equal(r.get(k), expected)
 
     # Write to CSV
     p2 = tmp_path / 'report-output.csv'

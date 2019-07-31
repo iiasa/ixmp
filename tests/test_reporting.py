@@ -62,9 +62,15 @@ def test_missing_keys():
         r.apply(gen, 'd', 'e', 'f')
 
     # add(..., strict=True) checks str or Key arguments
+    g = Key('g', 'hi')
     with pytest.raises(KeyError, match=r"\['b', g:h-i\]"):
-        r.add('foo', (computations.product, 'a', 'b', Key('g', 'hi')),
-              strict=True)
+        r.add('foo', (computations.product, 'a', 'b', g), strict=True)
+
+    # aggregate() and disaggregate() call add(), which raises the exception
+    with pytest.raises(KeyError, match=r"\[g:h-i\]"):
+        r.aggregate(g, 'tag', 'i')
+    with pytest.raises(KeyError, match=r"\[g:h-i\]"):
+        r.disaggregate(g, 'j')
 
 
 def test_reporter_from_scenario(scenario):

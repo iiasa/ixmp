@@ -294,8 +294,14 @@ class AttrSeries(pd.Series):
         try:
             dim = kwargs.pop('dim')
             if isinstance(self.index, pd.MultiIndex):
-                obj = self.unstack(dim)
-                kwargs['axis'] = 1
+                if len(dim) == len(self.index.names):
+                    # assume dimensions = full multi index, do simple sum
+                    obj = self
+                    kwargs = {}
+                else:
+                    # pivot and sum across columns
+                    obj = self.unstack(dim)
+                    kwargs['axis'] = 1
             else:
                 if dim != [self.index.name]:
                     raise ValueError(dim, self.index.name, self)

@@ -5,8 +5,28 @@ import os
 import subprocess
 
 import ixmp as ix
+import jpype
 import numpy.testing as npt
 import pandas as pd
+
+
+def test_jvm_warn(recwarn):
+    """Test that no warnings are issued on JVM start-up.
+
+    A warning message is emitted e.g. for JPype 0.7 if the 'convertStrings'
+    kwarg is not provided to jpype.startJVM.
+
+    NB this function should be in test_core.py, but because pytest executes
+    tests in file, then code order, it must be before the call to ix.Platform()
+    below.
+    """
+
+    # Start the JVM for the first time in the test session
+    ix.start_jvm()
+
+    if jpype.__version__ > '0.7':
+        # Zero warnings were recorded
+        assert len(recwarn) == 0, recwarn.pop().message
 
 
 def test_import_timeseries(test_mp_props, test_data_path):

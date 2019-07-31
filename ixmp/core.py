@@ -111,6 +111,7 @@ class Platform:
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
         self.dbtype = dbtype
@@ -361,6 +362,7 @@ class Platform:
             for model in models:
                 result[model] = access_map.get(model) == 1
             return result
+
 
 def _logger_region_exists(_regions, r):
     region = _regions.set_index('region').loc[r]
@@ -1358,7 +1360,7 @@ class Scenario(TimeSeries):
     def solve(self, model, case=None, model_file=None, in_file=None,
               out_file=None, solve_args=None, comment=None, var_list=None,
               equ_list=None, check_solution=True, callback=None,
-              cb_kwargs={}):
+              gams_args=['LogOption=4'], cb_kwargs={}):
         """Solve the model and store output.
 
         ixmp 'solves' a model using the following steps:
@@ -1403,6 +1405,12 @@ class Scenario(TimeSeries):
             Method to execute arbitrary non-model code. Must accept a single
             argument, the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
+        gams_args : list of str, optional
+            Additional arguments for the CLI call to GAMS. See, e.g.,
+            https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters
+
+            - `LogOption=4` prints output to stdout (not console) and the log
+              file.
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
 
@@ -1460,7 +1468,7 @@ class Scenario(TimeSeries):
             self.to_gdx(ipth, ingdx)
 
             # Invoke GAMS
-            run_gams(model_file, args)
+            run_gams(model_file, args, gams_args=gams_args)
 
             # Read model solution
             self.read_sol_from_gdx(opth, outgdx, comment,

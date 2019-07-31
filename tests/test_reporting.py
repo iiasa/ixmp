@@ -39,7 +39,17 @@ def test_reporting_configure():
     pass
 
 
-def test_reporter(scenario):
+def test_missing_keys():
+    """Adding computations that refer to missing keys raises ValueError."""
+    r = Reporter()
+    r.add('a', 3)
+
+    with pytest.raises(ValueError):
+        # Refers to non-existent 'b'
+        r.add_product('ab', 'a', 'b')
+
+
+def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)
 
     r.finalize(scenario)

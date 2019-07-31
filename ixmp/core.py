@@ -53,8 +53,9 @@ def start_jvm(jvmargs=None):
     # Add user args
     args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
 
-    # Explicitly set the convertStrings option for JPype 0.7
-    # TODO set to False, fix code, and deprecate for JPype 0.8
+    # For JPype 0.7 (raises a warning) and 0.8 (default is False).
+    # 'True' causes Java string objects to be converted automatically to Python
+    # str(), as expected by ixmp Python code.
     kwargs = dict(convertStrings=True)
 
     jpype.startJVM(*args, **kwargs)

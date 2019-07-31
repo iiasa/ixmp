@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#174](https://github.com/iiasa/ixmp/pull/174): Set `convertStrings=True` for JPype >= 0.7; see the [JPype changelog](https://jpype.readthedocs.io/en/latest/CHANGELOG.html).
 - [#173](https://github.com/iiasa/ixmp/pull/173): Make AppVeyor CI more robust; support pandas 0.25.0.
 
 # v0.2.0

@@ -50,16 +50,16 @@ def test_missing_keys():
         return (lambda a, b: a * b, 'a', other)
 
     # One missing key
-    with pytest.raises(KeyError, match="['b']"):
+    with pytest.raises(KeyError, match=r"\['b'\]"):
         r.add_product('ab', 'a', 'b')
 
     # Two missing keys
-    with pytest.raises(KeyError, match="['c', 'b']"):
+    with pytest.raises(KeyError, match=r"\['c', 'b'\]"):
         r.add_product('abc', 'c', 'a', 'b')
 
     # Using apply() targeted at non-existent keys also raises an Exception
-    with pytest.raises(KeyError, match="['e', 'f']"):
-        r.apply(gen, 'b', 'd', 'e', 'f')
+    with pytest.raises(KeyError, match=r"\['e', 'f'\]"):
+        r.apply(gen, 'd', 'e', 'f')
 
 
 def test_reporter_from_scenario(scenario):

@@ -1383,9 +1383,11 @@ class Scenario(TimeSeries):
             argument, the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
         gams_args : list of str, optional
-            additional arguments for the CLI call to gams
+            Additional arguments for the CLI call to GAMS. See, e.g.,
+            https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters
+
             - `LogOption=4` prints output to stdout (not console) and the log
-              file
+              file.
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
 

@@ -40,13 +40,26 @@ def test_reporting_configure():
 
 
 def test_missing_keys():
-    """Adding computations that refer to missing keys raises ValueError."""
+    """Adding computations that refer to missing keys raises KeyError."""
     r = Reporter()
     r.add('a', 3)
+    r.add('d', 4)
 
-    with pytest.raises(ValueError):
-        # Refers to non-existent 'b'
+    def gen(other):
+        """A generator for apply()."""
+        return (lambda a, b: a * b, 'a', other)
+
+    # One missing key
+    with pytest.raises(KeyError, match="['b']"):
         r.add_product('ab', 'a', 'b')
+
+    # Two missing keys
+    with pytest.raises(KeyError, match="['c', 'b']"):
+        r.add_product('abc', 'c', 'a', 'b')
+
+    # Using apply() targeted at non-existent keys also raises an Exception
+    with pytest.raises(KeyError, match="['e', 'f']"):
+        r.apply(gen, 'b', 'd', 'e', 'f')
 
 
 def test_reporter_from_scenario(scenario):

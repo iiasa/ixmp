@@ -228,6 +228,7 @@ class Reporter:
         keys : hashable
             The starting key(s)
         """
+        keys = self.check_keys(*keys)
         try:
             self.graph.update(generator(*keys))
         except TypeError as e:
@@ -274,6 +275,34 @@ class Reporter:
         :class:`Key <ixmp.reporting.utils.Key>`.
         """
         return self._index[name]
+
+    def check_keys(self, *keys):
+        """Check that *keys* are in the Reporter.
+
+        If any of *keys* is not in the Reporter, KeyError is raised.
+        Otherwise, a list is returned with either the key from *keys*, or the
+        corresponding :meth:`full_key`.
+        """
+        result = []
+        missing = []
+
+        # Process all keys to produce more useful error messages
+        for key in keys:
+            # Add the key directly if it is in the graph
+            if key in self.graph:
+                result.append(key)
+                continue
+
+            # Try adding the full key
+            try:
+                result.append(self._index[key])
+            except KeyError:
+                missing.append(key)
+
+        if len(missing):
+            raise KeyError(missing)
+
+        return result
 
     def __contains__(self, name):
         return name in self.graph
@@ -323,10 +352,7 @@ class Reporter:
             The full key of the new quantity.
         """
         # Fetch the full key for each quantity
-        try:
-            base_keys = [self.full_key(q) for q in quantities]
-        except KeyError:
-            return None
+        base_keys = self.check_keys(*quantities)
 
         # Compute a key for the result
         key = Key.product(name, *base_keys)

@@ -205,16 +205,26 @@ class Reporter:
                computations.
             4. A list containing one or more of #1, #2, and/or #3.
         strict : bool, optional
-            If True (default), *key* must not already exist in the Reporter.
+            If True, *key* must not already exist in the Reporter, and
+            any keys referred to by *computation* must exist.
 
         Raises
         ------
         KeyError
-            If `key` is already in the Reporter.
+            If `key` is already in the Reporter, or any key referred to by
+            `computation` does not exist.
         """
-        if strict and key in self.graph:
-            raise KeyError(key)
+        if strict:
+            # Key already exists in graph
+            if key in self.graph:
+                raise KeyError(key)
+
+            # Check that keys used in *computation* are in the graph
+            keylike = filter(lambda e: isinstance(e, (str, Key)), computation)
+            self.check_keys(*keylike)
+
         self.graph[key] = computation
+
         return key
 
     def apply(self, generator, *keys):

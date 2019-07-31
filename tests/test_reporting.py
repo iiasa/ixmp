@@ -61,6 +61,11 @@ def test_missing_keys():
     with pytest.raises(KeyError, match=r"\['e', 'f'\]"):
         r.apply(gen, 'd', 'e', 'f')
 
+    # add(..., strict=True) checks str or Key arguments
+    with pytest.raises(KeyError, match=r"\['b', g:h-i\]"):
+        r.add('foo', (computations.product, 'a', 'b', Key('g', 'hi')),
+              strict=True)
+
 
 def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)

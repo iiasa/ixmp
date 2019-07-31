@@ -11,7 +11,7 @@ except ImportError:
 from ixmp.utils import logger
 
 
-class Config(object):
+class Config:
     """Configuration for ixmp.
 
     When imported, :mod:`ixmp` reads a configuration file `config.json` in the
@@ -164,8 +164,7 @@ class Config(object):
 
         # Write the file
         logger().info('Updating configuration file: {}'.format(path))
-        # str() here is for py2 compatibility
-        with open(str(path), 'w') as f:
+        with open(path, 'w') as f:
             json.dump({k: str(self.values[k]) for k in self._keys if
                        self.values[k] is not None}, f)
 

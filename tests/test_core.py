@@ -44,7 +44,7 @@ def test_db_config_path(tmp_env, test_mp_props, caplog):
 
     # Platform is instantiated used a relative filename, found in the
     # database configuration path
-    mp = ixmp.Platform(test_mp_props.name)
+    mp = ixmp.Platform(test_mp_props)
     assert launch_log_msg.format(test_mp_props) in caplog.text
 
     scenario = mp.scenario_list(model='Douglas Adams')['scenario']

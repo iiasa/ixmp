@@ -44,7 +44,7 @@ from .describe import describe_recursive
 log = logging.getLogger(__name__)
 
 
-class Reporter(object):
+class Reporter:
     """Class for generating reports on :class:`ixmp.Scenario` objects."""
     # TODO meet the requirements:
     # A3iii. Interpolation.
@@ -306,7 +306,7 @@ class Reporter(object):
                 self.graph['filters'].pop(key, None)
 
     # ixmp data model manipulations
-    def add_product(self, name, quantities, sums=True):
+    def add_product(self, name, *quantities, sums=True):
         """Add a computation that takes the product of *quantities*.
 
         Parameters
@@ -322,9 +322,6 @@ class Reporter(object):
         Key
             The full key of the new quantity.
         """
-        # TODO when py2 support is dropped, convert 'quantities' to
-        #      '*quantities' in the signature.
-
         # Fetch the full key for each quantity
         try:
             base_keys = [self.full_key(q) for q in quantities]

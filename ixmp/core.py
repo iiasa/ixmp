@@ -69,7 +69,7 @@ def start_jvm(jvmargs=None):
     java.LinkedHashMap = java('java.util').LinkedHashMap
 
 
-class Platform(object):
+class Platform:
     """Database-backed instance of the ixmp.
 
     Each Platform connects three components:
@@ -119,6 +119,9 @@ class Platform(object):
             # if no dbtype is specified, launch Platform with properties file
             if dbtype is None:
                 dbprops = _config.find_dbprops(dbprops)
+                if dbprops is None:
+                    raise ValueError("Not found database properties file "
+                                     "to launch platform")
                 logger().info("launching ixmp.Platform using config file at "
                               "'{}'".format(dbprops))
                 self._jobj = java.ixmp.Platform("Python", str(dbprops))
@@ -334,6 +337,30 @@ class Platform(object):
         else:
             _logger_region_exists(_regions, region)
 
+    def check_access(self, user, models, access='view'):
+        """Check access to specific model
+
+        Parameters
+        ----------
+        user: str
+            Registered user name
+        models : str or list of str
+            Model(s) name
+        access : str, optional
+            Access type - view or edit
+        """
+
+        if isinstance(models, str):
+            return self._jobj.checkModelAccess(user, access, models)
+        else:
+            models_list = java.LinkedList()
+            for model in models:
+                models_list.add(model)
+            access_map = self._jobj.checkModelAccess(user, access, models_list)
+            result = {}
+            for model in models:
+                result[model] = access_map.get(model) == 1
+            return result
 
 def _logger_region_exists(_regions, r):
     region = _regions.set_index('region').loc[r]
@@ -347,7 +374,7 @@ def _logger_region_exists(_regions, r):
 # %% class TimeSeries
 
 
-class TimeSeries(object):
+class TimeSeries:
     """Generic collection of data in time series format.
 
     TimeSeries is the parent/super-class of :class:`Scenario`.
@@ -462,9 +489,8 @@ class TimeSeries(object):
     # functions for importing and retrieving timeseries data
 
     def preload_timeseries(self):
-        """Preload Timeseries data to in-memory cache. Useful for bulk updates.
+        """Preload timeseries data to in-memory cache. Useful for bulk updates.
         """
-
         self._jobj.preloadAllTimeseries()
 
     def add_timeseries(self, df, meta=False):

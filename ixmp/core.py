@@ -803,7 +803,7 @@ class Scenario(TimeSeries):
         :class:`jpype.JavaException`
             If the set (or another object with the same *name*) already exists.
         """
-        self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
     def set(self, name, filters=None, **kwargs):
         """Return the (filtered) elements of a set.
@@ -922,7 +922,7 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
-        self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific parameter
@@ -1025,7 +1025,8 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the scalar.
         """
-        jPar = self._jobj.initializePar(name, None, None)
+        self.init_par(name, None, None)
+        jPar = self._item('par', name)
         jPar.addElement(_jdouble(val), unit, comment)
 
     def scalar(self, name):
@@ -1097,7 +1098,7 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             index name list
         """
-        self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'var', name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
@@ -1127,7 +1128,7 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             index name list
         """
-        self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'equ', name, idx_sets, idx_names)
 
     def has_equ(self, name):
         """check whether the scenario has an equation with that name"""
@@ -1518,13 +1519,6 @@ def to_iamc_template(df):
         raise ValueError("missing required columns `{}`!".format(missing))
 
     return df
-
-
-def make_dims(sets, names):
-    """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
-    if isinstance(sets, set) or isinstance(names, set):
-        raise ValueError('index dimension must be string or ordered lists!')
-    return to_jlist(sets), to_jlist(names if names is not None else sets)
 
 
 def _remove_ele(item, key):

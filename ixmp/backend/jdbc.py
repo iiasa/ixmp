@@ -164,9 +164,23 @@ class JDBCBackend(Backend):
     def s_list_items(self, s, type):
         return to_pylist(getattr(self.jindex[s], f'get{type.title()}List')())
 
-    def s_item_index(self, s, name, type):
+    def s_init_item(self, s, type, name, idx_sets, idx_names):
+        # generate index-set and index-name lists
+        if isinstance(idx_sets, set) or isinstance(idx_names, set):
+            raise ValueError('index dimension must be string or ordered lists')
+        idx_sets = to_jlist(idx_sets)
+        idx_names = to_jlist(idx_names if idx_names is not None else idx_sets)
+
+        # Initialize the Item
+        func = getattr(self.jindex[s], f'initialize{type.title()}')
+
+        # The constructor returns a reference to the Java Item, but these
+        # aren't exposed by Backend, so don't return here
+        func(name, idx_sets, idx_names)
+
+    def s_item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name)
-        return to_pylist(getattr(jitem, f'getIdx{type.title()}')())
+        return to_pylist(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def s_item_elements(self, s, type, name, filters=None, has_value=False,
                         has_level=False):

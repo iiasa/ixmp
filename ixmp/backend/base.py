@@ -81,12 +81,17 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def s_item_index(self, s, name, type):
+    def s_init_item(self, s, type, name):
+        """Initialize or create a new item *name* of *type* in Scenario *s*."""
+        pass
+
+    @abstractmethod
+    def s_item_index(self, s, name, sets_or_names):
         """Return the index sets or names of item *name*.
 
         Parameters
         ----------
-        type : 'set' or 'name'
+        sets_or_names : 'sets' or 'names'
         """
         pass
 

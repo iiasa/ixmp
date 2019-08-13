@@ -2,9 +2,14 @@ from abc import ABC, abstractmethod
 
 
 class Backend(ABC):
-    """Abstract base classe for backends."""
+    """Abstract base classe for backends.
 
-    @abstractmethod
+    Some methods below are decorated as @abstractmethod; this means they MUST
+    be overridden by a subclass of Backend. Others that are not decorated
+    mean that the behaviour here is the default behaviour; subclasses can
+    leave, replace or extend this behaviour as needed.
+    """
+
     def __init__(self):
         """Initialize the backend."""
         pass
@@ -14,7 +19,6 @@ class Backend(ABC):
         """Set logging level for the backend."""
         pass
 
-    @abstractmethod
     def open_db(self):
         """(Re-)open the database connection.
 
@@ -23,7 +27,6 @@ class Backend(ABC):
         """
         pass
 
-    @abstractmethod
     def close_db(self):
         """Close the database connection.
 
@@ -40,5 +43,25 @@ class Backend(ABC):
         Returns
         -------
         list
+        """
+        pass
+
+    @abstractmethod
+    def ts_init(self, ts, annotation=None):
+        """Initialize the ixmp.TimeSeries *ts*.
+
+        The method MAY:
+
+        - Modify the version attr of the returned object.
+        """
+        pass
+
+    @abstractmethod
+    def s_init(self, s, annotation=None):
+        """Initialize the ixmp.Scenario *s*.
+
+        The method MAY:
+
+        - Modify the version attr of the returned object.
         """
         pass

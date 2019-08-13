@@ -3,6 +3,7 @@ from pathlib import Path
 
 import jpype
 from jpype import (
+    JClass,
     JPackage as java,
 )
 import numpy as np
@@ -31,6 +32,10 @@ class JDBCBackend(Backend):
     """
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
     jobj = None
+
+    #: Mapping from ixmp.TimeSeries object to the underlying
+    #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
+    jindex = {}
 
     def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
         start_jvm(jvmargs)
@@ -61,8 +66,10 @@ class JDBCBackend(Backend):
             logger().info(msg)
             raise
 
+    # Platform methods
+
     def set_log_level(self, level):
-        self._jobj.setLogLevel(LOG_LEVELS[level])
+        self.jobj.setLogLevel(LOG_LEVELS[level])
 
     def open_db(self):
         """(Re-)open the database connection."""
@@ -80,6 +87,75 @@ class JDBCBackend(Backend):
     def units(self):
         """Return all units described in the database."""
         return to_pylist(self.jobj.getUnitList())
+
+    # Timeseries methods
+    def ts_init(self, ts, annotation=None):
+        """Initialize the ixmp.TimeSeries *ts*."""
+        if ts.version == 'new':
+            # Create a new TimeSeries
+            jobj = self.jobj.newTimeSeries(ts.model, ts.scenario, annotation)
+        elif isinstance(ts.version, int):
+            # Load a TimeSeries of specific version
+            jobj = self.jobj.getTimeSeries(ts.model, ts.scenario, ts.version)
+        else:
+            # Load the latest version of a TimeSeries
+            jobj = self.jobj.getTimeSeries(ts.model, ts.scenario)
+
+            # Update the version attribute
+            ts.version = jobj.getVersion()
+
+        # Add to index
+        self.jindex[ts] = jobj
+
+    def ts_discard_changes(self, ts):
+        """Discard all changes and reload from the database."""
+        self.jindex[ts].discardChanges()
+
+    def ts_set_as_default(self, ts):
+        """Set the current :attr:`version` as the default."""
+        self.jindex[ts].setAsDefaultVersion()
+
+    def ts_is_default(self, ts):
+        """Return :obj:`True` if the :attr:`version` is the default version."""
+        return bool(self.jindex[ts].isDefault())
+
+    def ts_last_update(self, ts):
+        """get the timestamp of the last update/edit of this TimeSeries"""
+        return self.jindex[ts].getLastUpdateTimestamp().toString()
+
+    def ts_run_id(self, ts):
+        """get the run id of this TimeSeries"""
+        return self.jindex[ts].getRunId()
+
+    def ts_preload(self, ts):
+        """Preload timeseries data to in-memory cache. Useful for bulk updates.
+        """
+        self.jindex[ts].preloadAllTimeseries()
+
+    # Scenario methods
+    def s_init(self, s, scheme=None, annotation=None):
+        """Initialize the ixmp.Scenario *s*."""
+        if s.version == 'new':
+            jobj = self.jobj.newScenario(s.model, s.scenario, scheme,
+                                         annotation)
+        elif isinstance(s.version, int):
+            jobj = self.jobj.getScenario(s.model, s.scenario, s.version)
+        # constructor for `message_ix.Scenario.__init__` or `clone()` function
+        elif isinstance(s.version,
+                        JClass('at.ac.iiasa.ixmp.objects.Scenario')):
+            jobj = s.version
+        elif s.version is None:
+            jobj = self.jobj.getScenario(s.model, s.scenario)
+        else:
+            raise ValueError('Invalid `version` arg: `{}`'.format(s.version))
+
+        s.version = jobj.getVersion()
+        s.scheme = jobj.getScheme()
+
+        # Add to index
+        self.jindex[s] = jobj
+
+
 
 
 def start_jvm(jvmargs=None):

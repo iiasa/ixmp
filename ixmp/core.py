@@ -1,12 +1,14 @@
 # coding=utf-8
+import inspect
 import logging
 import os
 import sys
 from subprocess import check_call
 import warnings
+from warnings import warn
 
+# TODO remove this import
 from jpype import (
-    JClass,
     JPackage as java,
 )
 import numpy as np
@@ -15,8 +17,10 @@ import pandas as pd
 import ixmp as ix
 from ixmp import model_settings
 from .backend import BACKENDS
-# TODO remove this
+
+# TODO remove these direct imports of Java-related methods
 from .backend.jdbc import to_pylist
+
 from ixmp.utils import logger, islistable, check_year, harmonize_path
 
 # %% default settings for column headers
@@ -92,16 +96,19 @@ class Platform:
                     backend_args[arg] = args[i]
 
         backend_cls = BACKENDS[backend]
-        self._be = backend_cls(**backend_args)
+        self._backend = backend_cls(**backend_args)
 
     @property
     def _jobj(self):
         """Shim to allow existing code that references ._jobj to work."""
-        return self._be.jobj
+        # TODO address all such warnings, then remove
+        loc = inspect.stack()[1].function
+        warn(f'Accessing Platform._jobj in {loc}')
+        return self._backend.jobj
 
     def __getattr__(self, name):
-        """Convenience for methods that are on Backend."""
-        return getattr(self._be, name)
+        """Convenience for methods of Backend."""
+        return getattr(self._backend, name)
 
     def set_log_level(self, level):
         """Set global logger level.
@@ -112,12 +119,12 @@ class Platform:
             set the logger level if specified, see
             https://docs.python.org/3/library/logging.html#logging-levels
         """
-        if level not in logging:
+        if level not in dir(logging):
             msg = '{} not a valid Python logger level, see ' + \
                 'https://docs.python.org/3/library/logging.html#logging-level'
             raise ValueError(msg.format(level))
         logger().setLevel(level)
-        self._be.set_log_level(level)
+        self._backend.set_log_level(level)
 
     def scenario_list(self, default=True, model=None, scen=None):
         """Return information on TimeSeries and Scenarios in the database.
@@ -349,25 +356,40 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+    #: Name of the model associated with the TimeSeries
+    model = None
 
-    # Version of the TimeSeries
+    #: Name of the scenario associated with the TimeSeries
+    scenario = None
+
+    #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if version == 'new':
-            self._jobj = mp._jobj.newTimeSeries(model, scenario, annotation)
-        elif isinstance(version, int):
-            self._jobj = mp._jobj.getTimeSeries(model, scenario, version)
-        else:
-            self._jobj = mp._jobj.getTimeSeries(model, scenario)
-
-        self.platform = mp
+        # Set attributes
         self.model = model
         self.scenario = scenario
-        self.version = self._jobj.getVersion()
+        self.version = version
+
+        # All the backend to complete initialization
+        self.platform = mp
+        self._backend('init', annotation)
+
+    @property
+    def _jobj(self):
+        """Shim to allow existing code that references ._jobj to work."""
+        # TODO address all such warnings, then remove
+        loc = inspect.stack()[1].function
+        warn(f'Accessing {self.__class__.__name__}._jobj in {loc}')
+        return self.platform._backend.jindex[self]
+
+    def _backend(self, method, *args, **kwargs):
+        """Convenience for calling *method* on the backend."""
+        func = getattr(self.platform._backend, f'ts_{method}')
+        return func(self, *args, **kwargs)
 
     # functions for platform management
 
@@ -393,34 +415,30 @@ class TimeSeries:
 
     def discard_changes(self):
         """Discard all changes and reload from the database."""
-        self._jobj.discardChanges()
+        self._backend('discard_changes')
 
     def set_as_default(self):
         """Set the current :attr:`version` as the default."""
-        self._jobj.setAsDefaultVersion()
+        self._backend('set_as_default')
 
     def is_default(self):
         """Return :obj:`True` if the :attr:`version` is the default version."""
-        return bool(self._jobj.isDefault())
+        return self._backend('is_default')
 
     def last_update(self):
         """get the timestamp of the last update/edit of this TimeSeries"""
-        return self._jobj.getLastUpdateTimestamp().toString()
+        return self._backend('last_update')
 
     def run_id(self):
         """get the run id of this TimeSeries"""
-        return self._jobj.getRunId()
-
-    def version(self):
-        """get the version number of this TimeSeries"""
-        return self._jobj.getVersion()
+        return self._backend('run_id')
 
     # functions for importing and retrieving timeseries data
 
     def preload_timeseries(self):
         """Preload timeseries data to in-memory cache. Useful for bulk updates.
         """
-        self._jobj.preloadAllTimeseries()
+        self._backend('preload')
 
     def add_timeseries(self, df, meta=False):
         """Add data to the TimeSeries.
@@ -639,12 +657,6 @@ class Scenario(TimeSeries):
         Store data in memory and return cached values instead of repeatedly
         querying the database.
     """
-    # Name of the model associated with the Scenario
-    model = None
-
-    # Name of the Scenario
-    scenario = None
-
     _java_kwargs = {
         'set': {},
         'par': {'has_value': True},
@@ -657,30 +669,30 @@ class Scenario(TimeSeries):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if version == 'new':
-            self._jobj = mp._jobj.newScenario(model, scenario, scheme,
-                                              annotation)
-        elif isinstance(version, int):
-            self._jobj = mp._jobj.getScenario(model, scenario, version)
-        # constructor for `message_ix.Scenario.__init__` or `clone()` function
-        elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
-            self._jobj = version
-        elif version is None:
-            self._jobj = mp._jobj.getScenario(model, scenario)
-        else:
-            raise ValueError('Invalid `version` arg: `{}`'.format(version))
-
-        self.platform = mp
+        # Set attributes
         self.model = model
         self.scenario = scenario
-        self.version = self._jobj.getVersion()
-        self.scheme = scheme or self._jobj.getScheme()
+        self.version = version
+
+        # All the backend to complete initialization
+        self.platform = mp
+        self._backend('init', scheme, annotation)
+
         if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
             warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
                           'is deprecated, please use `message_ix.Scenario`')
 
+        # Initialize cache
         self._cache = cache
         self._pycache = {}
+
+    def _backend(self, method, *args, **kwargs):
+        """Convenience for calling *method* on the backend."""
+        try:
+            func = getattr(self.platform._backend, f's_{method}')
+        except AttributeError:
+            func = getattr(self.platform._backend, f'ts_{method}')
+        return func(self, *args, **kwargs)
 
     def _item(self, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.

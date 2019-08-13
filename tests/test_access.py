@@ -1,3 +1,4 @@
+import sys
 from subprocess import Popen
 from time import sleep
 
@@ -16,7 +17,9 @@ def with_mock_server(test_fn):
     # def mocked_test(*args, **kwargs):
     def mocked_test(tmpdir, test_data_path):
         proc = Popen(
-            ['python', '-m', 'pretenders.server.server', '--host', '0.0.0.0',
+            [sys.executable, '-m',
+             'pretenders.server.server',
+             '--host', 'localhost',
              '--port', '8000'])
         print('Mock server started with pid ' + str(proc.pid))
         sleep(1)

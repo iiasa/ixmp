@@ -10,6 +10,11 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def set_log_level(self, level):
+        """Set logging level for the backend."""
+        pass
+
+    @abstractmethod
     def open_db(self):
         """(Re-)open the database connection.
 

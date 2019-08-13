@@ -1,4 +1,5 @@
 # coding=utf-8
+import logging
 import os
 import sys
 from subprocess import check_call
@@ -103,7 +104,7 @@ class Platform:
         return getattr(self._be, name)
 
     def set_log_level(self, level):
-        """Set global logger level (for both Python and Java)
+        """Set global logger level.
 
         Parameters
         ----------
@@ -111,20 +112,12 @@ class Platform:
             set the logger level if specified, see
             https://docs.python.org/3/library/logging.html#logging-levels
         """
-        py_to_java = {
-            'CRITICAL': 'ALL',
-            'ERROR': 'ERROR',
-            'WARNING': 'WARN',
-            'INFO': 'INFO',
-            'DEBUG': 'DEBUG',
-            'NOTSET': 'OFF',
-        }
-        if level not in py_to_java.keys():
+        if level not in logging:
             msg = '{} not a valid Python logger level, see ' + \
                 'https://docs.python.org/3/library/logging.html#logging-level'
             raise ValueError(msg.format(level))
         logger().setLevel(level)
-        self._jobj.setLogLevel(py_to_java[level])
+        self._be.set_log_level(level)
 
     def scenario_list(self, default=True, model=None, scen=None):
         """Return information on TimeSeries and Scenarios in the database.

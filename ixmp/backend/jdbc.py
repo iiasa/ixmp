@@ -12,6 +12,17 @@ from ixmp.utils import logger
 from ixmp.backend.base import Backend
 
 
+# Map of Python to Java log levels
+LOG_LEVELS = {
+    'CRITICAL': 'ALL',
+    'ERROR': 'ERROR',
+    'WARNING': 'WARN',
+    'INFO': 'INFO',
+    'DEBUG': 'DEBUG',
+    'NOTSET': 'OFF',
+}
+
+
 class JDBCBackend(Backend):
     """Backend using JDBC to connect to Oracle and HSQLDB instances.
 
@@ -49,6 +60,9 @@ class JDBCBackend(Backend):
                    "are included in the 'ixmp/lib' folder.")
             logger().info(msg)
             raise
+
+    def set_log_level(self, level):
+        self._jobj.setLogLevel(LOG_LEVELS[level])
 
     def open_db(self):
         """(Re-)open the database connection."""

@@ -7,6 +7,7 @@ from jpype import (
     JPackage as java,
 )
 import numpy as np
+import pandas as pd
 
 from ixmp.config import _config
 from ixmp.utils import islistable, logger
@@ -89,6 +90,7 @@ class JDBCBackend(Backend):
         return to_pylist(self.jobj.getUnitList())
 
     # Timeseries methods
+
     def ts_init(self, ts, annotation=None):
         """Initialize the ixmp.TimeSeries *ts*."""
         if ts.version == 'new':
@@ -133,6 +135,7 @@ class JDBCBackend(Backend):
         self.jindex[ts].preloadAllTimeseries()
 
     # Scenario methods
+
     def s_init(self, s, scheme=None, annotation=None):
         """Initialize the ixmp.Scenario *s*."""
         if s.version == 'new':
@@ -154,6 +157,94 @@ class JDBCBackend(Backend):
 
         # Add to index
         self.jindex[s] = jobj
+
+    def s_has_solution(self, s):
+        return self.jindex[s].hasSolution()
+
+    def s_list_items(self, s, type):
+        return to_pylist(getattr(self.jindex[s], f'get{type.title()}List')())
+
+    def s_item_index(self, s, name, type):
+        jitem = self._get_item(s, 'item', name)
+        return to_pylist(getattr(jitem, f'getIdx{type.title()}')())
+
+    def s_item_elements(self, s, type, name, filters=None, has_value=False,
+                        has_level=False):
+        # Retrieve the item
+        item = self._get_item(s, type, name, load=True)
+
+        # get list of elements, with filter HashMap if provided
+        if filters is not None:
+            jFilter = java.HashMap()
+            for idx_name in filters.keys():
+                jFilter.put(idx_name, to_jlist(filters[idx_name]))
+            jList = item.getElements(jFilter)
+        else:
+            jList = item.getElements()
+
+        # return a dataframe if this is a mapping or multi-dimensional
+        # parameter
+        dim = item.getDim()
+        if dim > 0:
+            idx_names = np.array(item.getIdxNames().toArray()[:])
+            idx_sets = np.array(item.getIdxSets().toArray()[:])
+
+            data = {}
+            for d in range(dim):
+                ary = np.array(item.getCol(d, jList)[:])
+                if idx_sets[d] == "year":
+                    # numpy tricks to avoid extra copy
+                    # _ary = ary.view('int')
+                    # _ary[:] = ary
+                    ary = ary.astype('int')
+                data[idx_names[d]] = ary
+
+            if has_value:
+                data['value'] = np.array(item.getValues(jList)[:])
+                data['unit'] = np.array(item.getUnits(jList)[:])
+
+            if has_level:
+                data['lvl'] = np.array(item.getLevels(jList)[:])
+                data['mrg'] = np.array(item.getMarginals(jList)[:])
+
+            df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
+            return df
+
+        else:
+            #  for index sets
+            if not (has_value or has_level):
+                return pd.Series(item.getCol(0, jList)[:])
+
+            data = {}
+
+            # for parameters as scalars
+            if has_value:
+                data['value'] = item.getScalarValue().floatValue()
+                data['unit'] = str(item.getScalarUnit())
+
+            # for variables as scalars
+            elif has_level:
+                data['lvl'] = item.getScalarLevel().floatValue()
+                data['mrg'] = item.getScalarMarginal().floatValue()
+
+            return data
+
+    # Helpers; not part of the Backend interface
+
+    def _get_item(self, s, ix_type, name, load=True):
+        """Return the Java object for item *name* of *ix_type*.
+
+        Parameters
+        ----------
+        load : bool, optional
+            If *ix_type* is 'par', 'var', or 'equ', the elements of the item
+            are loaded from the database before :meth:`_item` returns. If
+            :const:`False`, the elements can be loaded later using
+            ``item.loadItemElementsfromDB()``.
+        """
+        # getItem is not overloaded to accept a second bool argument
+        args = [name] + ([load] if ix_type != 'item' else [])
+        return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
 
 
 def start_jvm(jvmargs=None):
@@ -235,3 +326,18 @@ def to_jlist(pylist, idx_names=None):
         for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
+
+
+# Helper methods
+
+
+def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
+    if filters is None:
+        return df
+
+    mask = pd.Series(True, index=df.index)
+    for k, v in filters.items():
+        isin = df[k].isin(v)
+        mask = mask & isin
+    return df[mask]

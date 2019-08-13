@@ -14,7 +14,6 @@ from jpype import (
 import numpy as np
 import pandas as pd
 
-import ixmp as ix
 from ixmp import model_settings
 from .backend import BACKENDS
 
@@ -23,8 +22,9 @@ from .backend.jdbc import (
     to_jdouble as _jdouble,
     to_jlist,
     to_pylist,
+    filtered,
 )
-from ixmp.utils import logger, check_year, harmonize_path
+from ixmp.utils import logger, check_year, harmonize_path, numcols
 
 # %% default settings for column headers
 
@@ -503,7 +503,7 @@ class TimeSeries:
             for i in df.index:
                 jData = java.LinkedHashMap()
 
-                for j in ix.utils.numcols(df):
+                for j in numcols(df):
                     jData.put(java.Integer(int(j)),
                               java.Double(float(df[j][i])))
 
@@ -535,10 +535,10 @@ class TimeSeries:
             Specified data.
         """
         # convert filter lists to Java objects
-        region = ix.to_jlist(region)
-        variable = ix.to_jlist(variable)
-        unit = ix.to_jlist(unit)
-        year = ix.to_jlist(year)
+        region = to_jlist(region)
+        variable = to_jlist(variable)
+        unit = to_jlist(unit)
+        year = to_jlist(year)
 
         # retrieve data, convert to pandas.DataFrame
         data = self._jobj.getTimeseries(region, variable, unit, None, year)
@@ -698,26 +698,11 @@ class Scenario(TimeSeries):
         return func(self, *args, **kwargs)
 
     def _item(self, ix_type, name, load=True):
-        """Return the Java object for item *name* of *ix_type*.
-
-        Parameters
-        ----------
-        load : bool, optional
-            If *ix_type* is 'par', 'var', or 'equ', the elements of the item
-            are loaded from the database before :meth:`_item` returns. If
-            :const:`False`, the elements can be loaded later using
-            ``item.loadItemElementsfromDB()``.
-        """
-        funcs = {
-            'item': self._jobj.getItem,
-            'set': self._jobj.getSet,
-            'par': self._jobj.getPar,
-            'var': self._jobj.getVar,
-            'equ': self._jobj.getEqu,
-        }
-        # getItem is not overloaded to accept a second bool argument
-        args = [name] + ([load] if ix_type != 'item' else [])
-        return funcs[ix_type](*args)
+        """Shim to allow existing code that references ._item to work."""
+        # TODO address all such warnings, then remove
+        loc = inspect.stack()[1].function
+        warn(f'Calling {self.__class__.__name__}._item() in {loc}')
+        return self.platform._backend._get_item(self, ix_type, name)
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.
@@ -743,7 +728,6 @@ class Scenario(TimeSeries):
 
     def _element(self, ix_type, name, filters=None, cache=None):
         """Return a pd.DataFrame of item elements."""
-        item = self._item(ix_type, name)
         cache_key = (ix_type, name)
 
         # if dataframe in python cache, retrieve from there
@@ -752,10 +736,12 @@ class Scenario(TimeSeries):
 
         # if no cache, retrieve from Java with filters
         if filters is not None and not self._cache:
-            return _get_ele_list(item, filters, **self._java_kwargs[ix_type])
+            return self._backend('item_elements', ix_type, name, filters,
+                                 **self._java_kwargs[ix_type])
 
         # otherwise, retrieve from Java and keep in python cache
-        df = _get_ele_list(item, None, **self._java_kwargs[ix_type])
+        df = self._backend('item_elements', ix_type, name, None,
+                           **self._java_kwargs[ix_type])
 
         # save if using memcache
         if self._cache:
@@ -771,7 +757,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self._item('item', name).getIdxSets())
+        return self._backend('item_index', name, 'sets')
 
     def idx_names(self, name):
         """return the list of index names for an item (set, par, var, equ)
@@ -781,7 +767,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self._item('item', name).getIdxNames())
+        return self._backend('item_index', name, 'names')
 
     def cat_list(self, name):
         raise DeprecationWarning('function was migrated to `message_ix` class')
@@ -794,11 +780,11 @@ class Scenario(TimeSeries):
 
     def set_list(self):
         """List all defined sets."""
-        return to_pylist(self._jobj.getSetList())
+        return self._backend('list_items', 'set')
 
     def has_set(self, name):
-        """check whether the scenario has a set with that name"""
-        return self._jobj.hasSet(name)
+        """Check whether the scenario has a set *name*."""
+        return name in self.set_list()
 
     def init_set(self, name, idx_sets=None, idx_names=None):
         """Initialize a new set.
@@ -918,11 +904,11 @@ class Scenario(TimeSeries):
 
     def par_list(self):
         """List all defined parameters."""
-        return to_pylist(self._jobj.getParList())
+        return self._backend('list_items', 'par')
 
     def has_par(self, name):
         """check whether the scenario has a parameter with that name"""
-        return self._jobj.hasPar(name)
+        return name in self.par_list()
 
     def init_par(self, name, idx_sets, idx_names=None):
         """Initialize a new parameter.
@@ -1054,7 +1040,8 @@ class Scenario(TimeSeries):
         -------
         {'value': value, 'unit': unit}
         """
-        return _get_ele_list(self._jobj.getPar(name), None, has_value=True)
+        return self._backend('item_elements', 'par', name, None,
+                             has_value=True)
 
     def change_scalar(self, name, val, unit, comment=None):
         """Set the value and unit of a scalar.
@@ -1092,11 +1079,11 @@ class Scenario(TimeSeries):
 
     def var_list(self):
         """List all defined variables."""
-        return to_pylist(self._jobj.getVarList())
+        return self._backend('list_items', 'var')
 
     def has_var(self, name):
         """check whether the scenario has a variable with that name"""
-        return self._jobj.hasVar(name)
+        return name in self.var_list()
 
     def init_var(self, name, idx_sets=None, idx_names=None):
         """initialize a new variable in the scenario
@@ -1126,7 +1113,7 @@ class Scenario(TimeSeries):
 
     def equ_list(self):
         """List all defined equations."""
-        return to_pylist(self._jobj.getEquList())
+        return self._backend('list_items', 'equ')
 
     def init_equ(self, name, idx_sets=None, idx_names=None):
         """Initialize a new equation.
@@ -1144,7 +1131,7 @@ class Scenario(TimeSeries):
 
     def has_equ(self, name):
         """check whether the scenario has an equation with that name"""
-        return self._jobj.hasEqu(name)
+        return name in self.equ_list()
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation
@@ -1270,7 +1257,7 @@ class Scenario(TimeSeries):
 
         If ``has_solution() == True``, model solution data exists in the db.
         """
-        return self._jobj.hasSolution()
+        return self._backend('has_solution')
 
     def remove_solution(self, first_model_year=None):
         """Remove the solution from the scenario
@@ -1512,19 +1499,6 @@ class Scenario(TimeSeries):
 
 # %% auxiliary functions for class Scenario
 
-
-def filtered(df, filters):
-    """Returns a filtered dataframe based on a filters dictionary"""
-    if filters is None:
-        return df
-
-    mask = pd.Series(True, index=df.index)
-    for k, v in filters.items():
-        isin = df[k].isin(v)
-        mask = mask & isin
-    return df[mask]
-
-
 def to_iamc_template(df):
     """Formats a pd.DataFrame to an IAMC-compatible table"""
     if "time" in df.columns:
@@ -1551,64 +1525,6 @@ def make_dims(sets, names):
     if isinstance(sets, set) or isinstance(names, set):
         raise ValueError('index dimension must be string or ordered lists!')
     return to_jlist(sets), to_jlist(names if names is not None else sets)
-
-
-def _get_ele_list(item, filters=None, has_value=False, has_level=False):
-
-    # get list of elements, with filter HashMap if provided
-    if filters is not None:
-        jFilter = java.HashMap()
-        for idx_name in filters.keys():
-            jFilter.put(idx_name, to_jlist(filters[idx_name]))
-        jList = item.getElements(jFilter)
-    else:
-        jList = item.getElements()
-
-    # return a dataframe if this is a mapping or multi-dimensional parameter
-    dim = item.getDim()
-    if dim > 0:
-        idx_names = np.array(item.getIdxNames().toArray()[:])
-        idx_sets = np.array(item.getIdxSets().toArray()[:])
-
-        data = {}
-        for d in range(dim):
-            ary = np.array(item.getCol(d, jList)[:])
-            if idx_sets[d] == "year":
-                # numpy tricks to avoid extra copy
-                # _ary = ary.view('int')
-                # _ary[:] = ary
-                ary = ary.astype('int')
-            data[idx_names[d]] = ary
-
-        if has_value:
-            data['value'] = np.array(item.getValues(jList)[:])
-            data['unit'] = np.array(item.getUnits(jList)[:])
-
-        if has_level:
-            data['lvl'] = np.array(item.getLevels(jList)[:])
-            data['mrg'] = np.array(item.getMarginals(jList)[:])
-
-        df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
-        return df
-
-    else:
-        #  for index sets
-        if not (has_value or has_level):
-            return pd.Series(item.getCol(0, jList)[:])
-
-        data = {}
-
-        # for parameters as scalars
-        if has_value:
-            data['value'] = item.getScalarValue().floatValue()
-            data['unit'] = str(item.getScalarUnit())
-
-        # for variables as scalars
-        elif has_level:
-            data['lvl'] = item.getScalarLevel().floatValue()
-            data['mrg'] = item.getScalarMarginal().floatValue()
-
-        return data
 
 
 def _remove_ele(item, key):

@@ -2,12 +2,13 @@ from abc import ABC, abstractmethod
 
 
 class Backend(ABC):
-    """Abstract base classe for backends.
+    """Abstract base class for backends.
 
     Some methods below are decorated as @abstractmethod; this means they MUST
     be overridden by a subclass of Backend. Others that are not decorated
-    mean that the behaviour here is the default behaviour; subclasses can
+    mean that the behaviour here is the default behaviour; subclasses MAY
     leave, replace or extend this behaviour as needed.
+
     """
 
     def __init__(self):
@@ -64,4 +65,43 @@ class Backend(ABC):
 
         - Modify the version attr of the returned object.
         """
+        pass
+
+    @abstractmethod
+    def s_has_solution(self):
+        """Return :obj:`True` if the Scenario has been solved.
+
+        If :obj:`True`, model solution data exists in the database.
+        """
+        pass
+
+    @abstractmethod
+    def s_list_items(self, s, type):
+        """Return a list of items of *type* in the Scenario *s*."""
+        pass
+
+    @abstractmethod
+    def s_item_index(self, s, name, type):
+        """Return the index sets or names of item *name*.
+
+        Parameters
+        ----------
+        type : 'set' or 'name'
+        """
+        pass
+
+    @abstractmethod
+    def s_item_elements(self, s, type, name, filters=None, has_value=False,
+                        has_level=False):
+        """Return elements of item *name* in Scenario *s*.
+
+        The return type varies according to the *type* and contents:
+
+        - Scalars vs. parameters.
+        - Lists, e.g. set elements.
+        - Mapping sets.
+        - Multi-dimensional parameters, equations, or variables.
+        """
+        # TODO exactly specify the return types in the docstring using MUST,
+        # MAY, etc. terms
         pass

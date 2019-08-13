@@ -14,6 +14,8 @@ import pandas as pd
 import ixmp as ix
 from ixmp import model_settings
 from .backend import BACKENDS
+# TODO remove this
+from .backend.jdbc import to_pylist
 from ixmp.utils import logger, islistable, check_year, harmonize_path
 
 # %% default settings for column headers
@@ -71,6 +73,13 @@ class Platform:
            /technotes/tools/windows/java.html)
     """
 
+    # List of method names which are handled directly by the backend
+    _backend_direct = [
+        'open_db',
+        'close_db',
+        'units',
+        ]
+
     def __init__(self, *args, backend='jdbc', **backend_args):
         if backend != 'jdbc':
             raise ValueError(f'unknown ixmp backend {backend!r}')
@@ -88,6 +97,10 @@ class Platform:
     def _jobj(self):
         """Shim to allow existing code that references ._jobj to work."""
         return self._be.jobj
+
+    def __getattr__(self, name):
+        """Convenience for methods that are on Backend."""
+        return getattr(self._be, name)
 
     def set_log_level(self, level):
         """Set global logger level (for both Python and Java)
@@ -112,24 +125,6 @@ class Platform:
             raise ValueError(msg.format(level))
         logger().setLevel(level)
         self._jobj.setLogLevel(py_to_java[level])
-
-    def open_db(self):
-        """(Re-)open the database connection.
-
-        The database connection is opened automatically for many operations.
-        After calling :meth:`close_db`, it must be re-opened.
-
-        """
-        self._jobj.openDB()
-
-    def close_db(self):
-        """Close the database connection.
-
-        A HSQL database can only be used by one :class:`Platform` instance at a
-        time. Any existing connection must be closed before a new one can be
-        opened.
-        """
-        self._jobj.closeDB()
 
     def scenario_list(self, default=True, model=None, scen=None):
         """Return information on TimeSeries and Scenarios in the database.
@@ -200,15 +195,6 @@ class Platform:
                       'please use `ixmp.Scenario(mp, ...)`')
 
         return Scenario(self, model, scen, version, scheme, annotation, cache)
-
-    def units(self):
-        """Return all units described in the database.
-
-        Returns
-        -------
-        list
-        """
-        return to_pylist(self._jobj.getUnitList())
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.
@@ -1534,16 +1520,6 @@ def filtered(df, filters):
 def _jdouble(val):
     """Returns a Java.Double"""
     return java.Double(float(val))
-
-
-def to_pylist(jlist):
-    """Transforms a Java.Array or Java.List to a python list"""
-    # handling string array
-    try:
-        return np.array(jlist[:])
-    # handling Java LinkedLists
-    except Exception:
-        return np.array(jlist.toArray()[:])
 
 
 def to_jlist(pylist, idx_names=None):

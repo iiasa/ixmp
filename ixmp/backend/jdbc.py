@@ -5,6 +5,7 @@ import jpype
 from jpype import (
     JPackage as java,
 )
+import numpy as np
 
 from ixmp.config import _config
 from ixmp.utils import logger
@@ -48,6 +49,23 @@ class JDBCBackend(Backend):
                    "are included in the 'ixmp/lib' folder.")
             logger().info(msg)
             raise
+
+    def open_db(self):
+        """(Re-)open the database connection."""
+        self.jobj.openDB()
+
+    def close_db(self):
+        """Close the database connection.
+
+        A HSQL database can only be used by one :class:`Backend` instance at a
+        time. Any existing connection must be closed before a new one can be
+        opened.
+        """
+        self.jobj.closeDB()
+
+    def units(self):
+        """Return all units described in the database."""
+        return to_pylist(self.jobj.getUnitList())
 
 
 def start_jvm(jvmargs=None):
@@ -94,3 +112,13 @@ def start_jvm(jvmargs=None):
     java.LinkedList = java('java.util').LinkedList
     java.HashMap = java('java.util').HashMap
     java.LinkedHashMap = java('java.util').LinkedHashMap
+
+
+def to_pylist(jlist):
+    """Transforms a Java.Array or Java.List to a python list"""
+    # handling string array
+    try:
+        return np.array(jlist[:])
+    # handling Java LinkedLists
+    except Exception:
+        return np.array(jlist.toArray()[:])

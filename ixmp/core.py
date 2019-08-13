@@ -15,6 +15,7 @@ import pandas as pd
 
 import ixmp as ix
 from ixmp import model_settings
+from .backend import JDBCBackend  # noqa: F401
 from ixmp.config import _config
 from ixmp.utils import logger, islistable, check_year, harmonize_path
 

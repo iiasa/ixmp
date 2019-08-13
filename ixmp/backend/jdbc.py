@@ -9,7 +9,7 @@ from jpype import (
 import numpy as np
 
 from ixmp.config import _config
-from ixmp.utils import logger
+from ixmp.utils import islistable, logger
 from ixmp.backend.base import Backend
 
 
@@ -156,8 +156,6 @@ class JDBCBackend(Backend):
         self.jindex[s] = jobj
 
 
-
-
 def start_jvm(jvmargs=None):
     """Start the Java Virtual Machine via JPype.
 
@@ -204,6 +202,8 @@ def start_jvm(jvmargs=None):
     java.LinkedHashMap = java('java.util').LinkedHashMap
 
 
+# Conversion methods
+
 def to_pylist(jlist):
     """Transforms a Java.Array or Java.List to a python list"""
     # handling string array
@@ -212,3 +212,26 @@ def to_pylist(jlist):
     # handling Java LinkedLists
     except Exception:
         return np.array(jlist.toArray()[:])
+
+
+def to_jdouble(val):
+    """Returns a Java.Double"""
+    return java.Double(float(val))
+
+
+def to_jlist(pylist, idx_names=None):
+    """Transforms a python list to a Java.LinkedList"""
+    if pylist is None:
+        return None
+
+    jList = java.LinkedList()
+    if idx_names is None:
+        if islistable(pylist):
+            for key in pylist:
+                jList.add(str(key))
+        else:
+            jList.add(str(pylist))
+    else:
+        for idx in idx_names:
+            jList.add(str(pylist[idx]))
+    return jList

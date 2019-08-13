@@ -19,9 +19,12 @@ from ixmp import model_settings
 from .backend import BACKENDS
 
 # TODO remove these direct imports of Java-related methods
-from .backend.jdbc import to_pylist
-
-from ixmp.utils import logger, islistable, check_year, harmonize_path
+from .backend.jdbc import (
+    to_jdouble as _jdouble,
+    to_jlist,
+    to_pylist,
+)
+from ixmp.utils import logger, check_year, harmonize_path
 
 # %% default settings for column headers
 
@@ -1520,29 +1523,6 @@ def filtered(df, filters):
         isin = df[k].isin(v)
         mask = mask & isin
     return df[mask]
-
-
-def _jdouble(val):
-    """Returns a Java.Double"""
-    return java.Double(float(val))
-
-
-def to_jlist(pylist, idx_names=None):
-    """Transforms a python list to a Java.LinkedList"""
-    if pylist is None:
-        return None
-
-    jList = java.LinkedList()
-    if idx_names is None:
-        if islistable(pylist):
-            for key in pylist:
-                jList.add(str(key))
-        else:
-            jList.add(str(pylist))
-    else:
-        for idx in idx_names:
-            jList.add(str(pylist[idx]))
-    return jList
 
 
 def to_iamc_template(df):

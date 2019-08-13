@@ -1,1 +1,6 @@
-from .jdbc import JDBCBackend  # noqa: F401
+from .jdbc import JDBCBackend
+
+
+BACKENDS = {
+    'jdbc': JDBCBackend,
+}

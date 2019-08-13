@@ -1,11 +1,9 @@
 # coding=utf-8
 import os
 import sys
-from pathlib import Path
 from subprocess import check_call
 import warnings
 
-import jpype
 from jpype import (
     JClass,
     JPackage as java,
@@ -15,59 +13,12 @@ import pandas as pd
 
 import ixmp as ix
 from ixmp import model_settings
-from .backend import JDBCBackend  # noqa: F401
-from ixmp.config import _config
+from .backend import BACKENDS
 from ixmp.utils import logger, islistable, check_year, harmonize_path
 
 # %% default settings for column headers
 
 IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
-
-
-def start_jvm(jvmargs=None):
-    """Start the Java Virtual Machine via JPype.
-
-    Parameters
-    ----------
-    jvmargs : str or list of str, optional
-        Additional arguments to pass to :meth:`jpype.startJVM`.
-    """
-    # TODO change the jvmargs default to [] instead of None
-    if jpype.isJVMStarted():
-        return
-
-    jvmargs = jvmargs or []
-
-    # Arguments
-    args = [jpype.getDefaultJVMPath()]
-
-    # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
-    # the classpath
-    module_root = Path(__file__).parent
-    jarfile = module_root / 'ixmp.jar'
-    module_jars = list(module_root.glob('lib/*'))
-    classpath = map(str, [module_root, jarfile] + list(module_jars))
-
-    sep = ';' if os.name == 'nt' else ':'
-    args.append('-Djava.class.path={}'.format(sep.join(classpath)))
-
-    # Add user args
-    args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
-
-    # For JPype 0.7 (raises a warning) and 0.8 (default is False).
-    # 'True' causes Java string objects to be converted automatically to Python
-    # str(), as expected by ixmp Python code.
-    kwargs = dict(convertStrings=True)
-
-    jpype.startJVM(*args, **kwargs)
-
-    # define auxiliary references to Java classes
-    java.ixmp = java('at.ac.iiasa.ixmp')
-    java.Integer = java('java.lang').Integer
-    java.Double = java('java.lang').Double
-    java.LinkedList = java('java.util').LinkedList
-    java.HashMap = java('java.util').HashMap
-    java.LinkedHashMap = java('java.util').LinkedHashMap
 
 
 class Platform:
@@ -90,6 +41,13 @@ class Platform:
 
     Parameters
     ----------
+    backend : 'jdbc'
+        Storage backend type. Currently 'jdbc' is the only available backend.
+    backend_kwargs
+        Keyword arguments to configure the backend; see below.
+
+    Other parameters
+    ----------------
     dbprops : path-like, optional
         If `dbtype` is :obj:`None`, the name of a database properties file
         (default: 'default.properties') in the properties file directory
@@ -113,34 +71,23 @@ class Platform:
            /technotes/tools/windows/java.html)
     """
 
-    def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
-        start_jvm(jvmargs)
-        self.dbtype = dbtype
+    def __init__(self, *args, backend='jdbc', **backend_args):
+        if backend != 'jdbc':
+            raise ValueError(f'unknown ixmp backend {backend!r}')
+        else:
+            # Copy positional args for the default JDBC backend
+            print(args, backend_args)
+            for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
+                if len(args) > i:
+                    backend_args[arg] = args[i]
 
-        try:
-            # if no dbtype is specified, launch Platform with properties file
-            if dbtype is None:
-                dbprops = _config.find_dbprops(dbprops)
-                if dbprops is None:
-                    raise ValueError("Not found database properties file "
-                                     "to launch platform")
-                logger().info("launching ixmp.Platform using config file at "
-                              "'{}'".format(dbprops))
-                self._jobj = java.ixmp.Platform("Python", str(dbprops))
-            # if dbtype is specified, launch Platform with local database
-            elif dbtype == 'HSQLDB':
-                dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
-                logger().info("launching ixmp.Platform with local {} database "
-                              "at '{}'".format(dbtype, dbprops))
-                self._jobj = java.ixmp.Platform("Python", str(dbprops), dbtype)
-            else:
-                raise ValueError('Unknown dbtype: {}'.format(dbtype))
-        except TypeError:
-            msg = ("Could not launch the JVM for the ixmp.Platform."
-                   "Make sure that all dependencies of ixmp.jar"
-                   "are included in the 'ixmp/lib' folder.")
-            logger().info(msg)
-            raise
+        backend_cls = BACKENDS[backend]
+        self._be = backend_cls(**backend_args)
+
+    @property
+    def _jobj(self):
+        """Shim to allow existing code that references ._jobj to work."""
+        return self._be.jobj
 
     def set_log_level(self, level):
         """Set global logger level (for both Python and Java)

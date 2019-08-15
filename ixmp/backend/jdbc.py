@@ -103,7 +103,13 @@ class JDBCBackend(Backend):
         """
         self.jobj.closeDB()
 
-    def units(self):
+    def get_nodes(self):
+        for r in self.jobj.listNodes('%'):
+            n, p, h = r.getName(), r.getParent(), r.getHierarchy()
+            yield (n, None, p, h)
+            yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
+
+    def get_units(self):
         """Return all units described in the database."""
         return to_pylist(self.jobj.getUnitList())
 

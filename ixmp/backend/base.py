@@ -29,7 +29,23 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def units(self):
+    def get_nodes(self):
+        """Iterate over all nodes (required).
+
+        Yields
+        -------
+        tuple
+            The four members of each tuple are:
+
+            1. Name or synonym: str
+            2. Name: str or None.
+            3. Parent: str.
+            4. Hierarchy: str.
+        """
+        pass
+
+    @abstractmethod
+    def get_units(self):
         """Return all registered units of measurement (required).
 
         Returns

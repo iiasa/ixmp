@@ -88,7 +88,6 @@ class Platform:
     _backend_direct = [
         'open_db',
         'close_db',
-        'units',
         ]
 
     def __init__(self, *args, backend='jdbc', **backend_args):
@@ -219,6 +218,9 @@ class Platform:
             msg = 'unit `{}` is already defined in the platform instance'
             logger().info(msg.format(unit))
 
+    def units(self):
+        return self._backend.get_units()
+
     def regions(self):
         """Return all regions defined for the IAMC-style timeseries format
         including known synonyms.
@@ -227,14 +229,9 @@ class Platform:
         -------
         :class:`pandas.DataFrame`
         """
-        lst = []
-        for r in self._jobj.listNodes('%'):
-            n, p, h = (r.getName(), r.getParent(), r.getHierarchy())
-            lst.extend([(n, None, p, h)])
-            lst.extend([(s, n, p, h) for s in (r.getSynonyms() or [])])
-        region = pd.DataFrame(lst)
-        region.columns = ['region', 'mapped_to', 'parent', 'hierarchy']
-        return region
+        NODE_FIELDS = ['region', 'mapped_to', 'parent', 'hierarchy']
+        return pd.DataFrame(self._backend.get_nodes(),
+                            columns=NODE_FIELDS)
 
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.

@@ -10,7 +10,7 @@ import pandas as pd
 
 from ixmp.config import _config
 from ixmp.utils import islistable, logger
-from ixmp.backend.base import Backend
+from ixmp.backend.base import Backend, FIELDS
 
 
 # Map of Python to Java log levels
@@ -27,13 +27,14 @@ LOG_LEVELS = {
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
-    'java.lang.Double',
-    'java.util.HashMap',
-    'java.lang.Integer',
     'at.ac.iiasa.ixmp.exceptions.IxException',
+    'at.ac.iiasa.ixmp.objects.Scenario',
+    'at.ac.iiasa.ixmp.Platform',
+    'java.lang.Double',
+    'java.lang.Integer',
+    'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
-    'at.ac.iiasa.ixmp.Platform',
     ]
 
 
@@ -125,6 +126,16 @@ class JDBCBackend(Backend):
         """Return all units described in the database."""
         return to_pylist(self.jobj.getUnitList())
 
+    def get_scenarios(self, default, model, scenario):
+        # List<Map<String, Object>>
+        scenarios = self.jobj.getScenarioList(default, model, scenario)
+
+        for s in scenarios:
+            data = []
+            for field in FIELDS['get_scenarios']:
+                data.append(int(s[field]) if field == 'version' else s[field])
+            yield data
+
     # Timeseries methods
 
     def ts_init(self, ts, annotation=None):
@@ -188,8 +199,7 @@ class JDBCBackend(Backend):
         elif isinstance(s.version, int):
             jobj = self.jobj.getScenario(s.model, s.scenario, s.version)
         # constructor for `message_ix.Scenario.__init__` or `clone()` function
-        elif isinstance(s.version,
-                        JClass('at.ac.iiasa.ixmp.objects.Scenario')):
+        elif isinstance(s.version, java.Scenario):
             jobj = s.version
         elif s.version is None:
             jobj = self.jobj.getScenario(s.model, s.scenario)
@@ -201,6 +211,18 @@ class JDBCBackend(Backend):
 
         # Add to index
         self.jindex[s] = jobj
+
+    def s_clone(self, s, target_backend, model, scenario, annotation,
+                keep_solution, first_model_year=None):
+        if not isinstance(target_backend, self.__class__):
+            raise RuntimeError('Clone only possible between two instances of'
+                               f'{self.__class__.__name__}')
+
+        args = [model, scenario, annotation, keep_solution]
+        if first_model_year:
+            args.append(first_model_year)
+        # Reference to the cloned Java object
+        return self.jindex[s].clone(target_backend.jobj, *args)
 
     def s_has_solution(self, s):
         return self.jindex[s].hasSolution()

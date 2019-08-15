@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from ixmp import model_settings
-from .backend import BACKENDS
+from .backend import BACKENDS, FIELDS
 
 # TODO remove these direct imports of Java-related methods
 from .backend.jdbc import (
@@ -102,14 +102,6 @@ class Platform:
         backend_cls = BACKENDS[backend]
         self._backend = backend_cls(**backend_args)
 
-    @property
-    def _jobj(self):
-        """Shim to allow existing code that references ._jobj to work."""
-        # TODO address all such warnings, then remove
-        loc = inspect.stack()[1].function
-        warn(f'Accessing Platform._jobj in {loc}')
-        return self._backend.jobj
-
     def __getattr__(self, name):
         """Convenience for methods of Backend."""
         return getattr(self._backend, name)
@@ -164,24 +156,8 @@ class Platform:
               lock time.
             - ``annotation``: description of the Scenario or changelog.
         """
-        mod_scen_list = self._jobj.getScenarioList(default, model, scen)
-
-        mod_range = range(mod_scen_list.size())
-        cols = ['model', 'scenario', 'scheme', 'is_default', 'is_locked',
-                'cre_user', 'cre_date', 'upd_user', 'upd_date',
-                'lock_user', 'lock_date', 'annotation']
-
-        data = {}
-        for i in cols:
-            data[i] = [str(mod_scen_list.get(j).get(i)) for j in mod_range]
-
-        data['version'] = [int(str(mod_scen_list.get(j).get('version')))
-                           for j in mod_range]
-        cols.append("version")
-
-        df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
-        df = df[cols]
-        return df
+        return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
+                            columns=FIELDS['get_scenarios'])
 
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
@@ -229,9 +205,8 @@ class Platform:
         -------
         :class:`pandas.DataFrame`
         """
-        NODE_FIELDS = ['region', 'mapped_to', 'parent', 'hierarchy']
         return pd.DataFrame(self._backend.get_nodes(),
-                            columns=NODE_FIELDS)
+                            columns=FIELDS['get_nodes'])
 
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
@@ -1253,13 +1228,20 @@ class Scenario(TimeSeries):
         platform = platform or self.platform
         model = model or self.model
         scenario = scenario or self.scenario
-        args = [platform._jobj, model, scenario, annotation, keep_solution]
+
+        args = [platform._backend, model, scenario, annotation, keep_solution]
         if check_year(first_model_year, 'first_model_year'):
             args.append(first_model_year)
 
         scenario_class = self.__class__
+
+        # NB cloning happens entirely within the Java code. This requires
+        #    'jclone', a reference to a Java object, to be returned here...
+        jclone = self._backend('clone', *args)
+        #     ...and passed in to the constructor here. To avoid this, would
+        #     need to adjust the ixmp_source code.
         return scenario_class(platform, model, scenario, cache=self._cache,
-                              version=self._jobj.clone(*args))
+                              version=jclone)
 
     def to_gdx(self, path, filename, include_var_equ=False):
         """export the scenario data to GAMS gdx

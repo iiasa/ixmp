@@ -1,3 +1,4 @@
+from .base import FIELDS  # noqa: F401
 from .jdbc import JDBCBackend
 
 

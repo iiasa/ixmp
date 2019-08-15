@@ -1,6 +1,16 @@
 from abc import ABC, abstractmethod
 
 
+# List of field names for lists or tuples returned by Backend API methods
+FIELDS = {
+    'get_nodes': ('region', 'mapped_to', 'parent', 'hierarchy'),
+    'get_scenarios': ('model', 'scenario', 'scheme', 'is_default',
+                      'is_locked', 'cre_user', 'cre_date', 'upd_user',
+                      'upd_date', 'lock_user', 'lock_date', 'annotation',
+                      'version'),
+}
+
+
 class Backend(ABC):
     """Abstract base class for backends."""
 

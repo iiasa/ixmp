@@ -16,10 +16,7 @@ from .backend import BACKENDS
 
 # TODO remove these direct imports of Java-related methods
 from .backend.jdbc import (
-    JLinkedList,
-    JLinkedHashMap,
-    JInt,
-    JDouble,
+    java,
     to_jdouble as _jdouble,
     to_jlist,
     to_pylist,
@@ -298,7 +295,7 @@ class Platform:
         if isinstance(models, str):
             return self._jobj.checkModelAccess(user, access, models)
         else:
-            models_list = JLinkedList()
+            models_list = java.LinkedList()
             for model in models:
                 models_list.add(model)
             access_map = self._jobj.checkModelAccess(user, access, models_list)
@@ -410,18 +407,21 @@ class TimeSeries:
                              'use `Scenario.remove_solution()` or '
                              '`Scenario.clone(..., keep_solution=False)`'
                              )
-        self._jobj.checkOut(timeseries_only)
+        self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
         """Commit all changed data to the database.
 
-        :attr:`version` is not incremented.
+        If the TimeSeries was newly created (with ``version='new'``),
+        :attr:`version` is updated with a new version number assigned by the
+        backend. Otherwise, :meth:`commit` does not change the :attr:`version`.
+
+        Parameters
+        ----------
+        comment : str
+            Description of the changes being committed.
         """
-        self._jobj.commit(comment)
-        # if version == 0, this is a new instance
-        # and a new version number was assigned after the initial commit
-        if self.version == 0:
-            self.version = self._jobj.getVersion()
+        self._backend('commit', comment)
 
     def discard_changes(self):
         """Discard all changes and reload from the database."""
@@ -485,7 +485,7 @@ class TimeSeries:
             variable = df.variable[0]
             unit = df.unit[0]
             time = None
-            jData = JLinkedHashMap()
+            jData = java.LinkedHashMap()
 
             for i in df.index:
                 if not (region == df.region[i] and variable == df.variable[i]
@@ -498,21 +498,21 @@ class TimeSeries:
                     region = df.region[i]
                     variable = df.variable[i]
                     unit = df.unit[i]
-                    jData = JLinkedHashMap()
+                    jData = java.LinkedHashMap()
 
-                jData.put(JInt(int(df.year[i])),
-                          JDouble(float(df.value[i])))
+                jData.put(java.Integer(int(df.year[i])),
+                          java.Double(float(df.value[i])))
             # add the final iteration of the loop
             self._jobj.addTimeseries(region, variable, time, jData, unit, meta)
 
         # if in 'IAMC-style' format
         else:
             for i in df.index:
-                jData = JLinkedHashMap()
+                jData = java.LinkedHashMap()
 
                 for j in numcols(df):
-                    jData.put(JInt(int(j)),
-                              JDouble(float(df[j][i])))
+                    jData.put(java.Integer(int(j)),
+                              java.Double(float(df[j][i])))
 
                 time = None
                 self._jobj.addTimeseries(df.region[i], df.variable[i], time,
@@ -601,9 +601,9 @@ class TimeSeries:
             df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
                          var_name='year', value_name='value')
         for name, data in df.groupby(['region', 'variable', 'unit']):
-            years = JLinkedList()
+            years = java.LinkedList()
             for y in data['year']:
-                years.add(JInt(y))
+                years.add(java.Integer(y))
             self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
 
 
@@ -1108,7 +1108,7 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.clear_cache(name=name, ix_type='par')
-        self._item('par', name).addElement(_jdouble(val), unit, comment)
+        self._item('par', name).addElement(java.Double(val), unit, comment)
 
     def remove_par(self, name, key=None):
         """Remove parameter values or an entire parameter.

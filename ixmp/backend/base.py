@@ -58,6 +58,27 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def ts_check_out(self, ts, timeseries_only):
+        """Check out the ixmp.TimeSeries *s* for modifications.
+
+        Parameters
+        ----------
+        timeseries_only : bool
+            ???
+        """
+        pass
+
+    @abstractmethod
+    def ts_commit(self, ts, comment):
+        """Commit changes to the ixmp.TimeSeries *s* since the last check_out.
+
+        The method MAY:
+
+        - Modify the version attr of *ts*.
+        """
+        pass
+
+    @abstractmethod
     def s_init(self, s, annotation=None):
         """Initialize the ixmp.Scenario *s*.
 

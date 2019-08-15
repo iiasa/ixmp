@@ -1,16 +1,10 @@
 import os
 from pathlib import Path
 import re
+from types import SimpleNamespace
 
 import jpype
-from jpype import (
-    JClass,
-    JPackage,
-)
-from jpype.types import (  # noqa: F401
-    JInt,
-    JDouble,
-)
+from jpype import JClass
 import numpy as np
 import pandas as pd
 
@@ -29,13 +23,18 @@ LOG_LEVELS = {
     'NOTSET': 'OFF',
 }
 
-# Java packages, loaded by start_jvm()
-jixmp = None  # corresponds to at.ac.iiasa.ixmp
-
 # Java classes, loaded by start_jvm()
-JLinkedList = None
-JHashMap = None
-JLinkedHashMap = None
+java = SimpleNamespace()
+
+JAVA_CLASSES = [
+    'java.lang.Double',
+    'java.util.HashMap',
+    'java.lang.Integer',
+    'at.ac.iiasa.ixmp.exceptions.IxException',
+    'java.util.LinkedHashMap',
+    'java.util.LinkedList',
+    'at.ac.iiasa.ixmp.Platform',
+    ]
 
 
 class JDBCBackend(Backend):
@@ -69,13 +68,13 @@ class JDBCBackend(Backend):
                                      "to launch platform")
                 logger().info("launching ixmp.Platform using config file at "
                               "'{}'".format(dbprops))
-                self.jobj = jixmp.Platform('Python', str(dbprops))
+                self.jobj = java.Platform('Python', str(dbprops))
             # if dbtype is specified, launch Platform with local database
             elif dbtype == 'HSQLDB':
                 dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
                 logger().info("launching ixmp.Platform with local {} database "
                               "at '{}'".format(dbtype, dbprops))
-                self.jobj = jixmp.Platform('Python', str(dbprops), dbtype)
+                self.jobj = java.Platform('Python', str(dbprops), dbtype)
             else:
                 raise ValueError('Unknown dbtype: {}'.format(dbtype))
         except TypeError:
@@ -126,6 +125,14 @@ class JDBCBackend(Backend):
 
         # Add to index
         self.jindex[ts] = jobj
+
+    def ts_check_out(self, ts, timeseries_only):
+        self.jindex[ts].checkOut(timeseries_only)
+
+    def ts_commit(self, ts, comment):
+        self.jindex[ts].commit(comment)
+        if ts.version == 0:
+            ts.version = self.jindex[ts].getVersion()
 
     def ts_discard_changes(self, ts):
         """Discard all changes and reload from the database."""
@@ -207,7 +214,7 @@ class JDBCBackend(Backend):
 
         # get list of elements, with filter HashMap if provided
         if filters is not None:
-            jFilter = JHashMap()
+            jFilter = java.HashMap()
             for idx_name in filters.keys():
                 jFilter.put(idx_name, to_jlist(filters[idx_name]))
             jList = item.getElements(jFilter)
@@ -275,7 +282,7 @@ class JDBCBackend(Backend):
 
                 # Call with 1 or 2 args
                 jSet.addElement(e, comment) if comment else jSet.addElement(e)
-        except jixmp.exceptions.IxException as e:
+        except java.IxException as e:
             msg = e.message()
             if 'does not have an element' in msg:
                 # Re-raise as Python ValueError
@@ -300,7 +307,7 @@ class JDBCBackend(Backend):
         args = [name] + ([load] if ix_type != 'item' else [])
         try:
             return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
-        except jixmp.exceptions.IxException as e:
+        except java.IxException as e:
             if re.match('No item [^ ]* exists in this Scenario', e.args[0]):
                 # Re-raise as a Python KeyError
                 raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
@@ -346,13 +353,10 @@ def start_jvm(jvmargs=None):
 
     jpype.startJVM(*args, **kwargs)
 
-    global JLinkedList, JHashMap, JLinkedHashMap, jixmp
-
     # define auxiliary references to Java classes
-    jixmp = JPackage('at.ac.iiasa.ixmp')
-    JLinkedList = JClass('java.util.LinkedList')
-    JHashMap = JClass('java.util.HashMap')
-    JLinkedHashMap = JClass('java.util.LinkedHashMap')
+    global java
+    for class_name in JAVA_CLASSES:
+        setattr(java, class_name.split('.')[-1], JClass(class_name))
 
 
 # Conversion methods
@@ -369,7 +373,7 @@ def to_pylist(jlist):
 
 def to_jdouble(val):
     """Returns a Java.Double"""
-    return JDouble(float(val))
+    return java.Double(float(val))
 
 
 def to_jlist(pylist, idx_names=None):
@@ -377,7 +381,7 @@ def to_jlist(pylist, idx_names=None):
     if pylist is None:
         return None
 
-    jList = JLinkedList()
+    jList = java.LinkedList()
     if idx_names is None:
         if islistable(pylist):
             for key in pylist:
@@ -393,7 +397,7 @@ def to_jlist(pylist, idx_names=None):
 
 def to_jlist2(arg):
     """Simple conversion of :class:`list` *arg* to JLinkedList."""
-    jlist = JLinkedList()
+    jlist = java.LinkedList()
     jlist.addAll(arg)
     return jlist
 

@@ -45,6 +45,10 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def set_unit(self, name, comment):
+        pass
+
+    @abstractmethod
     def get_units(self):
         """Return all registered units of measurement (required).
 

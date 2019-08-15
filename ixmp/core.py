@@ -16,7 +16,6 @@ from .backend import BACKENDS
 # TODO remove these direct imports of Java-related methods
 from .backend.jdbc import (
     java,
-    to_jdouble as _jdouble,
     to_jlist,
     to_pylist,
     filtered,
@@ -212,11 +211,12 @@ class Platform:
             Annotation describing the unit or why it was added. The current
             database user and timestamp are appended automatically.
         """
-        if unit not in self.units():
-            self._jobj.addUnitToDB(unit, comment)
-        else:
+        if unit in self.units():
             msg = 'unit `{}` is already defined in the platform instance'
             logger().info(msg.format(unit))
+            return
+
+        self._backend.set_unit(unit, comment)
 
     def units(self):
         return self._backend.get_units()
@@ -1073,8 +1073,7 @@ class Scenario(TimeSeries):
             Description of the scalar.
         """
         self.init_par(name, None, None)
-        jPar = self._item('par', name)
-        jPar.addElement(_jdouble(val), unit, comment)
+        self.change_scalar(name, val, unit, comment)
 
     def scalar(self, name):
         """Return the value and unit of a scalar.

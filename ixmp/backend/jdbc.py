@@ -109,6 +109,9 @@ class JDBCBackend(Backend):
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
 
+    def set_unit(self, name, comment):
+        self.jobj.addUnitToDB(name, comment)
+
     def get_units(self):
         """Return all units described in the database."""
         return to_pylist(self.jobj.getUnitList())
@@ -394,11 +397,6 @@ def to_pylist(jlist):
     # handling Java LinkedLists
     except Exception:
         return np.array(jlist.toArray()[:])
-
-
-def to_jdouble(val):
-    """Returns a Java.Double"""
-    return java.Double(float(val))
 
 
 def to_jlist(pylist, idx_names=None):

@@ -26,6 +26,27 @@ def logger():
     return _LOGGER
 
 
+def as_str_list(arg, idx_names=None):
+    """Convert various *arg* to list of str.
+
+    Several types of arguments are handled:
+    - None: returned as None.
+    - str: returned as a length-1 list of str.
+    - list of values: returned as a list with each value converted to str
+    - dict, with list of idx_names: the idx_names are used to look up values
+      in the dict, the resulting list has the corresponding values in the same
+      order.
+
+    """
+    if arg is None:
+        return None
+    elif idx_names is None:
+        # arg must be iterable
+        return list(map(str, arg)) if islistable(arg) else [str(arg)]
+    else:
+        return [str(arg[idx]) for idx in idx_names]
+
+
 def isstr(x):
     """Returns True if x is a string"""
     return isinstance(x, six.string_types)

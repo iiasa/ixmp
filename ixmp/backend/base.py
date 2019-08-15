@@ -110,3 +110,25 @@ class Backend(ABC):
         # TODO exactly specify the return types in the docstring using MUST,
         # MAY, etc. terms
         pass
+
+    @abstractmethod
+    def s_add_set_elements(self, s, name, elements):
+        """Add elements to set *name* in Scenario *s*.
+
+        Parameters
+        ----------
+        elements : list of 2-tuples
+            The first element of each tuple is a key (str or list of str).
+            The number and order of key dimensions must match the index of
+            *name*, if any. The second element is a str comment describing the
+            key, or None.
+
+        Raises
+        ------
+        ValueError
+            If *elements* contain invalid values, e.g. for an indexed set,
+            values not in the index set(s).
+        Exception
+            If the Backend encounters any error adding the key.
+        """
+        pass

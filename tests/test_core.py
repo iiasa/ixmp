@@ -128,8 +128,63 @@ def test_add_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add element to a non-existent set
-    with pytest.raises(jpype.JException,
-                       match="No Set 'foo' exists in this Scenario!"):
+    with pytest.raises(KeyError,
+                       match="No Item 'foo' exists in this Scenario!"):
+        scen.add_set('foo', 'bar')
+
+    scen.remove_solution()
+    scen.check_out()
+
+    # Add elements to a 0-D set
+    scen.add_set('i', 'i1')  # Name only
+    scen.add_set('i', 'i2', 'i2 comment')  # Name and comment
+    scen.add_set('i', ['i3'])  # List of names, length 1
+    scen.add_set('i', ['i4', 'i5'])  # List of names, length >1
+    scen.add_set('i', range(0, 3))  # Generator (range object)
+    # Lists of names and comments, length 1
+    scen.add_set('i', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('i', ['i7', 'i8'], ['i7 comment', 'i8 comment'])
+
+    # Incorrect usage
+
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+
+    # Add elements to a 1D set
+    scen.init_set('foo', 'i', 'dim_i')
+    scen.add_set('foo', ['i1'])  # Single key
+    scen.add_set('foo', ['i2'], 'i2 in foo')  # Single key and comment
+    scen.add_set('foo', 'i3')  # Bare name automatically wrapped
+    # Lists of names and comments, length 1
+    scen.add_set('foo', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('foo', [['i7'], ['i8']], ['i7 comment', 'i8 comment'])
+    # Dict
+    scen.add_set('foo', dict(dim_i=['i7', 'i8']))
+
+    # Incorrect usage
+    # Improperly wrapped keys
+    with pytest.raises(ValueError, match=r"2-D key \['i4', 'i5'\] invalid for "
+                                         r"1-D set foo\['dim_i'\]"):
+        scen.add_set('foo', ['i4', 'i5'])
+    with pytest.raises(ValueError):
+        scen.add_set('foo', range(0, 3))
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+    # Missing element in the index set
+    with pytest.raises(ValueError, match="The index set 'i' does not have an "
+                                         "element 'bar'!"):
         scen.add_set('foo', 'bar')
 
 

@@ -1,5 +1,6 @@
 # coding=utf-8
 import inspect
+from itertools import repeat, zip_longest
 import logging
 import os
 import sys
@@ -7,10 +8,6 @@ from subprocess import check_call
 import warnings
 from warnings import warn
 
-# TODO remove this import
-from jpype import (
-    JPackage as java,
-)
 import numpy as np
 import pandas as pd
 
@@ -19,12 +16,22 @@ from .backend import BACKENDS
 
 # TODO remove these direct imports of Java-related methods
 from .backend.jdbc import (
+    JLinkedList,
+    JLinkedHashMap,
+    JInt,
+    JDouble,
     to_jdouble as _jdouble,
     to_jlist,
     to_pylist,
     filtered,
 )
-from ixmp.utils import logger, check_year, harmonize_path, numcols
+from ixmp.utils import (
+    as_str_list,
+    check_year,
+    harmonize_path,
+    logger,
+    numcols,
+)
 
 # %% default settings for column headers
 
@@ -291,7 +298,7 @@ class Platform:
         if isinstance(models, str):
             return self._jobj.checkModelAccess(user, access, models)
         else:
-            models_list = java.LinkedList()
+            models_list = JLinkedList()
             for model in models:
                 models_list.add(model)
             access_map = self._jobj.checkModelAccess(user, access, models_list)
@@ -478,7 +485,7 @@ class TimeSeries:
             variable = df.variable[0]
             unit = df.unit[0]
             time = None
-            jData = java.LinkedHashMap()
+            jData = JLinkedHashMap()
 
             for i in df.index:
                 if not (region == df.region[i] and variable == df.variable[i]
@@ -491,21 +498,21 @@ class TimeSeries:
                     region = df.region[i]
                     variable = df.variable[i]
                     unit = df.unit[i]
-                    jData = java.LinkedHashMap()
+                    jData = JLinkedHashMap()
 
-                jData.put(java.Integer(int(df.year[i])),
-                          java.Double(float(df.value[i])))
+                jData.put(JInt(int(df.year[i])),
+                          JDouble(float(df.value[i])))
             # add the final iteration of the loop
             self._jobj.addTimeseries(region, variable, time, jData, unit, meta)
 
         # if in 'IAMC-style' format
         else:
             for i in df.index:
-                jData = java.LinkedHashMap()
+                jData = JLinkedHashMap()
 
                 for j in numcols(df):
-                    jData.put(java.Integer(int(j)),
-                              java.Double(float(df[j][i])))
+                    jData.put(JInt(int(j)),
+                              JDouble(float(df[j][i])))
 
                 time = None
                 self._jobj.addTimeseries(df.region[i], df.variable[i], time,
@@ -594,9 +601,9 @@ class TimeSeries:
             df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
                          var_name='year', value_name='value')
         for name, data in df.groupby(['region', 'variable', 'unit']):
-            years = java.LinkedList()
+            years = JLinkedList()
             for y in data['year']:
-                years.add(java.Integer(y))
+                years.add(JInt(y))
             self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
 
 
@@ -835,54 +842,96 @@ class Scenario(TimeSeries):
             Element(s) to be added. If *name* exists, the elements are
             appended to existing elements.
         comment : str or iterable of str, optional
-            Comment describing the element(s). Only used if *key* is a string
-            or list/range.
+            Comment describing the element(s). If given, there must be the
+            same number of comments as elements.
 
         Raises
         ------
-        :class:`jpype.JavaException`
+        KeyError
             If the set *name* does not exist. :meth:`init_set` must be called
             before :meth:`add_set`.
+        ValueError
+            For invalid forms or combinations of *key* and *comment*.
         """
+        # TODO expand docstring (here or in doc/source/api.rst) with examples,
+        #      per test_core.test_add_set.
         self.clear_cache(name=name, ix_type='set')
 
-        jSet = self._item('set', name)
+        # Get index names for set *name*, may raise KeyError
+        idx_names = self.idx_names(name)
 
-        if sys.version_info[0] > 2 and isinstance(key, range):
-            key = list(key)
+        # Check arguments and convert to two lists: keys and comments
+        if len(idx_names) == 0:
+            # Basic set. Keys must be strings.
+            if isinstance(key, (dict, pd.DataFrame)):
+                raise ValueError('dict, DataFrame keys invalid for '
+                                 f'basic set {name!r}')
 
-        if (jSet.getDim() == 0) and isinstance(key, list):
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    jSet.addElement(str(key[i]), str(comment[i]))
-                else:
-                    jSet.addElement(str(key[i]))
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = self.idx_names(name)
-            if "comment" in list(key):
-                for i in key.index:
-                    jSet.addElement(to_jlist(key.loc[i], idx_names),
-                                    str(key['comment'][i]))
-            else:
-                for i in key.index:
-                    jSet.addElement(to_jlist(key.loc[i], idx_names))
-        elif isinstance(key, list):
-            if isinstance(key[0], list):
-                for i in range(len(key)):
-                    if comment and i < len(comment):
-                        jSet.addElement(to_jlist(
-                            key[i]), str(comment[i]))
-                    else:
-                        jSet.addElement(to_jlist(key[i]))
-            else:
-                if comment:
-                    jSet.addElement(to_jlist(key), str(comment[i]))
-                else:
-                    jSet.addElement(to_jlist(key))
+            # Ensure keys is a list of str
+            keys = as_str_list(key)
         else:
-            jSet.addElement(str(key), str(comment))
+            # Set defined over 1+ other sets
+
+            # Check for ambiguous arguments
+            if comment and isinstance(key, (dict, pd.DataFrame)) and \
+                    'comment' in key:
+                raise ValueError("ambiguous; both key['comment'] and comment "
+                                 "given")
+
+            if isinstance(key, pd.DataFrame):
+                # DataFrame of key values and perhaps comments
+                try:
+                    # Pop a 'comment' column off the DataFrame, convert to list
+                    comment = key.pop('comment').to_list()
+                except KeyError:
+                    pass
+
+                # Convert key to list of list of key values
+                keys = []
+                for row in key.to_dict(orient='records'):
+                    keys.append(as_str_list(row, idx_names=idx_names))
+            elif isinstance(key, dict):
+                # Dict of lists of key values
+
+                # Pop a 'comment' list from the dict
+                comment = key.pop('comment', None)
+
+                # Convert to list of list of key values
+                keys = list(map(as_str_list,
+                                zip(*[key[i] for i in idx_names])))
+            elif isinstance(key[0], str):
+                # List of key values; wrap
+                keys = [as_str_list(key)]
+            elif isinstance(key[0], list):
+                # List of lists of key values; convert to list of list of str
+                keys = map(as_str_list, key)
+            elif isinstance(key, str) and len(idx_names) == 1:
+                # Bare key given for a 1D set; wrap for convenience
+                keys = [[key]]
+            else:
+                # Other, invalid value
+                raise ValueError(key)
+
+        # Process comments to a list of str, or let them all be None
+        comments = as_str_list(comment) if comment else repeat(None, len(keys))
+
+        # Combine iterators to tuples. If the lengths are mismatched, the
+        # sentinel value 'False' is filled in
+        to_add = list(zip_longest(keys, comments, fillvalue=False))
+
+        # Check processed arguments
+        for e, c in to_add:
+            # Check for sentinel values
+            if e is False:
+                raise ValueError(f'Comment {c!r} without matching key')
+            elif c is False:
+                raise ValueError(f'Key {e!r} without matching comment')
+            elif len(idx_names) and len(idx_names) != len(e):
+                raise ValueError(f'{len(e)}-D key {e!r} invalid for '
+                                 f'{len(idx_names)}-D set {name}{idx_names!r}')
+
+        # Send to backend
+        self._backend('add_set_elements', name, to_add)
 
     def remove_set(self, name, key=None):
         """delete a set from the scenario

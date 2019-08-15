@@ -1,10 +1,15 @@
 import os
 from pathlib import Path
+import re
 
 import jpype
 from jpype import (
     JClass,
-    JPackage as java,
+    JPackage,
+)
+from jpype.types import (  # noqa: F401
+    JInt,
+    JDouble,
 )
 import numpy as np
 import pandas as pd
@@ -24,12 +29,25 @@ LOG_LEVELS = {
     'NOTSET': 'OFF',
 }
 
+# Java packages, loaded by start_jvm()
+jixmp = None  # corresponds to at.ac.iiasa.ixmp
+
+# Java classes, loaded by start_jvm()
+JLinkedList = None
+JHashMap = None
+JLinkedHashMap = None
+
 
 class JDBCBackend(Backend):
     """Backend using JDBC to connect to Oracle and HSQLDB instances.
 
     Much of the code of this backend is implemented in Java, in the
     ixmp_source repository.
+
+    Among other things, this backend:
+    - Catches Java exceptions such as ixmp.exceptions.IxException, and
+      re-raises them as appropriate Python exceptions.
+
     """
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
     jobj = None
@@ -51,13 +69,13 @@ class JDBCBackend(Backend):
                                      "to launch platform")
                 logger().info("launching ixmp.Platform using config file at "
                               "'{}'".format(dbprops))
-                self.jobj = java.ixmp.Platform("Python", str(dbprops))
+                self.jobj = jixmp.Platform('Python', str(dbprops))
             # if dbtype is specified, launch Platform with local database
             elif dbtype == 'HSQLDB':
                 dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
                 logger().info("launching ixmp.Platform with local {} database "
                               "at '{}'".format(dbtype, dbprops))
-                self.jobj = java.ixmp.Platform("Python", str(dbprops), dbtype)
+                self.jobj = jixmp.Platform('Python', str(dbprops), dbtype)
             else:
                 raise ValueError('Unknown dbtype: {}'.format(dbtype))
         except TypeError:
@@ -180,7 +198,7 @@ class JDBCBackend(Backend):
 
     def s_item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name)
-        return to_pylist(getattr(jitem, f'getIdx{sets_or_names.title()}')())
+        return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def s_item_elements(self, s, type, name, filters=None, has_value=False,
                         has_level=False):
@@ -189,7 +207,7 @@ class JDBCBackend(Backend):
 
         # get list of elements, with filter HashMap if provided
         if filters is not None:
-            jFilter = java.HashMap()
+            jFilter = JHashMap()
             for idx_name in filters.keys():
                 jFilter.put(idx_name, to_jlist(filters[idx_name]))
             jList = item.getElements(jFilter)
@@ -243,6 +261,28 @@ class JDBCBackend(Backend):
 
             return data
 
+    def s_add_set_elements(self, s, name, elements):
+        """Add elements to set *name* in Scenario *s*."""
+        # Retrieve the Java Set and its number of dimensions
+        jSet = self._get_item(s, 'set', name)
+        dim = jSet.getDim()
+
+        try:
+            for e, comment in elements:
+                if dim:
+                    # Convert e to a JLinkedList
+                    e = to_jlist2(e)
+
+                # Call with 1 or 2 args
+                jSet.addElement(e, comment) if comment else jSet.addElement(e)
+        except jixmp.exceptions.IxException as e:
+            msg = e.message()
+            if 'does not have an element' in msg:
+                # Re-raise as Python ValueError
+                raise ValueError(msg) from e
+            else:
+                raise RuntimeError('Unhandled Java exception') from e
+
     # Helpers; not part of the Backend interface
 
     def _get_item(self, s, ix_type, name, load=True):
@@ -258,7 +298,15 @@ class JDBCBackend(Backend):
         """
         # getItem is not overloaded to accept a second bool argument
         args = [name] + ([load] if ix_type != 'item' else [])
-        return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
+        try:
+            return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
+        except jixmp.exceptions.IxException as e:
+            if re.match('No item [^ ]* exists in this Scenario', e.args[0]):
+                # Re-raise as a Python KeyError
+                raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
+                               'Scenario!') from None
+            else:
+                raise RuntimeError('Unhandled Java exception') from e
 
 
 def start_jvm(jvmargs=None):
@@ -298,13 +346,13 @@ def start_jvm(jvmargs=None):
 
     jpype.startJVM(*args, **kwargs)
 
+    global JLinkedList, JHashMap, JLinkedHashMap, jixmp
+
     # define auxiliary references to Java classes
-    java.ixmp = java('at.ac.iiasa.ixmp')
-    java.Integer = java('java.lang').Integer
-    java.Double = java('java.lang').Double
-    java.LinkedList = java('java.util').LinkedList
-    java.HashMap = java('java.util').HashMap
-    java.LinkedHashMap = java('java.util').LinkedHashMap
+    jixmp = JPackage('at.ac.iiasa.ixmp')
+    JLinkedList = JClass('java.util.LinkedList')
+    JHashMap = JClass('java.util.HashMap')
+    JLinkedHashMap = JClass('java.util.LinkedHashMap')
 
 
 # Conversion methods
@@ -321,15 +369,15 @@ def to_pylist(jlist):
 
 def to_jdouble(val):
     """Returns a Java.Double"""
-    return java.Double(float(val))
+    return JDouble(float(val))
 
 
 def to_jlist(pylist, idx_names=None):
-    """Transforms a python list to a Java.LinkedList"""
+    """Convert *pylist* to a jLinkedList."""
     if pylist is None:
         return None
 
-    jList = java.LinkedList()
+    jList = JLinkedList()
     if idx_names is None:
         if islistable(pylist):
             for key in pylist:
@@ -337,9 +385,17 @@ def to_jlist(pylist, idx_names=None):
         else:
             jList.add(str(pylist))
     else:
+        # pylist must be a dict
         for idx in idx_names:
             jList.add(str(pylist[idx]))
     return jList
+
+
+def to_jlist2(arg):
+    """Simple conversion of :class:`list` *arg* to JLinkedList."""
+    jlist = JLinkedList()
+    jlist.addAll(arg)
+    return jlist
 
 
 # Helper methods

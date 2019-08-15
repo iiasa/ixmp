@@ -3,7 +3,6 @@ import inspect
 from itertools import repeat, zip_longest
 import logging
 import os
-import sys
 from subprocess import check_call
 import warnings
 from warnings import warn
@@ -1003,23 +1002,23 @@ class Scenario(TimeSeries):
         """
         self.clear_cache(name=name, ix_type='par')
 
-        jPar = self._item('par', name)
-
-        if sys.version_info[0] > 2 and isinstance(key, range):
+        if isinstance(key, range):
             key = list(key)
+
+        elements = []
 
         if isinstance(key, pd.DataFrame) and "key" in list(key):
             if "comment" in list(key):
                 for i in key.index:
-                    jPar.addElement(str(key['key'][i]),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]),
-                                    str(key['comment'][i]))
+                    elements.append((str(key['key'][i]),
+                                     float(key['value'][i]),
+                                     str(key['unit'][i]),
+                                     str(key['comment'][i])))
             else:
                 for i in key.index:
-                    jPar.addElement(str(key['key'][i]),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]))
+                    elements.append((str(key['key'][i]),
+                                     float(key['value'][i]),
+                                     str(key['unit'][i])))
 
         elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
             if isinstance(key, dict):
@@ -1027,38 +1026,40 @@ class Scenario(TimeSeries):
             idx_names = self.idx_names(name)
             if "comment" in list(key):
                 for i in key.index:
-                    jPar.addElement(to_jlist(key.loc[i], idx_names),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]),
-                                    str(key['comment'][i]))
+                    elements.append((to_jlist(key.loc[i], idx_names),
+                                     float(key['value'][i]),
+                                     str(key['unit'][i]),
+                                     str(key['comment'][i])))
             else:
                 for i in key.index:
-                    jPar.addElement(to_jlist(key.loc[i], idx_names),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]))
+                    elements.append((to_jlist(key.loc[i], idx_names),
+                                     float(key['value'][i]),
+                                     str(key['unit'][i]),
+                                     None))
         elif isinstance(key, list) and isinstance(key[0], list):
             unit = unit or ["???"] * len(key)
             for i in range(len(key)):
                 if comment and i < len(comment):
-                    jPar.addElement(to_jlist(key[i]), _jdouble(val[i]),
-                                    str(unit[i]), str(comment[i]))
+                    elements.append((to_jlist(key[i]), float(val[i]),
+                                     str(unit[i]), str(comment[i])))
                 else:
-                    jPar.addElement(to_jlist(key[i]), _jdouble(val[i]),
-                                    str(unit[i]))
+                    elements.append((to_jlist(key[i]), float(val[i]),
+                                     str(unit[i]), None))
         elif isinstance(key, list) and isinstance(val, list):
             unit = unit or ["???"] * len(key)
             for i in range(len(key)):
                 if comment and i < len(comment):
-                    jPar.addElement(str(key[i]), _jdouble(val[i]),
-                                    str(unit[i]), str(comment[i]))
+                    elements.append((str(key[i]), float(val[i]),
+                                     str(unit[i]), str(comment[i])))
                 else:
-                    jPar.addElement(str(key[i]), _jdouble(val[i]),
-                                    str(unit[i]))
+                    elements.append((str(key[i]), float(val[i]),
+                                     str(unit[i]), None))
         elif isinstance(key, list) and not isinstance(val, list):
-            jPar.addElement(to_jlist(
-                key), _jdouble(val), unit, comment)
+            elements.append((to_jlist(key), float(val), unit, comment))
         else:
-            jPar.addElement(str(key), _jdouble(val), unit, comment)
+            elements.append((str(key), float(val), unit, comment))
+
+        self._backend('add_par_values', name, elements)
 
     def init_scalar(self, name, val, unit, comment=None):
         """Initialize a new scalar.
@@ -1108,7 +1109,8 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.clear_cache(name=name, ix_type='par')
-        self._item('par', name).addElement(java.Double(val), unit, comment)
+        self._backend('add_par_values', name,
+                      [(None, float(val), unit, comment)])
 
     def remove_par(self, name, key=None):
         """Remove parameter values or an entire parameter.

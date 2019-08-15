@@ -153,3 +153,27 @@ class Backend(ABC):
             If the Backend encounters any error adding the key.
         """
         pass
+
+    @abstractmethod
+    def s_add_par_values(self, s, name, elements):
+        """Add values to parameter *name* in Scenario *s*.
+
+        Parameters
+        ----------
+        elements : list of 4-tuples
+            The tuple members are, respectively:
+
+            1. Key: str or list of str or None.
+            2. Value: float.
+            3. Unit: str or None.
+            4. Comment: str or None.
+
+        Raises
+        ------
+        ValueError
+            If *elements* contain invalid values, e.g. key values not in the
+            index set(s).
+        Exception
+            If the Backend encounters any error adding the parameter values.
+        """
+        pass

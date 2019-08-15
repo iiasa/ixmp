@@ -290,6 +290,24 @@ class JDBCBackend(Backend):
             else:
                 raise RuntimeError('Unhandled Java exception') from e
 
+    def s_add_par_values(self, s, name, elements):
+        """Add values to parameter *name* in Scenario *s*."""
+        jPar = self._get_item(s, 'par', name)
+
+        for key, value, unit, comment in elements:
+            args = []
+            if key:
+                args.append(to_jlist2(key))
+            args.extend([java.Double(value), unit])
+            if comment:
+                args.append(comment)
+
+            # Activates one of 3 signatures for addElement:
+            # - (key, value, unit, comment)
+            # - (key, value, unit)
+            # - (value, unit, comment)
+            jPar.addElement(*args)
+
     # Helpers; not part of the Backend interface
 
     def _get_item(self, s, ix_type, name, load=True):

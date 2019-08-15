@@ -220,7 +220,7 @@ class JDBCBackend(Backend):
         func(name, idx_sets, idx_names)
 
     def s_item_index(self, s, name, sets_or_names):
-        jitem = self._get_item(s, 'item', name)
+        jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def s_item_elements(self, s, type, name, filters=None, has_value=False,

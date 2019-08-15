@@ -18,7 +18,7 @@ INSTALL_REQUIRES = [
     'pandas',
     'pint',
     'PyYAML',
-    'xarray<0.12',
+    'xarray',
     'xlsxwriter',
     'xlrd',
 ]

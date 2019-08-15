@@ -9,6 +9,7 @@ On separate pages:
    :maxdepth: 2
 
    api-python
+   api-backend
    reporting
 
 On this page:

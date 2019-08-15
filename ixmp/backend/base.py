@@ -2,14 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class Backend(ABC):
-    """Abstract base class for backends.
-
-    Some methods below are decorated as @abstractmethod; this means they MUST
-    be overridden by a subclass of Backend. Others that are not decorated
-    mean that the behaviour here is the default behaviour; subclasses MAY
-    leave, replace or extend this behaviour as needed.
-
-    """
+    """Abstract base class for backends."""
 
     def __init__(self):
         """Initialize the backend."""
@@ -17,39 +10,37 @@ class Backend(ABC):
 
     @abstractmethod
     def set_log_level(self, level):
-        """Set logging level for the backend."""
+        """Set logging level for the backend and other code (required)."""
         pass
 
     def open_db(self):
-        """(Re-)open the database connection.
+        """(Re-)open a database connection (optional).
 
-        The database connection is opened automatically for many operations.
-        After calling :meth:`close_db`, it must be re-opened.
+        A backend MAY connect to a database server. This method opens the
+        database connection if it is closed.
         """
         pass
 
     def close_db(self):
-        """Close the database connection.
+        """Close a database connection (optional).
 
-        Some backend database connections can only be used by one
-        :class:`Backend` instance at a time. Any existing connection must be
-        closed before a new one can be opened.
+        Close a database connection if it is open.
         """
         pass
 
     @abstractmethod
     def units(self):
-        """Return all units described in the database.
+        """Return all registered units of measurement (required).
 
         Returns
         -------
-        list
+        list of str
         """
         pass
 
     @abstractmethod
     def ts_init(self, ts, annotation=None):
-        """Initialize the ixmp.TimeSeries *ts*.
+        """Initialize the TimeSeries *ts* (required).
 
         The method MAY:
 
@@ -59,7 +50,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_check_out(self, ts, timeseries_only):
-        """Check out the ixmp.TimeSeries *s* for modifications.
+        """Check out the TimeSeries *s* for modifications (required).
 
         Parameters
         ----------
@@ -70,7 +61,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_commit(self, ts, comment):
-        """Commit changes to the ixmp.TimeSeries *s* since the last check_out.
+        """Commit changes to the TimeSeries *s*  (required).
 
         The method MAY:
 
@@ -80,7 +71,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_init(self, s, annotation=None):
-        """Initialize the ixmp.Scenario *s*.
+        """Initialize the Scenario *s* (required).
 
         The method MAY:
 
@@ -89,26 +80,26 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def s_has_solution(self):
-        """Return :obj:`True` if the Scenario has been solved.
+    def s_has_solution(self, s):
+        """Return :obj:`True` if Scenario *s* has been solved (required).
 
-        If :obj:`True`, model solution data exists in the database.
+        If :obj:`True`, model solution data is available from the Backend.
         """
         pass
 
     @abstractmethod
     def s_list_items(self, s, type):
-        """Return a list of items of *type* in the Scenario *s*."""
+        """Return a list of items of *type* in Scenario *s* (required)."""
         pass
 
     @abstractmethod
     def s_init_item(self, s, type, name):
-        """Initialize or create a new item *name* of *type* in Scenario *s*."""
+        """Initialize an item *name* of *type* in Scenario *s* (required)."""
         pass
 
     @abstractmethod
     def s_item_index(self, s, name, sets_or_names):
-        """Return the index sets or names of item *name*.
+        """Return the index sets or names of item *name* (required).
 
         Parameters
         ----------
@@ -119,7 +110,7 @@ class Backend(ABC):
     @abstractmethod
     def s_item_elements(self, s, type, name, filters=None, has_value=False,
                         has_level=False):
-        """Return elements of item *name* in Scenario *s*.
+        """Return elements of item *name* in Scenario *s* (required).
 
         The return type varies according to the *type* and contents:
 
@@ -134,15 +125,16 @@ class Backend(ABC):
 
     @abstractmethod
     def s_add_set_elements(self, s, name, elements):
-        """Add elements to set *name* in Scenario *s*.
+        """Add elements to set *name* in Scenario *s* (required).
 
         Parameters
         ----------
-        elements : list of 2-tuples
-            The first element of each tuple is a key (str or list of str).
-            The number and order of key dimensions must match the index of
-            *name*, if any. The second element is a str comment describing the
-            key, or None.
+        elements : iterable of 2-tuples
+            The tuple members are, respectively:
+
+            1. Key: str or list of str. The number and order of key dimensions
+               must match the index of *name*, if any.
+            2. Comment: str or None. An optional description of the key.
 
         Raises
         ------
@@ -156,14 +148,15 @@ class Backend(ABC):
 
     @abstractmethod
     def s_add_par_values(self, s, name, elements):
-        """Add values to parameter *name* in Scenario *s*.
+        """Add values to parameter *name* in Scenario *s* (required).
 
         Parameters
         ----------
-        elements : list of 4-tuples
+        elements : iterable of 4-tuples
             The tuple members are, respectively:
 
-            1. Key: str or list of str or None.
+            1. Key: str or list of str or (for a scalar, or 0-dimensional
+               parameter) None.
             2. Value: float.
             3. Unit: str or None.
             4. Comment: str or None.

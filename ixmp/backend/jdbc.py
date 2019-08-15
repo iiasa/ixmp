@@ -38,12 +38,13 @@ JAVA_CLASSES = [
 
 
 class JDBCBackend(Backend):
-    """Backend using JDBC to connect to Oracle and HSQLDB instances.
+    """Backend using JPype and JDBC to connect to Oracle and HSQLDB instances.
 
-    Much of the code of this backend is implemented in Java, in the
-    ixmp_source repository.
+    Much of the code of this backend is implemented in Java code in the
+    iiasa/ixmp_source Github repository.
 
     Among other things, this backend:
+
     - Catches Java exceptions such as ixmp.exceptions.IxException, and
       re-raises them as appropriate Python exceptions.
 

@@ -164,8 +164,7 @@ def keys_for_quantity(ix_type, name, scenario):
     # loading the associated data
     # NB this is used instead of .getIdxSets, since the same set may index more
     #    than one dimension of the same variable.
-    dims = _find_dims(scenario._item(ix_type, name, load=False)
-                      .getIdxNames().toArray())
+    dims = scenario.idx_names(name)
 
     # Column for retrieving data
     column = 'value' if ix_type == 'par' else 'lvl'

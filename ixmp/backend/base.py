@@ -28,6 +28,13 @@ class Backend(ABC):
         """
         pass
 
+    def get_auth(self, user, models, kind):
+        """Return user authorization for models (optional).
+
+        If the Backend implements access control…
+        """
+        return {model: True for model in models}
+
     @abstractmethod
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         pass

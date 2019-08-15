@@ -103,6 +103,9 @@ class JDBCBackend(Backend):
         """
         self.jobj.closeDB()
 
+    def get_auth(self, user, models, kind):
+        return self.jobj.checkModelAccess(user, kind, to_jlist2(models))
+
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         if parent and hierarchy and not synonym:
             self.jobj.addNode(name, parent, hierarchy)

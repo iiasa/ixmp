@@ -278,7 +278,7 @@ class Platform:
         self._backend.set_node(region, synonym=mapped_to)
 
     def check_access(self, user, models, access='view'):
-        """Check access to specific model
+        """Check access to specific models.
 
         Parameters
         ----------
@@ -288,19 +288,17 @@ class Platform:
             Model(s) name
         access : str, optional
             Access type - view or edit
-        """
 
+        Returns
+        -------
+        bool or dict of bool
+        """
+        models_list = as_str_list(models)
+        result = self._backend.get_auth(user, models_list, access)
         if isinstance(models, str):
-            return self._jobj.checkModelAccess(user, access, models)
+            return result[models]
         else:
-            models_list = java.LinkedList()
-            for model in models:
-                models_list.add(model)
-            access_map = self._jobj.checkModelAccess(user, access, models_list)
-            result = {}
-            for model in models:
-                result[model] = access_map.get(model) == 1
-            return result
+            return {model: result.get(model) == 1 for model in models_list}
 
 
 def _logger_region_exists(_regions, r):

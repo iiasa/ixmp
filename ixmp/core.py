@@ -245,16 +245,17 @@ class Platform:
         ----------
         region : str
             Name of the region.
-        hierarchy : str
-            Hierarchy level of the region (e.g., country, R11, basin)
         parent : str, default 'World'
             Assign a 'parent' region.
+        hierarchy : str
+            Hierarchy level of the region (e.g., country, R11, basin)
         """
-        _regions = self.regions()
-        if region not in list(_regions['region']):
-            self._jobj.addNode(region, parent, hierarchy)
-        else:
-            _logger_region_exists(_regions, region)
+        for r in self._backend.get_nodes():
+            if r[1] == region:
+                _logger_region_exists(self.regions(), region)
+                return
+
+        self._backend.set_node(region, parent, hierarchy)
 
     def add_region_synomym(self, region, mapped_to):
         """Define a synomym for a `region`.
@@ -269,11 +270,12 @@ class Platform:
         mapped_to : str
             Name of the region to which the synonym should be mapped.
         """
-        _regions = self.regions()
-        if region not in list(_regions['region']):
-            self._jobj.addNodeSynonym(mapped_to, region)
-        else:
-            _logger_region_exists(_regions, region)
+        for r in self._backend.get_nodes():
+            if r[1] == region:
+                _logger_region_exists(self.regions(), region)
+                return
+
+        self._backend.set_node(region, synonym=mapped_to)
 
     def check_access(self, user, models, access='view'):
         """Check access to specific model

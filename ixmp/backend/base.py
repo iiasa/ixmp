@@ -29,6 +29,10 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
+        pass
+
+    @abstractmethod
     def get_nodes(self):
         """Iterate over all nodes (required).
 

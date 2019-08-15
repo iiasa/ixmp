@@ -103,6 +103,12 @@ class JDBCBackend(Backend):
         """
         self.jobj.closeDB()
 
+    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
+        if parent and hierarchy and not synonym:
+            self.jobj.addNode(name, parent, hierarchy)
+        elif synonym and not (parent or hierarchy):
+            self.jobj.addNodeSynonym(synonym, name)
+
     def get_nodes(self):
         for r in self.jobj.listNodes('%'):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()

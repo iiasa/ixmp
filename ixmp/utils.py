@@ -102,6 +102,18 @@ def numcols(df):
             if dtypes.loc[i].name.startswith(('float', 'int'))]
 
 
+def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
+    if filters is None:
+        return df
+
+    mask = pd.Series(True, index=df.index)
+    for k, v in filters.items():
+        isin = df[k].isin(v)
+        mask = mask & isin
+    return df[mask]
+
+
 def import_timeseries(mp, data, model, scenario, version=None,
                       firstyear=None, lastyear=None):
     if not isinstance(mp, ixmp.Platform):

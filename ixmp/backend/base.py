@@ -135,7 +135,7 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def ts_delete(self, ts):
+    def ts_delete(self, ts, region, variable, years, unit):
         """Remove time-series data."""
         pass
 

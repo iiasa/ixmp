@@ -15,14 +15,13 @@ from .backend import BACKENDS, FIELDS
 
 # TODO remove these direct imports of Java-related methods
 from .backend.jdbc import (
-    java,
     to_jlist,
     to_pylist,
-    filtered,
 )
 from ixmp.utils import (
     as_str_list,
     check_year,
+    filtered,
     harmonize_path,
     logger,
 )
@@ -547,15 +546,17 @@ class TimeSeries:
             - `unit`
             - `year`
         """
+        # Ensure consistent column names
         df = to_iamc_template(df)
+
         if 'year' not in df.columns:
+            # Reshape from wide to long format
             df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
                          var_name='year', value_name='value')
-        for name, data in df.groupby(['region', 'variable', 'unit']):
-            years = java.LinkedList()
-            for y in data['year']:
-                years.add(java.Integer(y))
-            self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
+
+        # Remove all years for a given (r, v, u) combination at once
+        for (r, v, u), data in df.groupby(['region', 'variable', 'unit']):
+            self._backend('delete', r, v, data['year'].tolist(), u)
 
 
 # %% class Scenario

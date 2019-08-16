@@ -1,3 +1,4 @@
+from collections.abc import Collection, Iterable
 import os
 from pathlib import Path
 import re
@@ -204,9 +205,10 @@ class JDBCBackend(Backend):
         self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
                                       meta)
 
-    def ts_delete(self, ts):
+    def ts_delete(self, ts, region, variable, years, unit):
         """Remove time-series data."""
-        pass
+        years = to_jlist2(map(java.Integer, years))
+        self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
     # Scenario methods
 
@@ -471,20 +473,12 @@ def to_jlist(pylist, idx_names=None):
 def to_jlist2(arg):
     """Simple conversion of :class:`list` *arg* to JLinkedList."""
     jlist = java.LinkedList()
-    jlist.addAll(arg)
+    if isinstance(arg, Collection):
+        # Sized collection can be used directly
+        jlist.addAll(arg)
+    elif isinstance(arg, Iterable):
+        # Transfer items from an iterable, generator, etc. to the LinkedList
+        [jlist.add(value) for value in arg]
+    else:
+        raise ValueError(arg)
     return jlist
-
-
-# Helper methods
-
-
-def filtered(df, filters):
-    """Returns a filtered dataframe based on a filters dictionary"""
-    if filters is None:
-        return df
-
-    mask = pd.Series(True, index=df.index)
-    for k, v in filters.items():
-        isin = df[k].isin(v)
-        mask = mask & isin
-    return df[mask]

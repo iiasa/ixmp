@@ -4,7 +4,6 @@ from itertools import repeat, zip_longest
 import logging
 import os
 from subprocess import check_call
-import warnings
 from warnings import warn
 
 import numpy as np
@@ -163,8 +162,8 @@ class Platform:
            >>> ixmp.Scenario(mp, …)
         """
 
-        warnings.warn('The constructor `mp.Scenario()` is deprecated, '
-                      'please use `ixmp.Scenario(mp, ...)`')
+        warn('The constructor `mp.Scenario()` is deprecated, please use '
+             '`ixmp.Scenario(mp, ...)`')
 
         return Scenario(self, model, scen, version, scheme, annotation, cache)
 
@@ -611,8 +610,8 @@ class Scenario(TimeSeries):
         self._backend('init', scheme, annotation)
 
         if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
-            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
-                          'is deprecated, please use `message_ix.Scenario`')
+            warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios is '
+                 'deprecated, please use `message_ix.Scenario`')
 
         # Initialize cache
         self._cache = cache
@@ -1161,15 +1160,13 @@ class Scenario(TimeSeries):
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
-            warnings.warn(
-                '`keep_sol` is deprecated and will be removed in the next' +
-                ' release, please use `keep_solution`')
+            warn('`keep_sol` is deprecated and will be removed in the next'
+                 ' release, please use `keep_solution`')
             keep_solution = kwargs.pop('keep_sol')
 
         if 'scen' in kwargs:
-            warnings.warn(
-                '`scen` is deprecated and will be removed in the next' +
-                ' release, please use `scenario`')
+            warn('`scen` is deprecated and will be removed in the next'
+                 ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
         if keep_solution and first_model_year is not None:
@@ -1399,9 +1396,8 @@ class Scenario(TimeSeries):
             cb_result = callback(self, **cb_kwargs)
 
             if cb_result is None and warn_none:
-                warnings.warn('solve(callback=...) argument returned None;'
-                              ' will loop indefinitely unless True is'
-                              ' returned.')
+                warn('solve(callback=...) argument returned None; will loop '
+                     'indefinitely unless True is returned.')
                 # Don't repeat the warning
                 warn_none = False
 

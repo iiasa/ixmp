@@ -96,6 +96,7 @@ def pd_write(df, f, *args, **kwargs):
 
 
 def numcols(df):
+    """Return the indices of the numeric columns of *df*."""
     dtypes = df.dtypes
     return [i for i in dtypes.index
             if dtypes.loc[i].name.startswith(('float', 'int'))]

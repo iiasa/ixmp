@@ -189,6 +189,25 @@ class JDBCBackend(Backend):
         """
         self.jindex[ts].preloadAllTimeseries()
 
+    def ts_get(self, ts):
+        """Retrieve time-series data."""
+        pass
+
+    def ts_set(self, ts, region, variable, data, unit, meta):
+        """Store time-series data."""
+        # Convert *data* to a Java data structure
+        jdata = java.LinkedHashMap()
+        for k, v in data.items():
+            # Explicit cast is necessary; otherwise java.lang.Long
+            jdata.put(java.Integer(k), v)
+
+        self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
+                                      meta)
+
+    def ts_delete(self, ts):
+        """Remove time-series data."""
+        pass
+
     # Scenario methods
 
     def s_init(self, s, scheme=None, annotation=None):

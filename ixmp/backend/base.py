@@ -66,6 +66,10 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def get_scenarios(self, default, model, scenario):
+        pass
+
+    @abstractmethod
     def set_unit(self, name, comment):
         pass
 
@@ -108,6 +112,31 @@ class Backend(ABC):
 
         - Modify the version attr of *ts*.
         """
+        pass
+
+    @abstractmethod
+    def ts_get(self, ts):
+        """Retrieve time-series data."""
+        pass
+
+    @abstractmethod
+    def ts_set(self, ts, region, variable, data, unit, meta):
+        """Store time-series data.
+
+        Parameters
+        ----------
+        region, variable, time, unit : str
+            Indices for the data.
+        data : dict (int -> float)
+            Mapping from year to value.
+        meta : bool
+            Metadata flag.
+        """
+        pass
+
+    @abstractmethod
+    def ts_delete(self, ts):
+        """Remove time-series data."""
         pass
 
     @abstractmethod

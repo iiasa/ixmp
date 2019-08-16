@@ -25,7 +25,6 @@ from ixmp.utils import (
     check_year,
     harmonize_path,
     logger,
-    numcols,
 )
 
 # %% default settings for column headers
@@ -443,51 +442,32 @@ class TimeSeries:
             specially when :meth:`Scenario.clone` is called for Scenarios
             created with ``scheme='MESSAGE'``.
         """
-        meta = 1 if meta else 0
+        meta = bool(meta)
 
+        # Ensure consistent column names
         df = to_iamc_template(df)
 
-        # if in tabular format
-        if ("value" in df.columns):
-            df = df.sort_values(by=['region', 'variable', 'unit', 'year'])\
-                .reset_index(drop=True)
-
-            region = df.region[0]
-            variable = df.variable[0]
-            unit = df.unit[0]
-            time = None
-            jData = java.LinkedHashMap()
-
-            for i in df.index:
-                if not (region == df.region[i] and variable == df.variable[i]
-                        and unit == df.unit[i]):
-                    # if new 'line', pass to Java interface, start a new
-                    # LinkedHashMap
-                    self._jobj.addTimeseries(region, variable, time, jData,
-                                             unit, meta)
-
-                    region = df.region[i]
-                    variable = df.variable[i]
-                    unit = df.unit[i]
-                    jData = java.LinkedHashMap()
-
-                jData.put(java.Integer(int(df.year[i])),
-                          java.Double(float(df.value[i])))
-            # add the final iteration of the loop
-            self._jobj.addTimeseries(region, variable, time, jData, unit, meta)
-
-        # if in 'IAMC-style' format
+        if 'value' in df.columns:
+            # Long format; pivot to wide
+            df = pd.pivot_table(df,
+                                values='value',
+                                index=['region', 'variable', 'unit'],
+                                columns=['year'])
         else:
-            for i in df.index:
-                jData = java.LinkedHashMap()
+            # Wide format: set index columns
+            df.set_index(['region', 'variable', 'unit'], inplace=True)
 
-                for j in numcols(df):
-                    jData.put(java.Integer(int(j)),
-                              java.Double(float(df[j][i])))
+        # Discard non-numeric columns, e.g. 'model', 'scenario'
+        num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
+        df = df.iloc[:, num_cols]
 
-                time = None
-                self._jobj.addTimeseries(df.region[i], df.variable[i], time,
-                                         jData, df.unit[i], meta)
+        # Columns (year) as integer
+        df.columns = df.columns.astype(int)
+
+        # Add one time series per row
+        for (r, v, u), data in df.iterrows():
+            # Values as float; exclude NA
+            self._backend('set', r, v, data.astype(float).dropna(), u, meta)
 
     def timeseries(self, iamc=False, region=None, variable=None, level=None,
                    unit=None, year=None, **kwargs):
@@ -1009,6 +989,8 @@ class Scenario(TimeSeries):
                                      str(key['unit'][i]),
                                      None))
         elif isinstance(key, list) and isinstance(key[0], list):
+            # FIXME filling with non-SI units '???' requires special handling
+            #       later by ixmp.reporting
             unit = unit or ["???"] * len(key)
             for i in range(len(key)):
                 if comment and i < len(comment):
@@ -1018,6 +1000,8 @@ class Scenario(TimeSeries):
                     elements.append((to_jlist(key[i]), float(val[i]),
                                      str(unit[i]), None))
         elif isinstance(key, list) and isinstance(val, list):
+            # FIXME filling with non-SI units '???' requires special handling
+            #       later by ixmp.reporting
             unit = unit or ["???"] * len(key)
             for i in range(len(key)):
                 if comment and i < len(comment):
@@ -1495,6 +1479,7 @@ class Scenario(TimeSeries):
         yr_vtg : str
             vintage year
         """
+        # TODO this is specific to message_ix.Scenario; remove
         return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
     def get_meta(self, name=None):
@@ -1530,9 +1515,30 @@ class Scenario(TimeSeries):
 # %% auxiliary functions for class Scenario
 
 def to_iamc_template(df):
-    """Formats a pd.DataFrame to an IAMC-compatible table"""
-    if "time" in df.columns:
-        raise("sub-annual time slices not supported by the Python interface!")
+    """Format pd.DataFrame *df* in IAMC style.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        May have a 'node' column, which will be renamed to 'region'.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The returned object has:
+
+        - Any (Multi)Index levels reset as columns.
+        - Lower-case column names 'region', 'variable', and 'unit'.
+
+    Raises
+    ------
+    ValueError
+        If 'time' is among the column names; or 'region', 'variable', or 'unit'
+        is not.
+    """
+    if 'time' in df.columns:
+        raise ValueError('sub-annual time slices not supported by '
+                         'ixmp.TimeSeries')
 
     # reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:

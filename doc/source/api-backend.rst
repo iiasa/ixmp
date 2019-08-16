@@ -46,7 +46,9 @@ In the following, the words MUST, MAY, etc. have specific meanings as described 
       set_log_level
       open_db
       close_db
-      units
+      get_nodes
+      get_scenarios
+      get_units
 
    Methods related to :class:`ixmp.TimeSeries`:
 
@@ -54,6 +56,9 @@ In the following, the words MUST, MAY, etc. have specific meanings as described 
       ts_init
       ts_check_out
       ts_commit
+      ts_set
+      ts_get
+      ts_delete
 
    Methods related to :class:`ixmp.Scenario`:
 

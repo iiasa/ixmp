@@ -8,6 +8,7 @@ FIELDS = {
                       'is_locked', 'cre_user', 'cre_date', 'upd_user',
                       'upd_date', 'lock_user', 'lock_date', 'annotation',
                       'version'),
+    'ts_get': ('region', 'variable', 'unit', 'year', 'value'),
 }
 
 
@@ -115,8 +116,27 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def ts_get(self, ts):
-        """Retrieve time-series data."""
+    def ts_get(self, ts, region, variable, unit, year):
+        """Retrieve time-series data.
+
+        Parameters
+        ----------
+        region : list of str
+        variable : list of str
+        unit : list of str
+        year : list of str
+
+        Yields
+        ------
+        tuple
+            The five members of each tuple are:
+
+            1. region: str.
+            2. variable: str.
+            3. unit: str.
+            4. year: int.
+            5. value: float.
+        """
         pass
 
     @abstractmethod

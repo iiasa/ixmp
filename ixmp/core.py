@@ -468,8 +468,8 @@ class TimeSeries:
             # Values as float; exclude NA
             self._backend('set', r, v, data.astype(float).dropna(), u, meta)
 
-    def timeseries(self, iamc=False, region=None, variable=None, level=None,
-                   unit=None, year=None, **kwargs):
+    def timeseries(self, region=None, variable=None, unit=None, year=None,
+                   iamc=False):
         """Retrieve TimeSeries data.
 
         Parameters
@@ -491,44 +491,20 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
-        # convert filter lists to Java objects
-        region = to_jlist(region)
-        variable = to_jlist(variable)
-        unit = to_jlist(unit)
-        year = to_jlist(year)
-
-        # retrieve data, convert to pandas.DataFrame
-        data = self._jobj.getTimeseries(region, variable, unit, None, year)
-        dictionary = {}
-
-        # if in tabular format
-        ts_range = range(data.size())
-
-        cols = ['region', 'variable', 'unit']
-        for i in cols:
-            dictionary[i] = [str(data.get(j).get(i)) for j in ts_range]
-
-        dictionary['year'] = [data.get(j).get('year').intValue()
-                              for j in ts_range]
-        cols.append("year")
-
-        dictionary['value'] = [data.get(j).get('value').floatValue()
-                               for j in ts_range]
-        cols.append("value")
-
-        df = pd.DataFrame
-        df = df.from_dict(dictionary, orient='columns', dtype=None)
-
+        # Retrieve data, convert to pandas.DataFrame
+        df = pd.DataFrame(self._backend('get',
+                                        as_str_list(region) or [],
+                                        as_str_list(variable) or [],
+                                        as_str_list(unit) or [],
+                                        as_str_list(year) or []),
+                          columns=FIELDS['ts_get'])
         df['model'] = self.model
         df['scenario'] = self.scenario
 
-        df = df[['model', 'scenario'] + cols]
-
         if iamc:
-            df = df.pivot_table(index=IAMC_IDX, columns='year')['value']
-            df.reset_index(inplace=True)
-            df.columns = [c if isinstance(c, str) else int(c)
-                          for c in df.columns]
+            # Convert to wide format
+            df = df.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+                   .reset_index()
             df.columns.names = [None]
 
         return df

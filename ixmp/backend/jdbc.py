@@ -190,9 +190,21 @@ class JDBCBackend(Backend):
         """
         self.jindex[ts].preloadAllTimeseries()
 
-    def ts_get(self, ts):
+    def ts_get(self, ts, region, variable, unit, year):
         """Retrieve time-series data."""
-        pass
+        r = to_jlist2(region)
+        v = to_jlist2(variable)
+        u = to_jlist2(unit)
+        y = to_jlist2(year)
+
+        ftype = {
+            'year': int,
+            'value': float,
+        }
+
+        for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
+            yield tuple(ftype.get(f, str)(row.get(f))
+                        for f in FIELDS['ts_get'])
 
     def ts_set(self, ts, region, variable, data, unit, meta):
         """Store time-series data."""
@@ -207,7 +219,7 @@ class JDBCBackend(Backend):
 
     def ts_delete(self, ts, region, variable, years, unit):
         """Remove time-series data."""
-        years = to_jlist2(map(java.Integer, years))
+        years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
     # Scenario methods
@@ -470,9 +482,13 @@ def to_jlist(pylist, idx_names=None):
     return jList
 
 
-def to_jlist2(arg):
+def to_jlist2(arg, convert=None):
     """Simple conversion of :class:`list` *arg* to JLinkedList."""
     jlist = java.LinkedList()
+
+    if convert:
+        arg = map(convert, arg)
+
     if isinstance(arg, Collection):
         # Sized collection can be used directly
         jlist.addAll(arg)

@@ -454,7 +454,7 @@ def start_jvm(jvmargs=None):
 # Conversion methods
 
 def to_pylist(jlist):
-    """Transforms a Java.Array or Java.List to a python list"""
+    """Transforms a Java.Array or Java.List to a :class:`numpy.array`."""
     # handling string array
     try:
         return np.array(jlist[:])

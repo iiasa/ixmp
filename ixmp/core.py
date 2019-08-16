@@ -12,13 +12,7 @@ import pandas as pd
 
 from ixmp import model_settings
 from .backend import BACKENDS, FIELDS
-
-# TODO remove these direct imports of Java-related methods
-from .backend.jdbc import (
-    to_jlist,
-    to_pylist,
-)
-from ixmp.utils import (
+from .utils import (
     as_str_list,
     check_year,
     filtered,
@@ -955,13 +949,13 @@ class Scenario(TimeSeries):
             idx_names = self.idx_names(name)
             if "comment" in list(key):
                 for i in key.index:
-                    elements.append((to_jlist(key.loc[i], idx_names),
+                    elements.append((as_str_list(key.loc[i], idx_names),
                                      float(key['value'][i]),
                                      str(key['unit'][i]),
                                      str(key['comment'][i])))
             else:
                 for i in key.index:
-                    elements.append((to_jlist(key.loc[i], idx_names),
+                    elements.append((as_str_list(key.loc[i], idx_names),
                                      float(key['value'][i]),
                                      str(key['unit'][i]),
                                      None))
@@ -971,10 +965,10 @@ class Scenario(TimeSeries):
             unit = unit or ["???"] * len(key)
             for i in range(len(key)):
                 if comment and i < len(comment):
-                    elements.append((to_jlist(key[i]), float(val[i]),
+                    elements.append((as_str_list(key[i]), float(val[i]),
                                      str(unit[i]), str(comment[i])))
                 else:
-                    elements.append((to_jlist(key[i]), float(val[i]),
+                    elements.append((as_str_list(key[i]), float(val[i]),
                                      str(unit[i]), None))
         elif isinstance(key, list) and isinstance(val, list):
             # FIXME filling with non-SI units '???' requires special handling
@@ -988,7 +982,7 @@ class Scenario(TimeSeries):
                     elements.append((str(key[i]), float(val[i]),
                                      str(unit[i]), None))
         elif isinstance(key, list) and not isinstance(val, list):
-            elements.append((to_jlist(key), float(val), unit, comment))
+            elements.append((as_str_list(key), float(val), unit, comment))
         else:
             elements.append((str(key), float(val), unit, comment))
 
@@ -1240,7 +1234,8 @@ class Scenario(TimeSeries):
         """
         self.clear_cache()  # reset Python data cache
         self._jobj.readSolutionFromGDX(path, filename, comment,
-                                       to_jlist(var_list), to_jlist(equ_list),
+                                       as_str_list(var_list),
+                                       as_str_list(equ_list),
                                        check_solution)
 
     def has_solution(self):
@@ -1456,8 +1451,8 @@ class Scenario(TimeSeries):
         yr_vtg : str
             vintage year
         """
-        # TODO this is specific to message_ix.Scenario; remove
-        return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
+        # TODO this is specific to message_ix.Scenario AND is untested; remove
+        return list(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
     def get_meta(self, name=None):
         """get scenario metadata
@@ -1537,19 +1532,19 @@ def _remove_ele(item, key):
     """auxiliary """
     if item.getDim() > 0:
         if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(to_jlist(key))
+            item.removeElement(as_str_list(key))
         elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
             if isinstance(key, dict):
                 key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = to_pylist(item.getIdxNames())
+            idx_names = list(item.getIdxNames())
             for i in key.index:
-                item.removeElement(to_jlist(key.loc[i], idx_names))
+                item.removeElement(as_str_list(key.loc[i], idx_names))
         else:
             item.removeElement(str(key))
 
     else:
         if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(to_jlist(key))
+            item.removeElement(as_str_list(key))
         else:
             item.removeElement(str(key))
 

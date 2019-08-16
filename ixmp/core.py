@@ -347,14 +347,6 @@ class TimeSeries:
         self.platform = mp
         self._backend('init', annotation)
 
-    @property
-    def _jobj(self):
-        """Shim to allow existing code that references ._jobj to work."""
-        # TODO address all such warnings, then remove
-        loc = inspect.stack()[1].function
-        warn(f'Accessing {self.__class__.__name__}._jobj in {loc}')
-        return self.platform._backend.jindex[self]
-
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
         func = getattr(self.platform._backend, f'ts_{method}')
@@ -616,6 +608,14 @@ class Scenario(TimeSeries):
         # Initialize cache
         self._cache = cache
         self._pycache = {}
+
+    @property
+    def _jobj(self):
+        """Shim to allow existing code that references ._jobj to work."""
+        # TODO address all such warnings, then remove
+        loc = inspect.stack()[1].function
+        warn(f'Accessing Scenario._jobj in {loc}')
+        return self.platform._backend.jindex[self]
 
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""

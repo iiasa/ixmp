@@ -6,13 +6,13 @@ r: release
 
 matrix:
   include:
-  - os: linux
-    env: PYENV=py37
-  - os: osx
-    env: PYENV=py37
-# turn these on once travis support gets a little better, see pyam for example
-#  - os: windows
+#  - os: linux
 #    env: PYENV=py37
+#  - os: osx
+#    env: PYENV=py37
+# turn these on once travis support gets a little better, see pyam for example
+  - os: windows
+    env: PYENV=py37
 
 r_packages:
 - IRkernel

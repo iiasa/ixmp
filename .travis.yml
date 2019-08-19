@@ -1,9 +1,5 @@
 dist: xenial
 
-language: r
-
-r: release
-
 matrix:
   include:
 #  - os: linux
@@ -13,9 +9,6 @@ matrix:
 # turn these on once travis support gets a little better, see pyam for example
   - os: windows
     env: PYENV=py37
-
-r_packages:
-- IRkernel
 
 cache:
   # Travis ensures these directories are created if they do not already exist
@@ -40,7 +33,6 @@ before_install:
 install:
   - source ci/travis-install.sh
   - pip install .[docs,tests,tutorial]
-  - Rscript -e 'devtools::install("rixmp", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
@@ -48,7 +40,6 @@ script:
   # These include the equivalent of Travis R tests via test_r.py
   - >
     pytest
-    --testr
     --verbose
     --cov=ixmp
     --cov-config ci/.coveragerc

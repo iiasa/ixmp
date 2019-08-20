@@ -319,8 +319,8 @@ class Platform:
         else:
             _logger_region_exists(_regions, region)
 
-    def add_region_synomym(self, region, mapped_to):
-        """Define a synomym for a `region`.
+    def add_region_synonym(self, region, mapped_to):
+        """Define a synonym for a `region`.
 
         When adding timeseries data using the synonym in the region column, it
         will be converted to `mapped_to`.
@@ -368,7 +368,7 @@ def _logger_region_exists(_regions, r):
     region = _regions.set_index('region').loc[r]
     msg = 'region `{}` is already defined in the platform instance'
     if region['mapped_to'] is not None:
-        msg += ' as synomym for region `{}`'.format(region.mapped_to)
+        msg += ' as synonym for region `{}`'.format(region.mapped_to)
     if region['parent'] is not None:
         msg += ', as subregion of `{}`'.format(region.parent)
     logger().info(msg.format(r))

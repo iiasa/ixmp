@@ -151,7 +151,7 @@ def test_timeseries_edit_iamc(test_mp):
 def test_timeseries_edit_with_region_synonyms(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
     test_mp.set_log_level('DEBUG')
-    test_mp.add_region_synomym('Hell', 'World')
+    test_mp.add_region_synonym('Hell', 'World')
     scen = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 
     df = pd.DataFrame.from_dict({'region': ['World'],

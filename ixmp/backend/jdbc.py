@@ -24,7 +24,8 @@ LOG_LEVELS = {
     'NOTSET': 'OFF',
 }
 
-# Java classes, loaded by start_jvm()
+# Java classes, loaded by start_jvm(). These become available as e.g.
+# java.IxException or java.HashMap.
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
@@ -36,7 +37,7 @@ JAVA_CLASSES = [
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
-    ]
+]
 
 
 class JDBCBackend(Backend):

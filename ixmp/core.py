@@ -78,7 +78,7 @@ class Platform:
     _backend_direct = [
         'open_db',
         'close_db',
-        ]
+    ]
 
     def __init__(self, *args, backend='jdbc', **backend_args):
         if backend != 'jdbc':

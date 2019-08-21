@@ -1,6 +1,6 @@
 from subprocess import Popen
-from time import sleep
 import sys
+from time import sleep
 
 from pretenders.client.http import HTTPMock
 from pretenders.common.constants import FOREVER
@@ -17,8 +17,10 @@ def with_mock_server(test_fn):
     # def mocked_test(*args, **kwargs):
     def mocked_test(tmpdir, test_data_path):
         proc = Popen(
-            [sys.executable, '-m', 'pretenders.server.server', '--host',
-             '0.0.0.0', '--port', '8000'])
+            [sys.executable, '-m',
+             'pretenders.server.server',
+             '--host', 'localhost',
+             '--port', '8000'])
         print('Mock server started with pid ' + str(proc.pid))
         sleep(1)
         try:

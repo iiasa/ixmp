@@ -19,7 +19,7 @@ def test_add_region(test_mp):
 
 def test_add_region_synonym(test_mp):
     test_mp.add_region('foo', 'bar', 'World')
-    test_mp.add_region_synomym('foo2', 'foo')
+    test_mp.add_region_synonym('foo2', 'foo')
     regions = test_mp.regions()
     obs = regions[regions.region.isin(['foo', 'foo2'])].reset_index(drop=True)
 

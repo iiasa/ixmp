@@ -13,9 +13,9 @@
 /model/2*/**
 /model/$gms*
 *.dat
+*.swp
 *.tmp
 *.RData*
-*.pyc
 *-checkpoint.ipynb
 *~
 #*

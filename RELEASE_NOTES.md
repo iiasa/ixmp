@@ -5,6 +5,7 @@
 - [#175](https://github.com/iiasa/ixmp/pull/175): Drop support for Python 2.
 - [#174](https://github.com/iiasa/ixmp/pull/174): Set `convertStrings=True` for JPype >= 0.7; see the [JPype changelog](https://jpype.readthedocs.io/en/latest/CHANGELOG.html).
 - [#173](https://github.com/iiasa/ixmp/pull/173): Make AppVeyor CI more robust; support pandas 0.25.0.
+- [#165](https://github.com/iiasa/ixmp/pull/165): Add support for handling geodata.
 
 # v0.2.0
 

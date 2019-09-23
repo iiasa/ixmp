@@ -286,8 +286,12 @@ class AttrSeries(pd.Series):
     def sel(self, indexers=None, **indexers_kwargs):
         indexers = indexers or {}
         indexers.update(indexers_kwargs)
-        idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
-        return AttrSeries(self.loc[idx])
+        if len(indexers) == 1:
+            level, key = list(indexers.items())[0]
+            return AttrSeries(self.xs(key, level=level, drop_level=False))
+        else:
+            idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
+            return AttrSeries(self.loc[idx])
 
     def sum(self, *args, **kwargs):
         try:

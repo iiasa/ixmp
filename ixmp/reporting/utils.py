@@ -17,7 +17,7 @@ ureg = pint.UnitRegistry()
 
 
 # Replacements to apply to quantity units before parsing by pint
-replace_units = {
+REPLACE_UNITS = {
     '%': 'percent',
 }
 
@@ -116,7 +116,7 @@ def clean_units(input_string):
 
     """
     input_string = input_string.strip('[]')
-    for old, new in replace_units.items():
+    for old, new in REPLACE_UNITS.items():
         input_string = input_string.replace(old, new)
     return input_string
 

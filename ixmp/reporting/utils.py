@@ -191,8 +191,7 @@ def _parse_units(units_series):
 
     if len(unit) > 1:
         # py3.5 compat: could use an f-string here
-        log.info('Mixed units {} discarded'.format(unit))
-        unit = ['']
+        raise ValueError('mixed units {!r}'.format(list(unit)))
 
     # Helper method to return an intelligible exception
     def invalid(unit):
@@ -378,6 +377,14 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     except KeyError:
         # 'equ' are returned without units
         attrs = {}
+    except ValueError as e:
+        if 'mixed units' in e.args[0]:
+            # Discard mixed units
+            log.warn('{} discarded for {!r}'.format(e.args[0], name))
+            attrs = {'_unit': ureg.parse_units('')}
+        else:
+            # Raise all other ValueErrors
+            raise
 
     # Set index if 1 or more dimensions
     if len(dims):

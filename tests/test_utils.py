@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import pandas.util.testing as pdt
 import pytest
+from pytest import mark, param
 
 from ixmp import utils
 
@@ -52,8 +53,17 @@ URLS = [
     ('ixmp://local/m/s', dict(dbtype='HSQLDB'), m_s),
     ('ixmp://local/m/s/foo/bar', dict(dbtype='HSQLDB'),
      dict(model='m', scenario='s/foo/bar')),
-    ('m/s#42', dict(), dict(model='m', scenario='s', version=42))
-    # TODO add some values that cause exceptions
+    ('m/s#42', dict(), dict(model='m', scenario='s', version=42)),
+
+    # Invalid values
+    param('foo://example/m/s', None, None,
+          marks=mark.xfail(raises=ValueError)),
+    param('ixmp://example/m', None, None,
+          marks=mark.xfail(raises=ValueError)),
+    param('ixmp://example/m#notaversion', None, None,
+          marks=mark.xfail(raises=ValueError)),
+    param('ixmp://example/m/s?querystring', None, None,
+          marks=mark.xfail(raises=ValueError)),
 ]
 
 

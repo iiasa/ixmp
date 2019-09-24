@@ -51,21 +51,47 @@ def check_year(y, s):
 
 
 def parse_url(url):
-    """Parse *url* for Platform and Scenario information.
+    """Parse *url* and return Platform and Scenario information.
 
-    An ixmp URL uniquely identifies a specific scenario and (optionally)
-    version of a model, stored on in a particular back end, and takes the form:
+    A URL (Uniform Resource Locator), as the name implies, uniquely identifies
+    a specific scenario and (optionally) version of a model, as well as
+    (optionally) the database in which it is stored. ixmp URLs take forms
+    like::
 
         ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]
+        MODEL/SCENARIO[#VERSION]
+
+    Details:
+
+    - The ``PLATFORM`` is interpreted as follows:
+
+      - The exact string 'local': the default local database.
+      - Any string ending in '.local' (e.g. 'foo.local'): the local database
+        of that name (e.g. 'foo') in the ``DEFAULT_LOCAL_DB_PATH``.
+      - Any other string (e.g. 'bar'): the remote database described by a
+        corresponding database properties file (e.g. 'bar.properties') located
+        in the current directory or the ``DB_CONFIG_PATH``.
+
+      See :class:`Config <ixmp.config.Config>` for more information about
+      search paths.
+
+    - ``MODEL`` may not contain the forward slash character ('/'); ``SCENARIO``
+      may contain any number of forward slashes. Both must be supplied.
+    - ``VERSION`` is optional, but if supplied must be an integer.
 
     Returns
     -------
     platform_info : dict
-        Keyword arguments 'dbprops' and (depending on input) 'dbtype' for the
-        :class:`Platform` constructor.
+        Keyword arguments 'dbprops' and 'dbtype' for the :class:`Platform`
+        constructor. Depending on input, one or both may be absent.
     scenario_info : dict
         Keyword arguments for a :class:`Scenario` on the above platform:
-        'model', 'scenario', and/or 'version'.
+        'model', 'scenario' and, optionally, 'version'.
+
+    Raises
+    ------
+    ValueError
+        For malformed urls.
     """
     components = urlparse(url)
     if components.scheme not in ('ixmp', ''):
@@ -98,6 +124,9 @@ def parse_url(url):
 
         scenario_info['model'] = path[0]
         scenario_info['scenario'] = '/'.join(path[1:])
+
+    if len(components.query):
+        raise ValueError(f"queries ({components.query}) not supported in URLs")
 
     if len(components.fragment):
         scenario_info['version'] = int(components.fragment)

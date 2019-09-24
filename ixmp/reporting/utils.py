@@ -284,6 +284,10 @@ class AttrSeries(pd.Series):
         """Read-only."""
         return dict(zip(self.index.names, self.index.levels))
 
+    @property
+    def dims(self):
+        return tuple(self.index.names)
+
     def sel(self, indexers=None, **indexers_kwargs):
         indexers = indexers or {}
         indexers.update(indexers_kwargs)

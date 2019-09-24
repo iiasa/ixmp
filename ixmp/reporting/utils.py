@@ -329,6 +329,12 @@ class AttrSeries(pd.Series):
     def as_xarray(self):
         return xr.DataArray.from_series(self)
 
+    def transpose(self, *dims):
+        return self.reorder_levels(dims)
+
+    def to_dataframe(self):
+        return self.to_frame()
+
     def to_series(self):
         return self
 

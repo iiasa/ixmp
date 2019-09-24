@@ -70,6 +70,22 @@ def test_default_version(test_mp):
     assert scen.version == 2
 
 
+@pytest.mark.skip(reason='Platform does not currently support local dbprops '
+                         'in the default directory.')
+def test_scenario_from_url(test_mp_props):
+    url = 'ixmp://ixmptest.local/Douglas Adams/Hitchhiker'
+
+    # Default version is loaded
+    scen, mp = ixmp.Scenario.from_url(url)
+    assert scen.version == 1
+
+    # Giving an invalid version raises an exception
+    with pytest.raises(Exception, match='There was a problem getting the run '
+                                        'id from the database!'):
+        url += '#10000'
+        scen, mp = ixmp.Scenario.from_url(url)
+
+
 def test_has_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
     assert scen.has_set('i')

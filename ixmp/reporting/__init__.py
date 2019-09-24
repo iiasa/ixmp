@@ -189,7 +189,7 @@ class Reporter:
         return self  # to allow chaining
 
     # Generic graph manipulations
-    def add(self, key, computation, strict=False):
+    def add(self, key, computation, strict=False, sums=False):
         """Add *computation* to the Reporter under *key*.
 
         Parameters
@@ -207,25 +207,36 @@ class Reporter:
         strict : bool, optional
             If True, *key* must not already exist in the Reporter, and
             any keys referred to by *computation* must exist.
+        sums : bool, optional
+            If True, all partial sums of *key* are also added to the Reporter.
 
         Raises
         ------
         KeyError
-            If `key` is already in the Reporter, or any key referred to by
-            `computation` does not exist.
+            If `key` is already in the Reporter; any key referred to by
+            `computation` does not exist; or ``sums=True`` and the key for one
+            of the partial sums of `key` is already in the Reporter.
         """
-        if strict:
-            # Key already exists in graph
-            if key in self.graph:
-                raise KeyError(key)
+        to_add = [(key, computation)]
+        added = []
 
-            # Check that keys used in *computation* are in the graph
-            keylike = filter(lambda e: isinstance(e, (str, Key)), computation)
-            self.check_keys(*keylike)
+        if sums:
+            to_add.extend(key.iter_sums())
 
-        self.graph[key] = computation
+        for k, comp in to_add:
+            if strict:
+                if k in self.graph:
+                    # Key already exists in graph
+                    raise KeyError(key)
 
-        return key
+                # Check that keys used in *comp* are in the graph
+                keylike = filter(lambda e: isinstance(e, (str, Key)), comp)
+                self.check_keys(*keylike)
+
+            self.graph[k] = comp
+            added.append(k)
+
+        return added if sums else added[0]
 
     def apply(self, generator, *keys):
         """Add computations from `generator` applied to `key`.

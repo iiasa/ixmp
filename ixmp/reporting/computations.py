@@ -39,12 +39,17 @@ def sum(quantity, weights=None, dimensions=None):
 
 def aggregate(quantity, groups, keep):
     """Aggregate *quantity* by *groups*."""
+    # NB .transpose() below is necessary only for Quantity == AttrSeries. It
+    #   can be removed when Quantity = xr.DataArray.
+    dim_order = quantity.dims
+
     for dim, dim_groups in groups.items():
         values = []
         for group, members in dim_groups.items():
             values.append(quantity.sel({dim: members})
                                   .sum(dim=dim)
-                                  .assign_coords(**{dim: group}))
+                                  .assign_coords(**{dim: group})
+                                  .transpose(*dim_order))
         if keep:
             # Prepend the original values
             values.insert(0, quantity)

@@ -38,7 +38,25 @@ def sum(quantity, weights=None, dimensions=None):
 
 
 def aggregate(quantity, groups, keep):
-    """Aggregate *quantity* by *groups*."""
+    """Aggregate *quantity* by *groups*.
+
+    Parameters
+    ----------
+    quantity : :class:`Quantity <ixmp.reporting.utils.Quantity>`
+    groups: dict of dict
+        Top-level keys are the names of dimensions in `quantity`. Second-level
+        keys are group names; second-level values are lists of labels along the
+        dimension to sum into a group.
+    keep : bool
+        If True, the members that are aggregated into a group are returned with
+        the group sums. If False, they are discarded.
+
+    Returns
+    -------
+    :class:`Quantity <ixmp.reporting.utils.Quantity>`
+        Same dimensionality as `quantity`.
+
+    """
     # NB .transpose() below is necessary only for Quantity == AttrSeries. It
     #   can be removed when Quantity = xr.DataArray.
     dim_order = quantity.dims

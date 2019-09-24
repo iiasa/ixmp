@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 import pandas.util.testing as pdt
+import pytest
 
 from ixmp import utils
 
@@ -38,3 +39,28 @@ def test_pd_io_xlsx_multi():
     for k, _exp in exp.items():
         _obs = obs[k]
         pdt.assert_frame_equal(_obs, _exp)
+
+
+m_s = dict(model='m', scenario='s')
+
+URLS = [
+    ('ixmp://example/m/s', dict(dbprops='example.properties'), m_s),
+    ('ixmp://example/m/s#42', dict(dbprops='example.properties'),
+     dict(model='m', scenario='s', version=42)),
+    ('ixmp://example.local/m/s', dict(dbprops='example', dbtype='HSQLDB'),
+     m_s),
+    ('ixmp://local/m/s', dict(dbtype='HSQLDB'), m_s),
+    ('ixmp://local/m/s/foo/bar', dict(dbtype='HSQLDB'),
+     dict(model='m', scenario='s/foo/bar')),
+    ('m/s#42', dict(), dict(model='m', scenario='s', version=42))
+    # TODO add some values that cause exceptions
+]
+
+
+@pytest.mark.parametrize('url, p, s', URLS)
+def test_parse_url(url, p, s):
+    platform_info, scenario_info = utils.parse_url(url)
+
+    # Expected platform and scenario information is returned
+    assert platform_info == p
+    assert scenario_info == s

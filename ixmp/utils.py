@@ -5,6 +5,7 @@ try:
     from pathlib import Path
 except ImportError:
     from pathlib2 import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 import six
@@ -47,6 +48,61 @@ def check_year(y, s):
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
         return True
+
+
+def parse_url(url):
+    """Parse *url* for Platform and Scenario information.
+
+    An ixmp URL uniquely identifies a specific scenario and (optionally)
+    version of a model, stored on in a particular back end, and takes the form:
+
+        ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]
+
+    Returns
+    -------
+    platform_info : dict
+        Keyword arguments 'dbprops' and (depending on input) 'dbtype' for the
+        :class:`Platform` constructor.
+    scenario_info : dict
+        Keyword arguments for a :class:`Scenario` on the above platform:
+        'model', 'scenario', and/or 'version'.
+    """
+    components = urlparse(url)
+    if components.scheme not in ('ixmp', ''):
+        raise ValueError('URL must begin with ixmp:// or //')
+
+    platform_info = dict()
+
+    platform = components.netloc
+
+    # Determine the backend information for the platform
+    if platform == 'local':
+        platform_info['dbtype'] = 'HSQLDB'
+    elif platform.endswith('.local'):
+        platform_info['dbtype'] = 'HSQLDB'
+        platform_info['dbprops'] = platform.split('.local')[0]
+    elif platform:
+        if not platform.endswith('.properties'):
+            platform += '.properties'
+        platform_info = dict(dbprops=platform)
+
+    scenario_info = dict()
+
+    path = components.path.split('/')
+    if len(path):
+        # If netloc was given, path begins with '/'; discard
+        path = path if len(path[0]) else path[1:]
+
+        if len(path) < 2:
+            raise ValueError("URL path must be 'MODEL/SCENARIO'")
+
+        scenario_info['model'] = path[0]
+        scenario_info['scenario'] = '/'.join(path[1:])
+
+    if len(components.fragment):
+        scenario_info['version'] = int(components.fragment)
+
+    return platform_info, scenario_info
 
 
 def pd_read(f, *args, **kwargs):

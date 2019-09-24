@@ -52,7 +52,7 @@ class Key:
         else:
             name, *dims = value.split(':')
             _tag = dims[1] if len(dims) == 2 else None
-            dims = dims[0].split('-')
+            dims = dims[0].split('-') if len(dims) else []
         if drop:
             dims = list(filter(lambda d: d not in drop, dims))
         if append:

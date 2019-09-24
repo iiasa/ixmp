@@ -16,7 +16,13 @@ import pandas as pd
 import ixmp as ix
 from ixmp import model_settings
 from ixmp.config import _config
-from ixmp.utils import logger, islistable, check_year, harmonize_path
+from ixmp.utils import (
+    logger,
+    islistable,
+    check_year,
+    harmonize_path,
+    parse_url,
+)
 
 # %% default settings for column headers
 
@@ -850,6 +856,13 @@ class Scenario(TimeSeries):
 
         self._cache = cache
         self._pycache = {}
+
+    @classmethod
+    def from_url(cls, url):
+        platform_info, scenario_info = parse_url(url)
+        platform = Platform(**platform_info)
+        scenario = cls(platform, **scenario_info)
+        return scenario, platform
 
     def _item(self, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.

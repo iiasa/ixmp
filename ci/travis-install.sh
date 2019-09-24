@@ -6,6 +6,9 @@ which gams
 
 
 # Install and update conda
+# -b: run in batch mode with no user input
+# -u: update existing installation
+# -p: install prefix
 $CACHE/$CONDAFNAME -b -u -p $HOME/miniconda
 conda update --yes conda
 

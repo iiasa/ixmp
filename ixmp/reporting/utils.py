@@ -1,4 +1,5 @@
 import collections
+from collections.abc import Collection
 from copy import deepcopy
 
 from functools import partial, reduce
@@ -288,10 +289,13 @@ class AttrSeries(pd.Series):
         indexers.update(indexers_kwargs)
         if len(indexers) == 1:
             level, key = list(indexers.items())[0]
-            return AttrSeries(self.xs(key, level=level, drop_level=False))
-        else:
-            idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
-            return AttrSeries(self.loc[idx])
+            if not isinstance(key, Collection):
+                # When using .loc[] to select 1 label on 1 level, pandas drops
+                # the level. Use .xs() to avoid this behaviour
+                return AttrSeries(self.xs(key, level=level, drop_level=False))
+
+        idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
+        return AttrSeries(self.loc[idx])
 
     def sum(self, *args, **kwargs):
         try:

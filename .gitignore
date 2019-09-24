@@ -58,6 +58,8 @@ rixmp/source/.Rhistory
 # pytest
 .coverage
 .pytest_cache/
+# Related to test_access.py
+*.pid
 
 # idea
 .idea/

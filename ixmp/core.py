@@ -859,9 +859,33 @@ class Scenario(TimeSeries):
 
     @classmethod
     def from_url(cls, url):
+        """Instantiate a Scenario given an ixmp-scheme URL.
+
+        The following are equivalent::
+
+            from ixmp import Platform, Scenario
+            mp = Platform(dbprops='example.properties')
+            scen = Scenario(mp 'model', 'scenario', version=42)
+
+        and::
+
+            from ixmp import Scenario
+            scen, mp = Scenario.from_url('ixmp://example/model/scenario#42')
+
+        Parameters
+        ----------
+        url : str
+            See :meth:`parse_url <ixmp.utils.parse_url>`.
+
+        Returns
+        -------
+        scenario, platform : 2-tuple of (Scenario, :class:`Platform`)
+            The Scenario and Platform referred to by the URL.
+        """
         platform_info, scenario_info = parse_url(url)
         platform = Platform(**platform_info)
         scenario = cls(platform, **scenario_info)
+
         return scenario, platform
 
     def _item(self, ix_type, name, load=True):

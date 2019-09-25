@@ -50,3 +50,6 @@ esac
 export CONDAFNAME=Miniconda$PYVERSION-latest-$OSNAME-x86_64.$EXT
 export CONDAURL=https://repo.anaconda.com/miniconda/$CONDAFNAME
 export PATH=$HOME/miniconda/bin:$PATH
+
+# Echo all environment variables for debugging
+env | sort

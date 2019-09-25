@@ -13,7 +13,7 @@ maybe_download $CONDAURL $CONDAFNAME
 
 
 # Install graphiz on OS X (requires updating homebrew)
-if [ `uname` -eq "Darwin" ];
+if [ `uname` = "Darwin" ];
 then
   brew update
   brew install graphviz

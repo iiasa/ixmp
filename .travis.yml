@@ -22,7 +22,7 @@ cache:
   directories:
   - $HOME/.conda/pkgs
   - $HOME/.cache/ixmp
-  - $HOME/miniconda/pkgs
+#  - $HOME/miniconda/pkgs
   - $HOME/R/Library
 
 addons:

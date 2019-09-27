@@ -27,8 +27,4 @@ build: false
 test_script:
   # Run tests
   # These include the equivalent of Travis R tests via test_r.py
-  - >
-    pytest
-    --verbose
-    --cov ixmp --cov-config ci/coveragerc
-    --cov-report term-missing --cov-report xml
+  - pytest --test-r --verbose

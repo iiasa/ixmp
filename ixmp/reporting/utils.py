@@ -1,6 +1,7 @@
 import collections
 from collections.abc import Collection
 from copy import deepcopy
+from functools import lru_cache
 
 from functools import partial, reduce
 from itertools import compress
@@ -35,30 +36,28 @@ def combo_partition(iterable):
 
 class Key:
     """A hashable key for a quantity that includes its dimensionality."""
-    # TODO cache repr() and only recompute when name/dims changed
-
     def __init__(self, name, dims=[], tag=None):
         self._name = name
-        self._dims = list(dims)
+        self._dims = tuple(dims)
         self._tag = tag if isinstance(tag, str) and len(tag) else None
 
     @classmethod
-    def from_str_or_key(cls, value, drop=None, append=None, tag=None):
+    def from_str_or_key(cls, value, drop=[], append=[], tag=None):
         """Return a new Key from *value*."""
+        # Determine the base Key
         if isinstance(value, cls):
-            name = value._name
-            dims = value._dims.copy()
-            _tag = value._tag
+            base = value
         else:
+            # Parse a string
             name, *dims = value.split(':')
             _tag = dims[1] if len(dims) == 2 else None
             dims = dims[0].split('-') if len(dims) else []
-        if drop:
-            dims = list(filter(lambda d: d not in drop, dims))
-        if append:
-            dims.append(append)
-        tag = '+'.join(filter(None, [_tag, tag]))
-        return cls(name, dims, tag)
+            base = cls(name, dims, _tag)
+
+        # Drop and append dimensions; add tag
+        return base.drop(*(base.dims if drop is True else drop)) \
+                   .append(*append) \
+                   .add_tag(tag)
 
     @classmethod
     def product(cls, new_name, *keys):
@@ -67,40 +66,76 @@ class Key:
         Dimensions are ordered by their first appearance.
         """
         # Dimensions of first key appear first
-        base_dims = keys[0]._dims
+        base_dims = keys[0].dims
 
         # Accumulate additional dimensions from subsequent keys
         new_dims = []
         for key in keys[1:]:
-            new_dims.extend(set(key._dims) - set(base_dims) - set(new_dims))
+            new_dims.extend(set(key.dims) - set(base_dims) - set(new_dims))
 
         # Return new key
         return cls(new_name, base_dims + new_dims)
 
     def __repr__(self):
+        return f'<{self}>'
+
+    def __str__(self):
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
-        return ':'.join([self._name, '-'.join(self._dims)]
-                        + ([self._tag] if self._tag is not None else []))
+        @lru_cache(1)
+        def _():
+            return ':'.join([self._name, '-'.join(self._dims)] +
+                            ([self._tag] if self._tag else []))
+        return _()
 
     def __hash__(self):
-        return hash(repr(self))
+        return hash(str(self))
 
     def __eq__(self, other):
-        return repr(self) == other
+        return str(self) == other
 
+    # Less-than and greater-than operations, for sorting
     def __lt__(self, other):
         if isinstance(other, (self.__class__, str)):
-            return repr(self) < repr(other)
+            return str(self) < str(other)
 
     def __gt__(self, other):
         if isinstance(other, (self.__class__, str)):
-            return repr(self) > repr(other)
+            return str(self) > str(other)
+
+    @property
+    def name(self):
+        """Name of the quantity, :class:`str`."""
+        return self._name
+
+    @property
+    def dims(self):
+        """Dimensions of the quantity, :class:`tuple` of :class:`str`."""
+        return self._dims
+
+    @property
+    def tag(self):
+        """Quantity tag, :class:`str`."""
+        return self._tag
+
+    def drop(self, *dims):
+        """Return a new Key with *dims* dropped."""
+        return Key(self.name, filter(lambda d: d not in dims, self.dims),
+                   self.tag)
+
+    def append(self, *dims):
+        """Return a new Key with additional dimensions *dims*."""
+        return Key(self.name, list(self.dims) + list(dims), self.tag)
+
+    def add_tag(self, tag):
+        """Return a new Key with *tag* appended."""
+        return Key(self.name, self.dims,
+                   '+'.join(filter(None, [self.tag, tag])))
 
     def iter_sums(self):
         """Yield (key, task) for all possible partial sums of the Key."""
         from . import computations
 
-        for agg_dims, others in combo_partition(self._dims):
+        for agg_dims, others in combo_partition(self.dims):
             yield Key(self._name, agg_dims), \
                 (partial(computations.sum, dimensions=others, weights=None),
                  self)
@@ -288,14 +323,14 @@ class AttrSeries(pd.Series):
     def dims(self):
         return tuple(self.index.names)
 
-    def sel(self, indexers=None, **indexers_kwargs):
+    def sel(self, indexers=None, drop=False, **indexers_kwargs):
         indexers = indexers or {}
         indexers.update(indexers_kwargs)
         if len(indexers) == 1:
             level, key = list(indexers.items())[0]
-            if not isinstance(key, Collection):
+            if not isinstance(key, Collection) and not drop:
                 # When using .loc[] to select 1 label on 1 level, pandas drops
-                # the level. Use .xs() to avoid this behaviour
+                # the level. Use .xs() to avoid this behaviour unless drop=True
                 return AttrSeries(self.xs(key, level=level, drop_level=False))
 
         idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)

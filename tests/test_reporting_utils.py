@@ -11,8 +11,11 @@ from ixmp.testing import assert_qty_allclose, assert_qty_equal
 def test_reporting_key():
     k1 = Key('foo', ['a', 'b', 'c'])
 
+    # String
+    assert str(k1) == 'foo:a-b-c'
+
     # Representation
-    assert repr(k1) == 'foo:a-b-c'
+    assert repr(k1) == '<foo:a-b-c>'
 
     # Key hashes the same as its string representation
     assert hash(k1) == hash('foo:a-b-c')
@@ -22,6 +25,9 @@ def test_reporting_key():
 
     # Number of partial sums for a 3-dimensional quantity
     assert sum(1 for a in k1.iter_sums()) == 7
+
+    # Key with name and tag but no dimensions
+    assert Key('foo', tag='bar') == 'foo::bar'
 
 
 class TestQuantity:

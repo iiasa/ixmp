@@ -44,6 +44,16 @@ from .describe import describe_recursive
 log = logging.getLogger(__name__)
 
 
+class KeyExistsError(KeyError):
+    def __str__(self):
+        return f'key {self.args[0]!r} already exists'
+
+
+class MissingKeyError(KeyError):
+    def __str__(self):
+        return f'required keys {self.args!r} not defined'
+
+
 class Reporter:
     """Class for generating reports on :class:`ixmp.Scenario` objects."""
     # TODO meet the requirements:
@@ -61,6 +71,7 @@ class Reporter:
 
     def __init__(self, **kwargs):
         self.graph = {'filters': None}
+        self._index = {}
         self.configure(**kwargs)
 
     @classmethod
@@ -189,7 +200,7 @@ class Reporter:
         return self  # to allow chaining
 
     # Generic graph manipulations
-    def add(self, key, computation, strict=False, sums=False):
+    def add(self, key, computation, strict=False, index=False, sums=False):
         """Add *computation* to the Reporter under *key*.
 
         Parameters
@@ -207,6 +218,9 @@ class Reporter:
         strict : bool, optional
             If True, *key* must not already exist in the Reporter, and
             any keys referred to by *computation* must exist.
+        index : bool, optional
+            If True, *key* is added to the index as a full-resolution key, so
+            it can be later retrieved with :meth:`full_key`.
         sums : bool, optional
             If True, all partial sums of *key* are also added to the Reporter.
 
@@ -217,21 +231,28 @@ class Reporter:
             `computation` does not exist; or ``sums=True`` and the key for one
             of the partial sums of `key` is already in the Reporter.
         """
-        to_add = [(key, computation)]
+        to_add = [(key, computation)] + (key.iter_sums() if sums else [])
         added = []
-
-        if sums:
-            to_add.extend(key.iter_sums())
 
         for k, comp in to_add:
             if strict:
                 if k in self.graph:
                     # Key already exists in graph
-                    raise KeyError(key)
+                    raise KeyExistsError(key)
 
                 # Check that keys used in *comp* are in the graph
                 keylike = filter(lambda e: isinstance(e, (str, Key)), comp)
                 self.check_keys(*keylike)
+
+            if index:
+                # String equivalent of *key* with all dimensions dropped
+                idx = str(Key.from_str_or_key(key, drop=True)).rstrip(':')
+
+                # Add *key* to the index
+                self._index[idx] = key
+
+                # Don't index further elements of to_add, e.g. sums
+                index = False
 
             self.graph[k] = comp
             added.append(k)
@@ -291,13 +312,18 @@ class Reporter:
     def keys(self):
         return self.graph.keys()
 
-    def full_key(self, name):
-        """Return the full-dimensionality key for *name*.
+    def full_key(self, name_or_key):
+        """Return the full-dimensionality key for *name_or_key*.
 
-        An ixmp variable 'foo' indexed by a, c, n, q, and x is available in the
-        Reporter at ``'foo:a-c-n-q-x'``. ``full_key('foo')`` retrieves this
-        :class:`Key <ixmp.reporting.utils.Key>`.
+        An ixmp variable 'foo' with dimensions (a, c, n, q, x) is available in
+        the Reporter as ``'foo:a-c-n-q-x'``. This :class:`Key
+        <ixmp.reporting.utils.Key>` can be retrieved with::
+
+            rep.full_key('foo')
+            rep.full_key('foo:c')
+            # etc.
         """
+        name = str(Key.from_str_or_key(name_or_key, drop=True)).rstrip(':')
         return self._index[name]
 
     def check_keys(self, *keys):
@@ -324,7 +350,7 @@ class Reporter:
                 missing.append(key)
 
         if len(missing):
-            raise KeyError(missing)
+            raise MissingKeyError(*missing)
 
         return result
 

@@ -88,6 +88,10 @@ def test_reporter_add():
     with pytest.raises(MissingKeyError, match=msg(g)):
         r.disaggregate(g, 'j')
 
+    # add(..., sums=True) also adds partial sums
+    key = Key('foo', ['a', 'b', 'c'])
+    r.add(key, [], sums=True)
+
 
 def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)

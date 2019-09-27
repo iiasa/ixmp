@@ -11,6 +11,7 @@ import xarray as xr
 
 import ixmp.reporting
 from ixmp.reporting import (
+    ComputationError,
     KeyExistsError,
     MissingKeyError,
     Key,
@@ -371,7 +372,7 @@ def test_reporting_platform_units(test_mp, caplog):
         scen.add_par('x', x)
 
         # Parsing units with invalid chars raises an intelligible exception
-        with pytest.raises(ValueError, match=msg.format(expr, chars)):
+        with pytest.raises(ComputationError, match=msg.format(expr, chars)):
             rep.get(x_key)
 
     # Now using parseable but unrecognized units

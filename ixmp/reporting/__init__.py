@@ -307,7 +307,7 @@ class Reporter:
         try:
             return dask_get(dsk, key)
         except Exception as exc:
-            _handle_computation_error(self, exc)
+            raise ComputationError from exc
 
     def keys(self):
         return self.graph.keys()
@@ -590,61 +590,63 @@ def _config_args(path, keys, sections={}):
     return result
 
 
-def _handle_computation_error(reporter, exc):
-    """Helper to print intelligible exception information for Reporter.get().
+class ComputationError(Exception):
+    """Wrapper to print intelligible exception information for Reporter.get().
 
     In order to aid in debugging, this helper:
     - Omits the parts of the stack trace that are internal to dask, and
     - Gives the key in the Reporter.graph and the computation task that
       caused the exception.
     """
-    from traceback import (
-        TracebackException,
-        format_exception_only,
-        format_list,
-    )
-    import sys
+    def __str__(self):
+        from traceback import (
+            TracebackException,
+            format_exception_only,
+            format_list,
+        )
 
-    # Two copies of the stack: one with information on local variables (for
-    # retrieving the key and task); one without (for printing the traceback)
-    tb1 = TracebackException.from_exception(exc, capture_locals=True)
-    tb2 = TracebackException.from_exception(exc)
+        # Move the cause to a non-private attribute
+        self.cause = self.__cause__
 
-    info = None  # Information about the call that triggered the exception
-    frames = []  # Frames for an abbreviated stack trace, from tb2
-    dask_internal = True  # Flag if the frame is internal to dask
+        # Suppress automatic printing of the cause
+        self.__cause__ = None
 
-    # Iterate over frames from the base of the stack
-    for frame, summary in zip(tb1.stack, tb2.stack):
-        if frame.name == 'execute_task':
-            # Dask internal call to execute a task
+        info = None  # Information about the call that triggered the exception
+        frames = []  # Frames for an abbreviated stacktrace
+        dask_internal = True  # Flag if the frame is internal to dask
 
-            # Retrieve information about the key/task that triggered the
-            # exception
-            info = dict(key=frame.locals['key'],
-                        task=frame.locals['task'])
+        # Iterate over frames from the base of the stack
+        tb = TracebackException.from_exception(self.cause, capture_locals=True)
+        for frame in tb.stack:
+            if frame.name == 'execute_task':
+                # Current frame is the dask internal call to execute a task
 
-            # Remaining frames are related to the exception
-            dask_internal = False
+                # Retrieve information about the key/task that triggered the
+                # exception. These are not the raw values of variables, but
+                # their string repr().
+                info = {name: frame.locals[name] for name in ('key', 'task')}
 
-        if not dask_internal:
-            # Store the frame for printing the traceback
-            frames.append(summary)
+                # Remaining frames are related to the exception
+                dask_internal = False
 
-    # Assemble the exception printout
+            if not dask_internal:
+                # Don't display the locals when printing the traceback
+                frame.locals = None
 
-    # Traceback; omitting a few dask internal calls below execute_task
-    lines = ['Traceback (most recent call last):\n'] + format_list(frames[3:])
+                # Store the frame for printing the traceback
+                frames.append(frame)
 
-    # Type and message of the original exception
-    lines.extend(format_exception_only(exc.__class__, exc))
+        # Assemble the exception printout
 
-    # Reporter information for debugging
-    lines.append("\nOccurred when computing {key!r} using:\n{task}\n\n"
-                 .format(**info))
-    lines.append("Use Reporter.describe(...) to trace the computation.")
+        # Reporter information for debugging
+        lines = [
+            'when computing {key}, using\n\n{task}\n\n'.format(**info),
+            'Use Reporter.describe(...) to trace the computation.\n\n',
+            'Computation traceback:\n',
+        ]
+        # Traceback; omitting a few dask internal calls below execute_task
+        lines.extend(format_list(frames[3:]))
+        # Type and message of the original exception
+        lines.extend(format_exception_only(self.cause.__class__, self.cause))
 
-    print(''.join(lines))
-
-    # Exit instead of raising further
-    sys.exit(1)
+        return ''.join(lines)

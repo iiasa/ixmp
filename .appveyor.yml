@@ -19,7 +19,7 @@ init:
 
 install:
   - ps: . .\ci\appveyor-install.ps1
-  - pip install .[docs,tests,tutorial]
+  - pip install --editable .[docs,tests,tutorial]
   - Rscript .\ci\appveyor-install.R 2
 
 build: false
@@ -30,6 +30,5 @@ test_script:
   - >
     pytest
     --verbose
-    --cov=ixmp
-    --cov-config ci/.coveragerc
-    --cov-report term-missing
+    --cov ixmp --cov-config ci/coveragerc
+    --cov-report term-missing --cov-report xml

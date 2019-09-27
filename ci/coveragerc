@@ -1,3 +1,4 @@
 [report]
 omit =
+    ixmp/_version.py
     ixmp/lib/*

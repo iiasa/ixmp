@@ -18,8 +18,8 @@ conda create -n testing python=$PYVERSION --yes
 # Install deps
 conda install -n testing -c conda-forge --yes \
       ixmp \
+      codecov \
       pytest \
-      coveralls \
       pytest-cov
 conda remove -n testing --force --yes ixmp
 

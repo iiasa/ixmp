@@ -66,7 +66,7 @@ class Key:
         Dimensions are ordered by their first appearance.
         """
         # Dimensions of first key appear first
-        base_dims = keys[0].dims
+        base_dims = list(keys[0].dims)
 
         # Accumulate additional dimensions from subsequent keys
         new_dims = []

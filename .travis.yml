@@ -49,9 +49,7 @@ script:
     pytest
     --testr
     --verbose
-    --cov=ixmp
-    --cov-config ci/.coveragerc
-    --cov-report term-missing
+    --cov ixmp --cov-config ci/coveragerc --cov-report term-missing,xml
   # Test that documentation can be built
   - cd doc
   - pip install -r requirements.txt

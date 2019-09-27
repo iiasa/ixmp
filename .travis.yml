@@ -58,4 +58,5 @@ script:
   - make html
 
 after_success:
-  - coveralls
+  - coverage combine
+  - codecov

@@ -1,4 +1,3 @@
-[report]
+[run]
 omit =
-    ixmp/_version.py
-    ixmp/lib/*
+    */_version.py

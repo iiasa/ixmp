@@ -231,8 +231,11 @@ class Reporter:
             `computation` does not exist; or ``sums=True`` and the key for one
             of the partial sums of `key` is already in the Reporter.
         """
-        to_add = [(key, computation)] + (key.iter_sums() if sums else [])
+        to_add = [(key, computation)]
         added = []
+
+        if sums:
+            to_add = chain(to_add, Key.from_str_or_key(key).iter_sums())
 
         for k, comp in to_add:
             if strict:

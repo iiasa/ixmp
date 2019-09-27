@@ -89,8 +89,8 @@ def test_reporter_add():
         r.disaggregate(g, 'j')
 
     # add(..., sums=True) also adds partial sums
-    key = Key('foo', ['a', 'b', 'c'])
-    r.add(key, [], sums=True)
+    r.add('foo:a-b-c', [], sums=True)
+    assert 'foo:b' in r
 
 
 def test_reporter_from_scenario(scenario):

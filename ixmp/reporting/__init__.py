@@ -440,6 +440,7 @@ class Reporter:
         :class:`Key`
             The key of the newly-added node.
         """
+        # TODO maybe split this to two methods?
         if isinstance(dims_or_groups, dict):
             groups = dims_or_groups
             if len(groups) > 1:
@@ -455,7 +456,7 @@ class Reporter:
             key = Key.from_str_or_key(qty, drop=dims, tag=tag)
             comp = (partial(computations.sum, dimensions=dims), qty, weights)
 
-        return self.add(key, comp, True)
+        return self.add(key, comp, strict=True, index=True)
 
     def disaggregate(self, qty, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.

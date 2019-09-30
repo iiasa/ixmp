@@ -46,22 +46,21 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-Exec { conda update --quiet --yes conda }
+Exec { conda update -n testing --quiet --yes conda }
 
 # Create named environment
 Exec { conda create -n testing python=$PYTHON_VERSION --yes}
 
 
 # Install dependencies
-# TODO for PYTHON_VERSION = 2.7, this causes mkl and openjdk to be installed,
-#      each about 150 MB. Enable Appveyor caching or tweak conda configuration
-#      to speed up.
 Exec { conda install -n testing --channel conda-forge  --quiet --yes `
-       ixmp[tests] "pytest>=3.9" coveralls pytest-cov }
+       ixmp[tests] codecov "pytest>=3.9" pytest-cov }
 Exec { conda remove -n testing --force --yes ixmp }
 
-# Activate the environment
-Exec { activate testing }
+
+# Activate the environment. This is not wrapped in Exec { } because that
+# cmdlet operates in a sub-process and doesn't modify the current shell.
+activate testing
 
 # Show information
 Exec { conda info --all }

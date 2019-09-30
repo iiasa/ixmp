@@ -61,6 +61,7 @@ Exec { conda install -n testing --channel conda-forge  --quiet --yes `
 Exec { conda remove -n testing --force --yes ixmp }
 
 # Activate the environment
+Exec { conda init powershell }
 Exec { conda activate testing }
 
 # Show information

@@ -9,12 +9,13 @@ Function Exec
         [Parameter(Position=0, Mandatory=1)]
         [scriptblock]$Command,
         [Parameter(Position=1, Mandatory=0)]
-        [string]$ErrorMessage = "Execution of command failed.`n$Command"
+        [string]$ErrorMessage = 'Execution of command failed.`n$Command'
     )
-    $ErrorActionPreference = "Continue"
-    . $Command 2>&1 | %{ "$_" }
+    $ErrorActionPreference = 'Continue'
+    Write-Host '$Command' -ForegroundColor cyan
+    . $Command 2>&1 | %{ '$_' }
     if ($LastExitCode -ne 0) {
-        throw "Exec: $ErrorMessage`nExit code: $LastExitCode"
+        throw 'Exec: $ErrorMessage`nExit code: $LastExitCode'
     }
 }
 
@@ -33,13 +34,13 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 Progress "Install GAMS"
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSInstaller $GAMSArgs -Wait 2>&1 | Write-Host
+Exec { $GAMSInstaller $GAMSArgs }
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-gams 2>&1 | Write-Host
+Exec { gams }
 
 
 Progress 'Set conda version/path'
@@ -57,32 +58,20 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-Progress '1'
-where.exe conda | Write-Host
-
-Progress '2'
+# Display the conda executable
 where.exe conda
+which.exe activate
 
 Progress "Create 'testing' environment"
-conda create -n testing python=$PYTHON_VERSION --yes
+Exec { conda create -n testing python=$PYTHON_VERSION --yes }
 
 Progress "Activate the environment"
 
 Progress "1"
+Exec { activate.bat testing }
 
 Progress "2"
-which.exe activate | Write-Host
-
-Progress "3"
-which.exe activate.bat | Write-Host
-
-Progress "4"
-activate.bat testing | Write-Host
-
-Progress "5"
-
-Progress "6"
-which.exe jupyter | Write-Host
+which.exe jupyter
 
 Progress "Install dependencies"
 Exec { conda install -n testing --channel conda-forge --quiet --yes `

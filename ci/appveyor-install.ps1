@@ -56,7 +56,7 @@ $env:CONDA_ROOT = $CR
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 Progress "Create 'testing' environment"
-conda create -n testing python=$PYTHON_VERSION --yes | Write-Host
+conda create -n testing python=$PYTHON_VERSION --yes
 
 Progress "Activate the environment"
 

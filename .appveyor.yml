@@ -2,6 +2,9 @@
 # Based on https://github.com/rmcgibbo/python-appveyor-conda-example
 
 environment:
+  # Variables common to all jobs
+  USE_RTOOLS: true
+
   matrix:
   - PYTHON_VERSION: "3.6"
     PYTHON_ARCH: "64"

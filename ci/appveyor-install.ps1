@@ -48,13 +48,20 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 # and errors.
 Exec { conda update --quiet --yes conda }
 
-# TODO create a 'testing' env, as on Travis.
+# Create named environment
+Exec { conda create -n testing python=$MC_PYTHON_VERSION --yes}
+
+
+# Install dependencies
 # TODO for PYTHON_VERSION = 2.7, this causes mkl and openjdk to be installed,
-# each about 150 MB. Enable Appveyor caching or tweak conda configuration to
-# speed up.
-Exec { conda install --channel conda-forge  --quiet --yes `
+#      each about 150 MB. Enable Appveyor caching or tweak conda configuration
+#      to speed up.
+Exec { conda install -n testing --channel conda-forge  --quiet --yes `
        ixmp[tests] "pytest>=3.9" coveralls pytest-cov }
-Exec { conda remove --force --yes ixmp }
+Exec { conda remove -n testing --force --yes ixmp }
+
+# Activate the environment
+Exec { conda activate testing }
 
 # Show information
 Exec { conda info --all }

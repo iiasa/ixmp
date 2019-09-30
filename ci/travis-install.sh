@@ -15,7 +15,7 @@ conda update --yes conda
 # Create named env
 conda create -n testing python=$PYVERSION --yes
 
-# Install deps
+# Install dependencies
 conda install -n testing -c conda-forge --yes \
       ixmp \
       codecov \
@@ -23,7 +23,7 @@ conda install -n testing -c conda-forge --yes \
       pytest-cov
 conda remove -n testing --force --yes ixmp
 
-# Use '.' (POSIX) instead of 'source' (a bashism)
+# Activate the environment. Use '.' (POSIX) instead of 'source' (a bashism).
 . activate testing
 
 # Show information

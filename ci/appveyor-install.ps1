@@ -1,3 +1,7 @@
+# Modified from 'Exec' cmdlet in krlmlr/r-appveyor/scripts/appveyor-tool.ps1
+#
+# The sole difference is '. $Command' instead of '& $Command'; this ensures the
+# script block is executed in the current scope, rather than a child scope.
 Function Exec
 {
     [CmdletBinding()]
@@ -21,11 +25,12 @@ $ErrorActionPreference = 'Stop'
 # For debugging, use -Trace 1 or -Trace 2.
 Set-PSDebug -Trace 0
 
-# Download GAMS
+# The 'Progress' cmdlet is also from appveyor-tool.ps1
+Progress "Download GAMS"
 $GAMSInstaller = '..\windows_x64_64.exe'
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
 
-# Install GAMS
+Progress "Install GAMS"
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
 Start-Process $GAMSInstaller $GAMSArgs -Wait
@@ -63,13 +68,13 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-Exec { conda update --yes conda }
+Exec { conda update --quiet --yes conda }
 
 Progress "Create 'testing' environment"
 Exec { conda create -n testing python=$PYTHON_VERSION --yes }
 
 Progress "Install dependencies"
-Exec { conda install -n testing --channel conda-forge --yes `
+Exec { conda install -n testing --channel conda-forge --quiet --yes `
       ixmp[tests] `
       codecov `
       "pytest>=3.9" `
@@ -77,7 +82,8 @@ Exec { conda install -n testing --channel conda-forge --yes `
 Exec { conda remove -n testing --force --yes ixmp }
 
 Progress "Activate the environment"
-Exec { activate testing }
+activate testing
+where jupyter
 
 Progress "Conda information"
 Exec { conda info --all }

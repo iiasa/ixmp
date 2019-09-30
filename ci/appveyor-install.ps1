@@ -21,7 +21,7 @@ gams | Out-Default
 
 Write-Output '-----'
 
-gams | Write-Host
+gams 2>&1 | { "$_" }
 
 Write-Output '-----'
 

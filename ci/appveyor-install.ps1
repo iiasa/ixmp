@@ -1,3 +1,20 @@
+Function Exec
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Position=0, Mandatory=1)]
+        [scriptblock]$Command,
+        [Parameter(Position=1, Mandatory=0)]
+        [string]$ErrorMessage = "Execution of command failed.`n$Command"
+    )
+    $ErrorActionPreference = "Continue"
+    . $Command 2>&1 | %{ "$_" }
+    if ($LastExitCode -ne 0) {
+        throw "Exec: $ErrorMessage`nExit code: $LastExitCode"
+    }
+}
+
+
 # Halt instead of stalling on failure
 $ErrorActionPreference = 'Stop'
 
@@ -21,7 +38,7 @@ gams | Out-Default
 
 Write-Output '-----'
 
-gams 2>&1 | { "$_" }
+Exec { gams }
 
 Write-Output '-----'
 

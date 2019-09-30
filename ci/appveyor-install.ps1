@@ -26,21 +26,21 @@ $ErrorActionPreference = 'Stop'
 # For debugging, use -Trace 1 or -Trace 2.
 Set-PSDebug -Trace 1
 
-# The 'Progress' cmdlet is also from appveyor-tool.ps1
-Progress "Download GAMS"
-$GAMSInstaller = '..\windows_x64_64.exe'
-Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
-
-Progress "Install GAMS"
-$GAMSPath = 'C:\GAMS'
-$GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSInstaller $GAMSArgs -Wait
-
-# Add to PATH
-$env:PATH = $GAMSPath + ';' + $env:PATH
-
-# Show information
-Exec { gams }
+# # The 'Progress' cmdlet is also from appveyor-tool.ps1
+# Progress "Download GAMS"
+# $GAMSInstaller = '..\windows_x64_64.exe'
+# Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
+#
+# Progress "Install GAMS"
+# $GAMSPath = 'C:\GAMS'
+# $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
+# Start-Process $GAMSInstaller $GAMSArgs -Wait
+#
+# # Add to PATH
+# $env:PATH = $GAMSPath + ';' + $env:PATH
+#
+# # Show information
+# Exec { gams }
 
 
 Progress 'Set conda version/path'
@@ -68,7 +68,7 @@ Exec { conda create -n testing python=$PYTHON_VERSION --yes }
 Progress "Activate the environment"
 
 Progress "1"
-activate.bat testing
+Exec { activate testing }
 
 conda info --all
 

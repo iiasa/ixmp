@@ -39,7 +39,7 @@ Start-Process $GAMSInstaller $GAMSArgs -Wait
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-gams | Out-Default
+gams | Write-Host
 
 Write-Output '-----'
 
@@ -65,6 +65,8 @@ $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
 $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
+Exec { where activate }
+where activate | Write-Host
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
@@ -89,10 +91,10 @@ Progress "Conda information"
 Exec { conda info --all }
 
 Progress "Install graphviz (for dask.visualize)"
-Exec { choco install --no-progress graphviz }
+choco install --no-progress graphviz
 
 Progress "Set up r-appveyor"
-Exec { Bootstrap }
+Bootstrap
 
 Progress "Install R packages needed for testing and the package itself"
 Exec { Rscript .\ci\appveyor-install.R 1 }

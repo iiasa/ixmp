@@ -34,7 +34,7 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 Progress "Install GAMS"
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Exec { $GAMSInstaller $GAMSArgs }
+Start-Process $GAMSInstaller $GAMSArgs -Wait
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH

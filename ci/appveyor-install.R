@@ -12,6 +12,8 @@ if ( step == '1' ) {
   # Install the IR kernel specification so that Jupyter can handle R notebooks
   IRkernel::installspec()
 } else if ( step == '2' ) {
+  system('echo %PATH%')
+  system('set')
   devtools::install(file.path('.', 'rixmp'),
                     args = '--no-multiarch',
                     dependencies = TRUE)

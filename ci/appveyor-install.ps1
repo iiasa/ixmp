@@ -65,8 +65,8 @@ $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
 $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
-Exec { where activate }
-where activate | Write-Host
+Exec { where.exe activate }
+where.exe activate | Write-Host
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.

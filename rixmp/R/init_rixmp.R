@@ -49,7 +49,6 @@ ixmp <- NULL
     # Set $XDG_DATA_HOME within the reticulate Python process
     # NB R's Sys.setenv() does not work here if reticulate has already started
     #    Python
-    stop(parts)
     reticulate::py_run_string(paste0(
       "import os; os.environ['XDG_DATA_HOME'] = '",
       do.call('file.path', as.list(parts)), "'"))

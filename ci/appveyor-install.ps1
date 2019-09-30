@@ -46,7 +46,7 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-Exec { conda update -n testing --quiet --yes conda }
+Exec { conda update --quiet --yes conda }
 
 # Create named environment
 Exec { conda create -n testing python=$PYTHON_VERSION --yes}

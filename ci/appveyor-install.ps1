@@ -33,24 +33,13 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 Progress "Install GAMS"
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSInstaller $GAMSArgs -Wait
+Start-Process $GAMSInstaller $GAMSArgs -Wait | Write-Host
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
 gams 2>&1 | Write-Host
-
-Write-Output '-----'
-
-Exec { gams }
-
-Write-Output '-----'
-
-Start-Process gams -Wait
-
-
-Progress "Update conda"
 
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
@@ -66,12 +55,28 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors.
-conda update --quiet --yes conda | Write-Host
-
 Progress "Create 'testing' environment"
-Exec { conda create -n testing python=$PYTHON_VERSION --yes }
+conda create -n testing python=$PYTHON_VERSION --yes | Write-Host
+
+Progress "Activate the environment"
+
+Progress "1"
+set
+
+Progress "2"
+which.exe activate | Write-Host
+
+Progress "3"
+which.exe activate.bat | Write-Host
+
+Progress "4"
+activate.bat testing | Write-Host
+
+Progress "5"
+set
+
+Progress "6"
+which.exe jupyter | Write-Host
 
 Progress "Install dependencies"
 Exec { conda install -n testing --channel conda-forge --quiet --yes `
@@ -81,9 +86,6 @@ Exec { conda install -n testing --channel conda-forge --quiet --yes `
       pytest-cov }
 Exec { conda remove -n testing --force --yes ixmp }
 
-Progress "Activate the environment"
-activate.bat testing | Write-Host
-where jupyter
 
 Progress "Conda information"
 Exec { conda info --all }
@@ -91,7 +93,6 @@ Exec { conda info --all }
 Progress "Install graphviz (for dask.visualize)"
 choco install --no-progress graphviz
 
-Progress "Set up r-appveyor"
 Bootstrap
 
 Progress "Install R packages needed for testing and the package itself"

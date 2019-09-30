@@ -21,14 +21,14 @@ gams | Out-Default
 
 Write-Output '-----'
 
-Exec { gams }
+gams | Write-Host
 
 Write-Output '-----'
 
 Start-Process gams -Wait
 
 
-# Update conda
+Progress "Update conda"
 
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
@@ -46,30 +46,30 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-Exec { conda update --quiet --yes conda }
+conda update --yes conda
 
-# Create named environment
-Exec { conda create -n testing python=$PYTHON_VERSION --yes}
+Progress "Create 'testing' environment"
+conda create -n testing python=$PYTHON_VERSION --yes
 
+Progress "Install dependencies"
+conda install -n testing --channel conda-forge --yes `
+      ixmp[tests] `
+      codecov `
+      "pytest>=3.9" `
+      pytest-cov
+conda remove -n testing --force --yes ixmp
 
-# Install dependencies
-Exec { conda install -n testing --channel conda-forge  --quiet --yes `
-       ixmp[tests] codecov "pytest>=3.9" pytest-cov }
-Exec { conda remove -n testing --force --yes ixmp }
-
-
-# Activate the environment. This is not wrapped in Exec { } because that
-# cmdlet operates in a sub-process and doesn't modify the current shell.
+Progress "Activate the environment"
 activate testing
 
-# Show information
-Exec { conda info --all }
+Progress "Conda information"
+conda info --all
 
-# Install graphviz (for dask.visualize)
-Exec { choco install --no-progress graphviz }
+Progress "Install graphviz (for dask.visualize)"
+choco install --no-progress graphviz
 
-# Set up r-appveyor
+Progress "Set up r-appveyor"
 Bootstrap
 
-# Install R packages needed for testing and the package itself
-Exec { Rscript .\ci\appveyor-install.R 1 }
+Progress "Install R packages needed for testing and the package itself"
+Rscript .\ci\appveyor-install.R 1

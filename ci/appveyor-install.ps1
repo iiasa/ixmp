@@ -63,30 +63,30 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-conda update --yes conda
+Exec { conda update --yes conda }
 
 Progress "Create 'testing' environment"
-conda create -n testing python=$PYTHON_VERSION --yes
+Exec { conda create -n testing python=$PYTHON_VERSION --yes }
 
 Progress "Install dependencies"
-conda install -n testing --channel conda-forge --yes `
+Exec { conda install -n testing --channel conda-forge --yes `
       ixmp[tests] `
       codecov `
       "pytest>=3.9" `
-      pytest-cov
-conda remove -n testing --force --yes ixmp
+      pytest-cov }
+Exec { conda remove -n testing --force --yes ixmp }
 
 Progress "Activate the environment"
-activate testing
+Exec { activate testing }
 
 Progress "Conda information"
-conda info --all
+Exec { conda info --all }
 
 Progress "Install graphviz (for dask.visualize)"
-choco install --no-progress graphviz
+Exec { choco install --no-progress graphviz }
 
 Progress "Set up r-appveyor"
-Bootstrap
+Exec { Bootstrap }
 
 Progress "Install R packages needed for testing and the package itself"
-Rscript .\ci\appveyor-install.R 1
+Exec { Rscript .\ci\appveyor-install.R 1 }

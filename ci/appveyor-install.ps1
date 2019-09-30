@@ -9,11 +9,11 @@ Function Exec
         [Parameter(Position=0, Mandatory=1)]
         [scriptblock]$Command,
         [Parameter(Position=1, Mandatory=0)]
-        [string]$ErrorMessage = 'Execution of command failed.`n$Command'
+        [string]$ErrorMessage = "Execution of command failed.`n$Command"
     )
     $ErrorActionPreference = 'Continue'
-    Write-Host '$Command' -ForegroundColor cyan
-    . $Command 2>&1 | %{ '$_' }
+    Write-Host "$Command" -ForegroundColor cyan
+    . $Command 2>&1 | %{ "$_" }
     if ($LastExitCode -ne 0) {
         throw 'Exec: $ErrorMessage`nExit code: $LastExitCode'
     }
@@ -68,7 +68,9 @@ Exec { conda create -n testing python=$PYTHON_VERSION --yes }
 Progress "Activate the environment"
 
 Progress "1"
-Exec { activate.bat testing }
+activate.bat testing
+
+conda info --all
 
 Progress "2"
 which.exe jupyter
@@ -83,7 +85,7 @@ Exec { conda remove -n testing --force --yes ixmp }
 
 
 Progress "Conda information"
-Exec { conda info --all }
+conda info --all
 
 Progress "Install graphviz (for dask.visualize)"
 choco install --no-progress graphviz

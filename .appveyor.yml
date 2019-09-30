@@ -20,7 +20,6 @@ init:
 install:
   - ps: . .\ci\appveyor-install.ps1
   - pip install --editable .[docs,tests,tutorial]
-  - set
   - Rscript .\ci\appveyor-install.R 2
 
 build: false

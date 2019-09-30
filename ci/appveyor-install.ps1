@@ -23,7 +23,7 @@ Function Exec
 $ErrorActionPreference = 'Stop'
 
 # For debugging, use -Trace 1 or -Trace 2.
-Set-PSDebug -Trace 0
+Set-PSDebug -Trace 1
 
 # The 'Progress' cmdlet is also from appveyor-tool.ps1
 Progress "Download GAMS"
@@ -33,7 +33,7 @@ Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/w
 Progress "Install GAMS"
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-Start-Process $GAMSInstaller $GAMSArgs -Wait | Write-Host
+Start-Process $GAMSInstaller $GAMSArgs -Wait 2>&1 | Write-Host
 
 # Add to PATH
 $env:PATH = $GAMSPath + ';' + $env:PATH
@@ -41,6 +41,8 @@ $env:PATH = $GAMSPath + ';' + $env:PATH
 # Show information
 gams 2>&1 | Write-Host
 
+
+Progress 'Set conda version/path'
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
 if ( $env:PYTHON_VERSION -eq '2.7' ) {
@@ -55,13 +57,18 @@ $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
+Progress '1'
+where.exe conda | Write-Host
+
+Progress '2'
+where.exe conda
+
 Progress "Create 'testing' environment"
 conda create -n testing python=$PYTHON_VERSION --yes
 
 Progress "Activate the environment"
 
 Progress "1"
-set
 
 Progress "2"
 which.exe activate | Write-Host
@@ -73,7 +80,6 @@ Progress "4"
 activate.bat testing | Write-Host
 
 Progress "5"
-set
 
 Progress "6"
 which.exe jupyter | Write-Host

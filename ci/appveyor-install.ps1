@@ -49,7 +49,7 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 Exec { conda update --quiet --yes conda }
 
 # Create named environment
-Exec { conda create -n testing python=$MC_PYTHON_VERSION --yes}
+Exec { conda create -n testing python=$PYTHON_VERSION --yes}
 
 
 # Install dependencies

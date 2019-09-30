@@ -39,7 +39,7 @@ Start-Process $GAMSInstaller $GAMSArgs -Wait
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-gams | Write-Host
+gams 2>&1 | Write-Host
 
 Write-Output '-----'
 
@@ -65,12 +65,10 @@ $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
 $env:CONDA_ROOT = $CR
 
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
-Exec { where.exe activate }
-where.exe activate | Write-Host
 
 # Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
 # and errors.
-Exec { conda update --quiet --yes conda }
+conda update --quiet --yes conda | Write-Host
 
 Progress "Create 'testing' environment"
 Exec { conda create -n testing python=$PYTHON_VERSION --yes }
@@ -84,7 +82,7 @@ Exec { conda install -n testing --channel conda-forge --quiet --yes `
 Exec { conda remove -n testing --force --yes ixmp }
 
 Progress "Activate the environment"
-activate testing
+activate.bat testing | Write-Host
 where jupyter
 
 Progress "Conda information"

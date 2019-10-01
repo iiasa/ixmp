@@ -83,8 +83,8 @@ class Key:
         """Representation of the Key, e.g. name:dim1-dim2-dim3."""
         @lru_cache(1)
         def _():
-            return ':'.join([self._name, '-'.join(self._dims)] +
-                            ([self._tag] if self._tag else []))
+            return ':'.join([self._name, '-'.join(self._dims)]
+                            + ([self._tag] if self._tag else []))
         return _()
 
     def __hash__(self):

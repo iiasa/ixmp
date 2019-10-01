@@ -1,3 +1,5 @@
+param ( [int]$Step )
+
 # Modified from 'Exec' cmdlet in krlmlr/r-appveyor/scripts/appveyor-tool.ps1
 #
 # The sole difference is '. $Command' instead of '& $Command'; this ensures the
@@ -19,78 +21,79 @@ Function Exec
     }
 }
 
-
 # Halt instead of stalling on failure
 $ErrorActionPreference = 'Stop'
 
 # For debugging, use -Trace 1 or -Trace 2.
 Set-PSDebug -Trace 1
 
-# # The 'Progress' cmdlet is also from appveyor-tool.ps1
-# Progress "Download GAMS"
-# $GAMSInstaller = '..\windows_x64_64.exe'
-# Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
-#
-# Progress "Install GAMS"
-# $GAMSPath = 'C:\GAMS'
-# $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
-# Start-Process $GAMSInstaller $GAMSArgs -Wait
-#
-# # Add to PATH
-# $env:PATH = $GAMSPath + ';' + $env:PATH
-#
-# # Show information
-# Exec { gams }
+if ($Step -eq 1) {
+  # # The 'Progress' cmdlet is also from appveyor-tool.ps1
+  # Progress "Download GAMS"
+  # $GAMSInstaller = '..\windows_x64_64.exe'
+  # Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
+  #
+  # Progress "Install GAMS"
+  # $GAMSPath = 'C:\GAMS'
+  # $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
+  # Start-Process $GAMSInstaller $GAMSArgs -Wait
+  #
+  # # Add to PATH
+  # $env:PATH = $GAMSPath + ';' + $env:PATH
+  #
+  # # Show information
+  # Exec { gams }
 
 
-Progress 'Set conda version/path'
-# These correspond to folder naming of miniconda installs on appveyor
-# See https://www.appveyor.com/docs/windows-images-software/#miniconda
-if ( $env:PYTHON_VERSION -eq '2.7' ) {
-  $MC_PYTHON_VERSION = ''
-} else {
-  $MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
+  Progress 'Set conda version/path'
+  # These correspond to folder naming of miniconda installs on appveyor
+  # See https://www.appveyor.com/docs/windows-images-software/#miniconda
+  if ( $env:PYTHON_VERSION -eq '2.7' ) {
+    $MC_PYTHON_VERSION = ''
+  } else {
+    $MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
+  }
+  if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
+
+  $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
+  $env:CONDA_ROOT = $CR
+
+  $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
+
+  Progress 'Initialize conda'
+  conda init powershell
+} elseif ($Step -eq 2) {
+  # Display the conda executable
+  where.exe conda
+  which.exe activate
+
+  Progress "Create 'testing' environment"
+  Exec { conda create -n testing python=$PYTHON_VERSION --yes }
+
+  Progress 'Activate the environment'
+
+  Progress "1"
+  conda activate testing
+
+  Progress 'Conda configuration'
+  conda info --all
+
+  Progress "2"
+  which.exe jupyter
+
+  Progress 'Install dependencies'
+  Exec { conda install --channel conda-forge --quiet --yes `
+        ixmp[tests] `
+        codecov `
+        "pytest>=3.9" `
+        pytest-cov }
+  Exec { conda remove --force --yes ixmp }
+
+  Progress 'Conda information'
+  conda info --all
+
+  Progress 'Install graphviz (for dask.visualize)'
+  choco install --no-progress graphviz
+
+  Bootstrap
 }
-if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
-
-$CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
-$env:CONDA_ROOT = $CR
-
-$env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
-
-# Display the conda executable
-where.exe conda
-which.exe activate
-
-Progress "Create 'testing' environment"
-Exec { conda create -n testing python=$PYTHON_VERSION --yes }
-
-Progress "Activate the environment"
-
-Progress "1"
-Exec { activate testing }
-
-conda info --all
-
-Progress "2"
-which.exe jupyter
-
-Progress "Install dependencies"
-Exec { conda install -n testing --channel conda-forge --quiet --yes `
-      ixmp[tests] `
-      codecov `
-      "pytest>=3.9" `
-      pytest-cov }
-Exec { conda remove -n testing --force --yes ixmp }
-
-
-Progress "Conda information"
-conda info --all
-
-Progress "Install graphviz (for dask.visualize)"
-choco install --no-progress graphviz
-
-Bootstrap
-
-Progress "Install R packages needed for testing and the package itself"
-Exec { Rscript .\ci\appveyor-install.R 1 }

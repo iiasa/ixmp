@@ -18,13 +18,19 @@ init:
         Import-Module $Tool
 
 install:
-  - ps: . .\ci\appveyor-install.ps1
+  # Install GAMS, update, and init conda
+  - ps: . .\ci\appveyor-install.ps1 -step 1
+  # Create conda environment and install dependencies
+  - ps: . .\ci\appveyor-install.ps1 -step 2
+  # Install R packages needed for testing
+  - Rscript .\ci\appveyor-install.R 1
+  # Install the Python package
   - pip install --editable .[docs,tests,tutorial]
+  # Install the R package
   - Rscript .\ci\appveyor-install.R 2
 
 build: false
 
 test_script:
-  # Run tests
-  # These include the equivalent of Travis R tests via test_r.py
+  # Run tests. These include the equivalent of Travis R tests via test_r.py.
   - pytest --test-r --verbose

@@ -18,13 +18,8 @@ init:
         Import-Module $Tool
 
 install:
-  # Install GAMS, update, and init conda
-  - ps: . .\ci\appveyor-install.ps1 -step 1
-  - ps: conda init powershell
-  # Create conda environment and install dependencies
-  - ps: . .\ci\appveyor-install.ps1 -step 2
-  # Install R packages needed for testing
-  - Rscript .\ci\appveyor-install.R 1
+  # Install GAMS, update conda, install dependencies
+  - ps: . .\ci\appveyor-install.ps1
   # Install the Python package
   - pip install --editable .[docs,tests,tutorial]
   # Install the R package

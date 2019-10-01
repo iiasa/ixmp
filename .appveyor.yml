@@ -20,6 +20,7 @@ init:
 install:
   # Install GAMS, update, and init conda
   - ps: . .\ci\appveyor-install.ps1 -step 1
+  - ps: conda init powershell
   # Create conda environment and install dependencies
   - ps: . .\ci\appveyor-install.ps1 -step 2
   # Install R packages needed for testing

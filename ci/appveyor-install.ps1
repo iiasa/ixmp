@@ -61,7 +61,7 @@ if ($Step -eq 1) {
   $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
   Progress 'Initialize conda'
-  conda init powershell
+  # At this point, conda requires that PowerShell be restarted
 } elseif ($Step -eq 2) {
   # Display the conda executable
   where.exe conda

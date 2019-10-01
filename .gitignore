@@ -56,10 +56,10 @@ rixmp/source/.Rhistory
 .env
 
 # pytest
-.coverage
-.pytest_cache/
-# Related to test_access.py
 *.pid
+.coverage*
+.pytest_cache/
+coverage.xml
 
 # idea
 .idea/

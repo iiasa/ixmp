@@ -1,4 +1,4 @@
-# Continuous integration procedure for AppVeyor
+# Continuous integration configuration for AppVeyor
 # Based on https://github.com/rmcgibbo/python-appveyor-conda-example
 
 environment:
@@ -9,7 +9,7 @@ environment:
     PYTHON_ARCH: "64"
 
 init:
-  # Download and install the R + Appveyor tool from
+  # Download and install the R Appveyor tool from
   # https://github.com/krlmlr/r-appveyor
   - ps: |
         $ErrorActionPreference = "Stop"
@@ -18,18 +18,15 @@ init:
         Import-Module $Tool
 
 install:
+  # Install GAMS, update conda, and install Python and R dependencies
   - ps: . .\ci\appveyor-install.ps1
-  - pip install .[docs,tests,tutorial]
+  # Install the Python package
+  - pip install --editable .[docs,tests,tutorial]
+  # Install the R package
   - Rscript .\ci\appveyor-install.R 2
 
 build: false
 
 test_script:
-  # Run tests
-  # These include the equivalent of Travis R tests via test_r.py
-  - >
-    pytest
-    --verbose
-    --cov=ixmp
-    --cov-config ci/.coveragerc
-    --cov-report term-missing
+  # Run tests. These include the equivalent of Travis R tests via test_r.py.
+  - pytest --test-r --verbose

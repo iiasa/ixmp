@@ -27,12 +27,8 @@ NULL
 ixmp <- NULL
 
 .onLoad <- function(libname, pkgname) {
-  system('echo "init_rixmp.R 1"')
-
   # Force reticulate to pick up on e.g. RETICULATE_PYTHON environment variable
   reticulate::py_config()
-
-  system('echo "init_rixmp.R 2"')
 
   # If $IXMP_DATA and $XDG_DATA_HOME are not set, ixmp.config.Config uses
   # $HOME/.local/ixmp for configuration and local databases. On Windows, $HOME
@@ -50,20 +46,14 @@ ixmp <- NULL
     # Filter out 'Documents' and add '.local' and 'share'
     parts <- c(Filter(function (s) s != 'Documents', home), '.local', 'share')
 
-    system('echo "init_rixmp.R 3"')
-
     # Set $XDG_DATA_HOME within the reticulate Python process
     # NB R's Sys.setenv() does not work here if reticulate has already started
     #    Python
     reticulate::py_run_string(paste0(
       "import os; os.environ['XDG_DATA_HOME'] = '",
       do.call('file.path', as.list(parts)), "'"))
-
-    system('echo "init_rixmp.R 4"')
   }
 
   # Set 'ixmp' in the global namespace
   ixmp <<- reticulate::import('ixmp', delay_load = TRUE)
-
-  system('echo "init_rixmp.R 5"')
 }

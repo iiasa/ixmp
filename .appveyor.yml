@@ -1,4 +1,4 @@
-# Continuous integration procedure for AppVeyor
+# Continuous integration configuration for AppVeyor
 # Based on https://github.com/rmcgibbo/python-appveyor-conda-example
 
 environment:
@@ -9,7 +9,7 @@ environment:
     PYTHON_ARCH: "64"
 
 init:
-  # Download and install the R + Appveyor tool from
+  # Download and install the R Appveyor tool from
   # https://github.com/krlmlr/r-appveyor
   - ps: |
         $ErrorActionPreference = "Stop"
@@ -18,7 +18,7 @@ init:
         Import-Module $Tool
 
 install:
-  # Install GAMS, update conda, install dependencies
+  # Install GAMS, update conda, and install Python and R dependencies
   - ps: . .\ci\appveyor-install.ps1
   # Install the Python package
   - pip install --editable .[docs,tests,tutorial]

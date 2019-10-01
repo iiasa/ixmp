@@ -1,3 +1,5 @@
+# Continuous integration configuration for Travis
+
 dist: xenial
 
 language: r
@@ -33,18 +35,22 @@ addons:
     - graphviz
 
 before_install:
+  # Set other environment variables
   - source ci/env.sh
+  # Download GAMS and Miniconda
   - source ci/travis-before_install.sh
 
 install:
+  # Install GAMS, conda, Python dependencies, and R packages needed for testing
   - source ci/travis-install.sh
+  # Install the Python package
   - pip install --editable .[docs,tests,tutorial]
+  # Install the R package and its dependencies
   - Rscript -e 'devtools::install("rixmp", dep = T)'
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
-  # Run tests
-  # These include the equivalent of Travis R tests via test_r.py
+  # Run tests. These include the equivalent of Travis R tests via test_r.py.
   - pytest --test-r --verbose
   # Test that documentation can be built
   - cd doc

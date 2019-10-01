@@ -1,3 +1,5 @@
+# Pre-installation script for Linux/macOS CI on Travis
+
 # Download files into the cache directory
 maybe_download () {
   if [ ! -x $CACHE/$2 ]; then

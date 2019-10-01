@@ -1,3 +1,5 @@
+# Installation script for Linux/macOS CI on Travis
+
 # Install GAMS
 $CACHE/$GAMSFNAME > install.out
 
@@ -12,7 +14,7 @@ which gams
 $CACHE/$CONDAFNAME -b -u -p $HOME/miniconda
 conda update --yes conda
 
-# Create named env
+# Create named environment
 conda create -n testing python=$PYVERSION --yes
 
 # Install dependencies

@@ -1,4 +1,4 @@
-# Set environment variables for Travis
+# Set environment variables for Linux/macOS CI on Travis
 
 export CACHE=$HOME/.cache/ixmp
 

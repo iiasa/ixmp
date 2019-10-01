@@ -56,8 +56,10 @@ rixmp/source/.Rhistory
 .env
 
 # pytest
-.coverage
+*.pid
+.coverage*
 .pytest_cache/
+coverage.xml
 
 # idea
 .idea/

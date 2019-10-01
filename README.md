@@ -1,5 +1,9 @@
 # The ix modeling platform (ixmp)
 
+[![Build status](https://travis-ci.org/iiasa/ixmp.svg?branch=master)](https://travis-ci.org/iiasa/ixmp)
+[![Test coverage](https://codecov.io/gh/iiasa/ixmp/branch/master/graph/badge.svg)](https://codecov.io/gh/iiasa/ixmp)
+[![Documentation build](https://readthedocs.com/projects/iiasa-energy-program-ixmp/badge/?version=master)](https://message.iiasa.ac.at/projects/ixmp/en/master/)
+
 ## Overview
 
 The ix modeling platform (ixmp) is a data warehouse for high-powered scenario

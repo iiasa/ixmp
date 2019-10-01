@@ -1,14 +1,26 @@
+# Installation script for Windows CI on Appveyor
+#
+# This script mirrors travis-before_install.sh and travis-install.sh. The
+# 'Progress', 'Bootstrap', and 'Exec' "cmdlets" are from the R Appveyor tool
+# krlmlr/r-appveyor.
+#
+# 'Exec' is used because (in some cases, unpredictably) commands given directly
+# in this file (a) do not produce any output in the Appveyor build log, and/or
+# (b) cause the build to stop, even though the command completes successfully.
+# 'Exec' resolves both of these issues.
+
+
 # Halt instead of stalling on failure
 $ErrorActionPreference = 'Stop'
 
 # For debugging, use -Trace 1 or -Trace 2.
 Set-PSDebug -Trace 0
 
-# Download GAMS
+Progress 'Download GAMS'
 $GAMSInstaller = '..\windows_x64_64.exe'
 Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/25.1.1/windows/windows_x64_64.exe' -FileName $GAMSInstaller
 
-# Install GAMS
+Progress 'Install GAMS'
 $GAMSPath = 'C:\GAMS'
 $GAMSArgs = '/SP- /SILENT /DIR=' + $GAMSPath + ' /NORESTART'
 Start-Process $GAMSInstaller $GAMSArgs -Wait
@@ -17,19 +29,13 @@ Start-Process $GAMSInstaller $GAMSArgs -Wait
 $env:PATH = $GAMSPath + ';' + $env:PATH
 
 # Show information
-gams | Out-Default
-
-Write-Output '-----'
-
+# NB this doesn't generate any output in the Appveyor log, and it's unclear
+#    why; possibly because GAMS uses non-standard output conventions (e.g. to
+#    stderr).
 Exec { gams }
 
-Write-Output '-----'
 
-Start-Process gams -Wait
-
-
-# Update conda
-
+Progress 'Set conda version/path'
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
 if ( $env:PYTHON_VERSION -eq '2.7' ) {
@@ -39,31 +45,47 @@ if ( $env:PYTHON_VERSION -eq '2.7' ) {
 }
 if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
 
+
+# Conda root path
 $CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
 $env:CONDA_ROOT = $CR
 
+# Path for executables, e.g. pip, jupyter
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-# Use the 'Exec' cmdlet from appveyor-tool.ps1 to handle output redirection
-# and errors.
+# Explicit path to Python executable, for reticulate 1.13. This workaround is
+# suggested at rstudio/reticulate#571 to address errors that occurred during
+# devtools::install() in appveyor-install.R
+# TODO test and possibly remove once reticulate 1.14 is released
+$env:RETICULATE_PYTHON = $CR + '\python.exe'
+
+Progress 'Update conda'
+# The installed conda on Appveyor workers is 4.5.x, while the latest is >4.7.
+# --quiet here and below suppresses progress bars, which show up as many lines
+# in the Appveyor build logs.
 Exec { conda update --quiet --yes conda }
 
-# TODO create a 'testing' env, as on Travis.
-# TODO for PYTHON_VERSION = 2.7, this causes mkl and openjdk to be installed,
-# each about 150 MB. Enable Appveyor caching or tweak conda configuration to
-# speed up.
-Exec { conda install --channel conda-forge  --quiet --yes `
-       ixmp[tests] "pytest>=3.9" coveralls pytest-cov }
+# NB at the corresponding location, travis-install.sh creates a new conda
+#    environment, and later activates it. This was attempted for Windows/
+#    Appveyor in iiasa/ixmp#192, but for unclear reasons the 'activate testing'
+#    step could not be made to work. On Windows/Appveyor, ixmp and its
+#    dependencies are installed into the base conda environment.
+
+Progress 'Install dependencies'
+Exec { conda install --channel conda-forge --quiet --yes `
+      ixmp[tests] `
+      codecov `
+      "pytest>=3.9" `
+      pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
-# Show information
-Exec { conda info --all }
+Progress 'Conda information'
+conda info --all
 
-# Install graphviz (for dask.visualize)
-Exec { choco install --no-progress graphviz }
+Progress 'Install graphviz (for dask.visualize)'
+choco install --no-progress graphviz
 
-# Set up r-appveyor
 Bootstrap
 
-# Install R packages needed for testing and the package itself
+Progress 'Install R packages needed for testing'
 Exec { Rscript .\ci\appveyor-install.R 1 }

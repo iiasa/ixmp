@@ -5,7 +5,7 @@
 # The core design pattern uses dask graphs; see
 # http://docs.dask.org/en/latest/spec.html
 # - Reporter.graph is a dictionary where:
-#   - keys are strings or ixmp.reporting.util.Key objects (which compare/hash
+#   - keys are strings or ixmp.reporting.key.Key objects (which compare/hash
 #     equal to their str() representation), and
 #   - values are 'computations' (the Reporter.add() docstring repeats the
 #     definition of computations from the above URL).
@@ -37,7 +37,12 @@ from dask.optimization import cull
 import yaml
 
 from .key import Key
-from .utils import REPLACE_UNITS, keys_for_quantity, rename_dims, ureg
+from .utils import (
+    REPLACE_UNITS,
+    keys_for_quantity,
+    rename_dims,
+    ureg,
+)
 from . import computations
 from .describe import describe_recursive
 

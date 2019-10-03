@@ -130,6 +130,10 @@ Computations
 .. automodule:: ixmp.reporting.computations
    :members:
 
+   Unless otherwise specified, these methods accept and return
+   :class:`Quantity <ixmp.reporting.utils.Quantity>` objects for data
+   arguments/return values.
+
    Calculations:
 
    .. autosummary::
@@ -154,7 +158,7 @@ Computations
 Utilities
 ---------
 
-.. autoclass:: ixmp.reporting.utils.AttrSeries
+.. autoclass:: ixmp.reporting.attrseries.AttrSeries
 
 .. automodule:: ixmp.reporting.utils
    :members:

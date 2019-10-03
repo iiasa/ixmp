@@ -265,6 +265,9 @@ def test_reporter_file(tmp_path):
     p2 = tmp_path / 'bar.txt'
     r.write('file:foo.txt', p2)
 
+    # Write using a string path
+    r.write('file:foo.txt', str(p2))
+
     # The Reporter produces the expected output file
     assert p2.read_text() == 'Hello, world!'
 

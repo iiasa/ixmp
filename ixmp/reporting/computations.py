@@ -2,6 +2,7 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
+from pathlib import Path
 
 import pandas as pd
 import xarray as xr
@@ -160,7 +161,15 @@ def load_file(path):
 
 
 def write_report(quantity, path):
-    """Write the report identified by *key* to the file at *path*."""
+    """Write a quantity to a file.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the file to be written.
+    """
+    path = Path(path)
+
     if path.suffix == '.csv':
         quantity.to_dataframe().to_csv(path)
     elif path.suffix == '.xlsx':

@@ -36,7 +36,8 @@ from dask.optimization import cull
 
 import yaml
 
-from .utils import REPLACE_UNITS, Key, keys_for_quantity, rename_dims, ureg
+from .key import Key
+from .utils import REPLACE_UNITS, keys_for_quantity, rename_dims, ureg
 from . import computations
 from .describe import describe_recursive
 

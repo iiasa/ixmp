@@ -9,6 +9,20 @@ Reporting
    Python 3. The API and functionality may change without advance notice or a
    deprecation period in subsequent releases.
 
+Top-level methods and classes:
+
+.. autosummary::
+
+   configure
+   Reporter
+   Key
+
+Others:
+
+.. contents::
+   :local:
+   :depth: 3
+
 .. automethod:: ixmp.reporting.configure
 
 .. autoclass:: ixmp.reporting.Reporter
@@ -83,6 +97,33 @@ Reporting
          computations.
 
 
+.. autoclass:: ixmp.reporting.Key
+   :members:
+
+   Quantities in a :class:`Scenario` can be indexed by one or more dimensions.
+   For example, a parameter with three dimensions can be initialized with:
+
+   >>> scenario.init_par('foo', ['a', 'b', 'c'], ['apple', 'bird', 'car'])
+
+   Computations for this scenario might use the quantity ``foo`` in different
+   ways:
+
+   1. in its full resolution, i.e. indexed by a, b, and c;
+   2. aggregated (e.g. summed) over any one dimension, e.g. aggregated over c
+      and thus indexed by a and b;
+   3. aggregated over any two dimensions; etc.
+
+   A Key for (1) will hash, display, and evaluate as equal to ``'foo:a-b-c'``.
+   A Key for (2) corresponds to ``'foo:a-b'``, and so forth.
+
+   Keys may be generated concisely by defining a convenience method:
+
+   >>> def foo(dims):
+   >>>     return Key('foo', dims.split(''))
+   >>> foo('a b')
+   foo:a-b
+
+
 Computations
 ------------
 
@@ -113,34 +154,8 @@ Computations
 Utilities
 ---------
 
-.. autoclass:: ixmp.reporting.utils.Key
-   :members:
-
-   Quantities in a :class:`Scenario` can be indexed by one or more dimensions.
-   For example, a parameter with three dimensions can be initialized with:
-
-   >>> scenario.init_par('foo', ['a', 'b', 'c'], ['apple', 'bird', 'car'])
-
-   Computations for this scenario might use the quantity ``foo`` in different
-   ways:
-
-   1. in its full resolution, i.e. indexed by a, b, and c;
-   2. aggregated (e.g. summed) over any one dimension, e.g. aggregated over c
-      and thus indexed by a and b;
-   3. aggregated over any two dimensions; etc.
-
-   A Key for (1) will hash, display, and evaluate as equal to ``'foo:a-b-c'``.
-   A Key for (2) corresponds to ``'foo:a-b'``, and so forth.
-
-   Keys may be generated concisely by defining a convenience method:
-
-   >>> def foo(dims):
-   >>>     return Key('foo', dims.split(''))
-   >>> foo('a b')
-   foo:a-b
-
 .. autoclass:: ixmp.reporting.utils.AttrSeries
 
 .. automodule:: ixmp.reporting.utils
    :members:
-   :exclude-members: AttrSeries, Key, combo_partition
+   :exclude-members: AttrSeries

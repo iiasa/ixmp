@@ -4,7 +4,7 @@ from itertools import chain
 
 import xarray as xr
 
-from .utils import Key
+from .key import Key
 
 
 def describe_recursive(graph, comp, depth=0, seen=None):

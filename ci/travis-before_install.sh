@@ -1,3 +1,5 @@
+# Pre-installation script for Linux/macOS CI on Travis
+
 # Download files into the cache directory
 maybe_download () {
   if [ ! -x $CACHE/$2 ]; then
@@ -13,7 +15,7 @@ maybe_download $CONDAURL $CONDAFNAME
 
 
 # Install graphiz on OS X (requires updating homebrew)
-if [ `uname` -eq "Darwin" ];
+if [ `uname` = "Darwin" ];
 then
   brew update
   brew install graphviz

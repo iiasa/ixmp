@@ -13,9 +13,9 @@
 /model/2*/**
 /model/$gms*
 *.dat
+*.swp
 *.tmp
 *.RData*
-*.pyc
 *-checkpoint.ipynb
 *~
 #*
@@ -52,6 +52,7 @@ rixmp/source/.Rhistory
 .env
 
 # pytest and related
+*.pid
 .coverage
 .pytest_cache/
 coverage.xml

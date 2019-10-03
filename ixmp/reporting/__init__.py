@@ -5,7 +5,7 @@
 # The core design pattern uses dask graphs; see
 # http://docs.dask.org/en/latest/spec.html
 # - Reporter.graph is a dictionary where:
-#   - keys are strings or ixmp.reporting.util.Key objects (which compare/hash
+#   - keys are strings or ixmp.reporting.key.Key objects (which compare/hash
 #     equal to their str() representation), and
 #   - values are 'computations' (the Reporter.add() docstring repeats the
 #     definition of computations from the above URL).
@@ -36,12 +36,28 @@ from dask.optimization import cull
 
 import yaml
 
-from .utils import Key, keys_for_quantity, rename_dims, replace_units, ureg
 from . import computations
 from .describe import describe_recursive
+from .key import Key
+from .utils import (
+    REPLACE_UNITS,
+    RENAME_DIMS,
+    UNITS,
+    keys_for_quantity,
+)
 
 
 log = logging.getLogger(__name__)
+
+
+class KeyExistsError(KeyError):
+    def __str__(self):
+        return f'key {self.args[0]!r} already exists'
+
+
+class MissingKeyError(KeyError):
+    def __str__(self):
+        return f'required keys {self.args!r} not defined'
 
 
 class Reporter:
@@ -61,6 +77,7 @@ class Reporter:
 
     def __init__(self, **kwargs):
         self.graph = {'filters': None}
+        self._index = {}
         self.configure(**kwargs)
 
     @classmethod
@@ -189,7 +206,7 @@ class Reporter:
         return self  # to allow chaining
 
     # Generic graph manipulations
-    def add(self, key, computation, strict=False):
+    def add(self, key, computation, strict=False, index=False, sums=False):
         """Add *computation* to the Reporter under *key*.
 
         Parameters
@@ -207,25 +224,49 @@ class Reporter:
         strict : bool, optional
             If True, *key* must not already exist in the Reporter, and
             any keys referred to by *computation* must exist.
+        index : bool, optional
+            If True, *key* is added to the index as a full-resolution key, so
+            it can be later retrieved with :meth:`full_key`.
+        sums : bool, optional
+            If True, all partial sums of *key* are also added to the Reporter.
 
         Raises
         ------
         KeyError
-            If `key` is already in the Reporter, or any key referred to by
-            `computation` does not exist.
+            If `key` is already in the Reporter; any key referred to by
+            `computation` does not exist; or ``sums=True`` and the key for one
+            of the partial sums of `key` is already in the Reporter.
         """
-        if strict:
-            # Key already exists in graph
-            if key in self.graph:
-                raise KeyError(key)
+        to_add = [(key, computation)]
+        added = []
 
-            # Check that keys used in *computation* are in the graph
-            keylike = filter(lambda e: isinstance(e, (str, Key)), computation)
-            self.check_keys(*keylike)
+        if sums:
+            to_add = chain(to_add, Key.from_str_or_key(key).iter_sums())
 
-        self.graph[key] = computation
+        for k, comp in to_add:
+            if strict:
+                if k in self.graph:
+                    # Key already exists in graph
+                    raise KeyExistsError(key)
 
-        return key
+                # Check that keys used in *comp* are in the graph
+                keylike = filter(lambda e: isinstance(e, (str, Key)), comp)
+                self.check_keys(*keylike)
+
+            if index:
+                # String equivalent of *key* with all dimensions dropped
+                idx = str(Key.from_str_or_key(key, drop=True)).rstrip(':')
+
+                # Add *key* to the index
+                self._index[idx] = key
+
+                # Don't index further elements of to_add, e.g. sums
+                index = False
+
+            self.graph[k] = comp
+            added.append(k)
+
+        return added if sums else added[0]
 
     def apply(self, generator, *keys):
         """Add computations from `generator` applied to `key`.
@@ -272,18 +313,26 @@ class Reporter:
         dsk, deps = cull(self.graph, key)
         log.debug('Cull {} -> {} keys'.format(len(self.graph), len(dsk)))
 
-        return dask_get(dsk, key)
+        try:
+            return dask_get(dsk, key)
+        except Exception as exc:
+            raise ComputationError from exc
 
     def keys(self):
         return self.graph.keys()
 
-    def full_key(self, name):
-        """Return the full-dimensionality key for *name*.
+    def full_key(self, name_or_key):
+        """Return the full-dimensionality key for *name_or_key*.
 
-        An ixmp variable 'foo' indexed by a, c, n, q, and x is available in the
-        Reporter at ``'foo:a-c-n-q-x'``. ``full_key('foo')`` retrieves this
-        :class:`Key <ixmp.reporting.utils.Key>`.
+        An ixmp variable 'foo' with dimensions (a, c, n, q, x) is available in
+        the Reporter as ``'foo:a-c-n-q-x'``. This :class:`Key
+        <ixmp.reporting.utils.Key>` can be retrieved with::
+
+            rep.full_key('foo')
+            rep.full_key('foo:c')
+            # etc.
         """
+        name = str(Key.from_str_or_key(name_or_key, drop=True)).rstrip(':')
         return self._index[name]
 
     def check_keys(self, *keys):
@@ -310,7 +359,7 @@ class Reporter:
                 missing.append(key)
 
         if len(missing):
-            raise KeyError(missing)
+            raise MissingKeyError(*missing)
 
         return result
 
@@ -397,6 +446,7 @@ class Reporter:
         :class:`Key`
             The key of the newly-added node.
         """
+        # TODO maybe split this to two methods?
         if isinstance(dims_or_groups, dict):
             groups = dims_or_groups
             if len(groups) > 1:
@@ -412,7 +462,7 @@ class Reporter:
             key = Key.from_str_or_key(qty, drop=dims, tag=tag)
             comp = (partial(computations.sum, dimensions=dims), qty, weights)
 
-        return self.add(key, comp, True)
+        return self.add(key, comp, strict=True, index=True)
 
     def disaggregate(self, qty, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.
@@ -497,13 +547,29 @@ class Reporter:
 def configure(path=None, **config):
     """Configure reporting globally.
 
-    Valid configuration keys include:
+    Modifies global variables that affect the behaviour of *all* Reporters and
+    computations, namely
+    :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`,
+    :obj:`REPLACE_UNITS <ixmp.reporting.utils.REPLACE_UNITS>`, and
+    :obj:`UNITS <ixmp.reporting.utils.UNITS>`.
 
-    - *units*:
+    Valid configuration keys—passed as *config* keyword arguments—include:
 
-      - *define*: a string, passed to :meth:`pint.UnitRegistry.define`.
-      - *replace*: a mapping from str to str, used to replace units before they
-        are parsed by pints
+    Other Parameters
+    ----------------
+    units : mapping
+        Configuration for handling of units. Valid sub-keys include:
+
+        - **replace** (mapping of str -> str): replace units before they are
+          parsed by :doc:`pint <pint:index>`. Added to :obj:`REPLACE_UNITS
+          <ixmp.reporting.utils.REPLACE_UNITS>`.
+        - **define** (:class:`str`): block of unit definitions, added to
+          :obj:`UNITS <ixmp.reporting.utils.UNITS>` so that units are
+          recognized by pint. See the :ref:`pint documentation
+          <pint:defining>`.
+
+    rename_dims : mapping of str -> str
+        Update :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`.
 
     Warns
     -----
@@ -517,14 +583,14 @@ def configure(path=None, **config):
 
     # Define units
     if 'define' in units:
-        ureg.define(units['define'].strip())
+        UNITS.define(units['define'].strip())
 
     # Add replacements
     for old, new in units.get('replace', {}).items():
-        replace_units[old] = new
+        REPLACE_UNITS[old] = new
 
     # Dimensions to be renamed
-    rename_dims.update(config.get('rename_dims', {}))
+    RENAME_DIMS.update(config.get('rename_dims', {}))
 
 
 def _config_args(path, keys, sections={}):
@@ -548,3 +614,65 @@ def _config_args(path, keys, sections={}):
                   'have no effect').format(extra_sections))
 
     return result
+
+
+class ComputationError(Exception):
+    """Wrapper to print intelligible exception information for Reporter.get().
+
+    In order to aid in debugging, this helper:
+    - Omits the parts of the stack trace that are internal to dask, and
+    - Gives the key in the Reporter.graph and the computation task that
+      caused the exception.
+    """
+    def __str__(self):
+        from traceback import (
+            TracebackException,
+            format_exception_only,
+            format_list,
+        )
+
+        # Move the cause to a non-private attribute
+        self.cause = self.__cause__
+
+        # Suppress automatic printing of the cause
+        self.__cause__ = None
+
+        info = None  # Information about the call that triggered the exception
+        frames = []  # Frames for an abbreviated stacktrace
+        dask_internal = True  # Flag if the frame is internal to dask
+
+        # Iterate over frames from the base of the stack
+        tb = TracebackException.from_exception(self.cause, capture_locals=True)
+        for frame in tb.stack:
+            if frame.name == 'execute_task':
+                # Current frame is the dask internal call to execute a task
+
+                # Retrieve information about the key/task that triggered the
+                # exception. These are not the raw values of variables, but
+                # their string repr().
+                info = {name: frame.locals[name] for name in ('key', 'task')}
+
+                # Remaining frames are related to the exception
+                dask_internal = False
+
+            if not dask_internal:
+                # Don't display the locals when printing the traceback
+                frame.locals = None
+
+                # Store the frame for printing the traceback
+                frames.append(frame)
+
+        # Assemble the exception printout
+
+        # Reporter information for debugging
+        lines = [
+            'when computing {key}, using\n\n{task}\n\n'.format(**info),
+            'Use Reporter.describe(...) to trace the computation.\n\n',
+            'Computation traceback:\n',
+        ]
+        # Traceback; omitting a few dask internal calls below execute_task
+        lines.extend(format_list(frames[3:]))
+        # Type and message of the original exception
+        lines.extend(format_exception_only(self.cause.__class__, self.cause))
+
+        return ''.join(lines)

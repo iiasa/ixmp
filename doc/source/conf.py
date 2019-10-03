@@ -302,8 +302,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/', None),
-    'dask': ('http://docs.dask.org/en/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'dask': ('https://docs.dask.org/en/stable/', None),
     'jpype': ('https://jpype.readthedocs.io/en/latest', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'pint': ('https://pint.readthedocs.io/en/stable/', None),

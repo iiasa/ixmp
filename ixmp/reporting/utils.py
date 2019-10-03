@@ -43,7 +43,23 @@ class Key:
 
     @classmethod
     def from_str_or_key(cls, value, drop=[], append=[], tag=None):
-        """Return a new Key from *value*."""
+        """Return a new Key from *value*.
+
+        Parameters
+        ----------
+        value : str or Key
+        drop : list of str, optional
+            Existing dimensions of *value* to drop. See :meth:`drop`.
+        append : list of str, optional.
+            New dimensions to append to the returned Key. See :meth:`append`.
+        tag : str, optional
+            Tag for returned Key. If *value* has a tag, the two are joined
+            using a '+' character. See :meth:`add_tag`.
+
+        Returns
+        -------
+        Key
+        """
         # Determine the base Key
         if isinstance(value, cls):
             base = value
@@ -63,7 +79,17 @@ class Key:
     def product(cls, new_name, *keys):
         """Return a new Key that has the union of dimensions on *keys*.
 
-        Dimensions are ordered by their first appearance.
+        Dimensions are ordered by their first appearance:
+
+        1. First, the dimensions of the first of the *keys*.
+        2. Next, any additional dimensions in the second of the *keys* that
+           were not already added in step 1.
+        3. etc.
+
+        Parameters
+        ----------
+        new_name : str
+            Name for the new Key. The names of *keys* are discarded.
         """
         # Dimensions of first key appear first
         base_dims = list(keys[0].dims)
@@ -77,10 +103,14 @@ class Key:
         return cls(new_name, base_dims + new_dims)
 
     def __repr__(self):
+        """Representation of the Key, e.g. '<name:dim1-dim2-dim3:tag>."""
         return f'<{self}>'
 
     def __str__(self):
-        """Representation of the Key, e.g. name:dim1-dim2-dim3."""
+        """Representation of the Key, e.g. 'name:dim1-dim2-dim3:tag'."""
+        # Use a cache so this value is only generated once; otherwise the
+        # stored value is returned. This requires that the properties of the
+        # key be immutable.
         @lru_cache(1)
         def _():
             return ':'.join([self._name, '-'.join(self._dims)]
@@ -88,9 +118,11 @@ class Key:
         return _()
 
     def __hash__(self):
+        """Key hashes the same as str(Key)."""
         return hash(str(self))
 
     def __eq__(self, other):
+        """Key is equal to str(Key)."""
         return str(self) == other
 
     # Less-than and greater-than operations, for sorting
@@ -132,7 +164,7 @@ class Key:
                    '+'.join(filter(None, [self.tag, tag])))
 
     def iter_sums(self):
-        """Yield (key, task) for all possible partial sums of the Key."""
+        """Generate (key, task) for all possible partial sums of the Key."""
         from . import computations
 
         for agg_dims, others in combo_partition(self.dims):

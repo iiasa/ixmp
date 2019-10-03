@@ -48,6 +48,7 @@ class Key:
         Parameters
         ----------
         value : str or Key
+            Value to use to generate a new Key.
         drop : list of str, optional
             Existing dimensions of *value* to drop. See :meth:`drop`.
         append : list of str, optional.

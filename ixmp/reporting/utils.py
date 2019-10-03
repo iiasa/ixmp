@@ -12,8 +12,6 @@ from .key import Key
 
 log = logging.getLogger(__name__)
 
-ureg = pint.UnitRegistry()
-
 # See also:
 # - docstring of attrseries.AttrSeries.
 # - test_report_size() for a test that shows how non-sparse xr.DataArray
@@ -21,10 +19,20 @@ ureg = pint.UnitRegistry()
 Quantity = AttrSeries
 # Quantity = xr.DataArray
 
-# Replacements to apply to quantity units before parsing by pint
+#: Replacements to apply to quantity units before parsing by
+#: :doc:`pint <pint:index>`. Mapping from original unit -> preferred unit.
 REPLACE_UNITS = {
     '%': 'percent',
 }
+
+#: Dimensions to rename when extracting raw data from Scenario objects.
+#: Mapping from Scenario dimension name -> preferred dimension name.
+RENAME_DIMS = {}
+
+#: :doc:`pint <pint:index>` unit registry for processing quantity units.
+#: All units handled by :mod:`imxp.reporting` must be either standard SI units,
+#: or added to this registry.
+UNITS = pint.UnitRegistry()
 
 
 def clean_units(input_string):
@@ -49,16 +57,12 @@ def collect_units(*args):
         if '_unit' in arg.attrs:
             # Convert units if necessary
             if isinstance(arg.attrs['_unit'], str):
-                arg.attrs['_unit'] = ureg.parse_units(arg.attrs['_unit'])
+                arg.attrs['_unit'] = UNITS.parse_units(arg.attrs['_unit'])
         else:
             log.debug('assuming {} is unitless'.format(arg))
-            arg.attrs['_unit'] = ureg.parse_units('')
+            arg.attrs['_unit'] = UNITS.parse_units('')
 
     return [arg.attrs['_unit'] for arg in args]
-
-
-# Mapping from raw -> preferred dimension names
-rename_dims = {}
 
 
 def _find_dims(data):
@@ -77,7 +81,7 @@ def _find_dims(data):
             continue
 
     # Rename dimensions
-    return [rename_dims.get(d, d) for d in dims]
+    return [RENAME_DIMS.get(d, d) for d in dims]
 
 
 def keys_for_quantity(ix_type, name, scenario):
@@ -124,16 +128,16 @@ def _parse_units(units_series):
     # Parse units
     try:
         unit = clean_units(unit[0])
-        unit = ureg.parse_units(unit)
+        unit = UNITS.parse_units(unit)
     except IndexError:
         # Quantity has no unit
-        unit = ureg.parse_units('')
+        unit = UNITS.parse_units('')
     except pint.UndefinedUnitError:
         # Unit(s) do not exist; define them in the UnitRegistry
 
         # Split possible compound units
         for u in unit.split('/'):
-            if u in dir(ureg):
+            if u in dir(UNITS):
                 # Unit already defined
                 continue
 
@@ -142,11 +146,11 @@ def _parse_units(units_series):
             log.info('Add unit definition: {}'.format(definition))
 
             # This line will fail silently for units like 'G$'
-            ureg.define(definition)
+            UNITS.define(definition)
 
         # Try to parse again
         try:
-            unit = ureg.parse_units(unit)
+            unit = UNITS.parse_units(unit)
         except pint.UndefinedUnitError:
             # Handle the silent failure of define(), above
             raise invalid(unit) from None
@@ -203,7 +207,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         if 'mixed units' in e.args[0]:
             # Discard mixed units
             log.warn('{} discarded for {!r}'.format(e.args[0], name))
-            attrs = {'_unit': ureg.parse_units('')}
+            attrs = {'_unit': UNITS.parse_units('')}
         else:
             # Raise all other ValueErrors
             raise
@@ -211,7 +215,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # Set index if 1 or more dimensions
     if len(dims):
         # First rename, then set index
-        data.rename(columns=rename_dims, inplace=True)
+        data.rename(columns=RENAME_DIMS, inplace=True)
         data.set_index(dims, inplace=True)
 
     # Check sparseness

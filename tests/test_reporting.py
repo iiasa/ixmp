@@ -18,7 +18,8 @@ from ixmp.reporting import (
     Reporter,
     computations,
 )
-from ixmp.reporting.utils import ureg, Quantity
+from ixmp.reporting import UNITS
+from ixmp.reporting.utils import Quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
@@ -111,7 +112,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     d_i = rep.get('d:i')
 
     # Units pass through summation
-    assert d_i.attrs['_unit'] == ureg.parse_units('km')
+    assert d_i.attrs['_unit'] == UNITS.parse_units('km')
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
@@ -335,15 +336,15 @@ def test_reporting_units():
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
-    assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
+    assert r.get('energy').attrs['_unit'] == UNITS.parse_units('MJ')
 
     # Units are derived for a ratio of two quantities
     r.add('power', (computations.ratio, 'energy:x', 'time'))
-    assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
+    assert r.get('power').attrs['_unit'] == UNITS.parse_units('MJ/hour')
 
     # Product of dimensioned and dimensionless quantities keeps the former
     r.add('energy2', (computations.product, 'energy:x', 'efficiency'))
-    assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
+    assert r.get('energy2').attrs['_unit'] == UNITS.parse_units('MJ')
 
 
 def test_reporting_platform_units(test_mp, caplog):

@@ -36,15 +36,15 @@ from dask.optimization import cull
 
 import yaml
 
+from . import computations
+from .describe import describe_recursive
 from .key import Key
 from .utils import (
     REPLACE_UNITS,
+    RENAME_DIMS,
+    UNITS,
     keys_for_quantity,
-    rename_dims,
-    ureg,
 )
-from . import computations
-from .describe import describe_recursive
 
 
 log = logging.getLogger(__name__)
@@ -547,13 +547,29 @@ class Reporter:
 def configure(path=None, **config):
     """Configure reporting globally.
 
-    Valid configuration keys include:
+    Modifies global variables that affect the behaviour of *all* Reporters and
+    computations, namely
+    :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`,
+    :obj:`REPLACE_UNITS <ixmp.reporting.utils.REPLACE_UNITS>`, and
+    :obj:`UNITS <ixmp.reporting.utils.UNITS>`.
 
-    - *units*:
+    Valid configuration keys—passed as *config* keyword arguments—include:
 
-      - *define*: a string, passed to :meth:`pint.UnitRegistry.define`.
-      - *replace*: a mapping from str to str, used to replace units before they
-        are parsed by pints
+    Other Parameters
+    ----------------
+    units : mapping
+        Configuration for handling of units. Valid sub-keys include:
+
+        - **replace** (mapping of str -> str): replace units before they are
+          parsed by :doc:`pint <pint:index>`. Added to :obj:`REPLACE_UNITS
+          <ixmp.reporting.utils.REPLACE_UNITS>`.
+        - **define** (:class:`str`): block of unit definitions, added to
+          :obj:`UNITS <ixmp.reporting.utils.UNITS>` so that units are
+          recognized by pint. See the :ref:`pint documentation
+          <pint:defining>`.
+
+    rename_dims : mapping of str -> str
+        Update :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`.
 
     Warns
     -----
@@ -567,14 +583,14 @@ def configure(path=None, **config):
 
     # Define units
     if 'define' in units:
-        ureg.define(units['define'].strip())
+        UNITS.define(units['define'].strip())
 
     # Add replacements
     for old, new in units.get('replace', {}).items():
         REPLACE_UNITS[old] = new
 
     # Dimensions to be renamed
-    rename_dims.update(config.get('rename_dims', {}))
+    RENAME_DIMS.update(config.get('rename_dims', {}))
 
 
 def _config_args(path, keys, sections={}):

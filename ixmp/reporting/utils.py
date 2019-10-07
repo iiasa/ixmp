@@ -232,7 +232,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # Convert to a Dataset, assign attrbutes and name
     # ds = xr.Dataset.from_dataframe(data)[column]
     # or to a new "Attribute Series"
-    ds = Quantity(data[column])
+    ds = Quantity.from_series(data[column], sparse=True)
 
     ds = ds \
         .assign_attrs(attrs) \

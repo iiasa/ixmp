@@ -426,7 +426,8 @@ class Reporter:
 
         return key
 
-    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True):
+    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True,
+                  sums=False):
         """Add a computation that aggregates *qty*.
 
         Parameters
@@ -438,8 +439,13 @@ class Reporter:
             quantity.
         dims_or_groups: str or iterable of str or dict
             Name(s) of the dimension(s) to sum over, or nested dict.
-        weights : xr.DataArray
+        weights : xr.DataArray, optional
             Weights for weighted aggregation.
+        keep : bool, optional
+            Passed to :meth:`computations.aggregate
+            <imxp.reporting.computations.aggregate>`.
+        sums : bool, optional
+            Passed to :meth:`add`.
 
         Returns
         -------
@@ -462,7 +468,7 @@ class Reporter:
             key = Key.from_str_or_key(qty, drop=dims, tag=tag)
             comp = (partial(computations.sum, dimensions=dims), qty, weights)
 
-        return self.add(key, comp, strict=True, index=True)
+        return self.add(key, comp, strict=True, index=True, sums=sums)
 
     def disaggregate(self, qty, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.

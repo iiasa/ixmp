@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-from .utils import collect_units, Quantity, concat
+from .utils import collect_units, AttrSeries, Quantity, concat
 
 __all__ = [
     'aggregate',
@@ -32,7 +32,7 @@ def sum(quantity, weights=None, dimensions=None):
     else:
         w_total = weights.sum(dim=dimensions)
 
-    result = Quantity(quantity * weights).sum(dim=dimensions) / w_total
+    result = (quantity * weights).sum(dim=dimensions) / w_total
     result.attrs['_unit'] = collect_units(quantity)[0]
 
     return result
@@ -85,7 +85,7 @@ def disaggregate_shares(quantity, shares):
                     attrs={'_unit': collect_units(quantity)[0]})
 
 
-def product(*quantities, drop=True):
+def product(*quantities):
     """Return the product of any number of *quantities*."""
     if len(quantities) == 1:
         quantities = [quantities]
@@ -103,13 +103,13 @@ def product(*quantities, drop=True):
 
     result.attrs['_unit'] = u_result
 
-    if drop:
+    if Quantity is AttrSeries:
         result.dropna(inplace=True)
 
     return result
 
 
-def ratio(numerator, denominator, drop=True):
+def ratio(numerator, denominator):
     """Return the ratio *numerator* / *denominator*."""
     # Handle units
     u_num, u_denom = collect_units(numerator, denominator)
@@ -117,7 +117,7 @@ def ratio(numerator, denominator, drop=True):
     result = numerator / denominator
     result.attrs['_unit'] = u_num / u_denom
 
-    if drop:
+    if Quantity is AttrSeries:
         result.dropna(inplace=True)
 
     return result

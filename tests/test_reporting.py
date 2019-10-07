@@ -19,6 +19,7 @@ from ixmp.reporting import (
     computations,
 )
 from ixmp.reporting import UNITS
+from ixmp.reporting.attrseries import AttrSeries
 from ixmp.reporting.utils import Quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
@@ -116,8 +117,9 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
-    assert len(d) == 1
-    assert np.isclose(d.iloc[0], 11.7)
+    assert d.shape == ((1,) if Quantity is AttrSeries else tuple())
+    assert d.size == 1
+    assert np.isclose(d.values, 11.7)
 
     # Weighted sum
     weights = Quantity(xr.DataArray(
@@ -620,7 +622,7 @@ def test_reporting_filters(test_mp, tmp_path):
     x_key = rep.full_key('x')
 
     def assert_t_indices(labels):
-        assert set(rep.get(x_key).index.levels[0]) == set(labels)
+        assert set(rep.get(x_key).coords['t'].values) == set(labels)
 
     # 1. Set filters directly
     rep.graph['filters'] = {'t': t_foo}

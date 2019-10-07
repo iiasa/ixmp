@@ -41,6 +41,10 @@ class AttrSeries(pd.Series):
 
         self.attrs = attrs
 
+    @classmethod
+    def from_series(cls, series, sparse=None):
+        return cls(series)
+
     def assign_attrs(self, d):
         self.attrs.update(d)
         return self

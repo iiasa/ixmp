@@ -63,15 +63,15 @@ def aggregate(quantity, groups, keep):
     dim_order = quantity.dims
 
     for dim, dim_groups in groups.items():
-        values = []
+        # Optionally keep the original values
+        values = [quantity] if keep else []
+
+        # Aggregate each group
         for group, members in dim_groups.items():
             values.append(quantity.sel({dim: members})
                                   .sum(dim=dim)
                                   .assign_coords(**{dim: group})
                                   .transpose(*dim_order))
-        if keep:
-            # Prepend the original values
-            values.insert(0, quantity)
 
         # Reassemble to a single dataarray
         quantity = concat(values, dim=dim)
@@ -81,8 +81,9 @@ def aggregate(quantity, groups, keep):
 
 def disaggregate_shares(quantity, shares):
     """Disaggregate *quantity* by *shares*."""
-    return Quantity(quantity * shares,
-                    attrs={'_unit': collect_units(quantity)[0]})
+    result = quantity * shares
+    result.attrs['_unit'] = collect_units(quantity)[0]
+    return result
 
 
 def product(*quantities):

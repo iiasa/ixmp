@@ -2,6 +2,7 @@ from functools import partial, reduce
 import logging
 from operator import mul
 
+import numpy
 import pandas as pd
 import pint
 import xarray as xr
@@ -232,9 +233,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # Convert to a Dataset, assign attrbutes and name
     # ds = xr.Dataset.from_dataframe(data)[column]
     # or to a new "Attribute Series"
-    ds = Quantity.from_series(data[column], sparse=True)
-
-    ds = ds \
+    ds = as_quantity(data[column]) \
         .assign_attrs(attrs) \
         .rename(name + ('-margin' if column == 'mrg' else ''))
 
@@ -247,9 +246,41 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     return ds
 
 
-def concat(*args, **kwargs):
+def concat(objs, *args, **kwargs):
+    """Concatenate Quantity *objs*."""
     if Quantity is AttrSeries:
         kwargs.pop('dim')
-        return pd.concat(*args, **kwargs)
+        return pd.concat(objs, *args, **kwargs)
     elif Quantity is xr.DataArray:
-        return xr.concat(*args, **kwargs)
+        return xr.concat(objs, *args, **kwargs)
+
+
+def as_attrseries(obj):
+    """Convert obj to an AttrSeries."""
+    return AttrSeries(obj)
+
+
+def as_sparse_xarray(obj):
+    """Convert *obj* to an xr.DataArray with sparse.COO storage."""
+    import sparse
+    from xarray.core.dtypes import maybe_promote
+
+    if isinstance(obj, xr.DataArray) and isinstance(obj.data, numpy.ndarray):
+        return xr.DataArray(
+            data=sparse.COO.from_numpy(
+                obj.data,
+                fill_value=maybe_promote(obj.data.dtype)[1]),
+            coords=obj.coords,
+            dims=obj.dims,
+            name=obj.name,
+            attrs=obj.attrs,
+        )
+    elif isinstance(obj, pd.Series):
+        return xr.DataArray.from_series(obj, sparse=True)
+
+    else:
+        print(type(obj), type(obj.data))
+        return obj
+
+
+as_quantity = as_attrseries if Quantity is AttrSeries else as_sparse_xarray

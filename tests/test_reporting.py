@@ -5,7 +5,6 @@ import subprocess
 import ixmp
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_series_equal
 import pytest
 import xarray as xr
 
@@ -20,7 +19,7 @@ from ixmp.reporting import (
 )
 from ixmp.reporting import UNITS
 from ixmp.reporting.attrseries import AttrSeries
-from ixmp.reporting.utils import Quantity
+from ixmp.reporting.utils import Quantity, as_quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
@@ -134,17 +133,18 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
     # ...produces the expected new value
     obs = rep.get(new_key)
-    exp = (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    # TODO: attrs has to be explicitly copied here because math is done which
-    # returns a pd.Series
-    exp = Quantity(exp, attrs=rep.get('d:i-j').attrs)
+    d_ij = rep.get('d:i-j')
+    exp = (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j'])
+    # FIXME attrs has to be explicitly copied here because math is done which
+    #       returns a pd.Series
+    exp.attrs = d_ij.attrs
 
-    assert_series_equal(obs.sort_index(), exp.sort_index())
+    assert_qty_equal(exp, obs)
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
+    new_key = rep.disaggregate('b:j', 'p', args=[as_quantity(shares)])
 
     # ...produces the expected key with new dimension added
     assert new_key == 'b:j-p'
@@ -574,38 +574,38 @@ def test_reporting_aggregate(test_mp):
     # Define some groups
     t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
 
-    # Add aggregates
-    key1 = rep.aggregate('x:t-y', 'agg1', {'t': t_groups}, keep=True)
-
-    # Group has expected key and contents
-    assert key1 == 'x:t-y:agg1'
-
-    # Aggregate is computed without error
-    agg1 = rep.get(key1)
+    # Use the computation directly
+    agg1 = computations.aggregate(as_quantity(x), {'t': t_groups}, True)
 
     # Expected set of keys along the aggregated dimension
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries,
-    # should that be made default in assert_qty_allclose?
-    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'),
-                        check_dtype=False)
-    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'),
-                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
+    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
     assert_qty_allclose(agg1.sel(t='baz', drop=True),
-                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'),
-                        check_dtype=False)
+                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+
+    # Use Reporter convenience method
+    key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=True)
+
+    # Group has expected key and contents
+    assert key2 == 'x:t-y:agg2'
+
+    # Aggregate is computed without error
+    agg2 = rep.get(key2)
+
+    assert_qty_equal(agg1, agg2)
 
     # Add aggregates, without keeping originals
-    key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)
+    key3 = rep.aggregate('x:t-y', 'agg3', {'t': t_groups}, keep=False)
 
     # Distinct keys
-    assert key2 != key1
+    assert key3 != key2
 
     # Only the aggregated and no original keys along the aggregated dimension
-    agg2 = rep.get(key2)
-    assert set(agg2.coords['t'].values) == set(t_groups.keys())
+    agg3 = rep.get(key3)
+    assert set(agg3.coords['t'].values) == set(t_groups.keys())
 
     with pytest.raises(NotImplementedError):
         # Not yet supported; requires two separate operations

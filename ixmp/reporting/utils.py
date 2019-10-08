@@ -1,4 +1,4 @@
-from functools import partial, reduce
+from functools import lru_cache, partial, reduce
 import logging
 from operator import mul
 
@@ -83,6 +83,11 @@ def _find_dims(data):
 
     # Rename dimensions
     return [RENAME_DIMS.get(d, d) for d in dims]
+
+
+@lru_cache(1)
+def get_reversed_rename_dims():
+    return {v: k for k, v in RENAME_DIMS.items()}
 
 
 def keys_for_quantity(ix_type, name, scenario):
@@ -188,6 +193,24 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         Data for *name*.
     """
     log.debug('Retrieving data for {}'.format(name))
+
+    # Only use the relevant filters
+    if filters:
+        # Dimensions of the object
+        dims = _find_dims(scenario._item(ix_type, name, load=False)
+                          .getIdxNames().toArray())
+
+        # Mapping from renamed dimensions to Scenario dimension names
+        MAP = get_reversed_rename_dims()
+
+        filters_to_use = {}
+        for dim, values in filters.items():
+            if dim in dims:
+                # *dim* is in this ixmp object, so the filter can be used
+                filters_to_use[MAP[dim]] = values
+
+        filters = filters_to_use
+
     # Retrieve quantity data
     data = scenario._element(ix_type, name, filters)
 

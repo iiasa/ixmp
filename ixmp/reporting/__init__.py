@@ -237,11 +237,13 @@ class Reporter:
             `computation` does not exist; or ``sums=True`` and the key for one
             of the partial sums of `key` is already in the Reporter.
         """
-        to_add = [(key, computation)]
         added = []
 
         if sums:
-            to_add = chain(to_add, Key.from_str_or_key(key).iter_sums())
+            key = Key.from_str_or_key(key)
+            to_add = chain([(key, computation)], key.iter_sums())
+        else:
+            to_add = [(key, computation)]
 
         for k, comp in to_add:
             if strict:
@@ -411,7 +413,8 @@ class Reporter:
             The full key of the new quantity.
         """
         # Fetch the full key for each quantity
-        base_keys = self.check_keys(*quantities)
+        base_keys = list(map(Key.from_str_or_key,
+                             self.check_keys(*quantities)))
 
         # Compute a key for the result
         key = Key.product(name, *base_keys)

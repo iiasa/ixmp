@@ -207,7 +207,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         for dim, values in filters.items():
             if dim in dims:
                 # *dim* is in this ixmp object, so the filter can be used
-                filters_to_use[MAP[dim]] = values
+                filters_to_use[MAP.get(dim, dim)] = values
 
         filters = filters_to_use
 

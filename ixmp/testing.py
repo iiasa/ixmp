@@ -327,7 +327,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
         a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
         b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
 
-        assert_series_equal(a, b, **kwargs)
+        assert_series_equal(a, b, check_dtype=False, **kwargs)
     elif Quantity is DataArray:
         assert_xr_equal(a, b, **kwargs)
 

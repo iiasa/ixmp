@@ -16,9 +16,10 @@ from .utils import (
 
 __all__ = [
     'aggregate',
+    'concat',
     'disaggregate_shares',
-    'make_dataframe',
     'load_file',
+    'make_dataframe',
     'sum',
     'write_report',
 ]

@@ -11,7 +11,7 @@ from .utils import (
     AttrSeries,
     Quantity,
     collect_units,
-    concat,
+    filter_concat_args,
 )
 
 __all__ = [
@@ -82,6 +82,21 @@ def aggregate(quantity, groups, keep):
         quantity = concat(values, dim=dim)
 
     return quantity
+
+
+def concat(objs, *args, **kwargs):
+    """Concatenate Quantity *objs*.
+
+    Any strings included amongst *args* are discarded, with a logged warning;
+    these usually indicate that a quantity is referenced which is not in the
+    Reporter.
+    """
+    objs = filter_concat_args(objs)
+    if Quantity is AttrSeries:
+        kwargs.pop('dim')
+        return pd.concat(objs, *args, **kwargs)
+    elif Quantity is xr.DataArray:
+        return xr.concat(objs, *args, **kwargs)
 
 
 def disaggregate_shares(quantity, shares):

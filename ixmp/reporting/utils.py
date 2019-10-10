@@ -85,6 +85,18 @@ def _find_dims(data):
     return [RENAME_DIMS.get(d, d) for d in dims]
 
 
+def filter_concat_args(*args):
+    """Filter out str and Key from *args*.
+
+    A warning is logged for each element removed.
+    """
+    for arg in args:
+        if isinstance(arg, (str, Key)):
+            log.warn('concat() argument {arg!r} missing; will be omitted')
+            continue
+        yield arg
+
+
 @lru_cache(1)
 def get_reversed_rename_dims():
     return {v: k for k, v in RENAME_DIMS.items()}
@@ -267,15 +279,6 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         pass
 
     return ds
-
-
-def concat(objs, *args, **kwargs):
-    """Concatenate Quantity *objs*."""
-    if Quantity is AttrSeries:
-        kwargs.pop('dim')
-        return pd.concat(objs, *args, **kwargs)
-    elif Quantity is xr.DataArray:
-        return xr.concat(objs, *args, **kwargs)
 
 
 def as_attrseries(obj):

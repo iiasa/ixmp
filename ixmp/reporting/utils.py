@@ -85,7 +85,7 @@ def _find_dims(data):
     return [RENAME_DIMS.get(d, d) for d in dims]
 
 
-def filter_concat_args(*args):
+def filter_concat_args(args):
     """Filter out str and Key from *args*.
 
     A warning is logged for each element removed.

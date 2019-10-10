@@ -80,12 +80,12 @@ def aggregate(quantity, groups, keep):
                                   .transpose(*dim_order))
 
         # Reassemble to a single dataarray
-        quantity = concat(values, dim=dim)
+        quantity = concat(*values, dim=dim)
 
     return quantity
 
 
-def concat(objs, *args, **kwargs):
+def concat(*objs, **kwargs):
     """Concatenate Quantity *objs*.
 
     Any strings included amongst *args* are discarded, with a logged warning;
@@ -95,9 +95,9 @@ def concat(objs, *args, **kwargs):
     objs = filter_concat_args(objs)
     if Quantity is AttrSeries:
         kwargs.pop('dim')
-        return pd.concat(objs, *args, **kwargs)
+        return pd.concat(objs, **kwargs)
     elif Quantity is xr.DataArray:
-        return xr.concat(objs, *args, **kwargs)
+        return xr.concat(objs, **kwargs)
 
 
 def disaggregate_shares(quantity, shares):
@@ -125,6 +125,8 @@ def product(*quantities):
 
         TODO remove when Quantity is xr.DataArray, or above issues is closed.
         """
+        if not isinstance(obj.index, pd.MultiIndex):
+            return obj
         common = [n for n in ref.index.names if n in obj.index.names]
         unique = [n for n in obj.index.names if n not in common]
         return obj.reorder_levels(common + unique)

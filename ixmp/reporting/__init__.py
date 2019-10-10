@@ -21,11 +21,7 @@
 from functools import partial
 from itertools import chain, repeat
 import logging
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
-from warnings import warn
+from pathlib import Path
 
 import dask
 
@@ -619,8 +615,8 @@ def _config_args(path, keys, sections={}):
     if sections:
         extra_sections = set(result.keys()) - sections - {'config_dir'}
         if len(extra_sections):
-            warn(('Unrecognized sections {!r} in reporting configuration will '
-                  'have no effect').format(extra_sections))
+            log.warn('Unrecognized sections in reporting configuration '
+                     'will have no effect:\n  ' + repr(extra_sections))
 
     return result
 

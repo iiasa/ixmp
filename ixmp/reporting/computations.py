@@ -7,7 +7,12 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-from .utils import collect_units, AttrSeries, Quantity, concat
+from .utils import (
+    AttrSeries,
+    Quantity,
+    collect_units,
+    concat,
+)
 
 __all__ = [
     'aggregate',
@@ -97,15 +102,26 @@ def product(*quantities):
     # Initialize result values with first entry
     result, u_result = next(items)
 
+    def _align_levels(ref, obj):
+        """Work around https://github.com/pandas-dev/pandas/issues/25760
+
+        Return a copy of *obj* with common levels in the same order as *ref*.
+
+        TODO remove when Quantity is xr.DataArray, or above issues is closed.
+        """
+        common = [n for n in ref.index.names if n in obj.index.names]
+        unique = [n for n in obj.index.names if n not in common]
+        return obj.reorder_levels(common + unique)
+
     # Iterate over remaining entries
     for q, u in items:
-        result = result * q
+        if Quantity is AttrSeries:
+            result = (result * _align_levels(result, q)).dropna()
+        else:
+            result = result * q
         u_result *= u
 
     result.attrs['_unit'] = u_result
-
-    if Quantity is AttrSeries:
-        result.dropna(inplace=True)
 
     return result
 

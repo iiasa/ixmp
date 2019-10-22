@@ -655,6 +655,12 @@ def test_reporting_filters(test_mp, tmp_path):
     rep.set_filters(t=None)
     assert_t_indices(t)
 
+    # Clear using the convenience method with no args
+    rep.set_filters(t=t_foo)
+    assert_t_indices(t_foo)
+    rep.set_filters()
+    assert_t_indices(t)
+
     # 3. Set filters via configuration keys
     # NB passes through from_scenario() -> __init__() -> configure()
     rep = Reporter.from_scenario(scen, filters={'t': t_foo})

@@ -376,11 +376,21 @@ class Reporter:
     def set_filters(self, **filters):
         """Apply *filters* ex ante (before computations occur).
 
-        *filters* has the same form as the argument of the same name to
-        :meth:`ixmp.Scenario.par` and analogous methods. A value of
-        :const:`None` will clear the filter for the named dimension.
+        Filters are stored in the reporter at the ``'filters'`` key, and are
+        passed to :meth:`ixmp.Scenario.par` and similar methods. All quantity
+        values read from the Scenario are filtered *before* any other
+        computations take place.
+
+        Parameters
+        ----------
+        filters : mapping of str → (list of str or None)
+            Argument names are dimension names; values are lists of allowable
+            labels along the respective dimension, *or* None to clear any
+            existing filters for the dimension.
+
+            If no arguments are provided, *all* filters are cleared.
         """
-        if self.graph['filters'] is None:
+        if self.graph['filters'] is None or len(filters) == 0:
             self.graph['filters'] = {}
 
         # Update

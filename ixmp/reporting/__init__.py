@@ -551,6 +551,7 @@ class Reporter:
     def write(self, key, path):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
+        key = self.check_keys(key)[0]
         computations.write_report(self.get(key), path)
 
 
@@ -620,8 +621,8 @@ def _config_args(path, keys, sections={}):
     if sections:
         extra_sections = set(result.keys()) - sections - {'config_dir'}
         if len(extra_sections):
-            log.warn('Unrecognized sections in reporting configuration '
-                     'will have no effect:\n  ' + repr(extra_sections))
+            log.warning('Unrecognized sections in reporting configuration '
+                        'will have no effect:\n  ' + repr(extra_sections))
 
     return result
 

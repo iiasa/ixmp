@@ -693,4 +693,4 @@ def test_reporting_filters(test_mp, tmp_path, caplog):
 
     msg = (f"0 values for par 'x' using filters:\n  {removed!r}\n  "
            "Subsequent computations may fail.")
-    assert msg == caplog.records[0].message
+    assert msg == caplog.records[-1].message

@@ -623,7 +623,7 @@ def test_reporting_aggregate(test_mp):
         rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})
 
 
-def test_reporting_filters(test_mp, tmp_path):
+def test_reporting_filters(test_mp, tmp_path, caplog):
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, 'Reporting filters', 'Reporting filters',
                          'new')
@@ -678,3 +678,19 @@ def test_reporting_filters(test_mp, tmp_path):
 
     rep.configure(config_file)
     assert_t_indices(t_bar)
+
+    # Filtering too heavily:
+    # Remove one value from the database at valid coordinates
+    removed = {'t': t[:1], 'y': list(x.coords['y'].values)[:1]}
+    scen.remove_par('x', removed)
+
+    # Set filters to retrieve only this coordinate
+    rep.set_filters(**removed)
+
+    # A warning is logged
+    caplog.clear()
+    rep.get(x_key)
+
+    msg = (f"0 values for par 'x' using filters:\n  {removed!r}\n  "
+           "Subsequent computations may fail.")
+    assert msg == caplog.records[0].message

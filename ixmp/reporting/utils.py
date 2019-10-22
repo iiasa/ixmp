@@ -230,6 +230,13 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     if isinstance(data, dict):
         data = pd.DataFrame.from_records([data])
 
+    # Warn if no values are returned.
+    # TODO construct an empty Quantity with the correct dimensions *even if* no
+    #      values are returned.
+    if len(data) == 0:
+        log.warning(f'0 values for {ix_type} {name!r} using filters:'
+                    f'\n  {filters!r}\n  Subsequent computations may fail.')
+
     # List of the dimensions
     dims = _find_dims(data)
 

@@ -521,19 +521,24 @@ class Reporter:
         key = key if key else 'file:{}'.format(path.name)
         return self.add(key, (partial(computations.load_file, path),), True)
 
-    def describe(self, key=None):
+    def describe(self, key=None, quiet=False):
         """Return a string describing the computations that produce *key*.
 
         If *key* is not provided, all keys in the Reporter are described.
+
+        The string is also printed. If *quiet*, do not print to the console.
         """
-        # TODO allow key to be an iterable of keys
         if key is None:
             # Sort with 'all' at the end
             key = tuple(sorted(filter(lambda k: k != 'all',
                                       self.graph.keys())) + ['all'])
         else:
             key = (key,)
-        return describe_recursive(self.graph, key) + '\n'
+
+        result = describe_recursive(self.graph, key)
+        if not quiet:
+            print(result, end='\n')
+        return result
 
     def visualize(self, filename, **kwargs):
         """Generate an image describing the reporting structure.

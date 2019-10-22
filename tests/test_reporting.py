@@ -416,7 +416,7 @@ def test_reporting_platform_units(test_mp, caplog):
                rec.message for rec in caplog.records)
 
 
-def test_reporter_describe(test_mp, test_data_path):
+def test_reporter_describe(test_mp, test_data_path, capsys):
     scen = make_dantzig(test_mp)
     r = Reporter.from_scenario(scen)
 
@@ -425,21 +425,28 @@ def test_reporter_describe(test_mp, test_data_path):
         '{:#018X}'.format(id(scen)).replace('X', 'x')
 
     # Describe one key
-    expected = """'d:i':
+    desc1 = """'d:i':
 - sum(dimensions=['j'], weights=None, ...)
 - 'd:i-j':
   - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario':
     - <ixmp.core.Scenario object at {id}>
   - 'filters':
-    - {{}}
-""".format(id=id_)
-    assert expected == r.describe('d:i')
+    - {{}}""".format(id=id_)
+    assert desc1 == r.describe('d:i')
 
-    # Describe all keys
-    expected = (test_data_path / 'report-describe.txt').read_text() \
-                                                       .format(id=id_)
-    assert expected == r.describe()
+    # Description was also written to stdout
+    out1, _ = capsys.readouterr()
+    assert desc1 + '\n' == out1
+
+    # Description of all keys is as expected
+    desc2 = (test_data_path / 'report-describe.txt').read_text() \
+                                                    .format(id=id_)
+    assert desc2 == r.describe() + '\n'
+
+    # Result was also written to stdout
+    out2, _ = capsys.readouterr()
+    assert desc2 == out2
 
 
 def test_reporter_visualize(test_mp, tmp_path):

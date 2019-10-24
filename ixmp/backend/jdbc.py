@@ -445,6 +445,12 @@ class JDBCBackend(Backend):
     def s_set_meta(self, s, name, value):
         self.jindex[s].setMeta(name, value)
 
+    def s_clear_solution(self, s, from_year=None):
+        if from_year:
+            self.jindex[s].removeSolution(from_year)
+        else:
+            self.jindex[s].removeSolution()
+
     # Helpers; not part of the Backend interface
 
     def s_write_gdx(self, s, path):

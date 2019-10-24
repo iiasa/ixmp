@@ -1269,10 +1269,8 @@ class Scenario(TimeSeries):
         """
         if self.has_solution():
             self.clear_cache()  # reset Python data cache
-            if check_year(first_model_year, 'first_model_year'):
-                self._jobj.removeSolution(first_model_year)
-            else:
-                self._jobj.removeSolution()
+            check_year(first_model_year, 'first_model_year')
+            self._backend('clear_solution', first_model_year)
         else:
             raise ValueError('This Scenario does not have a solution!')
 

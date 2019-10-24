@@ -307,3 +307,7 @@ class Backend(ABC):
     @abstractmethod
     def s_set_meta(self, s, name, value):
         pass
+
+    @abstractmethod
+    def s_clear_solution(self, s, from_year=None):
+        pass

@@ -1407,22 +1407,6 @@ class Scenario(TimeSeries):
         if key is not None:
             self._pycache.pop(key)
 
-    def years_active(self, node, tec, yr_vtg):
-        """return a list of years in which a technology of certain vintage
-        at a specific node can be active
-
-        Parameters
-        ----------
-        node : str
-            node name
-        tec : str
-            name of the technology
-        yr_vtg : str
-            vintage year
-        """
-        # TODO this is specific to message_ix.Scenario AND is untested; remove
-        return list(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
-
     def get_meta(self, name=None):
         """get scenario metadata
 

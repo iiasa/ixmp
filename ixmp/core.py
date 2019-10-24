@@ -744,6 +744,19 @@ class Scenario(TimeSeries):
         """
         return self._backend('item_index', name, 'names')
 
+    def _keys(self, name, key_or_keys):
+        if isinstance(key_or_keys, (list, pd.Series)):
+            return as_str_list(key_or_keys)
+        elif isinstance(key_or_keys, (pd.DataFrame, dict)):
+            if isinstance(key_or_keys, dict):
+                key_or_keys = pd.DataFrame.from_dict(
+                    key_or_keys, orient='columns', dtype=None)
+            idx_names = self.idx_names(name)
+            return [as_str_list(row, idx_names)
+                    for _, row in key_or_keys.iterrows()]
+        else:
+            return [str(key_or_keys)]
+
     def cat_list(self, name):
         raise DeprecationWarning('function was migrated to `message_ix` class')
 
@@ -915,9 +928,10 @@ class Scenario(TimeSeries):
         self.clear_cache(name=name, ix_type='set')
 
         if key is None:
-            self._backend('remove_item', 'set', name)
+            self._backend('delete_item', 'set', name)
         else:
-            _remove_ele(self._jobj.getSet(name), key)
+            self._backend('item_delete_elements', 'set', name,
+                          self._keys(name, key))
 
     def par_list(self):
         """List all defined parameters."""
@@ -1097,9 +1111,10 @@ class Scenario(TimeSeries):
         self.clear_cache(name=name, ix_type='par')
 
         if key is None:
-            self._backend('remove_item', 'par', name)
+            self._backend('delete_item', 'par', name)
         else:
-            _remove_ele(self._jobj.getPar(name), key)
+            self._backend('item_delete_elements', 'par', name,
+                          self._keys(name, key))
 
     def var_list(self):
         """List all defined variables."""
@@ -1491,24 +1506,3 @@ def to_iamc_template(df):
         raise ValueError("missing required columns `{}`!".format(missing))
 
     return df
-
-
-def _remove_ele(item, key):
-    """auxiliary """
-    if item.getDim() > 0:
-        if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(as_str_list(key))
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = list(item.getIdxNames())
-            for i in key.index:
-                item.removeElement(as_str_list(key.loc[i], idx_names))
-        else:
-            item.removeElement(str(key))
-
-    else:
-        if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(as_str_list(key))
-        else:
-            item.removeElement(str(key))

@@ -310,6 +310,10 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def s_item_delete_elements(self, s, type, name, key):
+        pass
+
+    @abstractmethod
     def s_get_meta(self, s):
         pass
 

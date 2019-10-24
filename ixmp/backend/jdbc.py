@@ -340,7 +340,6 @@ class JDBCBackend(Backend):
         func(name, idx_sets, idx_names)
 
     def s_delete_item(self, s, type, name):
-        """Remove an item *name* of *type* in Scenario *s*."""
         getattr(self.jindex[s], f'remove{type.title()}')()
 
     def s_item_index(self, s, name, sets_or_names):
@@ -447,6 +446,11 @@ class JDBCBackend(Backend):
             # - (key, value, unit)
             # - (value, unit, comment)
             jPar.addElement(*args)
+
+    def s_item_delete_elements(self, s, type, name, keys):
+        jitem = self._get_item(s, type, name, load=False)
+        for key in keys:
+            jitem.removeElement(key)
 
     def s_get_meta(self, s):
         def unwrap(v):

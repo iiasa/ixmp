@@ -9,6 +9,8 @@ FIELDS = {
                       'upd_date', 'lock_user', 'lock_date', 'annotation',
                       'version'),
     'ts_get': ('region', 'variable', 'unit', 'year', 'value'),
+    'ts_get_geo': ('region', 'variable', 'time', 'year', 'value', 'unit',
+                   'meta'),
 }
 
 
@@ -140,6 +142,25 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def ts_get_geo(self, ts):
+        """Retrieve time-series 'geodata'.
+
+        Yields
+        ------
+        tuple
+            The seven members of each tuple are:
+
+            1. region: str.
+            2. variable: str.
+            3. time: str.
+            4. year: int.
+            5. value: str.
+            6. unit: str.
+            7. meta: int.
+        """
+        pass
+
+    @abstractmethod
     def ts_set(self, ts, region, variable, data, unit, meta):
         """Store time-series data.
 
@@ -155,8 +176,30 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
+        """Store time-series 'geodata'.
+
+        Parameters
+        ----------
+        region, variable, time, unit : str
+            Indices for the data.
+        year : int
+            Year index.
+        value : str
+            Data.
+        meta : bool
+            Metadata flag.
+        """
+        pass
+
+    @abstractmethod
     def ts_delete(self, ts, region, variable, years, unit):
         """Remove time-series data."""
+        pass
+
+    @abstractmethod
+    def ts_delete_geo(self, ts, region, variable, time, years, unit):
+        """Remove time-series 'geodata'."""
         pass
 
     @abstractmethod

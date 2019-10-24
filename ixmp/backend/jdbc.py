@@ -1,4 +1,6 @@
+from collections import ChainMap
 from collections.abc import Collection, Iterable
+from functools import lru_cache
 import os
 from pathlib import Path
 import re
@@ -193,19 +195,66 @@ class JDBCBackend(Backend):
 
     def ts_get(self, ts, region, variable, unit, year):
         """Retrieve time-series data."""
+        # Convert the selectors to Java lists
         r = to_jlist2(region)
         v = to_jlist2(variable)
         u = to_jlist2(unit)
         y = to_jlist2(year)
 
+        # Field types
         ftype = {
             'year': int,
             'value': float,
         }
 
+        # Iterate over returned rows
         for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
+            # Get the value of each field and maybe convert its type
             yield tuple(ftype.get(f, str)(row.get(f))
                         for f in FIELDS['ts_get'])
+
+    def ts_get_geo(self, ts):
+        """Retrieve time-series 'geodata'."""
+        # NB the return type of getGeoData() requires more processing than
+        #    getTimeseries. It also accepts no selectors.
+
+        # Field types
+        ftype = {
+            'meta': int,
+            'time': lambda ord: timespans()[int(ord)],  # Look up the name
+            'year': lambda obj: obj,  # Pass through; handled later
+        }
+
+        # Returned names in Java data structure do not match API column names
+        jname = {
+            'meta': 'meta',
+            'region': 'nodeName',
+            'time': 'time',
+            'unit': 'unitName',
+            'variable': 'keyString',
+            'year': 'yearlyData'
+        }
+
+        # Iterate over rows from the Java backend
+        for row in self.jindex[ts].getGeoData():
+            data1 = {f: ftype.get(f, str)(row.get(jname.get(f, f)))
+                     for f in FIELDS['ts_get_geo'] if f != 'value'}
+
+            # At this point, the 'year' key is a not a single value, but a
+            # year -> value mapping with multiple entries
+            yv_entries = data1.pop('year').entrySet()
+
+            # Construct a chain map: look up in data1, then data2
+            data2 = {'year': None, 'value': None}
+            cm = ChainMap(data1, data2)
+
+            for yv in yv_entries:
+                # Update data2
+                data2['year'] = yv.getKey()
+                data2['value'] = yv.getValue()
+
+                # Construct a row with a single value
+                yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
     def ts_set(self, ts, region, variable, data, unit, meta):
         """Store time-series data."""
@@ -218,10 +267,20 @@ class JDBCBackend(Backend):
         self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
                                       meta)
 
+    def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
+        """Store time-series 'geodata'."""
+        self.jindex[ts].addGeoData(region, variable, time, java.Integer(year),
+                                   value, unit, meta)
+
     def ts_delete(self, ts, region, variable, years, unit):
         """Remove time-series data."""
         years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
+
+    def ts_delete_geo(self, ts, region, variable, time, years, unit):
+        """Remove time-series 'geodata'."""
+        years = to_jlist2(years, java.Integer)
+        self.jindex[ts].removeGeoData(region, variable, time, years, unit)
 
     # Scenario methods
 
@@ -499,3 +558,10 @@ def to_jlist2(arg, convert=None):
     else:
         raise ValueError(arg)
     return jlist
+
+
+@lru_cache(1)
+def timespans():
+    # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
+    jTimeSpan = JClass('at.ac.iiasa.ixmp.objects.TimeSeries$TimeSpan')
+    return {t.ordinal(): t.name() for t in jTimeSpan.values()}

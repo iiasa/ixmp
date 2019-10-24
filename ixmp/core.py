@@ -2,20 +2,17 @@
 import inspect
 from itertools import repeat, zip_longest
 import logging
-import os
-from subprocess import check_call
 from warnings import warn
 
 import numpy as np
 import pandas as pd
 
-from ixmp import model_settings
 from .backend import BACKENDS, FIELDS
+from .model import get_model
 from .utils import (
     as_str_list,
     check_year,
     filtered,
-    harmonize_path,
     logger,
 )
 
@@ -1291,46 +1288,6 @@ class Scenario(TimeSeries):
         return scenario_class(platform, model, scenario, cache=self._cache,
                               version=jclone)
 
-    def to_gdx(self, path, filename, include_var_equ=False):
-        """export the scenario data to GAMS gdx
-
-        Parameters
-        ----------
-        path : str
-            path to the folder
-        filename : str
-            name of the gdx file
-        include_var_equ : boolean, optional
-            indicator whether to include variables/equations in gdx
-        """
-        self._jobj.toGDX(path, filename, include_var_equ)
-
-    def read_sol_from_gdx(self, path, filename, comment=None,
-                          var_list=None, equ_list=None, check_solution=True):
-        """read solution from GAMS gdx and import it to the scenario
-
-        Parameters
-        ----------
-        path : str
-            path to the folder
-        filename : str
-            name of the gdx file
-        comment : str
-            comment to be added to the changelog
-        var_list : list of str
-            variables (levels and marginals) to be imported from gdx
-        equ_list : list of str
-            equations (levels and marginals) to be imported from gdx
-        check_solution : boolean, optional
-            raise an error if GAMS did not solve to optimality
-            (only applicable for a MESSAGE-scheme scenario)
-        """
-        self.clear_cache()  # reset Python data cache
-        self._jobj.readSolutionFromGDX(path, filename, comment,
-                                       as_str_list(var_list),
-                                       as_str_list(equ_list),
-                                       check_solution)
-
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
 
@@ -1365,17 +1322,13 @@ class Scenario(TimeSeries):
         else:
             raise ValueError('This Scenario does not have a solution!')
 
-    def solve(self, model, case=None, model_file=None, in_file=None,
-              out_file=None, solve_args=None, comment=None, var_list=None,
-              equ_list=None, check_solution=True, callback=None,
-              gams_args=['LogOption=4'], cb_kwargs={}):
+    def solve(self, model=None, callback=None, cb_kwargs={}, **model_options):
         """Solve the model and store output.
 
-        ixmp 'solves' a model using the following steps:
-
-        1. Write all Scenario data to a GDX model input file.
-        2. Run GAMS for the specified `model` to perform calculations.
-        3. Read the model output, or 'solution', into the database.
+        ixmp 'solves' a model by invoking the ``run`` method of a
+        :class:`BaseModel` subclass—for instance, :meth:`GAMSModel.run`.
+        Depending on the underlying optimization software, different steps are
+        taken; see each model class for details.
 
         If the optional argument `callback` is given, then additional steps are
         performed:
@@ -1438,27 +1391,8 @@ class Scenario(TimeSeries):
             raise ValueError('This Scenario has already been solved, ',
                              'use `remove_solution()` first!')
 
-        model = str(harmonize_path(model))
-        config = model_settings.model_config(model) \
-            if model_settings.model_registered(model) \
-            else model_settings.model_config('default')
-
-        # define case name for gdx export/import, replace spaces by '_'
-        case = case or '{}_{}'.format(self.model, self.scenario)
-        case = case.replace(" ", "_")
-
-        model_file = model_file or config.model_file.format(model=model)
-
-        # define paths for writing to gdx, running GAMS, and reading a solution
-        inp = in_file or config.inp.format(model=model, case=case)
-        outp = out_file or config.outp.format(model=model, case=case)
-        args = solve_args or [arg.format(model=model, case=case, inp=inp,
-                                         outp=outp) for arg in config.args]
-
-        ipth = os.path.dirname(inp)
-        ingdx = os.path.basename(inp)
-        opth = os.path.dirname(outp)
-        outgdx = os.path.basename(outp)
+        # Instantiate a model
+        model = get_model(model, **model_options)
 
         # Validate *callback* argument
         if callback is not None and not callable(callback):
@@ -1468,19 +1402,12 @@ class Scenario(TimeSeries):
             def callback(scenario, **kwargs):
                 return True
 
+        # Flag to warn if the *callback* appears not to return anything
         warn_none = True
 
         # Iterate until convergence
         while True:
-            # Write model data to file
-            self.to_gdx(ipth, ingdx)
-
-            # Invoke GAMS
-            run_gams(model_file, args, gams_args=gams_args)
-
-            # Read model solution
-            self.read_sol_from_gdx(opth, outgdx, comment,
-                                   var_list, equ_list, check_solution)
+            model.run(self)
 
             # Store an iteration number to help the callback
             if not hasattr(self, 'iteration'):
@@ -1639,23 +1566,3 @@ def _remove_ele(item, key):
             item.removeElement(as_str_list(key))
         else:
             item.removeElement(str(key))
-
-
-def run_gams(model_file, args, gams_args=['LogOption=4']):
-    """Parameters
-    ----------
-    model : str
-        the path to the gams file
-    args : list
-        arguments related to the GAMS code (input/output gdx paths, etc.)
-    gams_args : list of str
-        additional arguments for the CLI call to gams
-        - `LogOption=4` prints output to stdout (not console) and the log file
-    """
-    cmd = ['gams', model_file] + args + gams_args
-    cmd = cmd if os.name != 'nt' else ' '.join(cmd)
-
-    file_path = os.path.dirname(model_file).strip('"')
-    file_path = None if file_path == '' else file_path
-
-    check_call(cmd, shell=os.name == 'nt', cwd=file_path)

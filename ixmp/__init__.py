@@ -7,15 +7,4 @@ from ixmp.core import (  # noqa: E402,F401
     TimeSeries,
     Scenario,
 )
-
-from ixmp.model_settings import ModelConfig, register_model  # noqa: E402
 from ixmp.reporting import Reporter  # noqa: F401
-
-
-register_model(
-    'default',
-    ModelConfig(model_file='"{model}.gms"',
-                inp='{model}_in.gdx',
-                outp='{model}_out.gdx',
-                args=['--in="{inp}"', '--out="{outp}"'])
-)

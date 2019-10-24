@@ -231,6 +231,11 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def s_delete_item(self, s, type, name):
+        """Remove an item *name* of *type* in Scenario *s* (required)."""
+        pass
+
+    @abstractmethod
     def s_item_index(self, s, name, sets_or_names):
         """Return the index sets or names of item *name* (required).
 

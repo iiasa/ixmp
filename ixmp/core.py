@@ -915,7 +915,7 @@ class Scenario(TimeSeries):
         self.clear_cache(name=name, ix_type='set')
 
         if key is None:
-            self._jobj.removeSet(name)
+            self._backend('remove_item', 'set', name)
         else:
             _remove_ele(self._jobj.getSet(name), key)
 
@@ -1097,7 +1097,7 @@ class Scenario(TimeSeries):
         self.clear_cache(name=name, ix_type='par')
 
         if key is None:
-            self._jobj.removePar(name)
+            self._backend('remove_item', 'par', name)
         else:
             _remove_ele(self._jobj.getPar(name), key)
 

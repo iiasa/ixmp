@@ -33,6 +33,7 @@ java = SimpleNamespace()
 JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.exceptions.IxException',
     'at.ac.iiasa.ixmp.objects.Scenario',
+    'at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan',
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
@@ -338,6 +339,10 @@ class JDBCBackend(Backend):
         # aren't exposed by Backend, so don't return here
         func(name, idx_sets, idx_names)
 
+    def s_delete_item(self, s, type, name):
+        """Remove an item *name* of *type* in Scenario *s*."""
+        getattr(self.jindex[s], f'remove{type.title()}')()
+
     def s_item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
@@ -585,7 +590,7 @@ def to_jlist(pylist, idx_names=None):
 
 
 def to_jlist2(arg, convert=None):
-    """Simple conversion of :class:`list` *arg* to JLinkedList."""
+    """Simple conversion of :class:`list` *arg* to java.LinkedList."""
     jlist = java.LinkedList()
 
     if convert:
@@ -605,5 +610,4 @@ def to_jlist2(arg, convert=None):
 @lru_cache(1)
 def timespans():
     # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
-    jTimeSpan = JClass('at.ac.iiasa.ixmp.objects.TimeSeries$TimeSpan')
-    return {t.ordinal(): t.name() for t in jTimeSpan.values()}
+    return {t.ordinal(): t.name() for t in java.TimeSpan.values()}

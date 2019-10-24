@@ -656,14 +656,6 @@ class Scenario(TimeSeries):
         self._cache = cache
         self._pycache = {}
 
-    @property
-    def _jobj(self):
-        """Shim to allow existing code that references ._jobj to work."""
-        # TODO address all such warnings, then remove
-        loc = inspect.stack()[1].function
-        warn(f'Accessing Scenario._jobj in {loc}')
-        return self.platform._backend.jindex[self]
-
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
         try:
@@ -671,13 +663,6 @@ class Scenario(TimeSeries):
         except AttributeError:
             func = getattr(self.platform._backend, f'ts_{method}')
         return func(self, *args, **kwargs)
-
-    def _item(self, ix_type, name, load=True):
-        """Shim to allow existing code that references ._item to work."""
-        # TODO address all such warnings, then remove
-        loc = inspect.stack()[1].function
-        warn(f'Calling {self.__class__.__name__}._item() in {loc}')
-        return self.platform._backend._get_item(self, ix_type, name)
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.

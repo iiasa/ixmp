@@ -1454,7 +1454,7 @@ class Scenario(TimeSeries):
         value : str or number or bool
             metadata attribute value
         """
-        self._jobj.setMeta(name, value)
+        self._backend('set_meta', name, value)
 
 
 # %% auxiliary functions for class Scenario

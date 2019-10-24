@@ -442,6 +442,9 @@ class JDBCBackend(Backend):
             # - (value, unit, comment)
             jPar.addElement(*args)
 
+    def s_set_meta(self, s, name, value):
+        self.jindex[s].setMeta(name, value)
+
     # Helpers; not part of the Backend interface
 
     def s_write_gdx(self, s, path):

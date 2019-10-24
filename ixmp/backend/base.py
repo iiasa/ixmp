@@ -303,3 +303,7 @@ class Backend(ABC):
             If the Backend encounters any error adding the parameter values.
         """
         pass
+
+    @abstractmethod
+    def s_set_meta(self, s, name, value):
+        pass

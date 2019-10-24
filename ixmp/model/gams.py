@@ -3,6 +3,7 @@ from pathlib import Path
 from subprocess import check_call
 
 
+from ixmp.backend.jdbc import JDBCBackend
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
 
@@ -83,6 +84,10 @@ class GAMSModel(Model):
 
     def run(self, scenario):
         """Execute the model."""
+        if not isinstance(scenario.platform._backend, JDBCBackend):
+            raise ValueError('GAMSModel can only solve Scenarios with '
+                             'JDBCBackend')
+
         self.scenario = scenario
 
         def format(key):

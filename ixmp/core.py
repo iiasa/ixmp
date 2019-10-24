@@ -82,7 +82,6 @@ class Platform:
             raise ValueError(f'unknown ixmp backend {backend!r}')
         else:
             # Copy positional args for the default JDBC backend
-            print(args, backend_args)
             for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
                 if len(args) > i:
                     backend_args[arg] = args[i]

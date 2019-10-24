@@ -1,10 +1,8 @@
 # coding=utf-8
-import inspect
 from itertools import repeat, zip_longest
 import logging
 from warnings import warn
 
-import numpy as np
 import pandas as pd
 
 from .backend import BACKENDS, FIELDS

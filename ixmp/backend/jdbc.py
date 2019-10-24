@@ -471,8 +471,20 @@ class JDBCBackend(Backend):
 
     # MsgScenario methods
 
+    def ms_cat_list(self, ms, name):
+        return to_pylist(self.jindex[ms].getTypeList(name))
+
+    def ms_cat_get_elements(self, ms, name, cat):
+        return to_pylist(self.jindex[ms].getCatEle(name, cat))
+
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
+
+    def ms_year_first_model(self, ms):
+        return self.jindex[ms].getFirstModelYear()
+
+    def ms_years_active(self, ms, node, tec, year_vintage):
+        return list(self.jindex[ms].getTecActYrs(node, tec, year_vintage))
 
     # Helpers; not part of the Backend interface
 

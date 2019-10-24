@@ -48,15 +48,15 @@ class GAMSModel(Model):
 
         - “LogOption=4” prints output to stdout (not console) and the log
           file.
-    comment : str
-        Comment added to Scenario when importing the solution.
-    var_list : list of str
-        Variables to be imported from the *out_file*.
-    equ_list : list of str
-        Equations to be imported from the *out_file*.
     check_solution : bool
         If True, raise an exception if the GAMS solver did not reach
         optimality. (Only for MESSAGE-scheme Scenarios.)
+    comment : str
+        Comment added to Scenario when importing the solution.
+    equ_list : list of str
+        Equations to be imported from the *out_file*.
+    var_list : list of str
+        Variables to be imported from the *out_file*.
     """
 
     #: Model name.
@@ -117,9 +117,7 @@ class GAMSModel(Model):
             command = ' '.join(command)
 
         # Write model data to file
-        # include_var_equ=False -> do not include variables/equations in GDX
-        scenario._jobj.toGDX(str(self.in_file.parent), self.in_file.name,
-                             False)
+        scenario._backend('write_gdx', self.in_file)
 
         # Invoke GAMS
         check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
@@ -128,7 +126,9 @@ class GAMSModel(Model):
         scenario.clear_cache()
 
         # Read model solution
-        scenario._jobj.readSolutionFromGDX(
-            str(self.out_file.parent), self.out_file.name, self.comment,
-            as_str_list(self.var_list), as_str_list(self.equ_list),
-            self.check_solution)
+        scenario._backend('read_gdx', self.out_file,
+                          self.check_solution,
+                          self.comment,
+                          as_str_list(self.equ_list),
+                          as_str_list(self.var_list),
+                          )

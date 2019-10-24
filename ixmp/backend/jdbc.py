@@ -444,6 +444,30 @@ class JDBCBackend(Backend):
 
     # Helpers; not part of the Backend interface
 
+    def s_write_gdx(self, s, path):
+        """Write the Scenario to a GDX file at *path*."""
+        # include_var_equ=False -> do not include variables/equations in GDX
+        self.jindex[s].toGDX(str(path.parent), path.name, False)
+
+    def s_read_gdx(self, s, path, check_solution, comment, equ_list, var_list):
+        """Read the Scenario from a GDX file at *path*.
+
+        Parameters
+        ----------
+        check_solution : bool
+            If True, raise an exception if the GAMS solver did not reach
+            optimality. (Only for MESSAGE-scheme Scenarios.)
+        comment : str
+            Comment added to Scenario when importing the solution.
+        equ_list : list of str
+            Equations to be imported.
+        var_list : list of str
+            Variables to be imported.
+        """
+        self.jindex[s].readSolutionFromGDX(
+            str(path.parent), path.name, comment, var_list, equ_list,
+            check_solution)
+
     def _get_item(self, s, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.
 

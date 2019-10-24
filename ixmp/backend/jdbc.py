@@ -36,6 +36,7 @@ JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
+    'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
@@ -441,6 +442,14 @@ class JDBCBackend(Backend):
             # - (key, value, unit)
             # - (value, unit, comment)
             jPar.addElement(*args)
+
+    def s_get_meta(self, s):
+        def unwrap(v):
+            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            return v.doubleValue() if isinstance(v, java.BigDecimal) else v
+
+        return {entry.getKey(): unwrap(entry.getValue())
+                for entry in self.jindex[s].getMeta().entrySet()}
 
     def s_set_meta(self, s, name, value):
         self.jindex[s].setMeta(name, value)

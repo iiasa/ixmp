@@ -1433,14 +1433,8 @@ class Scenario(TimeSeries):
         name : str, optional
             metadata attribute name
         """
-        def unwrap(value):
-            """Unwrap metadata numeric value (BigDecimal -> Double)"""
-            if type(value).__name__ == 'java.math.BigDecimal':
-                return value.doubleValue()
-            return value
-        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
-        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
-        return meta if name is None else meta[name]
+        all_meta = self._backend('get_meta')
+        return all_meta[name] if name else all_meta
 
     def set_meta(self, name, value):
         """set scenario metadata

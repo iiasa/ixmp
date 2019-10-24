@@ -305,6 +305,10 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def s_get_meta(self, s):
+        pass
+
+    @abstractmethod
     def s_set_meta(self, s, name, value):
         pass
 

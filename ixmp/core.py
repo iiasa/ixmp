@@ -868,7 +868,7 @@ class Scenario(TimeSeries):
                 keys = [as_str_list(key)]
             elif isinstance(key[0], list):
                 # List of lists of key values; convert to list of list of str
-                keys = map(as_str_list, key)
+                keys = list(map(as_str_list, key))
             elif isinstance(key, str) and len(idx_names) == 1:
                 # Bare key given for a 1D set; wrap for convenience
                 keys = [[key]]

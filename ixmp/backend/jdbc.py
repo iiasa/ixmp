@@ -450,7 +450,7 @@ class JDBCBackend(Backend):
     def s_item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
         for key in keys:
-            jitem.removeElement(key)
+            jitem.removeElement(to_jlist2(key))
 
     def s_get_meta(self, s):
         def unwrap(v):

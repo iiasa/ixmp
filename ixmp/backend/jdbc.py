@@ -469,6 +469,11 @@ class JDBCBackend(Backend):
         else:
             self.jindex[s].removeSolution()
 
+    # MsgScenario methods
+
+    def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
+        self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
+
     # Helpers; not part of the Backend interface
 
     def s_write_gdx(self, s, path):

@@ -333,6 +333,7 @@ class TimeSeries:
 
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
+    _timespans = {}
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
@@ -518,6 +519,101 @@ class TimeSeries:
         # Remove all years for a given (r, v, u) combination at once
         for (r, v, u), data in df.groupby(['region', 'variable', 'unit']):
             self._backend('delete', r, v, data['year'].tolist(), u)
+
+    def add_geodata(self, df):
+        """Add geodata (layers) to the TimeSeries.
+
+        Parameters
+        ----------
+        df : :class:`pandas.DataFrame`
+            Data to add. `df` must have the following columns:
+
+            - `region`
+            - `variable`
+            - `time`
+            - `unit`
+            - `year`
+            - `value`
+            - `meta`
+        """
+        for i in df.index:
+            self._jobj.addGeoData(df.region[i],
+                                  df.variable[i],
+                                  df.time[i],
+                                  java.Integer(int(df.year[i])),
+                                  df.value[i],
+                                  df.unit[i],
+                                  int(df.meta[i]))
+
+    def remove_geodata(self, df):
+        """Remove geodata from the TimeSeries instance.
+
+        Parameters
+        ----------
+        df : :class:`pandas.DataFrame`
+            Data to remove. `df` must have the following columns:
+
+            - `region`
+            - `variable`
+            - `unit`
+            - `time`
+            - `year`
+        """
+        for values, _df in df.groupby(['region', 'variable', 'time', 'unit']):
+            years = java.LinkedList()
+            for year in _df['year']:
+                years.add(java.Integer(year))
+            self._jobj.removeGeoData(values[0], values[1], values[2], years,
+                                     values[3])
+
+    def _get_timespans(self):
+        self._timespans = {}
+        timespan_cls = JClass('at.ac.iiasa.ixmp.objects.TimeSeries$TimeSpan')
+        for timespan in timespan_cls.values():
+            self._timespans[timespan.ordinal()] = timespan.name()
+
+    def _get_timespan_name(self, ordinal):
+        """Access the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan"""
+        if isinstance(ordinal, str):
+            ordinal = int(ordinal)
+        if not self._timespans:
+            self._get_timespans()
+        return self._timespans[ordinal]
+
+    def get_geodata(self):
+        """Fetch geodata and return it as dataframe.
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            Specified data.
+        """
+        java_geodata = self._jobj.getGeoData()
+        geodata_range = range(java_geodata.size())
+        # auto_cols can be added without any conversion
+        auto_cols = {'nodeName': 'region',
+                     'unitName': 'unit',
+                     'meta': 'meta',
+                     'time': 'time',
+                     'keyString': 'variable'}
+        # Initialize empty dict to have correct columns also for empty results
+        cols = list(auto_cols.values()) + ['year', 'value']
+        geodata = {col: [] for col in cols}
+
+        for i in geodata_range:
+            year_values = java_geodata.get(i).get('yearlyData').entrySet()
+            for year_value in year_values:
+                geodata['year'].append(year_value.getKey())
+                geodata['value'].append(year_value.getValue())
+                for (java_key, python_key) in auto_cols.items():
+                    geodata[python_key].append(str(java_geodata.get(i).get(
+                        java_key)))
+
+        geodata['meta'] = [int(_meta) for _meta in geodata['meta']]
+        geodata['time'] = [self._get_timespan_name(time) for time in
+                           geodata['time']]
+
+        return pd.DataFrame.from_dict(geodata)
 
 
 # %% class Scenario

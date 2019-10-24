@@ -27,7 +27,7 @@ from xarray.testing import assert_equal as assert_xr_equal
 
 from .config import _config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
-from .reporting.utils import Quantity, AttrSeries
+from .reporting.utils import AttrSeries, Quantity
 
 
 models = {

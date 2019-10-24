@@ -9,6 +9,20 @@ Reporting
    Python 3. The API and functionality may change without advance notice or a
    deprecation period in subsequent releases.
 
+Top-level methods and classes:
+
+.. autosummary::
+
+   configure
+   Reporter
+   Key
+
+Others:
+
+.. contents::
+   :local:
+   :depth: 3
+
 .. automethod:: ixmp.reporting.configure
 
 .. autoclass:: ixmp.reporting.Reporter
@@ -83,37 +97,7 @@ Reporting
          computations.
 
 
-Computations
-------------
-
-.. automodule:: ixmp.reporting.computations
-   :members:
-
-   Calculations:
-
-   .. autosummary::
-      aggregate
-      disaggregate_shares
-      product
-      ratio
-      sum
-
-   Input and output:
-
-   .. autosummary::
-      load_file
-      write_report
-
-   Conversion:
-
-   .. autosummary::
-      make_dataframe
-
-
-Utilities
----------
-
-.. autoclass:: ixmp.reporting.utils.Key
+.. autoclass:: ixmp.reporting.Key
    :members:
 
    Quantities in a :class:`Scenario` can be indexed by one or more dimensions.
@@ -139,8 +123,43 @@ Utilities
    >>> foo('a b')
    foo:a-b
 
-.. autoclass:: ixmp.reporting.utils.AttrSeries
+
+Computations
+------------
+
+.. automodule:: ixmp.reporting.computations
+   :members:
+
+   Unless otherwise specified, these methods accept and return
+   :class:`Quantity <ixmp.reporting.utils.Quantity>` objects for data
+   arguments/return values.
+
+   Calculations:
+
+   .. autosummary::
+      aggregate
+      disaggregate_shares
+      product
+      ratio
+      sum
+
+   Input and output:
+
+   .. autosummary::
+      load_file
+      write_report
+
+   Conversion:
+
+   .. autosummary::
+      make_dataframe
+
+
+Utilities
+---------
+
+.. autoclass:: ixmp.reporting.attrseries.AttrSeries
 
 .. automodule:: ixmp.reporting.utils
    :members:
-   :exclude-members: AttrSeries, Key, combo_partition
+   :exclude-members: AttrSeries

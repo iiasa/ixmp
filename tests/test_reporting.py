@@ -10,8 +10,16 @@ import pytest
 import xarray as xr
 
 import ixmp.reporting
-from ixmp.reporting import Key, Reporter, computations
-from ixmp.reporting.utils import ureg, Quantity
+from ixmp.reporting import (
+    ComputationError,
+    KeyExistsError,
+    MissingKeyError,
+    Key,
+    Reporter,
+    computations,
+)
+from ixmp.reporting import UNITS
+from ixmp.reporting.utils import Quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
@@ -39,38 +47,51 @@ def test_reporting_configure():
     pass
 
 
-def test_missing_keys():
+def test_reporter_add():
     """Adding computations that refer to missing keys raises KeyError."""
     r = Reporter()
     r.add('a', 3)
     r.add('d', 4)
 
+    # Adding an existing key with strict=True
+    with pytest.raises(KeyExistsError, match=r"key 'a' already exists"):
+        r.add('a', 5, strict=True)
+
     def gen(other):
         """A generator for apply()."""
         return (lambda a, b: a * b, 'a', other)
 
+    def msg(*keys):
+        """Return a regex for str(MissingKeyError(*keys))."""
+        return 'required keys {!r} not defined'.format(tuple(keys)) \
+                                               .replace('(', '\\(') \
+                                               .replace(')', '\\)')
     # One missing key
-    with pytest.raises(KeyError, match=r"\['b'\]"):
+    with pytest.raises(MissingKeyError, match=msg('b')):
         r.add_product('ab', 'a', 'b')
 
     # Two missing keys
-    with pytest.raises(KeyError, match=r"\['c', 'b'\]"):
+    with pytest.raises(MissingKeyError, match=msg('c', 'b')):
         r.add_product('abc', 'c', 'a', 'b')
 
     # Using apply() targeted at non-existent keys also raises an Exception
-    with pytest.raises(KeyError, match=r"\['e', 'f'\]"):
+    with pytest.raises(MissingKeyError, match=msg('e', 'f')):
         r.apply(gen, 'd', 'e', 'f')
 
     # add(..., strict=True) checks str or Key arguments
     g = Key('g', 'hi')
-    with pytest.raises(KeyError, match=r"\['b', g:h-i\]"):
+    with pytest.raises(MissingKeyError, match=msg('b', g)):
         r.add('foo', (computations.product, 'a', 'b', g), strict=True)
 
     # aggregate() and disaggregate() call add(), which raises the exception
-    with pytest.raises(KeyError, match=r"\[g:h-i\]"):
+    with pytest.raises(MissingKeyError, match=msg(g)):
         r.aggregate(g, 'tag', 'i')
-    with pytest.raises(KeyError, match=r"\[g:h-i\]"):
+    with pytest.raises(MissingKeyError, match=msg(g)):
         r.disaggregate(g, 'j')
+
+    # add(..., sums=True) also adds partial sums
+    r.add('foo:a-b-c', [], sums=True)
+    assert 'foo:b' in r
 
 
 def test_reporter_from_scenario(scenario):
@@ -91,7 +112,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     d_i = rep.get('d:i')
 
     # Units pass through summation
-    assert d_i.attrs['_unit'] == ureg.parse_units('km')
+    assert d_i.attrs['_unit'] == UNITS.parse_units('km')
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
@@ -245,6 +266,9 @@ def test_reporter_file(tmp_path):
     p2 = tmp_path / 'bar.txt'
     r.write('file:foo.txt', p2)
 
+    # Write using a string path
+    r.write('file:foo.txt', str(p2))
+
     # The Reporter produces the expected output file
     assert p2.read_text() == 'Hello, world!'
 
@@ -275,6 +299,28 @@ def test_reporting_file_formats(test_data_path, tmp_path):
     # TODO check the contents of the Excel file
 
 
+def test_reporter_full_key():
+    r = Reporter()
+
+    # Without index, the full key cannot be retrieved
+    r.add('a:i-j-k', [])
+    with pytest.raises(KeyError, match='a'):
+        r.full_key('a')
+
+    # Using index=True adds the full key to the index
+    r.add('a:i-j-k', [], index=True)
+    assert r.full_key('a') == 'a:i-j-k'
+
+    # The full key can be retrieved by giving only some of the indices
+    assert r.full_key('a:j') == 'a:i-j-k'
+
+    # Same with a tag
+    r.add('a:i-j-k:foo', [], index=True)
+    # Original and tagged key can both be retrieved
+    assert r.full_key('a') == 'a:i-j-k'
+    assert r.full_key('a::foo') == 'a:i-j-k:foo'
+
+
 def test_reporting_units():
     """Test handling of units within Reporter computations."""
     r = Reporter()
@@ -290,15 +336,15 @@ def test_reporting_units():
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
-    assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
+    assert r.get('energy').attrs['_unit'] == UNITS.parse_units('MJ')
 
     # Units are derived for a ratio of two quantities
     r.add('power', (computations.ratio, 'energy:x', 'time'))
-    assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
+    assert r.get('power').attrs['_unit'] == UNITS.parse_units('MJ/hour')
 
     # Product of dimensioned and dimensionless quantities keeps the former
     r.add('energy2', (computations.product, 'energy:x', 'efficiency'))
-    assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
+    assert r.get('energy2').attrs['_unit'] == UNITS.parse_units('MJ')
 
 
 def test_reporting_platform_units(test_mp, caplog):
@@ -334,7 +380,7 @@ def test_reporting_platform_units(test_mp, caplog):
         scen.add_par('x', x)
 
         # Parsing units with invalid chars raises an intelligible exception
-        with pytest.raises(ValueError, match=msg.format(expr, chars)):
+        with pytest.raises(ComputationError, match=msg.format(expr, chars)):
             rep.get(x_key)
 
     # Now using parseable but unrecognized units
@@ -382,12 +428,12 @@ def test_reporter_describe(test_mp, test_data_path):
   - 'filters':
     - {{}}
 """.format(id=id_)
-    assert r.describe('d:i') == expected
+    assert expected == r.describe('d:i')
 
     # Describe all keys
     expected = (test_data_path / 'report-describe.txt').read_text() \
                                                        .format(id=id_)
-    assert r.describe() == expected
+    assert expected == r.describe()
 
 
 def test_reporter_visualize(test_mp, tmp_path):

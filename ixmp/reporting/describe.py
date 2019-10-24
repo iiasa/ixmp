@@ -1,9 +1,10 @@
+from collections.abc import Hashable
 from functools import partial
 from itertools import chain
 
 import xarray as xr
 
-from .utils import Key
+from .key import Key
 
 
 def describe_recursive(graph, comp, depth=0, seen=None):
@@ -57,7 +58,8 @@ def describe_recursive(graph, comp, depth=0, seen=None):
                 arg,
                 describe_recursive(graph, graph[arg], depth + 1, seen))
             seen.add(arg)
-        elif isinstance(arg, list) and len(arg) and arg[0] in graph:
+        elif (isinstance(arg, list) and len(arg)
+              and isinstance(arg[0], Hashable) and arg[0] in graph):
             # list → collection of items
             item = "list of:\n{}".format(
                 describe_recursive(graph, tuple(arg), depth + 1, seen))

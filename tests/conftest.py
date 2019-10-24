@@ -26,18 +26,20 @@ import pytest
 pytest_plugins = ['ixmp.testing']
 
 
-# CLI
+# Hooks
 
 def pytest_addoption(parser):
-    parser.addoption("--testr", action="store_true", default=False,
-                     help="run the tests associated with the R interface")
+    parser.addoption(
+        '--test-r',
+        action='store_true',
+        help='also run tests of the ixmp R interface.',
+    )
 
 
 def pytest_runtest_setup(item):
-    if 'testr' in item.keywords and not item.config.getoption("--testr"):
-        pytest.skip("need --testr option to run this test")
-
-# Hooks
+    if 'rixmp' in item.keywords and \
+       not item.config.getoption('--test-r'):
+        pytest.skip('skipping rixmp test without --test-r flag')
 
 
 def pytest_sessionstart(session):

@@ -13,9 +13,9 @@
 /model/2*/**
 /model/$gms*
 *.dat
+*.swp
 *.tmp
 *.RData*
-*.pyc
 *-checkpoint.ipynb
 *~
 #*
@@ -26,16 +26,12 @@
 # Apple file system
 .DS_Store
 
-# local version of auto-documentation features
-/doc/build/**
-/doc/source/model/**
+# sphinx
+doc/build
 
-# files generated during install
+# setuptools
 build
 dist
-
-# credentials
-config/*.properties
 
 # testdb
 .cache/**
@@ -55,10 +51,12 @@ rixmp/source/.Rhistory
 # virtualenv
 .env
 
-# pytest
+# pytest and related
+*.pid
 .coverage
 .pytest_cache/
-*.pid
+coverage.xml
+htmlcov/
 
 # idea
 .idea/

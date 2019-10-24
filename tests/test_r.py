@@ -1,4 +1,3 @@
-import os
 try:
     from pathlib import Path
 except ImportError:
@@ -48,7 +47,7 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     yield args
 
 
-@pytest.mark.testr
+@pytest.mark.rixmp
 def test_r_build_and_check(r_args):
     """R package can be built and R CMD check succeeds on the built package."""
     cmd = ['R', 'CMD', 'build', '.']
@@ -76,7 +75,7 @@ def test_r_build_and_check(r_args):
             raise
 
 
-@pytest.mark.testr
+@pytest.mark.rixmp
 def test_r_testthat(r_args):
     """Tests succeed on R code without building the package."""
     # NB previously used file.path('tests', 'testthat'), which produces an

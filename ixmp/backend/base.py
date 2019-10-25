@@ -27,7 +27,7 @@ class Backend(ABC):
         pass
 
     def open_db(self):
-        """(Re-)open a database connection (optional).
+        """(Re-)open a database connection (OPTIONAL).
 
         A backend MAY connect to a database server. This method opens the
         database connection if it is closed.
@@ -35,14 +35,14 @@ class Backend(ABC):
         pass
 
     def close_db(self):
-        """Close a database connection (optional).
+        """Close a database connection (OPTIONAL).
 
         Close a database connection if it is open.
         """
         pass
 
     def get_auth(self, user, models, kind):
-        """Return user authorization for models (optional).
+        """Return user authorization for models (OPTIONAL).
 
         If the Backend implements access control…
         """
@@ -73,6 +73,11 @@ class Backend(ABC):
         pass
 
     @abstractmethod
+    def set_nodes(self):
+        # TODO document
+        pass
+
+    @abstractmethod
     def set_unit(self, name, comment):
         pass
 
@@ -85,6 +90,8 @@ class Backend(ABC):
         list of str
         """
         pass
+
+    # Methods for ixmp.TimeSeries
 
     @abstractmethod
     def ts_init(self, ts, annotation=None):
@@ -200,6 +207,43 @@ class Backend(ABC):
     @abstractmethod
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
         """Remove time-series 'geodata'."""
+        pass
+
+    @abstractmethod
+    def ts_discard_changes(self, ts):
+        # TODO document
+        pass
+
+    @abstractmethod
+    def ts_set_as_default(self, ts):
+        # TODO document
+        pass
+
+    @abstractmethod
+    def ts_is_default(self, ts):
+        # TODO document
+        pass
+
+    @abstractmethod
+    def ts_last_update(self, ts):
+        # TODO document
+        pass
+
+    @abstractmethod
+    def ts_run_id(self, ts):
+        # TODO document
+        pass
+
+    @abstractmethod
+    def ts_preload(self, ts):
+        # TODO document
+        pass
+
+    # Methods for ixmp.Scenario
+
+    @abstractmethod
+    def s_clone():
+        # TODO
         pass
 
     @abstractmethod
@@ -323,4 +367,31 @@ class Backend(ABC):
 
     @abstractmethod
     def s_clear_solution(self, s, from_year=None):
+        pass
+
+    # Methods for message_ix.Scenario
+
+    @abstractmethod
+    def ms_cat_list(self, ms, name):
+        """Return list of categories."""
+        pass
+
+    @abstractmethod
+    def ms_cat_get_elements(self, ms, name, cat):
+        """Get elements of a category mapping."""
+        pass
+
+    @abstractmethod
+    def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
+        """Add elements to category mapping."""
+        pass
+
+    @abstractmethod
+    def ms_year_first_model(self, ms):
+        """Return the first model year."""
+        pass
+
+    @abstractmethod
+    def ms_years_active(self, ms, node, tec, year_vintage):
+        """Return a list of years in which *tec* is active."""
         pass

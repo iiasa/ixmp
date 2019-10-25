@@ -20,53 +20,51 @@ IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
 
 
 class Platform:
-    """Database-backed instance of the ixmp.
+    """Instance of the modeling platform.
 
-    Each Platform connects three components:
+    A Platform connects two key components:
 
-    1. A **database** for storing model inputs and outputs. This may either be
-       a local file (``dbtype='HSQLDB'``) or a database server accessed via a
-       network connection. In the latter case, connection information is read
-       from a `properties file`.
-    2. A Java Virtual Machine (**JVM**) to run core ixmp logic and access the
-       database.
-    3. One or more **model(s)**, implemented in GAMS or another language or
-       framework.
+    1. A **back end** for storing data such as model inputs and outputs.
+    2. One or more **model(s)**; codes in Python or other languages or
+       frameworks that run, via :meth:`Scenario.solve`, on the data stored in
+       the Platform.
 
-    The constructor parameters control these components. :class:`TimeSeries`
-    and :class:`Scenario` objects are specific to one Platform; to move data
-    between platforms, see :meth:`Scenario.clone`.
+    The Platform parameters control these components. :class:`TimeSeries` and
+    :class:`Scenario` objects tied to a single Platform; to move data between
+    platforms, see :meth:`Scenario.clone`.
 
     Parameters
     ----------
     backend : 'jdbc'
-        Storage backend type. Currently 'jdbc' is the only available backend.
-    backend_kwargs
-        Keyword arguments to configure the backend; see below.
+        Storage backend type. 'jdbc' corresponds to the built-in
+        :class:`JDBCBackend <ixmp.backend.jdbc.JDBCBackend>`; see
+        :obj:`ixmp.backend.BACKENDS`.
+    backend_args
+        Keyword arguments to specific to the `backend`.
+        The “Other Parameters” shown below are specific to
+        :class:`JDBCBackend <ixmp.backend.jdbc.JDBCBackend>`.
 
     Other parameters
     ----------------
-    dbprops : path-like, optional
-        If `dbtype` is :obj:`None`, the name of a database properties file
-        (default: 'default.properties') in the properties file directory
-        (default: ???) or the path of a properties file.
-
-        If `dbtype == 'HSQLDB'`, the path of a local database,
-        (default: "$HOME/.local/ixmp/localdb/default") or name of a
-        database file in the local database directory (default:
-        "$HOME/.local/ixmp/localdb/").
-
     dbtype : 'HSQLDB', optional
-        Database type to use. If `None`, a remote database is accessed. If
+        Database type to use. If :obj:`None`, a remote database is accessed. If
         'HSQLDB', a local database is created and used at the path given by
         `dbprops`.
 
-    jvmargs : str, optional
-        Options for launching the Java Virtual Machine, e.g., the maximum heap
-        space: "-Xmx4G". See the `JVM documentation`_ for a list of options.
+    dbprops : path-like, optional
+        If `dbtype` is :obj:`None`, the name of a *database properties file*
+        (default: ``default.properties``) in the properties file directory
+        (see :class:`Config <ixmp.config.Config>`) or a path to a properties
+        file.
 
-        .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
-           /technotes/tools/windows/java.html)
+        If `dbtype` is 'HSQLDB'`, the path of a local database,
+        (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
+        database file in the local database directory (default:
+        ``$HOME/.local/ixmp/localdb/``).
+
+    jvmargs : str, optional
+        Java Virtual Machine arguments.
+        See :meth:`ixmp.backend.jdbc.start_jvm`.
     """
 
     # List of method names which are handled directly by the backend
@@ -108,7 +106,7 @@ class Platform:
         self._backend.set_log_level(level)
 
     def scenario_list(self, default=True, model=None, scen=None):
-        """Return information on TimeSeries and Scenarios in the database.
+        """Return information about TimeSeries and Scenarios on the Platform.
 
         Parameters
         ----------
@@ -274,34 +272,9 @@ def _logger_region_exists(_regions, r):
 
 
 class TimeSeries:
-    """Generic collection of data in time series format.
+    """Collection of data in time series format.
 
     TimeSeries is the parent/super-class of :class:`Scenario`.
-
-    A TimeSeries is uniquely identified on its :class:`Platform` by three
-    values:
-
-    1. `model`: the name of a model used to perform calculations between input
-       and output data.
-
-       - In TimeSeries storing non-model data, arbitrary strings can be used.
-       - In a :class:`Scenario`, the `model` is a reference to a GAMS program
-         registered to the :class:`Platform` that can be solved with
-         :meth:`Scenario.solve`. See
-         :meth:`ixmp.model_settings.register_model`.
-
-    2. `scenario`: the name of a specific, coherent description of the real-
-       world system being modeled. Any `model` may be used to represent mutiple
-       alternate, or 'counter-factual', `scenarios`.
-    3. `version`: an integer identifying a specific iteration of a
-       (`model`, `scenario`). A new `version` is created by:
-
-       - Instantiating a new TimeSeries with the same `model` and `scenario` as
-         an existing TimeSeries.
-       - Calling :meth:`Scenario.clone`.
-
-       Optionally, one `version` may be set as a **default version**. See
-       :meth:`set_as_default`.
 
     Parameters
     ----------
@@ -568,62 +541,18 @@ class TimeSeries:
 # %% class Scenario
 
 class Scenario(TimeSeries):
-    """Collection of model-related input and output data.
+    """Collection of model-related data.
 
-    A Scenario is a :class:`TimeSeries` associated with a particular model that
-    can be run on the current :class:`Platform` by calling :meth:`solve`. The
-    Scenario also stores the output, or 'solution' of a model run; this
-    includes the 'level' and 'marginal' values of GAMS equations and variables.
-
-    Data in a Scenario are closely related to different types in the GAMS data
-    model:
-
-    - A **set** is a named collection of labels. See :meth:`init_set`,
-      :meth:`add_set`, and :meth:`set`. There are two types of sets:
-
-      1. Sets that are lists of labels.
-      2. Sets that are 'indexed' by one or more other set(s). For this type of
-         set, each member is an ordered tuple of the labels in the index sets.
-
-    - A **scalar** is a named, single, numerical value. See
-      :meth:`init_scalar`, :meth:`change_scalar`, and :meth:`scalar`.
-
-    - **Parameters**, **variables**, and **equations** are multi-dimensional
-      arrays of values that are indexed by one or more sets (i.e. with
-      dimension 1 or greater). The Scenario methods for handling these types
-      are very similar; they mainly differ in how they are used within GAMS
-      models registered with ixmp:
-
-      - **Parameters** are generic data that can be defined before a model run.
-        They may be altered by the model solution. See :meth:`init_par`,
-        :meth:`remove_par`, :meth:`par_list`, :meth:`add_par`, and :meth:`par`.
-      - **Variables** are calculated during or after a model run by GAMS code,
-        so they cannot be modified by a Scenario. See :meth:`init_var`,
-        :meth:`var_list`, and :meth:`var`.
-      - **Equations** describe fundamental relationships between other types
-        (parameters, variables, and scalars) in a model. They are defined in
-        GAMS code, so cannot be modified by a Scenario. See :meth:`init_equ`,
-        :meth:`equ_list`, and :meth:`equ`.
+    See :class:`TimeSeries` for the meaning of parameters `mp`, `model`,
+    `scenario`, `version`, and `annotation`.
 
     Parameters
     ----------
-    mp : :class:`Platform`
-        ixmp instance in which to store data.
-    model : str
-        Model name; must be a registered model.
-    scenario : str
-        Scenario name.
-    version : str or int or at.ac.iiasa.ixmp.objects.Scenario, optional
-        If omitted, load the default version of the (`model`, `scenario`).
-        If :class:`int`, load the specified version.
-        If ``'new'``, initialize a new Scenario.
     scheme : str, optional
         Use an explicit scheme for initializing a new scenario.
-    annotation : str, optional
-        A short annotation/comment used when ``version='new'``.
     cache : bool, optional
         Store data in memory and return cached values instead of repeatedly
-        querying the database.
+        querying the backend.
     """
     _java_kwargs = {
         'set': {},
@@ -1275,10 +1204,18 @@ class Scenario(TimeSeries):
     def solve(self, model=None, callback=None, cb_kwargs={}, **model_options):
         """Solve the model and store output.
 
-        ixmp 'solves' a model by invoking the ``run`` method of a
-        :class:`BaseModel` subclass—for instance, :meth:`GAMSModel.run`.
-        Depending on the underlying optimization software, different steps are
-        taken; see each model class for details.
+        ixmp 'solves' a model by invoking the run() method of a
+        :class:`Model <ixmp.model.base.Model>` subclass—for instance,
+        :meth:`GAMSModel.run <ixmp.model.gams.GAMSModel.run>`.
+        Depending on the underlying model code, different steps are taken; see
+        each model class for details.
+        In general:
+
+        1. Data from the Scenario are written to a **model input file**.
+        2. Code or an external program is invoked to perform calculations or
+           optimizations, **solving the model**.
+        3. Data representing the model outputs or solution are read from a
+           **model output file** and stored in the Scenario.
 
         If the optional argument `callback` is given, then additional steps are
         performed:
@@ -1286,44 +1223,22 @@ class Scenario(TimeSeries):
         4. Execute the `callback` with the Scenario as an argument. The
            Scenario has an `iteration` attribute that stores the number of
            times the underlying model has been solved (#2).
-        5. If the `callback` returns :obj:`False` or similar, go to #1;
-           otherwise exit.
+        5. If the `callback` returns :obj:`False` or similar, iterate by
+           repeating from step #1. Otherwise, exit.
 
         Parameters
         ----------
         model : str
             model (e.g., MESSAGE) or GAMS file name (excluding '.gms')
-        case : str
-            identifier of gdx file names, defaults to 'model_name_scen_name'
-        model_file : str, optional
-            path to GAMS file (including '.gms' extension)
-        in_file : str, optional
-            path to GAMS gdx input file (including '.gdx' extension)
-        out_file : str, optional
-            path to GAMS gdx output file (including '.gdx' extension)
-        solve_args : str, optional
-            arguments to be passed to GAMS (input/output file names, etc.)
-        comment : str, optional
-            additional comment added to changelog when importing the solution
-        var_list : list of str, optional
-            variables to be imported from the solution
-        equ_list : list of str, optional
-            equations to be imported from the solution
-        check_solution : boolean, optional
-            flag whether a non-optimal solution raises an exception
-            (only applies to MESSAGE runs)
         callback : callable, optional
             Method to execute arbitrary non-model code. Must accept a single
-            argument, the Scenario. Must return a non-:obj:`False` value to
+            argument: the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
-        gams_args : list of str, optional
-            Additional arguments for the CLI call to GAMS. See, e.g.,
-            https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters
-
-            - `LogOption=4` prints output to stdout (not console) and the log
-              file.
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
+        model_options :
+            Keyword arguments specific to the `model`. See
+            :class:`GAMSModel <ixmp.model.gams.GAMSModel>`.
 
         Warns
         -----

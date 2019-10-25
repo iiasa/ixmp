@@ -9,55 +9,65 @@ from ixmp.utils import as_str_list
 
 
 class GAMSModel(Model):
-    """General class for ixmp models using GAMS solvers.
+    """General class for ixmp models using `GAMS <https://gams.com/>`_.
 
     GAMSModel solves a Scenario using the following steps:
 
     1. All Scenario data is written to a model input file in GDX format.
-    2. A GAMS program is run to perform calculations.
-    3. Output, or solution, data is read and stored in the Scenario.
+    2. A GAMS program is run to perform calculations, producing output in a
+       GDX file.
+    3. Output, or solution, data is read from the GDX file and stored in the
+       Scenario.
 
-    When created and then :meth:`run`, GAMSModel constructs file paths and
-    other necessary values using format strings. The default settings are those
-    in :attr:`config`; these may be overridden by the keyword arguments to
-    the constructor.
+    When created and :meth:`run`, GAMSModel constructs file paths and other
+    necessary values using format strings. The :attr:`defaults` may be
+    overridden by the keyword arguments to the constructor:
 
     Other parameters
     ----------------
-    name : str
-        Override the :attr:`name` attribute.
-    model_file : str
+    name : str, optional
+        Override the :attr:`name` attribute to provide the `model_name` for
+        format strings.
+    model_file : str, optional
         Path to GAMS file, including '.gms' extension.
-    case : str
+        Default: ``'{model_name}.gms'`` (in the current directory).
+    case : str, optional
         Run or case identifier to use in GDX file names. Default:
-        '{scenario.model}_{scenario.name}', where *scenario* is the Scenario
-        object passed to :meth:`run`. Formatted using *model_file* and
-        *scenario*.
-    in_file : str
-        Path to write GDX input file. Formatted using *model_file*,
-        *scenario*, and *case*.
-    out_file : str
-        Path to read GDX output file. Formatted using *model_file*,
-        *scenario*, and *case*.
-    solve_args : list of str
-        Arguments to be passed to GAMS. Each formatted using *model_file*,
-        *scenario*, *case*, *in_file*, and *out_file*.
-    gams_args : list of str
-        Additional arguments passed directly to GAMS. See, e.g.,
-        https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters
+        ``'{scenario.model}_{scenario.name}'``, where `scenario` is the
+        :class:`ixmp.Scenario` object passed to :meth:`run`.
+        Formatted using `model_name` and `scenario`.
+    in_file : str, optional
+        Path to write GDX input file. Default: ``'{model_name}_in.gdx'``.
+        Formatted using `model_name`, `scenario`, and `case`.
+    out_file : str, optional
+        Path to read GDX output file. Default: ``'{model_name}_out.gdx'``.
+        Formatted using `model_name`, `scenario`, and `case`.
+    solve_args : list of str, optional
+        Arguments to be passed to GAMS, e.g. to identify the model input and
+        output files. Each formatted using `model_file`, `scenario`, `case`,
+        `in_file`, and `out_file`. Default:
 
-        - “LogOption=4” prints output to stdout (not console) and the log
+        - ``'--in="{in_file}"'``
+        - ``'--out="{out_file}"'``
+    gams_args : list of str, optional
+        Additional arguments passed directly to GAMS without formatting, e.g.
+        to control solver options or behaviour. See the `GAMS
+        Documentation <https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters>`_.
+        For example:
+
+        - ``'LogOption=4'`` prints output to stdout (not console) and the log
           file.
-    check_solution : bool
-        If True, raise an exception if the GAMS solver did not reach
+    check_solution : bool, optional
+        If :obj:`True`, raise an exception if the GAMS solver did not reach
         optimality. (Only for MESSAGE-scheme Scenarios.)
-    comment : str
-        Comment added to Scenario when importing the solution.
-    equ_list : list of str
-        Equations to be imported from the *out_file*.
-    var_list : list of str
-        Variables to be imported from the *out_file*.
-    """
+    comment : str, optional
+        Comment added to Scenario when importing the solution. If omitted, no
+        comment is added.
+    equ_list : list of str, optional
+        Equations to be imported from the `out_file`. Default: all.
+    var_list : list of str, optional
+        Variables to be imported from the `out_file`. Default: all.
+    """  # noqa: E501
 
     #: Model name.
     name = 'default'

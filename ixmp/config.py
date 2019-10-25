@@ -14,32 +14,10 @@ from ixmp.utils import logger
 class Config:
     """Configuration for ixmp.
 
-    When imported, :mod:`ixmp` reads a configuration file `config.json` in the
-    first of the following directories:
-
-    1. `IXMP_DATA`, if defined.
-    2. `${XDG_DATA_HOME}/ixmp`, if defined.
-    3. `$HOME/.local/share/ixmp`.
-    4. `$HOME/.local/ixmp` (used by ixmp <= 1.1).
-
-    The file may define either or both of the following configuration keys, in
-    JSON format:
-
-    - `DB_CONFIG_PATH`: location for database properties files. A
-      :class:`ixmp.Platform` instantiated with a relative path name for the
-      `dbprops` argument will locate the file first in the current working
-      directory, then in `DB_CONFIG_PATH`, then in the four directories above.
-    - `DEFAULT_DBPROPS_FILE`: path to a default database properties file. A
-      :class:`ixmp.Platform` instantiated with no arguments will use this file.
-    - `DEFAULT_LOCAL_DB_PATH`: path to a directory where a local directory
-      should be created. A :class:`ixmp.Platform` instantiated with
-      `dbtype='HSQLDB'` will create or reuse a database in this path.
-
     Parameters
     ----------
     read : bool
         Read `config.json` on startup.
-
     """
     # User configuration keys
     _keys = [

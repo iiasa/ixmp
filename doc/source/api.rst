@@ -10,6 +10,7 @@ On separate pages:
 
    api-python
    api-backend
+   api-model
    reporting
 
 On this page:

@@ -47,15 +47,36 @@ JAVA_CLASSES = [
 class JDBCBackend(Backend):
     """Backend using JPype and JDBC to connect to Oracle and HSQLDB instances.
 
-    Much of the code of this backend is implemented in Java code in the
-    iiasa/ixmp_source Github repository.
-
-    Among other things, this backend:
+    Among other abstractions, this backend:
 
     - Catches Java exceptions such as ixmp.exceptions.IxException, and
       re-raises them as appropriate Python exceptions.
 
+    Parameters
+    ----------
+    dbtype : 'HSQLDB', optional
+        Database type to use. If :obj:`None`, a remote database is accessed. If
+        'HSQLDB', a local database is created and used at the path given by
+        `dbprops`.
+
+    dbprops : path-like, optional
+        If `dbtype` is :obj:`None`, the name of a *database properties file*
+        (default: ``default.properties``) in the properties file directory
+        (see :class:`Config <ixmp.config.Config>`) or a path to a properties
+        file.
+
+        If `dbtype` is 'HSQLDB'`, the path of a local database,
+        (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
+        database file in the local database directory (default:
+        ``$HOME/.local/ixmp/localdb/``).
+
+    jvmargs : str, optional
+        Java Virtual Machine arguments.
+        See :meth:`ixmp.backend.jdbc.start_jvm`.
     """
+    # NB Much of the code of this backend is implemented in Java code in the
+    #    (private) iiasa/ixmp_source Github repository.
+
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
     jobj = None
 
@@ -125,13 +146,6 @@ class JDBCBackend(Backend):
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
 
-    def set_unit(self, name, comment):
-        self.jobj.addUnitToDB(name, comment)
-
-    def get_units(self):
-        """Return all units described in the database."""
-        return to_pylist(self.jobj.getUnitList())
-
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
         scenarios = self.jobj.getScenarioList(default, model, scenario)
@@ -142,10 +156,15 @@ class JDBCBackend(Backend):
                 data.append(int(s[field]) if field == 'version' else s[field])
             yield data
 
+    def set_unit(self, name, comment):
+        self.jobj.addUnitToDB(name, comment)
+
+    def get_units(self):
+        return to_pylist(self.jobj.getUnitList())
+
     # Timeseries methods
 
     def ts_init(self, ts, annotation=None):
-        """Initialize the ixmp.TimeSeries *ts*."""
         if ts.version == 'new':
             # Create a new TimeSeries
             jobj = self.jobj.newTimeSeries(ts.model, ts.scenario, annotation)
@@ -171,32 +190,24 @@ class JDBCBackend(Backend):
             ts.version = self.jindex[ts].getVersion()
 
     def ts_discard_changes(self, ts):
-        """Discard all changes and reload from the database."""
         self.jindex[ts].discardChanges()
 
     def ts_set_as_default(self, ts):
-        """Set the current :attr:`version` as the default."""
         self.jindex[ts].setAsDefaultVersion()
 
     def ts_is_default(self, ts):
-        """Return :obj:`True` if the :attr:`version` is the default version."""
         return bool(self.jindex[ts].isDefault())
 
     def ts_last_update(self, ts):
-        """get the timestamp of the last update/edit of this TimeSeries"""
         return self.jindex[ts].getLastUpdateTimestamp().toString()
 
     def ts_run_id(self, ts):
-        """get the run id of this TimeSeries"""
         return self.jindex[ts].getRunId()
 
     def ts_preload(self, ts):
-        """Preload timeseries data to in-memory cache. Useful for bulk updates.
-        """
         self.jindex[ts].preloadAllTimeseries()
 
     def ts_get(self, ts, region, variable, unit, year):
-        """Retrieve time-series data."""
         # Convert the selectors to Java lists
         r = to_jlist2(region)
         v = to_jlist2(variable)
@@ -216,7 +227,6 @@ class JDBCBackend(Backend):
                         for f in FIELDS['ts_get'])
 
     def ts_get_geo(self, ts):
-        """Retrieve time-series 'geodata'."""
         # NB the return type of getGeoData() requires more processing than
         #    getTimeseries. It also accepts no selectors.
 
@@ -259,7 +269,6 @@ class JDBCBackend(Backend):
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
     def ts_set(self, ts, region, variable, data, unit, meta):
-        """Store time-series data."""
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
@@ -270,24 +279,20 @@ class JDBCBackend(Backend):
                                       meta)
 
     def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
-        """Store time-series 'geodata'."""
         self.jindex[ts].addGeoData(region, variable, time, java.Integer(year),
                                    value, unit, meta)
 
     def ts_delete(self, ts, region, variable, years, unit):
-        """Remove time-series data."""
         years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
-        """Remove time-series 'geodata'."""
         years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeGeoData(region, variable, time, years, unit)
 
     # Scenario methods
 
     def s_init(self, s, scheme=None, annotation=None):
-        """Initialize the ixmp.Scenario *s*."""
         if s.version == 'new':
             jobj = self.jobj.newScenario(s.model, s.scenario, scheme,
                                          annotation)
@@ -408,7 +413,6 @@ class JDBCBackend(Backend):
             return data
 
     def s_add_set_elements(self, s, name, elements):
-        """Add elements to set *name* in Scenario *s*."""
         # Retrieve the Java Set and its number of dimensions
         jSet = self._get_item(s, 'set', name)
         dim = jSet.getDim()
@@ -430,7 +434,6 @@ class JDBCBackend(Backend):
                 raise RuntimeError('Unhandled Java exception') from e
 
     def s_add_par_values(self, s, name, elements):
-        """Add values to parameter *name* in Scenario *s*."""
         jPar = self._get_item(s, 'par', name)
 
         for key, value, unit, comment in elements:
@@ -464,7 +467,12 @@ class JDBCBackend(Backend):
         self.jindex[s].setMeta(name, value)
 
     def s_clear_solution(self, s, from_year=None):
+        from ixmp.core import Scenario
+
         if from_year:
+            if type(s) is not Scenario:
+                raise TypeError('s_clear_solution(from_year=...) only valid '
+                                'for ixmp.Scenario; not subclasses')
             self.jindex[s].removeSolution(from_year)
         else:
             self.jindex[s].removeSolution()
@@ -537,12 +545,20 @@ class JDBCBackend(Backend):
 
 
 def start_jvm(jvmargs=None):
-    """Start the Java Virtual Machine via JPype.
+    """Start the Java Virtual Machine via :mod:`JPype`.
 
     Parameters
     ----------
     jvmargs : str or list of str, optional
-        Additional arguments to pass to :meth:`jpype.startJVM`.
+        Additional arguments for launching the JVM, passed to
+        :meth:`jpype.startJVM`.
+
+        For instance, to set the maximum heap space to 4 GiB, give
+        ``jvmargs=['-Xmx4G']``.See the `JVM documentation`_ for a list of
+        options.
+
+        .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
+           /technotes/tools/windows/java.html)
     """
     # TODO change the jvmargs default to [] instead of None
     if jpype.isJVMStarted():

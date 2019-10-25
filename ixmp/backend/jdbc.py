@@ -78,6 +78,10 @@ class JDBCBackend(Backend):
     #      done automatically by JPype.
     #    - Catches Java exceptions such as ixmp.exceptions.IxException, and
     #      re-raises them as appropriate Python exceptions.
+    #
+    #    Limitations:
+    #
+    #    - s_clone() is only supported when target_backend is JDBCBackend.
 
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
     jobj = None
@@ -316,13 +320,22 @@ class JDBCBackend(Backend):
 
     def s_clone(self, s, target_backend, model, scenario, annotation,
                 keep_solution, first_model_year=None):
+        # Raise exceptions for limitations of JDBCBackend
         if not isinstance(target_backend, self.__class__):
-            raise RuntimeError('Clone only possible between two instances of'
-                               f'{self.__class__.__name__}')
+            raise NotImplementedError(f'Clone between {self.__class__} and'
+                                      f'{target_backend.__class__}')
+        elif target_backend is not self:
+            msg = 'Cross-platform clone of {}.Scenario with'.format(
+                s.__class__.__module__.split('.')[0])
+            if keep_solution is False:
+                raise NotImplementedError(msg + ' `keep_solution=False`')
+            elif 'message_ix' in msg and first_model_year is not None:
+                raise NotImplementedError(msg + ' first_model_year != None')
 
         args = [model, scenario, annotation, keep_solution]
         if first_model_year:
             args.append(first_model_year)
+
         # Reference to the cloned Java object
         return self.jindex[s].clone(target_backend.jobj, *args)
 

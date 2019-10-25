@@ -177,7 +177,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_init(self, ts, annotation=None):
-        """Initialize the TimeSeries *ts* (required).
+        """Initialize the TimeSeries *ts*.
 
         The method MAY:
 
@@ -187,7 +187,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_check_out(self, ts, timeseries_only):
-        """Check out the TimeSeries *s* for modifications (required).
+        """Check out *ts* for modifications.
 
         Parameters
         ----------
@@ -198,7 +198,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_commit(self, ts, comment):
-        """Commit changes to the TimeSeries *s*  (required).
+        """Commit changes to *ts*.
 
         The method MAY:
 
@@ -251,7 +251,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_set(self, ts, region, variable, data, unit, meta):
-        """Store time-series data.
+        """Store *data* in *ts*.
 
         Parameters
         ----------
@@ -283,54 +283,70 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_delete(self, ts, region, variable, years, unit):
-        """Remove time-series data."""
+        """Remove data values from *ts*."""
         pass
 
     @abstractmethod
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
-        """Remove time-series 'geodata'."""
+        """Remove 'geodata' values from *ts*."""
         pass
 
     @abstractmethod
     def ts_discard_changes(self, ts):
-        # TODO document
+        """Discard changes to *ts* since the last commit."""
         pass
 
     @abstractmethod
     def ts_set_as_default(self, ts):
-        # TODO document
+        """Set *ts* as the default version."""
         pass
 
     @abstractmethod
     def ts_is_default(self, ts):
-        # TODO document
+        """Return :obj:`True` if *ts* is the default version.
+
+        Returns
+        -------
+        bool
+        """
         pass
 
     @abstractmethod
     def ts_last_update(self, ts):
-        # TODO document
+        """Return the date of the last modification of the *ts*."""
         pass
 
     @abstractmethod
     def ts_run_id(self, ts):
-        # TODO document
+        """Return the run ID for the *ts*."""
         pass
 
-    @abstractmethod
     def ts_preload(self, ts):
-        # TODO document
+        """OPTIONAL: Load *ts* data into memory."""
         pass
 
     # Methods for ixmp.Scenario
 
     @abstractmethod
-    def s_clone():
-        # TODO
+    def s_clone(self, s, target_backend, model, scenario, annotation,
+                keep_solution, first_model_year=None):
+        """Clone *s*.
+
+        Parameters
+        ----------
+        target_backend : :class:`ixmp.backend.base.Backend`
+            Target backend. May be the same as `s.platform._backend`.
+        model : str
+        scenario : str
+        annotation : str
+        keep_solution : bool
+        first_model_year : int or None
+        """
         pass
 
     @abstractmethod
     def s_init(self, s, annotation=None):
-        """Initialize the Scenario *s* (required).
+        """Initialize the Scenario *s*.
 
         The method MAY:
 
@@ -340,7 +356,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_has_solution(self, s):
-        """Return :obj:`True` if Scenario *s* has been solved (required).
+        """Return :obj:`True` if Scenario *s* has been solved.
 
         If :obj:`True`, model solution data is available from the Backend.
         """
@@ -348,22 +364,22 @@ class Backend(ABC):
 
     @abstractmethod
     def s_list_items(self, s, type):
-        """Return a list of items of *type* in Scenario *s* (required)."""
+        """Return a list of items of *type* in Scenario *s*."""
         pass
 
     @abstractmethod
     def s_init_item(self, s, type, name):
-        """Initialize an item *name* of *type* in Scenario *s* (required)."""
+        """Initialize an item *name* of *type* in Scenario *s*."""
         pass
 
     @abstractmethod
     def s_delete_item(self, s, type, name):
-        """Remove an item *name* of *type* in Scenario *s* (required)."""
+        """Remove an item *name* of *type* in Scenario *s*."""
         pass
 
     @abstractmethod
     def s_item_index(self, s, name, sets_or_names):
-        """Return the index sets or names of item *name* (required).
+        """Return the index sets or names of item *name*.
 
         Parameters
         ----------
@@ -374,7 +390,7 @@ class Backend(ABC):
     @abstractmethod
     def s_item_elements(self, s, type, name, filters=None, has_value=False,
                         has_level=False):
-        """Return elements of item *name* in Scenario *s* (required).
+        """Return elements of item *name* in Scenario *s*.
 
         The return type varies according to the *type* and contents:
 
@@ -389,7 +405,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_add_set_elements(self, s, name, elements):
-        """Add elements to set *name* in Scenario *s* (required).
+        """Add elements to set *name* in Scenario *s*.
 
         Parameters
         ----------
@@ -412,7 +428,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_add_par_values(self, s, name, elements):
-        """Add values to parameter *name* in Scenario *s* (required).
+        """Add values to parameter *name* in Scenario *s*.
 
         Parameters
         ----------
@@ -437,18 +453,22 @@ class Backend(ABC):
 
     @abstractmethod
     def s_item_delete_elements(self, s, type, name, key):
+        """Remove elements of item *name*."""
         pass
 
     @abstractmethod
     def s_get_meta(self, s):
+        """Return all metadata."""
         pass
 
     @abstractmethod
     def s_set_meta(self, s, name, value):
+        """Set a single metadata key."""
         pass
 
     @abstractmethod
     def s_clear_solution(self, s, from_year=None):
+        """Remove data associated with a model solution."""
         pass
 
     # Methods for message_ix.Scenario

@@ -1097,7 +1097,7 @@ class Scenario(TimeSeries):
         return self._element('equ', name, filters, **kwargs)
 
     def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, first_model_year=None, platform=None,
+              keep_solution=True, shift_first_model_year=None, platform=None,
               **kwargs):
         """Clone the current scenario and return the clone.
 
@@ -1143,21 +1143,27 @@ class Scenario(TimeSeries):
                  ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
-        if keep_solution and first_model_year is not None:
-            raise ValueError('Use `keep_solution=False` when cloning with '
-                             '`first_model_year`!')
+        if 'first_model_year' in kwargs:
+            warn('`first_model_year` is deprecated and will be removed in the'
+                 ' next release. Use `shift_first_model_year`.')
+            shift_first_model_year = kwargs.pop('first_model_year')
 
-        if platform is not None and not keep_solution:
-            raise ValueError('Cloning across platforms is only possible '
-                             'with `keep_solution=True`!')
+        if len(kwargs):
+            raise ValueError('Invalid arguments {!r}'.format(kwargs))
+
+        if shift_first_model_year is not None:
+            if keep_solution:
+                logger().warn('Overriding keep_solution=True for '
+                              'shift_first_model_year')
+                keep_solution = False
 
         platform = platform or self.platform
         model = model or self.model
         scenario = scenario or self.scenario
 
         args = [platform._backend, model, scenario, annotation, keep_solution]
-        if check_year(first_model_year, 'first_model_year'):
-            args.append(first_model_year)
+        if check_year(shift_first_model_year, 'first_model_year'):
+            args.append(shift_first_model_year)
 
         scenario_class = self.__class__
 

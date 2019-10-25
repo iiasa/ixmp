@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-# List of field names for lists or tuples returned by Backend API methods
+#: Lists of field names for tuples returned by Backend API methods.
 FIELDS = {
     'get_nodes': ('region', 'mapped_to', 'parent', 'hierarchy'),
     'get_scenarios': ('model', 'scenario', 'scheme', 'is_default',
@@ -21,73 +21,155 @@ class Backend(ABC):
         """Initialize the backend."""
         pass
 
+    def close_db(self):
+        """OPTIONAL: Close database connection(s).
+
+        Close any database connection(s), if open.
+        """
+        pass
+
+    def get_auth(self, user, models, kind):
+        """OPTIONAL: Return user authorization for *models*.
+
+        If the Backend implements access control,
+
+        Parameters
+        ----------
+        user : str
+            User name or identifier.
+        models : list of str
+            Model names.
+        kind : str
+            Type of permission being requested
+
+        Returns
+        -------
+        dict
+            Mapping of `model name (str)` → `bool`; :obj:`True` if the user is
+            authorized for the model.
+        """
+        return {model: True for model in models}
+
     @abstractmethod
-    def set_log_level(self, level):
-        """Set logging level for the backend and other code (required)."""
+    def get_nodes(self):
+        """Iterate over all nodes stored on the Platform.
+
+        Yields
+        -------
+        tuple
+            The members of each tuple are:
+
+            ========= =========== ===
+            ID        Type        Description
+            ========= =========== ===
+            region    str         Node name or synonym for node
+            mapped_to str or None Node name
+            parent    str         Parent node name
+            hierarchy str         Node hierarchy ID
+            ========= =========== ===
+        """
+        pass
+
+    @abstractmethod
+    def get_scenarios(self, default, model, scenario):
+        """Iterate over TimeSeries stored on the Platform.
+
+        Scenarios, as subclasses of TimeSeries, are also included.
+
+        Parameters
+        ----------
+        default : bool
+           :obj:`True` to include only TimeSeries versions marked as default.
+        model : str or None
+           Model name to filter results.
+        scenario : str or None
+           Scenario name to filter results.
+
+        Yields
+        ------
+        tuple
+            The members of each tuple are:
+
+            ========== ==== ===
+            ID         Type Description
+            ========== ==== ===
+            model      str  Model name.
+            scenario   str  Scenario name.
+            scheme     str  Scheme name.
+            is_default bool :obj:`True` if `version` is the default.
+            is_locked  bool :obj:`True` if read-only.
+            cre_user   str  Name of user who created the TimeSeries.
+            cre_date   str  Creation datetime.
+            upd_user   str  Name of user who last modified the TimeSeries.
+            upd_date   str  Modification datetime.
+            lock_user  str  Name of user who locked the TimeSeries.
+            lock_date  str  Lock datetime.
+            annotation str  Description of the TimeSeries.
+            version    int  Version.
+            ========== ==== ===
+        """
+        pass
+
+    @abstractmethod
+    def get_units(self):
+        """Return all registered units of measurement.
+
+        Returns
+        -------
+        list of str
+        """
         pass
 
     def open_db(self):
-        """(Re-)open a database connection (OPTIONAL).
+        """OPTIONAL: (Re-)open database connection(s).
 
         A backend MAY connect to a database server. This method opens the
         database connection if it is closed.
         """
         pass
 
-    def close_db(self):
-        """Close a database connection (OPTIONAL).
+    def set_log_level(self, level):
+        """OPTIONAL: Set logging level for the backend and other code.
 
-        Close a database connection if it is open.
+        Parameters
+        ----------
+        level : int or Python logging level
         """
         pass
-
-    def get_auth(self, user, models, kind):
-        """Return user authorization for models (OPTIONAL).
-
-        If the Backend implements access control…
-        """
-        return {model: True for model in models}
 
     @abstractmethod
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
-        pass
+        """Add a node name to the Platform.
 
-    @abstractmethod
-    def get_nodes(self):
-        """Iterate over all nodes (required).
+        This method MUST be callable in one of two ways:
 
-        Yields
-        -------
-        tuple
-            The four members of each tuple are:
+        - With `parent` and `hierarchy`: `name` is added as a child of `parent`
+          in the named `hierarchy`.
+        - With `synonym`: `synonym` is added as an alias for `name`.
 
-            1. Name or synonym: str
-            2. Name: str or None.
-            3. Parent: str.
-            4. Hierarchy: str.
+        Parameters
+        ----------
+        name : str
+           Node name.
+        parent : str, optional
+           Parent node name.
+        hierarchy : str, optional
+           Node hierarchy ID.
+        synonym : str, optional
+           Synonym for node.
         """
-        pass
-
-    @abstractmethod
-    def get_scenarios(self, default, model, scenario):
-        pass
-
-    @abstractmethod
-    def set_nodes(self):
-        # TODO document
         pass
 
     @abstractmethod
     def set_unit(self, name, comment):
-        pass
+        """Add a unit of measurement to the Platform.
 
-    @abstractmethod
-    def get_units(self):
-        """Return all registered units of measurement (required).
-
-        Returns
-        -------
-        list of str
+        Parameters
+        ----------
+        name : str
+            Symbol of the unit.
+        comment : str
+            Description of the change.
         """
         pass
 

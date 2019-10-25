@@ -45,12 +45,7 @@ JAVA_CLASSES = [
 
 
 class JDBCBackend(Backend):
-    """Backend using JPype and JDBC to connect to Oracle and HSQLDB instances.
-
-    Among other abstractions, this backend:
-
-    - Catches Java exceptions such as ixmp.exceptions.IxException, and
-      re-raises them as appropriate Python exceptions.
+    """Backend using JPype/JDBC to connect to Oracle and HyperSQLDB instances.
 
     Parameters
     ----------
@@ -74,8 +69,15 @@ class JDBCBackend(Backend):
         Java Virtual Machine arguments.
         See :meth:`ixmp.backend.jdbc.start_jvm`.
     """
-    # NB Much of the code of this backend is implemented in Java code in the
-    #    (private) iiasa/ixmp_source Github repository.
+    # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
+    #    Github repository.
+    #
+    #    Among other abstractions, this backend:
+    #
+    #    - Handles any conversion between Java and Python types that is not
+    #      done automatically by JPype.
+    #    - Catches Java exceptions such as ixmp.exceptions.IxException, and
+    #      re-raises them as appropriate Python exceptions.
 
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
     jobj = None
@@ -554,7 +556,7 @@ def start_jvm(jvmargs=None):
         :meth:`jpype.startJVM`.
 
         For instance, to set the maximum heap space to 4 GiB, give
-        ``jvmargs=['-Xmx4G']``.See the `JVM documentation`_ for a list of
+        ``jvmargs=['-Xmx4G']``. See the `JVM documentation`_ for a list of
         options.
 
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs

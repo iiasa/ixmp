@@ -33,6 +33,8 @@ Provided backends
    It has the following methods that are not part of the overall :class:`Backend` API:
 
    .. autosummary::
+      :nosignatures:
+
       s_write_gdx
       s_read_gdx
 
@@ -51,7 +53,10 @@ Backend API
 
 .. currentmodule:: ixmp.backend.base
 
+.. autodata:: ixmp.backend.base.FIELDS
+
 .. autoclass:: ixmp.backend.base.Backend
+   :members:
 
    In the following, the words REQUIRED, OPTIONAL, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
 
@@ -65,6 +70,8 @@ Backend API
    Methods related to :class:`ixmp.Platform`:
 
    .. autosummary::
+      :nosignatures:
+
       close_db
       get_auth
       get_nodes
@@ -72,14 +79,17 @@ Backend API
       get_units
       open_db
       set_log_level
-      set_nodes
+      set_node
       set_unit
 
    Methods related to :class:`ixmp.TimeSeries`:
 
+   - Each method has an argument `ts`, a reference to the TimeSeries object being manipulated.
    - ‘Geodata’ is otherwise identical to regular timeseries data, except value are :class:`str` rather than :class:`float`.
 
    .. autosummary::
+      :nosignatures:
+
       ts_check_out
       ts_commit
       ts_delete
@@ -98,7 +108,11 @@ Backend API
 
    Methods related to :class:`ixmp.Scenario`:
 
+   - Each method has an argument `s`, a reference to the Scenario object being manipulated.
+
    .. autosummary::
+      :nosignatures:
+
       s_add_par_values
       s_add_set_elements
       s_clone
@@ -115,7 +129,11 @@ Backend API
 
    Methods related to :class:`message_ix.Scenario`:
 
+   - Each method has an argument `ms`, a reference to the Scenario object being manipulated.
+
    .. autosummary::
+      :nosignatures:
+
       ms_cat_get_elements
       ms_cat_list
       ms_cat_set_elements

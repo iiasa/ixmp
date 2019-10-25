@@ -1,7 +1,7 @@
 .. currentmodule:: ixmp.model
 
-Model formulations (:mod:`ixmp.model`)
-======================================
+Mathematical models (:mod:`ixmp.model`)
+=======================================
 
 By default, the |ixmp| is installed with :class:`ixmp.model.gams.GAMSModel`, which performs calculations by executing code stored in GAMS files.
 

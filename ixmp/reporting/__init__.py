@@ -611,7 +611,7 @@ def _config_args(path, keys, sections={}):
         extra_sections = set(result.keys()) - sections - {'config_dir'}
         if len(extra_sections):
             warn(('Unrecognized sections {!r} in reporting configuration will '
-                  'have no effect').format(extra_sections))
+                  'have no effect').format(sorted(extra_sections)))
 
     return result
 

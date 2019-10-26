@@ -140,7 +140,7 @@ class Reporter:
             except AttributeError:
                 # pd.DataFrame for a multidimensional set; store as-is
                 pass
-            rep.add(name, elements)
+            rep.add(RENAME_DIMS.get(name, name), elements)
 
         # Add the scenario itself
         rep.add('scenario', scenario)

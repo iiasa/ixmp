@@ -53,7 +53,7 @@ def test_reporting_configure(test_mp, test_data_path):
     scen = make_dantzig(test_mp)
     rep = Reporter.from_scenario(scen)
     assert 'd:i_renamed-j' in rep, rep.graph.keys()
-    assert ['seattle', 'new-york'] == rep.get('i_renamed')
+    assert ['seattle', 'san-diego'] == rep.get('i_renamed')
 
     # Original name 'i' are not found in the reporter
     assert 'd:i-j' not in rep, rep.graph.keys()

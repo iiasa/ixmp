@@ -1,10 +1,7 @@
 import collections
 import logging
 import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from pathlib import Path
 
 import pandas as pd
 import six
@@ -144,15 +141,3 @@ def import_timeseries(mp, data, model, scenario, version=None,
     if lastyear is not None:
         annot = '{} until {}'.format(annot, lastyear)
     scen.commit(annot)
-
-
-def harmonize_path(path_or_str):
-    """Harmonize mixed '\' and '/' separators in pathlib.Path or str.
-
-    On Windows, R's file.path(...) uses '/', not '\', as a path separator.
-    Python's str(WindowsPath(...)) uses '\'. Mixing outputs from the two
-    functions (e.g. through rixmp) produces path strings with both kinds of
-    separators.
-    """
-    args = ('/', '\\') if os.name == 'nt' else ('\\', '/')
-    return Path(str(path_or_str).replace(*args))

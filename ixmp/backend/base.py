@@ -16,19 +16,23 @@ FIELDS = {
 
 class Backend(ABC):
     """Abstract base class for backends."""
+    # NB non-abstract methods like close_db() are marked '# pragma: no cover'.
+    #    In order to cover these with tests, define a MemoryBackend or similar
+    #    that provides implementations of all the abstract methods but does
+    #    NOT override the non-abstract methods; then call those.
 
-    def __init__(self):
+    def __init__(self):  # pragma: no cover
         """Initialize the backend."""
         pass
 
-    def close_db(self):
+    def close_db(self):  # pragma: no cover
         """OPTIONAL: Close database connection(s).
 
         Close any database connection(s), if open.
         """
         pass
 
-    def get_auth(self, user, models, kind):
+    def get_auth(self, user, models, kind):  # pragma: no cover
         """OPTIONAL: Return user authorization for *models*.
 
         If the Backend implements access control,
@@ -68,7 +72,6 @@ class Backend(ABC):
             hierarchy str         Node hierarchy ID
             ========= =========== ===
         """
-        pass
 
     @abstractmethod
     def get_scenarios(self, default, model, scenario):
@@ -108,7 +111,6 @@ class Backend(ABC):
             version    int  Version.
             ========== ==== ===
         """
-        pass
 
     @abstractmethod
     def get_units(self):
@@ -118,9 +120,8 @@ class Backend(ABC):
         -------
         list of str
         """
-        pass
 
-    def open_db(self):
+    def open_db(self):  # pragma: no cover
         """OPTIONAL: (Re-)open database connection(s).
 
         A backend MAY connect to a database server. This method opens the
@@ -128,7 +129,7 @@ class Backend(ABC):
         """
         pass
 
-    def set_log_level(self, level):
+    def set_log_level(self, level):  # pragma: no cover
         """OPTIONAL: Set logging level for the backend and other code.
 
         Parameters
@@ -158,7 +159,6 @@ class Backend(ABC):
         synonym : str, optional
            Synonym for node.
         """
-        pass
 
     @abstractmethod
     def set_unit(self, name, comment):
@@ -171,7 +171,6 @@ class Backend(ABC):
         comment : str
             Description of the change.
         """
-        pass
 
     # Methods for ixmp.TimeSeries
 
@@ -183,7 +182,6 @@ class Backend(ABC):
 
         - Modify the version attr of the returned object.
         """
-        pass
 
     @abstractmethod
     def ts_check_out(self, ts, timeseries_only):
@@ -194,7 +192,6 @@ class Backend(ABC):
         timeseries_only : bool
             ???
         """
-        pass
 
     @abstractmethod
     def ts_commit(self, ts, comment):
@@ -204,7 +201,6 @@ class Backend(ABC):
 
         - Modify the version attr of *ts*.
         """
-        pass
 
     @abstractmethod
     def ts_get(self, ts, region, variable, unit, year):
@@ -228,7 +224,6 @@ class Backend(ABC):
             4. year: int.
             5. value: float.
         """
-        pass
 
     @abstractmethod
     def ts_get_geo(self, ts):
@@ -247,7 +242,6 @@ class Backend(ABC):
             6. unit: str.
             7. meta: int.
         """
-        pass
 
     @abstractmethod
     def ts_set(self, ts, region, variable, data, unit, meta):
@@ -262,7 +256,6 @@ class Backend(ABC):
         meta : bool
             Metadata flag.
         """
-        pass
 
     @abstractmethod
     def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
@@ -279,27 +272,22 @@ class Backend(ABC):
         meta : bool
             Metadata flag.
         """
-        pass
 
     @abstractmethod
     def ts_delete(self, ts, region, variable, years, unit):
         """Remove data values from *ts*."""
-        pass
 
     @abstractmethod
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
         """Remove 'geodata' values from *ts*."""
-        pass
 
     @abstractmethod
     def ts_discard_changes(self, ts):
         """Discard changes to *ts* since the last commit."""
-        pass
 
     @abstractmethod
     def ts_set_as_default(self, ts):
         """Set *ts* as the default version."""
-        pass
 
     @abstractmethod
     def ts_is_default(self, ts):
@@ -309,19 +297,16 @@ class Backend(ABC):
         -------
         bool
         """
-        pass
 
     @abstractmethod
     def ts_last_update(self, ts):
         """Return the date of the last modification of the *ts*."""
-        pass
 
     @abstractmethod
     def ts_run_id(self, ts):
         """Return the run ID for the *ts*."""
-        pass
 
-    def ts_preload(self, ts):
+    def ts_preload(self, ts):  # pragma: no cover
         """OPTIONAL: Load *ts* data into memory."""
         pass
 
@@ -342,7 +327,6 @@ class Backend(ABC):
         keep_solution : bool
         first_model_year : int or None
         """
-        pass
 
     @abstractmethod
     def s_init(self, s, annotation=None):
@@ -352,7 +336,6 @@ class Backend(ABC):
 
         - Modify the version attr of the returned object.
         """
-        pass
 
     @abstractmethod
     def s_has_solution(self, s):
@@ -360,22 +343,18 @@ class Backend(ABC):
 
         If :obj:`True`, model solution data is available from the Backend.
         """
-        pass
 
     @abstractmethod
     def s_list_items(self, s, type):
         """Return a list of items of *type* in Scenario *s*."""
-        pass
 
     @abstractmethod
     def s_init_item(self, s, type, name):
         """Initialize an item *name* of *type* in Scenario *s*."""
-        pass
 
     @abstractmethod
     def s_delete_item(self, s, type, name):
         """Remove an item *name* of *type* in Scenario *s*."""
-        pass
 
     @abstractmethod
     def s_item_index(self, s, name, sets_or_names):
@@ -385,7 +364,6 @@ class Backend(ABC):
         ----------
         sets_or_names : 'sets' or 'names'
         """
-        pass
 
     @abstractmethod
     def s_item_elements(self, s, type, name, filters=None, has_value=False,
@@ -401,7 +379,6 @@ class Backend(ABC):
         """
         # TODO exactly specify the return types in the docstring using MUST,
         # MAY, etc. terms
-        pass
 
     @abstractmethod
     def s_add_set_elements(self, s, name, elements):
@@ -424,7 +401,6 @@ class Backend(ABC):
         Exception
             If the Backend encounters any error adding the key.
         """
-        pass
 
     @abstractmethod
     def s_add_par_values(self, s, name, elements):
@@ -449,51 +425,41 @@ class Backend(ABC):
         Exception
             If the Backend encounters any error adding the parameter values.
         """
-        pass
 
     @abstractmethod
     def s_item_delete_elements(self, s, type, name, key):
         """Remove elements of item *name*."""
-        pass
 
     @abstractmethod
     def s_get_meta(self, s):
         """Return all metadata."""
-        pass
 
     @abstractmethod
     def s_set_meta(self, s, name, value):
         """Set a single metadata key."""
-        pass
 
     @abstractmethod
     def s_clear_solution(self, s, from_year=None):
         """Remove data associated with a model solution."""
-        pass
 
     # Methods for message_ix.Scenario
 
     @abstractmethod
     def ms_cat_list(self, ms, name):
         """Return list of categories."""
-        pass
 
     @abstractmethod
     def ms_cat_get_elements(self, ms, name, cat):
         """Get elements of a category mapping."""
-        pass
 
     @abstractmethod
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
         """Add elements to category mapping."""
-        pass
 
     @abstractmethod
     def ms_year_first_model(self, ms):
         """Return the first model year."""
-        pass
 
     @abstractmethod
     def ms_years_active(self, ms, node, tec, year_vintage):
         """Return a list of years in which *tec* is active."""
-        pass

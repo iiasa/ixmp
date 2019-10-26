@@ -123,8 +123,8 @@ def test_init_set(test_mp):
         scen.init_set('foo')
 
 
-def test_add_set(test_mp):
-    """Test ixmp.Scenario.add_set()."""
+def test_set(test_mp):
+    """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add element to a non-existent set
@@ -186,6 +186,28 @@ def test_add_set(test_mp):
     with pytest.raises(ValueError, match="The index set 'i' does not have an "
                                          "element 'bar'!"):
         scen.add_set('foo', 'bar')
+
+    # Retrieve set elements
+    i = {'seattle', 'san-diego', 'i1', 'i2', 'i3', 'i4', 'i5', '0', '1', '2',
+         'i6', 'i7', 'i8'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: bare name
+    scen.remove_set('i', 'i2')
+    i -= {'i2'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: Iterable of names, length >1
+    scen.remove_set('i', ['i4', 'i5'])
+    i -= {'i4', 'i5'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from a 1D set: Dict
+    scen.remove_set('foo', dict(dim_i=['i7', 'i8']))
+    # Added elements from above; minus directly removed elements; minus i2
+    # because it was removed from the set i that indexes dim_i of foo
+    foo = {'i1', 'i2', 'i3', 'i6', 'i7', 'i8'} - {'i2'} - {'i7', 'i8'}
+    assert foo == set(scen.set('foo')['dim_i'])
 
 
 # make sure that changes to a scenario are copied over during clone

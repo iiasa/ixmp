@@ -48,7 +48,7 @@ Backend API
 - In contrast, :class:`Backend` has a *very simple* API that accepts arguments and returns values in basic Python data types and structures.
 - As a result:
 
-  - :class:`Platform <ixmp.Platform>` code does is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
+  - :class:`Platform <ixmp.Platform>` code is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
   - :class:`Backend` code does not need to perform argument checking; merely store and retrieve data reliably.
 
 .. currentmodule:: ixmp.backend.base
@@ -58,14 +58,18 @@ Backend API
 .. autoclass:: ixmp.backend.base.Backend
    :members:
 
-   In the following, the words REQUIRED, OPTIONAL, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
+   In the following, the bold-face words **required**, **optional**, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
 
-   Backend is an **abstract** class; this means it MUST be subclassed.
-   Most of its methods are decorated with :meth:`abc.abstractmethod`; this means they are REQUIRED and MUST be overridden by subclasses.
+   Backend is an **abstract** class; this means it **must** be subclassed.
+   Most of its methods are decorated with :meth:`abc.abstractmethod`; this means they are **required** and **must** be overridden by subclasses.
 
-   Others, marked below with “(OPTIONAL)”, are not so decorated.
+   Others, marked below with "OPTIONAL:", are not so decorated.
    For these methods, the behaviour in the base Backend—often, nothing—is an acceptable default behaviour.
-   Subclasses MAY extend or replace this behaviour as desired, so long as the methods still perform the actions described in the description.
+   Subclasses **may** extend or replace this behaviour as desired, so long as the methods still perform the actions described in the description.
+
+   Backends:
+
+   - **must** only raise standard Python exceptions.
 
    Methods related to :class:`ixmp.Platform`:
 
@@ -96,13 +100,14 @@ Backend API
       ts_delete_geo
       ts_discard_changes
       ts_get
+      ts_get_data
       ts_get_geo
       ts_init
       ts_is_default
       ts_last_update
       ts_preload
       ts_run_id
-      ts_set
+      ts_set_data
       ts_set_as_default
       ts_set_geo
 
@@ -117,6 +122,7 @@ Backend API
       s_add_set_elements
       s_clone
       s_delete_item
+      s_get
       s_get_meta
       s_has_solution
       s_init
@@ -137,5 +143,4 @@ Backend API
       ms_cat_get_elements
       ms_cat_list
       ms_cat_set_elements
-      ms_year_first_model
       ms_years_active

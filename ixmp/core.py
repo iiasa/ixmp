@@ -37,12 +37,10 @@ class Platform:
     ----------
     backend : 'jdbc'
         Storage backend type. 'jdbc' corresponds to the built-in
-        :class:`JDBCBackend <ixmp.backend.jdbc.JDBCBackend>`; see
-        :obj:`ixmp.backend.BACKENDS`.
+        :class:`.JDBCBackend`; see :obj:`.BACKENDS`.
     backend_args
-        Keyword arguments to specific to the `backend`.
-        The “Other Parameters” shown below are specific to
-        :class:`JDBCBackend <ixmp.backend.jdbc.JDBCBackend>`.
+        Keyword arguments to specific to the `backend`. The “Other Parameters”
+        shown below are specific to :class:`.JDBCBackend`.
 
     Other parameters
     ----------------
@@ -54,8 +52,7 @@ class Platform:
     dbprops : path-like, optional
         If `dbtype` is :obj:`None`, the name of a *database properties file*
         (default: ``default.properties``) in the properties file directory
-        (see :class:`Config <ixmp.config.Config>`) or a path to a properties
-        file.
+        (see :class:`.Config`) or a path to a properties file.
 
         If `dbtype` is 'HSQLDB'`, the path of a local database,
         (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
@@ -63,8 +60,7 @@ class Platform:
         ``$HOME/.local/ixmp/localdb/``).
 
     jvmargs : str, optional
-        Java Virtual Machine arguments.
-        See :meth:`ixmp.backend.jdbc.start_jvm`.
+        Java Virtual Machine arguments. See :func:`.start_jvm`.
     """
 
     # List of method names which are handled directly by the backend
@@ -300,20 +296,22 @@ class TimeSeries:
 
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
-    _timespans = {}
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
         # Set attributes
+        self.platform = mp
         self.model = model
         self.scenario = scenario
-        self.version = version
 
-        # All the backend to complete initialization
-        self.platform = mp
-        self._backend('init', annotation)
+        if version == 'new':
+            self._backend('init', annotation)
+        elif isinstance(version, int) or version is None:
+            self._backend('get', version)
+        else:
+            raise ValueError(f'version={version!r}')
 
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
@@ -323,7 +321,7 @@ class TimeSeries:
     # functions for platform management
 
     def check_out(self, timeseries_only=False):
-        """check out from the ixmp database instance for making changes"""
+        """Check out the TimeSeries for modification."""
         if not timeseries_only and self.has_solution():
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '
@@ -419,7 +417,8 @@ class TimeSeries:
         # Add one time series per row
         for (r, v, u), data in df.iterrows():
             # Values as float; exclude NA
-            self._backend('set', r, v, data.astype(float).dropna(), u, meta)
+            self._backend('set_data', r, v, data.astype(float).dropna(), u,
+                          meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
                    iamc=False):
@@ -445,7 +444,7 @@ class TimeSeries:
             Specified data.
         """
         # Retrieve data, convert to pandas.DataFrame
-        df = pd.DataFrame(self._backend('get',
+        df = pd.DataFrame(self._backend('get_data',
                                         as_str_list(region) or [],
                                         as_str_list(variable) or [],
                                         as_str_list(unit) or [],
@@ -561,19 +560,25 @@ class Scenario(TimeSeries):
         'equ': {'has_level': True},
     }
 
+    #: Scheme of the Scenario.
+    scheme = None
+
     def __init__(self, mp, model, scenario, version=None, scheme=None,
                  annotation=None, cache=False):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
         # Set attributes
+        self.platform = mp
         self.model = model
         self.scenario = scenario
-        self.version = version
 
-        # All the backend to complete initialization
-        self.platform = mp
-        self._backend('init', scheme, annotation)
+        if version == 'new':
+            self._backend('init', scheme, annotation)
+        elif isinstance(version, int) or version is None:
+            self._backend('get', version)
+        else:
+            raise ValueError(f'version={version!r}')
 
         if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
             warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios is '
@@ -1161,19 +1166,11 @@ class Scenario(TimeSeries):
         model = model or self.model
         scenario = scenario or self.scenario
 
-        args = [platform._backend, model, scenario, annotation, keep_solution]
+        args = [platform, model, scenario, annotation, keep_solution]
         if check_year(shift_first_model_year, 'first_model_year'):
             args.append(shift_first_model_year)
 
-        scenario_class = self.__class__
-
-        # NB cloning happens entirely within the Java code. This requires
-        #    'jclone', a reference to a Java object, to be returned here...
-        jclone = self._backend('clone', *args)
-        #     ...and passed in to the constructor here. To avoid this, would
-        #     need to adjust the ixmp_source code.
-        return scenario_class(platform, model, scenario, cache=self._cache,
-                              version=jclone)
+        return self._backend('clone', *args)
 
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
@@ -1210,12 +1207,10 @@ class Scenario(TimeSeries):
     def solve(self, model=None, callback=None, cb_kwargs={}, **model_options):
         """Solve the model and store output.
 
-        ixmp 'solves' a model by invoking the run() method of a
-        :class:`Model <ixmp.model.base.Model>` subclass—for instance,
-        :meth:`GAMSModel.run <ixmp.model.gams.GAMSModel.run>`.
-        Depending on the underlying model code, different steps are taken; see
-        each model class for details.
-        In general:
+        ixmp 'solves' a model by invoking the run() method of a :class:`.Model`
+        subclass—for instance, :meth:`.GAMSModel.run`. Depending on the
+        underlying model code, different steps are taken; see each model class
+        for details. In general:
 
         1. Data from the Scenario are written to a **model input file**.
         2. Code or an external program is invoked to perform calculations or
@@ -1243,8 +1238,7 @@ class Scenario(TimeSeries):
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
         model_options :
-            Keyword arguments specific to the `model`. See
-            :class:`GAMSModel <ixmp.model.gams.GAMSModel>`.
+            Keyword arguments specific to the `model`. See :class:`.GAMSModel`.
 
         Warns
         -----

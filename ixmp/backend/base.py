@@ -22,7 +22,7 @@ class Backend(ABC):
     #    NOT override the non-abstract methods; then call those.
 
     def __init__(self):  # pragma: no cover
-        """Initialize the backend."""
+        """OPTIONAL: Initialize the backend."""
         pass
 
     def close_db(self):  # pragma: no cover
@@ -35,7 +35,11 @@ class Backend(ABC):
     def get_auth(self, user, models, kind):  # pragma: no cover
         """OPTIONAL: Return user authorization for *models*.
 
-        If the Backend implements access control,
+        If the Backend implements access control, this method **must** indicate
+        whether *user* has permission *kind* for each of *models*.
+
+        *kind* **may** be 'read'/'view', 'write'/'modify', or other values;
+        :meth:`get_auth` **should** raise exceptions on invalid values.
 
         Parameters
         ----------
@@ -49,8 +53,8 @@ class Backend(ABC):
         Returns
         -------
         dict
-            Mapping of `model name (str)` → `bool`; :obj:`True` if the user is
-            authorized for the model.
+            Mapping of *model name (str)* → :class:`bool`; :obj:`True` if the
+            user is authorized for the model.
         """
         return {model: True for model in models}
 
@@ -71,6 +75,10 @@ class Backend(ABC):
             parent    str         Parent node name
             hierarchy str         Node hierarchy ID
             ========= =========== ===
+
+        See also
+        --------
+        set_node
         """
 
     @abstractmethod
@@ -96,35 +104,39 @@ class Backend(ABC):
             ========== ==== ===
             ID         Type Description
             ========== ==== ===
-            model      str  Model name.
-            scenario   str  Scenario name.
-            scheme     str  Scheme name.
-            is_default bool :obj:`True` if `version` is the default.
-            is_locked  bool :obj:`True` if read-only.
-            cre_user   str  Name of user who created the TimeSeries.
-            cre_date   str  Creation datetime.
-            upd_user   str  Name of user who last modified the TimeSeries.
-            upd_date   str  Modification datetime.
-            lock_user  str  Name of user who locked the TimeSeries.
-            lock_date  str  Lock datetime.
-            annotation str  Description of the TimeSeries.
-            version    int  Version.
+            model      str  Model name
+            scenario   str  Scenario name
+            scheme     str  Scheme name
+            is_default bool :obj:`True` if `version` is the default
+            is_locked  bool :obj:`True` if read-only
+            cre_user   str  Name of user who created the TimeSeries
+            cre_date   str  Creation datetime
+            upd_user   str  Name of user who last modified the TimeSeries
+            upd_date   str  Modification datetime
+            lock_user  str  Name of user who locked the TimeSeries
+            lock_date  str  Lock datetime
+            annotation str  Description of the TimeSeries
+            version    int  Version
             ========== ==== ===
         """
 
     @abstractmethod
     def get_units(self):
-        """Return all registered units of measurement.
+        """Return all registered symbols for units of measurement.
 
         Returns
         -------
         list of str
+
+        See also
+        --------
+        set_unit
         """
 
     def open_db(self):  # pragma: no cover
         """OPTIONAL: (Re-)open database connection(s).
 
-        A backend MAY connect to a database server. This method opens the
+        A backend **may** connect to a database server. This method opens the
         database connection if it is closed.
         """
         pass
@@ -142,7 +154,8 @@ class Backend(ABC):
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         """Add a node name to the Platform.
 
-        This method MUST be callable in one of two ways:
+        This method **must** have one of two effects, depending on the
+        arguments:
 
         - With `parent` and `hierarchy`: `name` is added as a child of `parent`
           in the named `hierarchy`.
@@ -158,6 +171,10 @@ class Backend(ABC):
            Node hierarchy ID.
         synonym : str, optional
            Synonym for node.
+
+        See also
+        --------
+        get_nodes
         """
 
     @abstractmethod
@@ -169,7 +186,11 @@ class Backend(ABC):
         name : str
             Symbol of the unit.
         comment : str
-            Description of the change.
+            Description of the change or of the unit.
+
+        See also
+        --------
+        get_units
         """
 
     # Methods for ixmp.TimeSeries
@@ -178,51 +199,102 @@ class Backend(ABC):
     def ts_init(self, ts, annotation=None):
         """Initialize the TimeSeries *ts*.
 
-        The method MAY:
+        ts_init **may** modify the :attr:`~TimeSeries.version` attribute of
+        *ts*.
 
-        - Modify the version attr of the returned object.
+        Parameters
+        ----------
+        annotation : str
+            If *ts* is newly-created, the Backend **must** store this
+            annotation with the TimeSeries.
+
+        Returns
+        -------
+        None
+        """
+
+    @abstractmethod
+    def ts_get(self, ts, version):
+        """Retrieve the existing TimeSeries *ts*.
+
+        The TimeSeries is identified based on its (:attr:`~.TimeSeries.model`,
+        :attr:`~.TimeSeries.scenario`) and *version*.
+
+        Parameters
+        ----------
+        version : str or None
+            If :obj:`None`, the version marked as the default is returned, and
+            ts_get **must** set :attr:`.TimeSeries.version` attribute on *ts*.
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        ts_set_as_default
         """
 
     @abstractmethod
     def ts_check_out(self, ts, timeseries_only):
-        """Check out *ts* for modifications.
+        """Check out *ts* for modification.
 
         Parameters
         ----------
         timeseries_only : bool
             ???
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod
     def ts_commit(self, ts, comment):
         """Commit changes to *ts*.
 
-        The method MAY:
+        ts_init **may** modify the :attr:`~.TimeSeries.version` attribute of
+        *ts*.
 
-        - Modify the version attr of *ts*.
+        Parameters
+        ----------
+        comment : str
+            Description of the changes being committed.
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod
-    def ts_get(self, ts, region, variable, unit, year):
+    def ts_get_data(self, ts, region, variable, unit, year):
         """Retrieve time-series data.
 
         Parameters
         ----------
         region : list of str
+            Region names to filter results.
         variable : list of str
+            Variable names to filter results.
         unit : list of str
+            Unit symbols to filter results.
         year : list of str
+            Years to filter results.
 
         Yields
         ------
         tuple
-            The five members of each tuple are:
+            The members of each tuple are:
 
-            1. region: str.
-            2. variable: str.
-            3. unit: str.
-            4. year: int.
-            5. value: float.
+            ======== ===== ===
+            ID       Type  Description
+            ======== ===== ===
+            region   str   Region name
+            variable str   Variable name
+            unit     str   Unit symbol
+            year     int   Year
+            value    float Data value
+            ======== ===== ===
         """
 
     @abstractmethod
@@ -232,29 +304,39 @@ class Backend(ABC):
         Yields
         ------
         tuple
-            The seven members of each tuple are:
+            The members of each tuple are:
 
-            1. region: str.
-            2. variable: str.
-            3. time: str.
-            4. year: int.
-            5. value: str.
-            6. unit: str.
-            7. meta: int.
+            ======== ==== ===
+            ID       Type Description
+            ======== ==== ===
+            region   str  Region name
+            variable str  Variable name
+            time     str  Time period
+            year     int  Year
+            value    str  Value
+            unit     str  Unit symbol
+            meta     bool :obj:`True` if the data is marked as metadata
+            ======== ==== ===
         """
 
     @abstractmethod
-    def ts_set(self, ts, region, variable, data, unit, meta):
+    def ts_set_data(self, ts, region, variable, data, unit, meta):
         """Store *data* in *ts*.
 
         Parameters
         ----------
-        region, variable, time, unit : str
-            Indices for the data.
+        region : str
+            Region name.
+        variable : str
+            Variable name.
+        time : str
+            Time period.
+        unit : str
+            Unit symbol.
         data : dict (int -> float)
             Mapping from year to value.
         meta : bool
-            Metadata flag.
+            :obj:`True` to mark *data* as metadata.
         """
 
     @abstractmethod
@@ -263,31 +345,87 @@ class Backend(ABC):
 
         Parameters
         ----------
-        region, variable, time, unit : str
-            Indices for the data.
+        region : str
+            Region name.
+        variable : str
+            Variable name.
+        time : str
+            Time period.
         year : int
-            Year index.
+            Year.
         value : str
-            Data.
+            Data value.
+        unit : str
+            Unit symbol.
         meta : bool
-            Metadata flag.
+            :obj:`True` to mark *data* as metadata.
         """
 
     @abstractmethod
     def ts_delete(self, ts, region, variable, years, unit):
-        """Remove data values from *ts*."""
+        """Remove data values from *ts*.
+
+        Parameters
+        ----------
+        region : str
+            Region name.
+        variable : str
+            Variable name.
+        years : Iterable of int
+            Years.
+        unit : str
+            Unit symbol.
+
+        Returns
+        -------
+        None
+        """
 
     @abstractmethod
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
-        """Remove 'geodata' values from *ts*."""
+        """Remove 'geodata' values from *ts*.
+
+        Parameters
+        ----------
+        region : str
+            Region name.
+        variable : str
+            Variable name.
+        time : str
+            Time period.
+        years : Iterable of int
+            Years.
+        unit : str
+            Unit symbol.
+
+        Returns
+        -------
+        None
+        """
 
     @abstractmethod
     def ts_discard_changes(self, ts):
-        """Discard changes to *ts* since the last commit."""
+        """Discard changes to *ts* since the last :meth:`ts_check_out`.
+
+        Returns
+        -------
+        None
+        """
 
     @abstractmethod
     def ts_set_as_default(self, ts):
-        """Set *ts* as the default version."""
+        """Set the current :attr:`.TimeSeries.version` as the default.
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        ts_is_default
+        ts_get
+        s_get
+        """
 
     @abstractmethod
     def ts_is_default(self, ts):
@@ -296,15 +434,31 @@ class Backend(ABC):
         Returns
         -------
         bool
+
+        See also
+        --------
+        ts_set_as_default
+        ts_get
+        s_get
         """
 
     @abstractmethod
     def ts_last_update(self, ts):
-        """Return the date of the last modification of the *ts*."""
+        """Return the date of the last modification of the *ts*.
+
+        Returns
+        -------
+        str
+        """
 
     @abstractmethod
     def ts_run_id(self, ts):
-        """Return the run ID for the *ts*."""
+        """Return the run ID for the *ts*.
+
+        Returns
+        -------
+        int
+        """
 
     def ts_preload(self, ts):  # pragma: no cover
         """OPTIONAL: Load *ts* data into memory."""
@@ -313,48 +467,123 @@ class Backend(ABC):
     # Methods for ixmp.Scenario
 
     @abstractmethod
-    def s_clone(self, s, target_backend, model, scenario, annotation,
+    def s_init(self, s, scheme, annotation):
+        """Initialize the Scenario *s*.
+
+        s_init **may** modify the :attr:`~.TimeSeries.version` attribute of
+        *s*.
+
+        Parameters
+        ----------
+        scheme : str
+            Description of the scheme of the Scenario.
+        annotation : str
+            Description of the Scenario.
+
+        Returns
+        -------
+        None
+        """
+
+    @abstractmethod
+    def s_get(self, s, version):
+        """Retrieve the existing Scenario *ts*.
+
+        The Scenario is identified based on its (:attr:`~.TimeSeries.model`,
+        :attr:`~.TimeSeries.scenario`) and *version*. s_get **must** set
+        the :attr:`.Scenario.scheme` attribute on *s*.
+
+        Parameters
+        ----------
+        version : str or None
+            If :obj:`None`, the version marked as the default is returned, and
+            s_get **must** set :attr:`.TimeSeries.version` attribute on *s*.
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        ts_set_as_default
+        """
+
+    @abstractmethod
+    def s_clone(self, s, platform_dest, model, scenario, annotation,
                 keep_solution, first_model_year=None):
         """Clone *s*.
 
         Parameters
         ----------
-        target_backend : :class:`ixmp.backend.base.Backend`
-            Target backend. May be the same as `s.platform._backend`.
+        platform_dest : :class:`.Platform`
+            Target backend. May be the same as *s.platform*.
         model : str
+            New model name.
         scenario : str
+            New scenario name.
         annotation : str
+            Description for the creation of the new scenario.
         keep_solution : bool
+            If :obj:`True`, model solution data is also cloned. If
+            :obj:`False`, it is discarded.
         first_model_year : int or None
-        """
+            If :class:`int`, must be greater than the first model year of *s*.
 
-    @abstractmethod
-    def s_init(self, s, annotation=None):
-        """Initialize the Scenario *s*.
-
-        The method MAY:
-
-        - Modify the version attr of the returned object.
+        Returns
+        -------
+        Same class as *s*
+            The cloned Scenario.
         """
 
     @abstractmethod
     def s_has_solution(self, s):
-        """Return :obj:`True` if Scenario *s* has been solved.
+        """Return `True` if Scenario *s* has been solved.
 
         If :obj:`True`, model solution data is available from the Backend.
         """
 
     @abstractmethod
     def s_list_items(self, s, type):
-        """Return a list of items of *type* in Scenario *s*."""
+        """Return a list of items of *type* in Scenario *s*.
+
+        Parameters
+        ----------
+        type : 'set' or 'par' or 'equ'
+
+        Return
+        ------
+        list of str
+        """
 
     @abstractmethod
     def s_init_item(self, s, type, name):
-        """Initialize an item *name* of *type* in Scenario *s*."""
+        """Initialize an item *name* of *type* in Scenario *s*.
+
+        Parameters
+        ----------
+        type : 'set' or 'par' or 'equ'
+        name : str
+            Name for the new item.
+
+        Return
+        ------
+        None
+        """
 
     @abstractmethod
     def s_delete_item(self, s, type, name):
-        """Remove an item *name* of *type* in Scenario *s*."""
+        """Remove an item *name* of *type* in Scenario *s*.
+
+        Parameters
+        ----------
+        type : 'set' or 'par' or 'equ'
+        name : str
+            Name of the item to delete.
+
+        Return
+        ------
+        None
+        """
 
     @abstractmethod
     def s_item_index(self, s, name, sets_or_names):
@@ -363,6 +592,10 @@ class Backend(ABC):
         Parameters
         ----------
         sets_or_names : 'sets' or 'names'
+
+        Returns
+        -------
+        list of str
         """
 
     @abstractmethod
@@ -376,13 +609,15 @@ class Backend(ABC):
         - Lists, e.g. set elements.
         - Mapping sets.
         - Multi-dimensional parameters, equations, or variables.
+
+        .. todo:: Exactly specify the return types.
         """
-        # TODO exactly specify the return types in the docstring using MUST,
-        # MAY, etc. terms
 
     @abstractmethod
     def s_add_set_elements(self, s, name, elements):
         """Add elements to set *name* in Scenario *s*.
+
+        .. todo:: Use a table for *elements*.
 
         Parameters
         ----------
@@ -406,6 +641,8 @@ class Backend(ABC):
     def s_add_par_values(self, s, name, elements):
         """Add values to parameter *name* in Scenario *s*.
 
+        .. todo:: Use a table for *elements*. Rename to s_set_data_par.
+
         Parameters
         ----------
         elements : iterable of 4-tuples
@@ -428,38 +665,92 @@ class Backend(ABC):
 
     @abstractmethod
     def s_item_delete_elements(self, s, type, name, key):
-        """Remove elements of item *name*."""
+        """Remove elements of item *name*.
+
+        .. todo:: Document.
+        """
 
     @abstractmethod
     def s_get_meta(self, s):
-        """Return all metadata."""
+        """Return all metadata.
+
+        Returns
+        -------
+        dict (str -> any)
+            Mapping from metadata keys to values.
+
+        See also
+        --------
+        s_get_meta
+        """
 
     @abstractmethod
     def s_set_meta(self, s, name, value):
-        """Set a single metadata key."""
+        """Set a single metadata key.
+
+        Parameters
+        ----------
+        name : str
+            Metadata key name.
+        value : any
+            Value for *name*.
+
+        Returns
+        -------
+        None
+        """
 
     @abstractmethod
     def s_clear_solution(self, s, from_year=None):
-        """Remove data associated with a model solution."""
+        """Remove data associated with a model solution.
+
+        .. todo:: Document.
+        """
 
     # Methods for message_ix.Scenario
 
     @abstractmethod
     def ms_cat_list(self, ms, name):
-        """Return list of categories."""
+        """Return list of categories in mapping *name*.
+
+        Parameters
+        ----------
+        name : str
+            Name of the category mapping set.
+
+        Returns
+        -------
+        list of str
+            All categories in *name*.
+        """
 
     @abstractmethod
     def ms_cat_get_elements(self, ms, name, cat):
-        """Get elements of a category mapping."""
+        """Get elements of a category mapping.
+
+        Parameters
+        ----------
+        name : str
+            Name of the category mapping set.
+        cat : str
+            Name of the category within *name*.
+
+        Returns
+        -------
+        list of str
+            All set elements mapped to *cat* in *name*.
+        """
 
     @abstractmethod
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
-        """Add elements to category mapping."""
+        """Add elements to category mapping.
 
-    @abstractmethod
-    def ms_year_first_model(self, ms):
-        """Return the first model year."""
+        .. todo:: Document.
+        """
 
     @abstractmethod
     def ms_years_active(self, ms, node, tec, year_vintage):
-        """Return a list of years in which *tec* is active."""
+        """Return a list of years in which *tec* is active.
+
+        .. todo:: Document.
+        """

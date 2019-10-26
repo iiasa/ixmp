@@ -12,7 +12,7 @@ class Model(ABC):
         Parameters
         ----------
         kwargs :
-            Model options, passed directly from :meth:`ixmp.Scenario.solve`.
+            Model options, passed directly from :meth:`.Scenario.solve`.
 
             Model subclasses MUST document acceptable option values.
         """
@@ -24,7 +24,7 @@ class Model(ABC):
 
         Parameters
         ----------
-        scenario : ixmp.Scenario
+        scenario : .Scenario
             Scenario object to solve by running the Model.
         """
         pass

@@ -35,14 +35,14 @@ import ixmp.testing
 sys.path.append(os.path.abspath('exts'))
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.coverage',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.todo',
     'sphinxcontrib.bibtex',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

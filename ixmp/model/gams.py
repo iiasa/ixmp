@@ -34,7 +34,7 @@ class GAMSModel(Model):
     case : str, optional
         Run or case identifier to use in GDX file names. Default:
         ``'{scenario.model}_{scenario.name}'``, where `scenario` is the
-        :class:`ixmp.Scenario` object passed to :meth:`run`.
+        :class:`.Scenario` object passed to :meth:`run`.
         Formatted using `model_name` and `scenario`.
     in_file : str, optional
         Path to write GDX input file. Default: ``'{model_name}_in.gdx'``.

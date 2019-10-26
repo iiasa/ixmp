@@ -57,8 +57,7 @@ class JDBCBackend(Backend):
     dbprops : path-like, optional
         If `dbtype` is :obj:`None`, the name of a *database properties file*
         (default: ``default.properties``) in the properties file directory
-        (see :class:`Config <ixmp.config.Config>`) or a path to a properties
-        file.
+        (see :class:`.Config`) or a path to a properties file.
 
         If `dbtype` is 'HSQLDB'`, the path of a local database,
         (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
@@ -66,8 +65,7 @@ class JDBCBackend(Backend):
         ``$HOME/.local/ixmp/localdb/``).
 
     jvmargs : str, optional
-        Java Virtual Machine arguments.
-        See :meth:`ixmp.backend.jdbc.start_jvm`.
+        Java Virtual Machine arguments. See :func:`.start_jvm`.
     """
     # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
     #    Github repository.
@@ -170,22 +168,41 @@ class JDBCBackend(Backend):
 
     # Timeseries methods
 
-    def ts_init(self, ts, annotation=None):
-        if ts.version == 'new':
-            # Create a new TimeSeries
-            jobj = self.jobj.newTimeSeries(ts.model, ts.scenario, annotation)
-        elif isinstance(ts.version, int):
-            # Load a TimeSeries of specific version
-            jobj = self.jobj.getTimeSeries(ts.model, ts.scenario, ts.version)
-        else:
-            # Load the latest version of a TimeSeries
-            jobj = self.jobj.getTimeSeries(ts.model, ts.scenario)
-
-            # Update the version attribute
-            ts.version = jobj.getVersion()
+    def _common_init(self, ts, klass, *args):
+        """Common code for ts_init and s_init."""
+        method = getattr(self.jobj, 'new' + klass)
+        # Create a new TimeSeries
+        jobj = method(ts.model, ts.scenario, *args)
 
         # Add to index
         self.jindex[ts] = jobj
+
+        # Retrieve initial version
+        ts.version = jobj.getVersion()
+
+    def ts_init(self, ts, annotation=None):
+        self._common_init(ts, 'TimeSeries', annotation)
+
+    def _common_get(self, ts, klass, version):
+        """Common code for ts_get and s_get."""
+        args = [ts.model, ts.scenario]
+        if isinstance(version, int):
+            # Load a TimeSeries of specific version
+            args.append(version)
+
+        method = getattr(self.jobj, 'get' + klass)
+        jobj = method(*args)
+        # Add to index
+        self.jindex[ts] = jobj
+
+        if version is None:
+            # Update the version attribute
+            ts.version = jobj.getVersion()
+        else:
+            assert version == jobj.getVersion()
+
+    def ts_get(self, ts, version):
+        self._common_get(ts, 'TimeSeries', version)
 
     def ts_check_out(self, ts, timeseries_only):
         self.jindex[ts].checkOut(timeseries_only)
@@ -213,7 +230,7 @@ class JDBCBackend(Backend):
     def ts_preload(self, ts):
         self.jindex[ts].preloadAllTimeseries()
 
-    def ts_get(self, ts, region, variable, unit, year):
+    def ts_get_data(self, ts, region, variable, unit, year):
         # Convert the selectors to Java lists
         r = to_jlist2(region)
         v = to_jlist2(variable)
@@ -274,7 +291,7 @@ class JDBCBackend(Backend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
-    def ts_set(self, ts, region, variable, data, unit, meta):
+    def ts_set_data(self, ts, region, variable, data, unit, meta):
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
@@ -298,33 +315,21 @@ class JDBCBackend(Backend):
 
     # Scenario methods
 
-    def s_init(self, s, scheme=None, annotation=None):
-        if s.version == 'new':
-            jobj = self.jobj.newScenario(s.model, s.scenario, scheme,
-                                         annotation)
-        elif isinstance(s.version, int):
-            jobj = self.jobj.getScenario(s.model, s.scenario, s.version)
-        # constructor for `message_ix.Scenario.__init__` or `clone()` function
-        elif isinstance(s.version, java.Scenario):
-            jobj = s.version
-        elif s.version is None:
-            jobj = self.jobj.getScenario(s.model, s.scenario)
-        else:
-            raise ValueError('Invalid `version` arg: `{}`'.format(s.version))
+    def s_init(self, s, scheme, annotation):
+        self._common_init(s, 'Scenario', scheme, annotation)
 
-        s.version = jobj.getVersion()
-        s.scheme = jobj.getScheme()
+    def s_get(self, s, version):
+        self._common_get(s, 'Scenario', version)
+        # Also retrieve the scheme
+        s.scheme = self.jindex[s].getScheme()
 
-        # Add to index
-        self.jindex[s] = jobj
-
-    def s_clone(self, s, target_backend, model, scenario, annotation,
+    def s_clone(self, s, platform_dest, model, scenario, annotation,
                 keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend
-        if not isinstance(target_backend, self.__class__):
+        if not isinstance(platform_dest._backend, self.__class__):
             raise NotImplementedError(f'Clone between {self.__class__} and'
-                                      f'{target_backend.__class__}')
-        elif target_backend is not self:
+                                      f'{platform_dest._backend.__class__}')
+        elif platform_dest._backend is not self:
             msg = 'Cross-platform clone of {}.Scenario with'.format(
                 s.__class__.__module__.split('.')[0])
             if keep_solution is False:
@@ -332,12 +337,18 @@ class JDBCBackend(Backend):
             elif 'message_ix' in msg and first_model_year is not None:
                 raise NotImplementedError(msg + ' first_model_year != None')
 
-        args = [model, scenario, annotation, keep_solution]
+        # Prepare arguments
+        args = [platform_dest._backend.jobj, model, scenario, annotation,
+                keep_solution]
         if first_model_year:
             args.append(first_model_year)
 
         # Reference to the cloned Java object
-        return self.jindex[s].clone(target_backend.jobj, *args)
+        jclone = self.jindex[s].clone(*args)
+
+        # Instantiate same class as the original object
+        return s.__class__(platform_dest, model, scenario,
+                           version=jclone.getVersion(), cache=s._cache)
 
     def s_has_solution(self, s):
         return self.jindex[s].hasSolution()
@@ -503,9 +514,6 @@ class JDBCBackend(Backend):
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
 
-    def ms_year_first_model(self, ms):
-        return self.jindex[ms].getFirstModelYear()
-
     def ms_years_active(self, ms, node, tec, year_vintage):
         return list(self.jindex[ms].getTecActYrs(node, tec, year_vintage))
 
@@ -566,7 +574,7 @@ def start_jvm(jvmargs=None):
     ----------
     jvmargs : str or list of str, optional
         Additional arguments for launching the JVM, passed to
-        :meth:`jpype.startJVM`.
+        :func:`jpype.startJVM`.
 
         For instance, to set the maximum heap space to 4 GiB, give
         ``jvmargs=['-Xmx4G']``. See the `JVM documentation`_ for a list of

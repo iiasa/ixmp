@@ -381,61 +381,52 @@ class JDBCBackend(Backend):
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
 
-        # get list of elements, with filter HashMap if provided
+        # Get list of elements, using filters if provided
         if filters is not None:
             jFilter = java.HashMap()
-            for idx_name, values in filters.items():
-                jFilter.put(idx_name, to_jlist(values))
+            for dim, values in filters.items():
+                jFilter.put(dim, to_jlist(values))
             jList = item.getElements(jFilter)
         else:
             jList = item.getElements()
 
-        # return a dataframe if this is a mapping or multi-dimensional
-        # parameter
-        dim = item.getDim()
-        if dim > 0:
-            idx_names = np.array(item.getIdxNames().toArray()[:])
-            idx_sets = np.array(item.getIdxSets().toArray()[:])
+        if item.getDim() > 0:
+            # Mapping set or multi-dimensional equation, parameter, or variable
+            idx_names = list(item.getIdxNames())
+            idx_sets = list(item.getIdxSets())
 
             data = {}
-            for d in range(dim):
-                ary = np.array(item.getCol(d, jList)[:])
-                if idx_sets[d] == "year":
-                    # numpy tricks to avoid extra copy
-                    # _ary = ary.view('int')
-                    # _ary[:] = ary
-                    ary = ary.astype('int')
-                data[idx_names[d]] = ary
+            types = {}
 
+            # Retrieve index columns
+            for d, (d_name, d_set) in enumerate(zip(idx_names, idx_sets)):
+                data[d_name] = item.getCol(d, jList)
+                if d_set == 'year':
+                    # Record column for later type conversion
+                    types[d_name] = int
+
+            # Retrieve value columns
             if type == 'par':
-                data['value'] = np.array(item.getValues(jList)[:])
-                data['unit'] = np.array(item.getUnits(jList)[:])
+                data['value'] = item.getValues(jList)
+                data['unit'] = item.getUnits(jList)
 
             if type in ('equ', 'var'):
-                data['lvl'] = np.array(item.getLevels(jList)[:])
-                data['mrg'] = np.array(item.getMarginals(jList)[:])
+                data['lvl'] = item.getLevels(jList)
+                data['mrg'] = item.getMarginals(jList)
 
-            df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
-            return df
-
-        else:
-            #  for index sets
-            if type == 'set':
-                return pd.Series(item.getCol(0, jList)[:])
-
-            data = {}
-
-            # for parameters as scalars
-            if type == 'par':
-                data['value'] = item.getScalarValue().floatValue()
-                data['unit'] = str(item.getScalarUnit())
-
-            # for variables as scalars
-            elif type in ('equ', 'var'):
-                data['lvl'] = item.getScalarLevel().floatValue()
-                data['mrg'] = item.getScalarMarginal().floatValue()
-
-            return data
+            return pd.DataFrame.from_dict(data, orient='columns') \
+                               .astype(types)
+        elif type == 'set':
+            # Index sets
+            return pd.Series(item.getCol(0, jList))
+        elif type == 'par':
+            # Scalar parameters
+            return dict(value=item.getScalarValue().floatValue(),
+                        unit=str(item.getScalarUnit()))
+        elif type in ('equ', 'var'):
+            # Scalar equations and variables
+            return dict(lvl=item.getScalarLevel().floatValue(),
+                        mrg=item.getScalarMarginal().floatValue())
 
     def s_item_set_elements(self, s, type, name, elements):
         jobj = self._get_item(s, type, name)

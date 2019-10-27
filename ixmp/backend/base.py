@@ -622,14 +622,29 @@ class Backend(ABC):
     def s_item_get_elements(self, s, type, name, filters=None):
         """Return elements of item *name*.
 
-        The return type varies according to the *type* and contents:
+        Parameters
+        ----------
+        type : 'equ' or 'par' or 'set' or 'var'
+        name : str
+            Name of the item.
+        filters : dict (str -> list of str), optional
+            If provided, a mapping from dimension names to allowed values
+            along that dimension.
 
-        - Scalars vs. parameters.
-        - Lists, e.g. set elements.
-        - Mapping sets.
-        - Multi-dimensional parameters, equations, or variables.
-
-        .. todo:: Exactly specify the return types.
+        Returns
+        -------
+        pandas.Series
+            When *type* is 'set' and *name* an index set (not indexed by other
+            sets).
+        dict
+            When *type* is 'equ', 'par', or 'set' and *name* is scalar (zero-
+            dimensional). The value has the keys 'value' and 'unit' (for 'par')
+            or 'lvl' and 'mrg' (for 'equ' or 'var').
+        pandas.DataFrame
+            For mapping sets, or all 1+-dimensional values. The dataframe has
+            one column per index name with dimension values; plus the columns
+            'value' and 'unit' (for 'par') or 'lvl' and 'mrg' (for 'equ' or
+            'var').
         """
 
     @abstractmethod

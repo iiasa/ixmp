@@ -377,16 +377,15 @@ class JDBCBackend(Backend):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
-    def s_item_elements(self, s, type, name, filters=None, has_value=False,
-                        has_level=False):
+    def s_item_elements(self, s, type, name, filters=None):
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
 
         # get list of elements, with filter HashMap if provided
         if filters is not None:
             jFilter = java.HashMap()
-            for idx_name in filters.keys():
-                jFilter.put(idx_name, to_jlist(filters[idx_name]))
+            for idx_name, values in filters.items():
+                jFilter.put(idx_name, to_jlist(values))
             jList = item.getElements(jFilter)
         else:
             jList = item.getElements()
@@ -408,11 +407,11 @@ class JDBCBackend(Backend):
                     ary = ary.astype('int')
                 data[idx_names[d]] = ary
 
-            if has_value:
+            if type == 'par':
                 data['value'] = np.array(item.getValues(jList)[:])
                 data['unit'] = np.array(item.getUnits(jList)[:])
 
-            if has_level:
+            if type in ('equ', 'var'):
                 data['lvl'] = np.array(item.getLevels(jList)[:])
                 data['mrg'] = np.array(item.getMarginals(jList)[:])
 
@@ -421,18 +420,18 @@ class JDBCBackend(Backend):
 
         else:
             #  for index sets
-            if not (has_value or has_level):
+            if type == 'set':
                 return pd.Series(item.getCol(0, jList)[:])
 
             data = {}
 
             # for parameters as scalars
-            if has_value:
+            if type == 'par':
                 data['value'] = item.getScalarValue().floatValue()
                 data['unit'] = str(item.getScalarUnit())
 
             # for variables as scalars
-            elif has_level:
+            elif type in ('equ', 'var'):
                 data['lvl'] = item.getScalarLevel().floatValue()
                 data['mrg'] = item.getScalarMarginal().floatValue()
 

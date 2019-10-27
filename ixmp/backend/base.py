@@ -619,8 +619,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_elements(self, s, type, name, filters=None, has_value=False,
-                        has_level=False):
+    def s_item_elements(self, s, type, name, filters=None):
         """Return elements of item *name* in Scenario *s*.
 
         The return type varies according to the *type* and contents:

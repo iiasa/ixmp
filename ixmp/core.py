@@ -558,13 +558,6 @@ class Scenario(TimeSeries):
     # Name prefix for Backend methods called through ._backend()
     _backend_prefix = 's'
 
-    _java_kwargs = {
-        'set': {},
-        'par': {'has_value': True},
-        'var': {'has_level': True},
-        'equ': {'has_level': True},
-    }
-
     #: Scheme of the Scenario.
     scheme = None
 
@@ -623,14 +616,12 @@ class Scenario(TimeSeries):
         if cache_key in self._pycache:
             return filtered(self._pycache[cache_key], filters)
 
-        # if no cache, retrieve from Java with filters
+        # if no cache, retrieve from Backend with filters
         if filters is not None and not self._cache:
-            return self._backend('item_elements', ix_type, name, filters,
-                                 **self._java_kwargs[ix_type])
+            return self._backend('item_elements', ix_type, name, filters)
 
         # otherwise, retrieve from Java and keep in python cache
-        df = self._backend('item_elements', ix_type, name, None,
-                           **self._java_kwargs[ix_type])
+        df = self._backend('item_elements', ix_type, name, None)
 
         # save if using memcache
         if self._cache:
@@ -991,8 +982,7 @@ class Scenario(TimeSeries):
         -------
         {'value': value, 'unit': unit}
         """
-        return self._backend('item_elements', 'par', name, None,
-                             has_value=True)
+        return self._backend('item_elements', 'par', name, None)
 
     def change_scalar(self, name, val, unit, comment=None):
         """Set the value and unit of a scalar.

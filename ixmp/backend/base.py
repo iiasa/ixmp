@@ -1,3 +1,4 @@
+from functools import lru_cache
 from abc import ABC, abstractmethod
 
 
@@ -24,6 +25,25 @@ class Backend(ABC):
     def __init__(self):  # pragma: no cover
         """OPTIONAL: Initialize the backend."""
         pass
+
+    @classmethod
+    @lru_cache()  # Don't recompute
+    def __method(backend_cls, cls, name):
+        for c in cls.__mro__[:-1]:
+            try:
+                return getattr(backend_cls, f'{c._backend_prefix}_{name}')
+            except AttributeError:
+                pass
+        raise AttributeError(f"backend method '{{prefix}}_{name}'")
+
+    def __call__(self, obj, method, *args, **kwargs):
+        """Call the backend method *method* for *obj*.
+
+        The class attribute obj._backend_prefix is used to determine a prefix
+        for the method name, e.g. 'ts_{method}'.
+        """
+        method = self.__method(obj.__class__, method)
+        return method(self, obj, *args, **kwargs)
 
     def close_db(self):  # pragma: no cover
         """OPTIONAL: Close database connection(s).

@@ -1,5 +1,4 @@
 # coding=utf-8
-from functools import lru_cache
 from itertools import repeat, zip_longest
 import logging
 from warnings import warn
@@ -289,6 +288,9 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+    # Name prefix for Backend methods called through ._backend()
+    _backend_prefix = 'ts'
+
     #: Name of the model associated with the TimeSeries
     model = None
 
@@ -314,33 +316,9 @@ class TimeSeries:
         else:
             raise ValueError(f'version={version!r}')
 
-    # Name prefix for Backend methods called through ._backend()
-    _backend_prefix = 'ts'
-
-    @classmethod
-    @lru_cache(1)
-    def __prefixes(cls):
-        """List of prefixes to try when calling backend methods.
-
-        For TimeSeries subclasses, returns the _backend_prefix attribute for
-        the class itself, then each parent class, up to TimeSeries itself.
-        """
-        return tuple(getattr(c, '_backend_prefix') for c in cls.__mro__[:-1])
-
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
-        # Try each prefix, e.g. 's_' and then others
-        for prefix in self.__class__.__prefixes():
-            try:
-                func = getattr(self.platform._backend, f'{prefix}_{method}')
-            except AttributeError:
-                # Not an existing backend method
-                continue
-            else:
-                # Located
-                return func(self, *args, **kwargs)
-
-        raise ValueError(f'backend method {method!r}')
+        return self.platform._backend(self, method, *args, **kwargs)
 
     # functions for platform management
 

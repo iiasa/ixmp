@@ -76,10 +76,19 @@ def test_has_set(test_mp):
     assert not scen.has_set('k')
 
 
-def test_init_par_35(test_mp):
+def test_range(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args, version='new')
+
     scen.init_set('ii')
+    ii = range(1, 20, 2)
+
+    # range instance is automatically converted to list of str in add_set
+    scen.add_set('ii', ii)
+
     scen.init_par('new_par', idx_sets='ii')
+
+    # range instance is a valid key argument to add_par
+    scen.add_par('new_par', ii, [1.2] * len(ii))
 
 
 def test_get_scalar(test_mp):

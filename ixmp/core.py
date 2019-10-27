@@ -880,7 +880,8 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key_or_data : str or iterable of str or dict or pandas.DataFrame.
+        key_or_data : str or iterable of str or range or dict or \
+                      pandas.DataFrame
             Element(s) to be added.
         value : numeric or iterable of numeric, optional
             Values.
@@ -912,6 +913,8 @@ class Scenario(TimeSeries):
                 raise ValueError('both key_or_data.value and value supplied')
         else:
             # One or more keys; convert to a list of strings
+            if isinstance(key_or_data, range):
+                key_or_data = list(key_or_data)
             keys = self._keys(name, key_or_data)
 
             # Check the type of value

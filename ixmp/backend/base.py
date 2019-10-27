@@ -819,12 +819,3 @@ class Backend(ABC):
         -------
         None
         """
-
-    @abstractmethod
-    def ms_years_active(self, ms, node, tec, year_vintage):
-        """Return a list of years in which *tec* is active.
-
-        Returns
-        -------
-        list of ?
-        """

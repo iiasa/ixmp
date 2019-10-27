@@ -512,9 +512,6 @@ class JDBCBackend(Backend):
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
 
-    def ms_years_active(self, ms, node, tec, year_vintage):
-        return list(self.jindex[ms].getTecActYrs(node, tec, year_vintage))
-
     # Helpers; not part of the Backend interface
 
     def s_write_gdx(self, s, path):

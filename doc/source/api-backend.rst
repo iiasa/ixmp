@@ -143,4 +143,3 @@ Backend API
       ms_cat_get_elements
       ms_cat_list
       ms_cat_set_elements
-      ms_years_active

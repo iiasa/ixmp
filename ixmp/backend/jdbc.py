@@ -377,7 +377,7 @@ class JDBCBackend(Backend):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
-    def s_item_elements(self, s, type, name, filters=None):
+    def s_item_get_elements(self, s, type, name, filters=None):
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
 
@@ -437,19 +437,25 @@ class JDBCBackend(Backend):
 
             return data
 
-    def s_add_set_elements(self, s, name, elements):
-        # Retrieve the Java Set and its number of dimensions
-        jSet = self._get_item(s, 'set', name)
-        dim = jSet.getDim()
+    def s_item_set_elements(self, s, type, name, elements):
+        jobj = self._get_item(s, type, name)
 
         try:
-            for e, comment in elements:
-                if dim:
-                    # Convert e to a JLinkedList
-                    e = to_jlist2(e)
+            for key, value, unit, comment in elements:
+                # Prepare arguments
+                args = [to_jlist2(key)] if key else []
+                if type == 'par':
+                    args.extend([java.Double(value), unit])
+                if comment:
+                    args.append(comment)
 
-                # Call with 1 or 2 args
-                jSet.addElement(e, comment) if comment else jSet.addElement(e)
+                # Activates one of 5 signatures for addElement:
+                # - set: (key)
+                # - set: (key, comment)
+                # - par: (key, value, unit, comment)
+                # - par: (key, value, unit)
+                # - par: (value, unit, comment)
+                jobj.addElement(*args)
         except java.IxException as e:
             msg = e.message()
             if 'does not have an element' in msg:
@@ -457,22 +463,6 @@ class JDBCBackend(Backend):
                 raise ValueError(msg) from e
             else:
                 raise RuntimeError('Unhandled Java exception') from e
-
-    def s_add_par_values(self, s, name, elements):
-        jPar = self._get_item(s, 'par', name)
-
-        for key, value, unit, comment in elements:
-            args = [java.Double(value), unit]
-            if key:
-                args.insert(0, to_jlist2(key))
-            if comment:
-                args.append(comment)
-
-            # Activates one of 3 signatures for addElement:
-            # - (key, value, unit, comment)
-            # - (key, value, unit)
-            # - (value, unit, comment)
-            jPar.addElement(*args)
 
     def s_item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)

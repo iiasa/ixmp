@@ -341,7 +341,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_set_data(self, ts, region, variable, data, unit, meta):
-        """Store *data* in *ts*.
+        """Store *data*.
 
         Parameters
         ----------
@@ -383,7 +383,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_delete(self, ts, region, variable, years, unit):
-        """Remove data values from *ts*.
+        """Remove data values.
 
         Parameters
         ----------
@@ -403,7 +403,7 @@ class Backend(ABC):
 
     @abstractmethod
     def ts_delete_geo(self, ts, region, variable, time, years, unit):
-        """Remove 'geodata' values from *ts*.
+        """Remove 'geodata' values.
 
         Parameters
         ----------
@@ -507,7 +507,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_get(self, s, version):
-        """Retrieve the existing Scenario *ts*.
+        """Retrieve the existing Scenario *s*.
 
         The Scenario is identified based on its (:attr:`~.TimeSeries.model`,
         :attr:`~.TimeSeries.scenario`) and *version*. s_get **must** set
@@ -564,7 +564,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_list_items(self, s, type):
-        """Return a list of items of *type* in Scenario *s*.
+        """Return a list of items of *type*.
 
         Parameters
         ----------
@@ -577,7 +577,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_init_item(self, s, type, name):
-        """Initialize an item *name* of *type* in Scenario *s*.
+        """Initialize an item *name* of *type*.
 
         Parameters
         ----------
@@ -592,7 +592,7 @@ class Backend(ABC):
 
     @abstractmethod
     def s_delete_item(self, s, type, name):
-        """Remove an item *name* of *type* in Scenario *s*.
+        """Remove an item *name* of *type*.
 
         Parameters
         ----------
@@ -619,8 +619,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_elements(self, s, type, name, filters=None):
-        """Return elements of item *name* in Scenario *s*.
+    def s_item_get_elements(self, s, type, name, filters=None):
+        """Return elements of item *name*.
 
         The return type varies according to the *type* and contents:
 
@@ -633,61 +633,29 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_add_set_elements(self, s, name, elements):
-        """Add elements to set *name* in Scenario *s*.
+    def s_item_set_elements(self, s, type, name, elements):
+        """Add keys or values to item *name*.
 
         Parameters
         ----------
+        type : 'par' or 'set'
         name : str
-            Name of an existing *set*.
-        elements : iterable of 2-tuple
-            The members of each tuple are:
-
-            ======= ================== ===
-            ID      Type               Description
-            ======= ================== ===
-            key     str or list of str New set elements
-            comment str or None        Description of the key.
-            ======= ================== ===
-
-            If *name* is indexed by other set(s), then the number of elements
-            of each *key*, and their contents, must match the index set(s).
-
-        Raises
-        ------
-        ValueError
-            If *elements* contain invalid values, e.g. for an indexed set,
-            values not in the index set(s).
-        Exception
-            If the Backend encounters any error adding the key.
-
-        See also
-        --------
-        s_init_item
-        s_item_delete_elements
-        """
-
-    @abstractmethod
-    def s_add_par_values(self, s, name, elements):
-        """Add values to parameter *name* in Scenario *s*.
-
-        Parameters
-        ----------
-        name : name of
+            Name of the items.
         elements : iterable of 4-tuple
             The members of each tuple are:
 
             ======= ========================== ===
             ID      Type                       Description
             ======= ========================== ===
-            key     str or list of str or None Indices for the value.
-            value   float                      Value
+            key     str or list of str or None Set elements or value indices
+            value   float or None              Parameter value
             unit    str or None                Unit symbol
             comment str or None                Description of the change
             ======= ========================== ===
 
             If *name* is indexed by other set(s), then the number of elements
             of each *key*, and their contents, must match the index set(s).
+            When *type* is 'set', *value* and *unit* **must** be :obj:`None`.
 
         Raises
         ------
@@ -695,7 +663,7 @@ class Backend(ABC):
             If *elements* contain invalid values, e.g. key values not in the
             index set(s).
         Exception
-            If the Backend encounters any error adding the parameter values.
+            If the Backend encounters any error adding the elements.
 
         See also
         --------
@@ -721,8 +689,7 @@ class Backend(ABC):
         See also
         --------
         s_init_item
-        s_add_par_values
-        s_add_set_elements
+        s_item_set_elements
         """
 
     @abstractmethod

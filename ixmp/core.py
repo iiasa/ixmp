@@ -618,10 +618,10 @@ class Scenario(TimeSeries):
 
         # if no cache, retrieve from Backend with filters
         if filters is not None and not self._cache:
-            return self._backend('item_elements', ix_type, name, filters)
+            return self._backend('item_get_elements', ix_type, name, filters)
 
         # otherwise, retrieve from Java and keep in python cache
-        df = self._backend('item_elements', ix_type, name, None)
+        df = self._backend('item_get_elements', ix_type, name, None)
 
         # save if using memcache
         if self._cache:
@@ -817,7 +817,8 @@ class Scenario(TimeSeries):
                                  f'{len(idx_names)}-D set {name}{idx_names!r}')
 
         # Send to backend
-        self._backend('add_set_elements', name, to_add)
+        elements = ((kc[0], None, None, kc[1]) for kc in to_add)
+        self._backend('item_set_elements', 'set', name, elements)
 
     def remove_set(self, name, key=None):
         """delete a set from the scenario
@@ -973,7 +974,7 @@ class Scenario(TimeSeries):
                     for e in data.astype(types).itertuples())
 
         # Store
-        self._backend('add_par_values', name, elements)
+        self._backend('item_set_elements', 'par', name, elements)
 
         # Clear cache
         self.clear_cache(name=name, ix_type='par')
@@ -1007,7 +1008,7 @@ class Scenario(TimeSeries):
         -------
         {'value': value, 'unit': unit}
         """
-        return self._backend('item_elements', 'par', name, None)
+        return self._backend('item_get_elements', 'par', name, None)
 
     def change_scalar(self, name, val, unit, comment=None):
         """Set the value and unit of a scalar.
@@ -1024,7 +1025,7 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.clear_cache(name=name, ix_type='par')
-        self._backend('add_par_values', name,
+        self._backend('item_set_elements', 'par', name,
                       [(None, float(val), unit, comment)])
 
     def remove_par(self, name, key=None):

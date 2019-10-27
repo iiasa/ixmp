@@ -118,8 +118,6 @@ Backend API
    .. autosummary::
       :nosignatures:
 
-      s_add_par_values
-      s_add_set_elements
       s_clone
       s_delete_item
       s_get
@@ -128,7 +126,8 @@ Backend API
       s_init
       s_init_item
       s_item_delete_elements
-      s_item_elements
+      s_item_get_elements
+      s_item_set_elements
       s_item_index
       s_list_items
       s_set_meta

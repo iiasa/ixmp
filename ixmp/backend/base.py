@@ -636,16 +636,22 @@ class Backend(ABC):
     def s_add_set_elements(self, s, name, elements):
         """Add elements to set *name* in Scenario *s*.
 
-        .. todo:: Use a table for *elements*.
-
         Parameters
         ----------
-        elements : iterable of 2-tuples
-            The tuple members are, respectively:
+        name : str
+            Name of an existing *set*.
+        elements : iterable of 2-tuple
+            The members of each tuple are:
 
-            1. Key: str or list of str. The number and order of key dimensions
-               must match the index of *name*, if any.
-            2. Comment: str or None. An optional description of the key.
+            ======= ================== ===
+            ID      Type               Description
+            ======= ================== ===
+            key     str or list of str New set elements
+            comment str or None        Description of the key.
+            ======= ================== ===
+
+            If *name* is indexed by other set(s), then the number of elements
+            of each *key*, and their contents, must match the index set(s).
 
         Raises
         ------
@@ -654,24 +660,34 @@ class Backend(ABC):
             values not in the index set(s).
         Exception
             If the Backend encounters any error adding the key.
+
+        See also
+        --------
+        s_init_item
+        s_item_delete_elements
         """
 
     @abstractmethod
     def s_add_par_values(self, s, name, elements):
         """Add values to parameter *name* in Scenario *s*.
 
-        .. todo:: Use a table for *elements*. Rename to s_set_data_par.
-
         Parameters
         ----------
-        elements : iterable of 4-tuples
-            The tuple members are, respectively:
+        name : name of
+        elements : iterable of 4-tuple
+            The members of each tuple are:
 
-            1. Key: str or list of str or (for a scalar, or 0-dimensional
-               parameter) None.
-            2. Value: float.
-            3. Unit: str or None.
-            4. Comment: str or None.
+            ======= ========================== ===
+            ID      Type                       Description
+            ======= ========================== ===
+            key     str or list of str or None Indices for the value.
+            value   float                      Value
+            unit    str or None                Unit symbol
+            comment str or None                Description of the change
+            ======= ========================== ===
+
+            If *name* is indexed by other set(s), then the number of elements
+            of each *key*, and their contents, must match the index set(s).
 
         Raises
         ------
@@ -680,13 +696,33 @@ class Backend(ABC):
             index set(s).
         Exception
             If the Backend encounters any error adding the parameter values.
+
+        See also
+        --------
+        s_init_item
+        s_item_delete_elements
         """
 
     @abstractmethod
-    def s_item_delete_elements(self, s, type, name, key):
+    def s_item_delete_elements(self, s, type, name, keys):
         """Remove elements of item *name*.
 
-        .. todo:: Document.
+        Parameters
+        ----------
+        type : 'par' or 'set'
+        name : str
+        keys : iterable of iterable of str
+            If *name* is indexed by other set(s), then the number of elements
+            of each key in *keys*, and their contents, must match the index
+            set(s).
+            If *name* is a basic set, then each key must be a list containing a
+            single str, which must exist in the set.
+
+        See also
+        --------
+        s_init_item
+        s_add_par_values
+        s_add_set_elements
         """
 
     @abstractmethod
@@ -764,12 +800,31 @@ class Backend(ABC):
     def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
         """Add elements to category mapping.
 
-        .. todo:: Document.
+        Parameters
+        ----------
+        name : str
+            Name of the category mapping set.
+        cat : str
+            Name of the category within *name*.
+        keys : iterable of str or list of str
+            Keys to add to *cat*.
+        is_unique : bool
+            If :obj:`True`:
+
+            - *keys* **must** contain only one key.
+            - The Backend **must** remove any existing member of *cat*, so that
+              it has only one element.
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod
     def ms_years_active(self, ms, node, tec, year_vintage):
         """Return a list of years in which *tec* is active.
 
-        .. todo:: Document.
+        Returns
+        -------
+        list of ?
         """

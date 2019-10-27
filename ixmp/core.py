@@ -1,4 +1,4 @@
-# coding=utf-8
+from functools import partial
 from itertools import repeat, zip_longest
 import logging
 from warnings import warn
@@ -654,8 +654,8 @@ class Scenario(TimeSeries):
             return as_str_list(key_or_keys)
         elif isinstance(key_or_keys, (pd.DataFrame, dict)):
             if isinstance(key_or_keys, dict):
-                key_or_keys = pd.DataFrame.from_dict(
-                    key_or_keys, orient='columns', dtype=None)
+                key_or_keys = pd.DataFrame.from_dict(key_or_keys,
+                                                     orient='columns')
             idx_names = self.idx_names(name)
             return [as_str_list(row, idx_names)
                     for _, row in key_or_keys.iterrows()]
@@ -872,86 +872,108 @@ class Scenario(TimeSeries):
         """
         return self._element('par', name, filters, **kwargs)
 
-    def add_par(self, name, key, val=None, unit=None, comment=None):
+    def add_par(self, name, key_or_data=None, value=None, unit=None,
+                comment=None, key=None, val=None):
         """Set the values of a parameter.
 
         Parameters
         ----------
         name : str
             Name of the parameter.
-        key : str, list/range of strings/values, dictionary, dataframe
-            element(s) to be added
-        val : values, list/range of values, optional
-            element values (only used if 'key' is a string or list/range)
-        unit : str, list/range of strings, optional
-            element units (only used if 'key' is a string or list/range)
-        comment : str or list/range of strings, optional
-            comment (optional, only used if 'key' is a string or list/range)
+        key_or_data : str or iterable of str or dict or pandas.DataFrame.
+            Element(s) to be added.
+        value : numeric or iterable of numeric, optional
+            Values.
+        unit : str or iterable of str, optional
+            Unit symbols.
+        comment : str or iterable of str, optional
+            Comment(s) for the added values.
         """
-        self.clear_cache(name=name, ix_type='par')
+        # Number of dimensions in the index of *name*
+        idx_names = self.idx_names(name)
+        N_dim = len(idx_names)
 
-        if isinstance(key, range):
-            key = list(key)
+        if key:
+            warn("Scenario.add_par(key=...) deprecated and will be removed in "
+                 "ixmp 2.0; use key_or_data", DeprecationWarning)
+            key_or_data = key
+        if val:
+            warn("Scenario.add_par(val=...) deprecated and will be removed in "
+                 "ixmp 2.0; use value", DeprecationWarning)
+            value = val
 
-        elements = []
-
-        if isinstance(key, pd.DataFrame) and "key" in list(key):
-            if "comment" in list(key):
-                for i in key.index:
-                    elements.append((str(key['key'][i]),
-                                     float(key['value'][i]),
-                                     str(key['unit'][i]),
-                                     str(key['comment'][i])))
-            else:
-                for i in key.index:
-                    elements.append((str(key['key'][i]),
-                                     float(key['value'][i]),
-                                     str(key['unit'][i])))
-
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = self.idx_names(name)
-            if "comment" in list(key):
-                for i in key.index:
-                    elements.append((as_str_list(key.loc[i], idx_names),
-                                     float(key['value'][i]),
-                                     str(key['unit'][i]),
-                                     str(key['comment'][i])))
-            else:
-                for i in key.index:
-                    elements.append((as_str_list(key.loc[i], idx_names),
-                                     float(key['value'][i]),
-                                     str(key['unit'][i]),
-                                     None))
-        elif isinstance(key, list) and isinstance(key[0], list):
-            # FIXME filling with non-SI units '???' requires special handling
-            #       later by ixmp.reporting
-            unit = unit or ["???"] * len(key)
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    elements.append((as_str_list(key[i]), float(val[i]),
-                                     str(unit[i]), str(comment[i])))
-                else:
-                    elements.append((as_str_list(key[i]), float(val[i]),
-                                     str(unit[i]), None))
-        elif isinstance(key, list) and isinstance(val, list):
-            # FIXME filling with non-SI units '???' requires special handling
-            #       later by ixmp.reporting
-            unit = unit or ["???"] * len(key)
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    elements.append((str(key[i]), float(val[i]),
-                                     str(unit[i]), str(comment[i])))
-                else:
-                    elements.append((str(key[i]), float(val[i]),
-                                     str(unit[i]), None))
-        elif isinstance(key, list) and not isinstance(val, list):
-            elements.append((as_str_list(key), float(val), unit, comment))
+        # Convert valid forms of arguments to pd.DataFrame
+        if isinstance(key_or_data, dict):
+            # dict containing data
+            data = pd.DataFrame.from_dict(key_or_data, orient='columns')
+        elif isinstance(key_or_data, pd.DataFrame):
+            data = key_or_data
+            if 'value' in data.columns and value is not None:
+                raise ValueError('both key_or_data.value and value supplied')
         else:
-            elements.append((str(key), float(val), unit, comment))
+            # One or more keys; convert to a list of strings
+            keys = self._keys(name, key_or_data)
 
+            # Check the type of value
+            if isinstance(value, (float, int)):
+                # Single value
+                values = [float(value)]
+
+                if N_dim > 1 and len(keys) == N_dim:
+                    # Ambiguous case: ._key() above returns ['dim_0', 'dim_1'],
+                    # when we really want [['dim_0', 'dim_1']]
+                    keys = [keys]
+            else:
+                # Multiple values
+                values = value
+
+            data = pd.DataFrame(zip_longest(keys, values),
+                                columns=['key', 'value'])
+            if data.isna().any(axis=None):
+                raise ValueError('Length mismatch between keys and values')
+
+        # Column types
+        types = {
+            'key': str if N_dim == 1 else object,
+            'value': float,
+            'unit': str,
+            'comment': str,
+        }
+
+        # Further handle each column
+        if 'key' not in data.columns:
+            # Form the 'key' column from other columns
+            if N_dim > 1:
+                data['key'] = data.apply(partial(as_str_list,
+                                                 idx_names=idx_names),
+                                         axis=1)
+            else:
+                data['key'] = data[idx_names[0]]
+
+        if 'unit' not in data.columns:
+            # Broadcast single unit across all values. pandas raises ValueError
+            # if *unit* is iterable but the wrong length
+            data['unit'] = unit or '???'
+
+        if 'comment' not in data.columns:
+            if comment:
+                # Broadcast single comment across all values. pandas raises
+                # ValueError if *comment* is iterable but the wrong length
+                data['comment'] = comment
+            else:
+                # Store a 'None' comment
+                data['comment'] = None
+                types.pop('comment')
+
+        # Convert types, generate tuples
+        elements = ((e.key, e.value, e.unit, e.comment)
+                    for e in data.astype(types).itertuples())
+
+        # Store
         self._backend('add_par_values', name, elements)
+
+        # Clear cache
+        self.clear_cache(name=name, ix_type='par')
 
     def init_scalar(self, name, val, unit, comment=None):
         """Initialize a new scalar.

@@ -1,7 +1,5 @@
 import collections
 import logging
-import os
-from pathlib import Path
 
 import pandas as pd
 import six

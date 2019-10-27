@@ -463,10 +463,9 @@ class JDBCBackend(Backend):
         jPar = self._get_item(s, 'par', name)
 
         for key, value, unit, comment in elements:
-            args = []
+            args = [java.Double(value), unit]
             if key:
-                args.append(to_jlist2(key))
-            args.extend([java.Double(value), unit])
+                args.insert(0, to_jlist2(key))
             if comment:
                 args.append(comment)
 

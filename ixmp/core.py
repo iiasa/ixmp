@@ -1,4 +1,5 @@
 # coding=utf-8
+from functools import lru_cache
 from itertools import repeat, zip_longest
 import logging
 from warnings import warn
@@ -313,10 +314,33 @@ class TimeSeries:
         else:
             raise ValueError(f'version={version!r}')
 
+    # Name prefix for Backend methods called through ._backend()
+    _backend_prefix = 'ts'
+
+    @classmethod
+    @lru_cache(1)
+    def __prefixes(cls):
+        """List of prefixes to try when calling backend methods.
+
+        For TimeSeries subclasses, returns the _backend_prefix attribute for
+        the class itself, then each parent class, up to TimeSeries itself.
+        """
+        return tuple(getattr(c, '_backend_prefix') for c in cls.__mro__[:-1])
+
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
-        func = getattr(self.platform._backend, f'ts_{method}')
-        return func(self, *args, **kwargs)
+        # Try each prefix, e.g. 's_' and then others
+        for prefix in self.__class__.__prefixes():
+            try:
+                func = getattr(self.platform._backend, f'{prefix}_{method}')
+            except AttributeError:
+                # Not an existing backend method
+                continue
+            else:
+                # Located
+                return func(self, *args, **kwargs)
+
+        raise ValueError(f'backend method {method!r}')
 
     # functions for platform management
 
@@ -553,6 +577,9 @@ class Scenario(TimeSeries):
         Store data in memory and return cached values instead of repeatedly
         querying the backend.
     """
+    # Name prefix for Backend methods called through ._backend()
+    _backend_prefix = 's'
+
     _java_kwargs = {
         'set': {},
         'par': {'has_value': True},
@@ -587,14 +614,6 @@ class Scenario(TimeSeries):
         # Initialize cache
         self._cache = cache
         self._pycache = {}
-
-    def _backend(self, method, *args, **kwargs):
-        """Convenience for calling *method* on the backend."""
-        try:
-            func = getattr(self.platform._backend, f's_{method}')
-        except AttributeError:
-            func = getattr(self.platform._backend, f'ts_{method}')
-        return func(self, *args, **kwargs)
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.

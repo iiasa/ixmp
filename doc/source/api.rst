@@ -30,6 +30,7 @@ An R interface to the `ixmp` is provided by the ``rixmp`` package.
 
     # Load the rixmp package
     library(rixmp)
+    ixmp <- import('ixmp')
 
     # An 'ixmp' object is added to the global namespace.
     # It can be used in the same way as the Python ixmp package.

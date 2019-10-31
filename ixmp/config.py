@@ -1,14 +1,10 @@
 from itertools import chain
 import json
+import logging
 import os
-try:
-    from pathlib import Path
-except ImportError:
-    # Python 2.7 compatibility
-    from pathlib2 import Path
-    FileNotFoundError = OSError
+from pathlib import Path
 
-from ixmp.utils import logger
+log = logging.getLogger(__name__)
 
 
 class Config:
@@ -141,10 +137,10 @@ class Config:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the file
-        logger().info('Updating configuration file: {}'.format(path))
+        log.info('Updating configuration file: {}'.format(path))
         with open(path, 'w') as f:
             json.dump({k: str(self.values[k]) for k in self._keys if
-                       self.values[k] is not None}, f)
+                       self.values[k] is not None}, f, indent=2)
 
     def find_dbprops(self, fname):
         """Return the absolute path to a database properties file.

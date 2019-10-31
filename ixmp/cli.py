@@ -4,26 +4,6 @@ import click
 import ixmp
 
 
-def config():
-    # construct cli
-    parser = argparse.ArgumentParser()
-    db_config_path = ('Set default directory for database connection and '
-                      'configuration files.')
-    parser.add_argument('--db_config_path', help=db_config_path, default=None)
-    default_dbprops_file = ('Set default properties file for database '
-                            ' connection.')
-    parser.add_argument('--default_dbprops_file',
-                        help=default_dbprops_file, default=None)
-    args = parser.parse_args()
-
-    # Store the user-supplied configuration values
-    ixmp.config._config.set('DB_CONFIG_PATH', args.db_config_path)
-    ixmp.config._config.set('DEFAULT_DBPROPS_FILE', args.default_dbprops_file)
-
-    # Save the configuration to file
-    ixmp.config._config.save()
-
-
 def import_timeseries():
     # construct cli
     parser = argparse.ArgumentParser()
@@ -92,3 +72,23 @@ def report(ctx, config, default):
 
     # Print the default target
     print(r.get())
+
+
+@main.command()
+@click.argument('action', type=click.Choice(['set', 'get']))
+@click.argument('key', metavar='KEY',
+                type=click.Choice(['db_config_path', 'default_dbprops_file',
+                                   'default_local_db_path']))
+@click.argument('value', nargs=-1, type=click.Path())
+def config(action, key, value):
+    key = key.upper()
+
+    if action == 'get':
+        if len(value):
+            raise click.BadArgumentUsage("VALUE given for 'get' action")
+        print(ixmp.config._config.get(key))
+    else:
+        ixmp.config._config.set(key, value[0])
+
+        # Save the configuration to file
+        ixmp.config._config.save()

@@ -28,7 +28,4 @@ The tutorials are provided as Jupyter notebooks for both Python and R, and are i
   in `Python <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/py_transport_scenario.ipynb>`__,
   or in `R <https://github.com/iiasa/ixmp/blob/v0.2/tutorial/transport/R_transport_scenario.ipynb>`__.
 
-  This tutorial creates an alternate or ‘counterfactual’ scenario of the transport problem; solve it; and compare the results to the original or reference scenario.
-
-
-See :ref:`the GAMS API description <gams-api>` for an explanation of how the standard GAMS transport problem code is easily adapted for use with *ixmp*.
+  This tutorial creates an alternate or ‘counterfactual’ scenario of the transport problem; solves it; and compares the results to the original or reference scenario.

@@ -1,6 +1,7 @@
 
 # Next Release
 
+- [#182](https://github.com/iiasa/ixmp/pull/182): Add new Backend, Model APIs and JDBCBackend, GAMSModel classes.
 - [#188](https://github.com/iiasa/ixmp/pull/188),
   [#195](https://github.com/iiasa/ixmp/pull/195): Enhance reporting.
 - [#177](https://github.com/iiasa/ixmp/pull/177): add ability to pass `gams_args` through `Scenario.solve()`

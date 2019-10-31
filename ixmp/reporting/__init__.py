@@ -136,7 +136,7 @@ class Reporter:
             except AttributeError:
                 # pd.DataFrame for a multidimensional set; store as-is
                 pass
-            rep.add(name, elements)
+            rep.add(RENAME_DIMS.get(name, name), elements)
 
         # Add the scenario itself
         rep.add('scenario', scenario)
@@ -631,8 +631,9 @@ def _config_args(path, keys, sections={}):
     if sections:
         extra_sections = set(result.keys()) - sections - {'config_dir'}
         if len(extra_sections):
-            log.warning('Unrecognized sections in reporting configuration '
-                        'will have no effect:\n  ' + repr(extra_sections))
+            log.warning(('Unrecognized sections {!r} in reporting '
+                         'configuration will have no effect')
+                        .format(sorted(extra_sections)))
 
     return result
 

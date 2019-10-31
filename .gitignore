@@ -53,7 +53,7 @@ rixmp/source/.Rhistory
 
 # pytest and related
 *.pid
-.coverage
+.coverage*
 .pytest_cache/
 coverage.xml
 htmlcov/

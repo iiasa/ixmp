@@ -1,5 +1,5 @@
-import sys
 from subprocess import Popen
+import sys
 from time import sleep
 
 from pretenders.client.http import HTTPMock

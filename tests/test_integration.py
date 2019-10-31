@@ -10,7 +10,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_clone(tmpdir, test_data_path):
+def test_run_clone(tmpdir, test_data_path, caplog):
     # this test is designed to cover the full functionality of the GAMS API
     # - initialize a new platform instance
     # - creates a new scenario and exports a gdx file
@@ -27,8 +27,10 @@ def test_run_clone(tmpdir, test_data_path):
     assert np.isclose(scen2.var('z')['lvl'], 153.675)
     pdt.assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
-    # cloning with `keep_solution=True` and `first_model_year` raises an error
-    pytest.raises(ValueError, scen.clone, first_model_year=2005)
+    # cloning with `keep_solution=True` and `first_model_year` raises a warning
+    scen.clone(keep_solution=True, shift_first_model_year=2005)
+    assert ('Overriding keep_solution=True for shift_first_model_year'
+            == caplog.records[-1].message)
 
     # cloning with `keep_solution=False` drops the solution and only keeps
     # timeseries set as `meta=True`
@@ -100,7 +102,8 @@ def test_multi_db_run(tmpdir, test_data_path):
     mp2.add_region('wrong_region', 'country')
 
     # check that cloning across platforms must copy the full solution
-    pytest.raises(ValueError, scen1.clone, platform=mp2, keep_solution=False)
+    pytest.raises(NotImplementedError, scen1.clone, platform=mp2,
+                  keep_solution=False)
 
     # clone solved model across platforms (with default settings)
     scen1.clone(platform=mp2, keep_solution=True)

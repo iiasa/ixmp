@@ -10,11 +10,14 @@ import xarray as xr
 
 import ixmp.reporting
 from ixmp.reporting import (
+    UNITS,
+    RENAME_DIMS,
     ComputationError,
     KeyExistsError,
     MissingKeyError,
     Key,
     Reporter,
+    configure,
     computations,
 )
 from ixmp.reporting import UNITS
@@ -41,10 +44,24 @@ def scenario(test_mp):
     return scen
 
 
-def test_reporting_configure():
-    # TODO test: All supported configuration keys can be handled
-    # TODO test: Unsupported keys raise warnings or errors
-    pass
+def test_reporting_configure(test_mp, test_data_path):
+    # TODO test: configuration keys 'units', 'replace_units'
+
+    # Configure globally; reads 'rename_dims' section
+    configure(rename_dims={'i': 'i_renamed'})
+
+    # Reporting uses the RENAME_DIMS mapping of 'i' to 'i_renamed'
+    scen = make_dantzig(test_mp)
+    rep = Reporter.from_scenario(scen)
+    assert 'd:i_renamed-j' in rep, rep.graph.keys()
+    assert ['seattle', 'san-diego'] == rep.get('i_renamed')
+
+    # Original name 'i' are not found in the reporter
+    assert 'd:i-j' not in rep, rep.graph.keys()
+    pytest.raises(KeyError, rep.get, 'i')
+
+    # Remove the configuration for renaming 'i', so that other tests work
+    RENAME_DIMS.pop('i')
 
 
 def test_reporter_add():
@@ -172,11 +189,12 @@ def test_reporter_read_config(test_mp, test_data_path, caplog):
     rep = Reporter.from_scenario(scen)
 
     caplog.clear()
+
+    # Warning is raised when reading configuration with unrecognized section(s)
     rep.read_config(test_data_path / 'report-config-0.yaml')
 
-    msg = ("Unrecognized sections in reporting configuration will have no "
-           "effect:\n  {'notarealsection'}")
-    assert msg == caplog.records[0].message
+    assert ("Unrecognized sections ['notarealsection'] in reporting "
+            "configuration will have no effect") == caplog.records[0].message
 
     # Data from configured file is available
     assert rep.get('d_check').loc['seattle', 'chicago'] == 1.7

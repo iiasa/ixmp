@@ -66,8 +66,14 @@ def collect_units(*args):
     return [arg.attrs['_unit'] for arg in args]
 
 
-def _find_dims(data):
-    """Return the list of dimensions for *data*."""
+def dims_for_qty(data):
+    """Return the list of dimensions for *data*.
+
+    If *data* is a :class:`pandas.DataFrame`, its columns are processed;
+    otherwise it must be a list.
+
+    ixmp.reporting.RENAME_DIMS is used to rename dimensions.
+    """
     if isinstance(data, pd.DataFrame):
         # List of the dimensions
         dims = data.columns.tolist()
@@ -104,12 +110,8 @@ def get_reversed_rename_dims():
 
 def keys_for_quantity(ix_type, name, scenario):
     """Iterate over keys for *name* in *scenario*."""
-    # Retrieve names of the indices of the low-level/Java object, *without*
-    # loading the associated data
-    # NB this is used instead of .getIdxSets, since the same set may index more
-    #    than one dimension of the same variable.
-    dims = _find_dims(scenario._item(ix_type, name, load=False)
-                      .getIdxNames().toArray())
+    # Retrieve names of the indices of the ixmp item, without loading the data
+    dims = dims_for_qty(scenario.idx_names(name))
 
     # Column for retrieving data
     column = 'value' if ix_type == 'par' else 'lvl'
@@ -209,8 +211,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # Only use the relevant filters
     if filters:
         # Dimensions of the object
-        dims = _find_dims(scenario._item(ix_type, name, load=False)
-                          .getIdxNames().toArray())
+        dims = dims_for_qty(scenario.idx_names(name))
 
         # Mapping from renamed dimensions to Scenario dimension names
         MAP = get_reversed_rename_dims()
@@ -238,7 +239,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
                     f'\n  {filters!r}\n  Subsequent computations may fail.')
 
     # List of the dimensions
-    dims = _find_dims(data)
+    dims = dims_for_qty(data)
 
     # Remove the unit from the DataFrame
     try:

@@ -113,10 +113,3 @@ a GDX-format file created by *ixmp*, and write its output data to a GDX file
 specified by *ixmp*. *ixmp* then automatically retrieves the model solution and
 other information from the output file, updating the :class:`ixmp.Scenario` and
 database.
-
-
-Java
-----
-
-The `ixmp` is powered by a Java interface to connect a database instance with
-the scientific programming interfaces.

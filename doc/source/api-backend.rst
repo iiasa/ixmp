@@ -18,7 +18,7 @@ Provided backends
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
-   :members: s_write_gdx, s_read_gdx
+   :members: read_gdx, write_gdx
 
    JDBCBackend supports:
 
@@ -35,8 +35,8 @@ Provided backends
    .. autosummary::
       :nosignatures:
 
-      s_write_gdx
-      s_read_gdx
+      read_gdx
+      write_gdx
 
 .. automethod:: ixmp.backend.jdbc.start_jvm
 
@@ -51,9 +51,9 @@ Backend API
   - :class:`Platform <ixmp.Platform>` code is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
   - :class:`Backend` code does not need to perform argument checking; merely store and retrieve data reliably.
 
-.. currentmodule:: ixmp.backend.base
+.. autodata:: ixmp.backend.FIELDS
 
-.. autodata:: ixmp.backend.base.FIELDS
+.. currentmodule:: ixmp.backend.base
 
 .. autoclass:: ixmp.backend.base.Backend
    :members:
@@ -94,22 +94,22 @@ Backend API
    .. autosummary::
       :nosignatures:
 
-      ts_check_out
-      ts_commit
-      ts_delete
-      ts_delete_geo
-      ts_discard_changes
-      ts_get
-      ts_get_data
-      ts_get_geo
-      ts_init
-      ts_is_default
-      ts_last_update
-      ts_preload
-      ts_run_id
-      ts_set_data
-      ts_set_as_default
-      ts_set_geo
+      check_out
+      commit
+      delete
+      delete_geo
+      discard_changes
+      get_ts
+      get_data
+      get_geo
+      init_ts
+      is_default
+      last_update
+      preload
+      run_id
+      set_data
+      set_as_default
+      set_geo
 
    Methods related to :class:`ixmp.Scenario`:
 
@@ -118,27 +118,29 @@ Backend API
    .. autosummary::
       :nosignatures:
 
-      s_clone
-      s_delete_item
-      s_get
-      s_get_meta
-      s_has_solution
-      s_init
-      s_init_item
-      s_item_delete_elements
-      s_item_get_elements
-      s_item_set_elements
-      s_item_index
-      s_list_items
-      s_set_meta
+      clone
+      delete_item
+      get_s
+      get_meta
+      has_solution
+      init_s
+      init_item
+      item_delete_elements
+      item_get_elements
+      item_set_elements
+      item_index
+      list_items
+      set_meta
 
    Methods related to :class:`message_ix.Scenario`:
 
    - Each method has an argument `ms`, a reference to the Scenario object being manipulated.
 
+   .. warning:: These methods may be moved to ixmp in a future release.
+
    .. autosummary::
       :nosignatures:
 
-      ms_cat_get_elements
-      ms_cat_list
-      ms_cat_set_elements
+      cat_get_elements
+      cat_list
+      cat_set_elements

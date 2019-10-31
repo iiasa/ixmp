@@ -1,12 +1,6 @@
-from .gams import GAMSModel
-
-
 #: Mapping from names to available models. To register additional models,
 #: add elements to this variable.
-MODELS = {
-    'default': GAMSModel,
-    'gams': GAMSModel,
-}
+MODELS = {}
 
 
 def get_model(name, **model_options):

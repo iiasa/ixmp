@@ -288,9 +288,6 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
-    # Name prefix for Backend methods called through ._backend()
-    _backend_prefix = 'ts'
-
     #: Name of the model associated with the TimeSeries
     model = None
 
@@ -310,9 +307,9 @@ class TimeSeries:
         self.scenario = scenario
 
         if version == 'new':
-            self._backend('init', annotation)
+            self._backend('init_ts', annotation)
         elif isinstance(version, int) or version is None:
-            self._backend('get', version)
+            self._backend('get_ts', version)
         else:
             raise ValueError(f'version={version!r}')
 
@@ -555,9 +552,6 @@ class Scenario(TimeSeries):
         Store data in memory and return cached values instead of repeatedly
         querying the backend.
     """
-    # Name prefix for Backend methods called through ._backend()
-    _backend_prefix = 's'
-
     #: Scheme of the Scenario.
     scheme = None
 
@@ -572,9 +566,9 @@ class Scenario(TimeSeries):
         self.scenario = scenario
 
         if version == 'new':
-            self._backend('init', scheme, annotation)
+            self._backend('init_s', scheme, annotation)
         elif isinstance(version, int) or version is None:
-            self._backend('get', version)
+            self._backend('get_s', version)
         else:
             raise ValueError(f'version={version!r}')
 

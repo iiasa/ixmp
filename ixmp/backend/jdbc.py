@@ -13,7 +13,8 @@ import pandas as pd
 
 from ixmp.config import _config
 from ixmp.utils import islistable, logger
-from ixmp.backend.base import Backend, FIELDS
+from . import FIELDS
+from .base import Backend
 
 
 # Map of Python to Java log levels
@@ -180,7 +181,7 @@ class JDBCBackend(Backend):
         # Retrieve initial version
         ts.version = jobj.getVersion()
 
-    def ts_init(self, ts, annotation=None):
+    def init_ts(self, ts, annotation=None):
         self._common_init(ts, 'TimeSeries', annotation)
 
     def _common_get(self, ts, klass, version):
@@ -201,36 +202,36 @@ class JDBCBackend(Backend):
         else:
             assert version == jobj.getVersion()
 
-    def ts_get(self, ts, version):
+    def get_ts(self, ts, version):
         self._common_get(ts, 'TimeSeries', version)
 
-    def ts_check_out(self, ts, timeseries_only):
+    def check_out(self, ts, timeseries_only):
         self.jindex[ts].checkOut(timeseries_only)
 
-    def ts_commit(self, ts, comment):
+    def commit(self, ts, comment):
         self.jindex[ts].commit(comment)
         if ts.version == 0:
             ts.version = self.jindex[ts].getVersion()
 
-    def ts_discard_changes(self, ts):
+    def discard_changes(self, ts):
         self.jindex[ts].discardChanges()
 
-    def ts_set_as_default(self, ts):
+    def set_as_default(self, ts):
         self.jindex[ts].setAsDefaultVersion()
 
-    def ts_is_default(self, ts):
+    def is_default(self, ts):
         return bool(self.jindex[ts].isDefault())
 
-    def ts_last_update(self, ts):
+    def last_update(self, ts):
         return self.jindex[ts].getLastUpdateTimestamp().toString()
 
-    def ts_run_id(self, ts):
+    def run_id(self, ts):
         return self.jindex[ts].getRunId()
 
-    def ts_preload(self, ts):
+    def preload(self, ts):
         self.jindex[ts].preloadAllTimeseries()
 
-    def ts_get_data(self, ts, region, variable, unit, year):
+    def get_data(self, ts, region, variable, unit, year):
         # Convert the selectors to Java lists
         r = to_jlist2(region)
         v = to_jlist2(variable)
@@ -249,7 +250,7 @@ class JDBCBackend(Backend):
             yield tuple(ftype.get(f, str)(row.get(f))
                         for f in FIELDS['ts_get'])
 
-    def ts_get_geo(self, ts):
+    def get_geo(self, ts):
         # NB the return type of getGeoData() requires more processing than
         #    getTimeseries. It also accepts no selectors.
 
@@ -291,7 +292,7 @@ class JDBCBackend(Backend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
-    def ts_set_data(self, ts, region, variable, data, unit, meta):
+    def set_data(self, ts, region, variable, data, unit, meta):
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
@@ -301,30 +302,30 @@ class JDBCBackend(Backend):
         self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
                                       meta)
 
-    def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
+    def set_geo(self, ts, region, variable, time, year, value, unit, meta):
         self.jindex[ts].addGeoData(region, variable, time, java.Integer(year),
                                    value, unit, meta)
 
-    def ts_delete(self, ts, region, variable, years, unit):
+    def delete(self, ts, region, variable, years, unit):
         years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
-    def ts_delete_geo(self, ts, region, variable, time, years, unit):
+    def delete_geo(self, ts, region, variable, time, years, unit):
         years = to_jlist2(years, java.Integer)
         self.jindex[ts].removeGeoData(region, variable, time, years, unit)
 
     # Scenario methods
 
-    def s_init(self, s, scheme, annotation):
+    def init_s(self, s, scheme, annotation):
         self._common_init(s, 'Scenario', scheme, annotation)
 
-    def s_get(self, s, version):
+    def get_s(self, s, version):
         self._common_get(s, 'Scenario', version)
         # Also retrieve the scheme
         s.scheme = self.jindex[s].getScheme()
 
-    def s_clone(self, s, platform_dest, model, scenario, annotation,
-                keep_solution, first_model_year=None):
+    def clone(self, s, platform_dest, model, scenario, annotation,
+              keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
             raise NotImplementedError(f'Clone between {self.__class__} and'
@@ -350,13 +351,13 @@ class JDBCBackend(Backend):
         return s.__class__(platform_dest, model, scenario,
                            version=jclone.getVersion(), cache=s._cache)
 
-    def s_has_solution(self, s):
+    def has_solution(self, s):
         return self.jindex[s].hasSolution()
 
-    def s_list_items(self, s, type):
+    def list_items(self, s, type):
         return to_pylist(getattr(self.jindex[s], f'get{type.title()}List')())
 
-    def s_init_item(self, s, type, name, idx_sets, idx_names):
+    def init_item(self, s, type, name, idx_sets, idx_names):
         # generate index-set and index-name lists
         if isinstance(idx_sets, set) or isinstance(idx_names, set):
             raise ValueError('index dimension must be string or ordered lists')
@@ -370,14 +371,14 @@ class JDBCBackend(Backend):
         # aren't exposed by Backend, so don't return here
         func(name, idx_sets, idx_names)
 
-    def s_delete_item(self, s, type, name):
+    def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')()
 
-    def s_item_index(self, s, name, sets_or_names):
+    def item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
-    def s_item_get_elements(self, s, type, name, filters=None):
+    def item_get_elements(self, s, type, name, filters=None):
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
 
@@ -428,7 +429,7 @@ class JDBCBackend(Backend):
             return dict(lvl=item.getScalarLevel().floatValue(),
                         mrg=item.getScalarMarginal().floatValue())
 
-    def s_item_set_elements(self, s, type, name, elements):
+    def item_set_elements(self, s, type, name, elements):
         jobj = self._get_item(s, type, name)
 
         try:
@@ -455,12 +456,12 @@ class JDBCBackend(Backend):
             else:
                 raise RuntimeError('Unhandled Java exception') from e
 
-    def s_item_delete_elements(self, s, type, name, keys):
+    def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
         for key in keys:
             jitem.removeElement(to_jlist2(key))
 
-    def s_get_meta(self, s):
+    def get_meta(self, s):
         def unwrap(v):
             """Unwrap metadata numeric value (BigDecimal -> Double)"""
             return v.doubleValue() if isinstance(v, java.BigDecimal) else v
@@ -468,10 +469,10 @@ class JDBCBackend(Backend):
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
-    def s_set_meta(self, s, name, value):
+    def set_meta(self, s, name, value):
         self.jindex[s].setMeta(name, value)
 
-    def s_clear_solution(self, s, from_year=None):
+    def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario
 
         if from_year:
@@ -484,23 +485,23 @@ class JDBCBackend(Backend):
 
     # MsgScenario methods
 
-    def ms_cat_list(self, ms, name):
+    def cat_list(self, ms, name):
         return to_pylist(self.jindex[ms].getTypeList(name))
 
-    def ms_cat_get_elements(self, ms, name, cat):
+    def cat_get_elements(self, ms, name, cat):
         return to_pylist(self.jindex[ms].getCatEle(name, cat))
 
-    def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
+    def cat_set_elements(self, ms, name, cat, keys, is_unique):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
 
     # Helpers; not part of the Backend interface
 
-    def s_write_gdx(self, s, path):
+    def write_gdx(self, s, path):
         """Write the Scenario to a GDX file at *path*."""
         # include_var_equ=False -> do not include variables/equations in GDX
         self.jindex[s].toGDX(str(path.parent), path.name, False)
 
-    def s_read_gdx(self, s, path, check_solution, comment, equ_list, var_list):
+    def read_gdx(self, s, path, check_solution, comment, equ_list, var_list):
         """Read the Scenario from a GDX file at *path*.
 
         Parameters

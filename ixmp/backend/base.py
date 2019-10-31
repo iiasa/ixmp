@@ -1,18 +1,6 @@
-from functools import lru_cache
 from abc import ABC, abstractmethod
 
-
-#: Lists of field names for tuples returned by Backend API methods.
-FIELDS = {
-    'get_nodes': ('region', 'mapped_to', 'parent', 'hierarchy'),
-    'get_scenarios': ('model', 'scenario', 'scheme', 'is_default',
-                      'is_locked', 'cre_user', 'cre_date', 'upd_user',
-                      'upd_date', 'lock_user', 'lock_date', 'annotation',
-                      'version'),
-    'ts_get': ('region', 'variable', 'unit', 'year', 'value'),
-    'ts_get_geo': ('region', 'variable', 'time', 'year', 'value', 'unit',
-                   'meta'),
-}
+from ixmp.core import TimeSeries, Scenario
 
 
 class Backend(ABC):
@@ -26,24 +14,13 @@ class Backend(ABC):
         """OPTIONAL: Initialize the backend."""
         pass
 
-    @classmethod
-    @lru_cache()  # Don't recompute
-    def __method(backend_cls, cls, name):
-        for c in cls.__mro__[:-1]:
-            try:
-                return getattr(backend_cls, f'{c._backend_prefix}_{name}')
-            except AttributeError:
-                pass
-        raise AttributeError(f"backend method '{{prefix}}_{name}'")
-
     def __call__(self, obj, method, *args, **kwargs):
         """Call the backend method *method* for *obj*.
 
         The class attribute obj._backend_prefix is used to determine a prefix
         for the method name, e.g. 'ts_{method}'.
         """
-        method = self.__method(obj.__class__, method)
-        return method(self, obj, *args, **kwargs)
+        return getattr(self, method)(obj, *args, **kwargs)
 
     def close_db(self):  # pragma: no cover
         """OPTIONAL: Close database connection(s).
@@ -216,7 +193,7 @@ class Backend(ABC):
     # Methods for ixmp.TimeSeries
 
     @abstractmethod
-    def ts_init(self, ts, annotation=None):
+    def init_ts(self, ts: TimeSeries, annotation=None):
         """Initialize the TimeSeries *ts*.
 
         ts_init **may** modify the :attr:`~TimeSeries.version` attribute of
@@ -234,7 +211,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_get(self, ts, version):
+    def get_ts(self, ts: TimeSeries, version):
         """Retrieve the existing TimeSeries *ts*.
 
         The TimeSeries is identified based on its (:attr:`~.TimeSeries.model`,
@@ -256,7 +233,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_check_out(self, ts, timeseries_only):
+    def check_out(self, ts: TimeSeries, timeseries_only):
         """Check out *ts* for modification.
 
         Parameters
@@ -270,7 +247,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_commit(self, ts, comment):
+    def commit(self, ts: TimeSeries, comment):
         """Commit changes to *ts*.
 
         ts_init **may** modify the :attr:`~.TimeSeries.version` attribute of
@@ -287,7 +264,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_get_data(self, ts, region, variable, unit, year):
+    def get_data(self, ts: TimeSeries, region, variable, unit, year):
         """Retrieve time-series data.
 
         Parameters
@@ -318,7 +295,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_get_geo(self, ts):
+    def get_geo(self, ts: TimeSeries):
         """Retrieve time-series 'geodata'.
 
         Yields
@@ -340,7 +317,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_set_data(self, ts, region, variable, data, unit, meta):
+    def set_data(self, ts: TimeSeries, region, variable, data, unit, meta):
         """Store *data*.
 
         Parameters
@@ -360,7 +337,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_set_geo(self, ts, region, variable, time, year, value, unit, meta):
+    def set_geo(self, ts: TimeSeries, region, variable, time, year, value,
+                unit, meta):
         """Store time-series 'geodata'.
 
         Parameters
@@ -382,7 +360,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_delete(self, ts, region, variable, years, unit):
+    def delete(self, ts: TimeSeries, region, variable, years, unit):
         """Remove data values.
 
         Parameters
@@ -402,7 +380,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_delete_geo(self, ts, region, variable, time, years, unit):
+    def delete_geo(self, ts: TimeSeries, region, variable, time, years, unit):
         """Remove 'geodata' values.
 
         Parameters
@@ -424,7 +402,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_discard_changes(self, ts):
+    def discard_changes(self, ts: TimeSeries):
         """Discard changes to *ts* since the last :meth:`ts_check_out`.
 
         Returns
@@ -433,7 +411,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_set_as_default(self, ts):
+    def set_as_default(self, ts: TimeSeries):
         """Set the current :attr:`.TimeSeries.version` as the default.
 
         Returns
@@ -448,7 +426,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_is_default(self, ts):
+    def is_default(self, ts: TimeSeries):
         """Return :obj:`True` if *ts* is the default version.
 
         Returns
@@ -463,7 +441,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_last_update(self, ts):
+    def last_update(self, ts: TimeSeries):
         """Return the date of the last modification of the *ts*.
 
         Returns
@@ -472,7 +450,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ts_run_id(self, ts):
+    def run_id(self, ts: TimeSeries):
         """Return the run ID for the *ts*.
 
         Returns
@@ -480,14 +458,14 @@ class Backend(ABC):
         int
         """
 
-    def ts_preload(self, ts):  # pragma: no cover
+    def preload(self, ts: TimeSeries):  # pragma: no cover
         """OPTIONAL: Load *ts* data into memory."""
         pass
 
     # Methods for ixmp.Scenario
 
     @abstractmethod
-    def s_init(self, s, scheme, annotation):
+    def init_s(self, s: Scenario, scheme, annotation):
         """Initialize the Scenario *s*.
 
         s_init **may** modify the :attr:`~.TimeSeries.version` attribute of
@@ -506,7 +484,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_get(self, s, version):
+    def get_s(self, s: Scenario, version):
         """Retrieve the existing Scenario *s*.
 
         The Scenario is identified based on its (:attr:`~.TimeSeries.model`,
@@ -529,8 +507,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_clone(self, s, platform_dest, model, scenario, annotation,
-                keep_solution, first_model_year=None):
+    def clone(self, s: Scenario, platform_dest, model, scenario, annotation,
+              keep_solution, first_model_year=None):
         """Clone *s*.
 
         Parameters
@@ -556,14 +534,14 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_has_solution(self, s):
+    def has_solution(self, s: Scenario):
         """Return `True` if Scenario *s* has been solved.
 
         If :obj:`True`, model solution data is available from the Backend.
         """
 
     @abstractmethod
-    def s_list_items(self, s, type):
+    def list_items(self, s: Scenario, type):
         """Return a list of items of *type*.
 
         Parameters
@@ -576,7 +554,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_init_item(self, s, type, name):
+    def init_item(self, s: Scenario, type, name):
         """Initialize an item *name* of *type*.
 
         Parameters
@@ -591,7 +569,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_delete_item(self, s, type, name):
+    def delete_item(self, s: Scenario, type, name):
         """Remove an item *name* of *type*.
 
         Parameters
@@ -606,7 +584,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_index(self, s, name, sets_or_names):
+    def item_index(self, s: Scenario, name, sets_or_names):
         """Return the index sets or names of item *name*.
 
         Parameters
@@ -619,7 +597,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_get_elements(self, s, type, name, filters=None):
+    def item_get_elements(self, s: Scenario, type, name, filters=None):
         """Return elements of item *name*.
 
         Parameters
@@ -648,7 +626,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_set_elements(self, s, type, name, elements):
+    def item_set_elements(self, s: Scenario, type, name, elements):
         """Add keys or values to item *name*.
 
         Parameters
@@ -687,7 +665,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_item_delete_elements(self, s, type, name, keys):
+    def item_delete_elements(self, s: Scenario, type, name, keys):
         """Remove elements of item *name*.
 
         Parameters
@@ -708,7 +686,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_get_meta(self, s):
+    def get_meta(self, s: Scenario):
         """Return all metadata.
 
         Returns
@@ -722,7 +700,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_set_meta(self, s, name, value):
+    def set_meta(self, s: Scenario, name, value):
         """Set a single metadata key.
 
         Parameters
@@ -738,7 +716,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def s_clear_solution(self, s, from_year=None):
+    def clear_solution(self, s: Scenario, from_year=None):
         """Remove data associated with a model solution.
 
         .. todo:: Document.
@@ -747,7 +725,7 @@ class Backend(ABC):
     # Methods for message_ix.Scenario
 
     @abstractmethod
-    def ms_cat_list(self, ms, name):
+    def cat_list(self, ms: Scenario, name):
         """Return list of categories in mapping *name*.
 
         Parameters
@@ -762,7 +740,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ms_cat_get_elements(self, ms, name, cat):
+    def cat_get_elements(self, ms: Scenario, name, cat):
         """Get elements of a category mapping.
 
         Parameters
@@ -779,7 +757,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def ms_cat_set_elements(self, ms, name, cat, keys, is_unique):
+    def cat_set_elements(self, ms: Scenario, name, cat, keys, is_unique):
         """Add elements to category mapping.
 
         Parameters

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Model(ABC):
+class Model(ABC):  # pragma: no cover
     #: Name of the model.
     name = 'base'
 

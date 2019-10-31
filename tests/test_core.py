@@ -76,10 +76,19 @@ def test_has_set(test_mp):
     assert not scen.has_set('k')
 
 
-def test_init_par_35(test_mp):
+def test_range(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args, version='new')
+
     scen.init_set('ii')
+    ii = range(1, 20, 2)
+
+    # range instance is automatically converted to list of str in add_set
+    scen.add_set('ii', ii)
+
     scen.init_par('new_par', idx_sets='ii')
+
+    # range instance is a valid key argument to add_par
+    scen.add_par('new_par', ii, [1.2] * len(ii))
 
 
 def test_get_scalar(test_mp):
@@ -123,14 +132,91 @@ def test_init_set(test_mp):
         scen.init_set('foo')
 
 
-def test_add_set(test_mp):
-    """Test ixmp.Scenario.add_set()."""
+def test_set(test_mp):
+    """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add element to a non-existent set
-    with pytest.raises(jpype.JException,
-                       match="No Set 'foo' exists in this Scenario!"):
+    with pytest.raises(KeyError,
+                       match="No Item 'foo' exists in this Scenario!"):
         scen.add_set('foo', 'bar')
+
+    scen.remove_solution()
+    scen.check_out()
+
+    # Add elements to a 0-D set
+    scen.add_set('i', 'i1')  # Name only
+    scen.add_set('i', 'i2', 'i2 comment')  # Name and comment
+    scen.add_set('i', ['i3'])  # List of names, length 1
+    scen.add_set('i', ['i4', 'i5'])  # List of names, length >1
+    scen.add_set('i', range(0, 3))  # Generator (range object)
+    # Lists of names and comments, length 1
+    scen.add_set('i', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('i', ['i7', 'i8'], ['i7 comment', 'i8 comment'])
+
+    # Incorrect usage
+
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+
+    # Add elements to a 1D set
+    scen.init_set('foo', 'i', 'dim_i')
+    scen.add_set('foo', ['i1'])  # Single key
+    scen.add_set('foo', ['i2'], 'i2 in foo')  # Single key and comment
+    scen.add_set('foo', 'i3')  # Bare name automatically wrapped
+    # Lists of names and comments, length 1
+    scen.add_set('foo', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('foo', [['i7'], ['i8']], ['i7 comment', 'i8 comment'])
+    # Dict
+    scen.add_set('foo', dict(dim_i=['i7', 'i8']))
+
+    # Incorrect usage
+    # Improperly wrapped keys
+    with pytest.raises(ValueError, match=r"2-D key \['i4', 'i5'\] invalid for "
+                                         r"1-D set foo\['dim_i'\]"):
+        scen.add_set('foo', ['i4', 'i5'])
+    with pytest.raises(ValueError):
+        scen.add_set('foo', range(0, 3))
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+    # Missing element in the index set
+    with pytest.raises(ValueError, match="The index set 'i' does not have an "
+                                         "element 'bar'!"):
+        scen.add_set('foo', 'bar')
+
+    # Retrieve set elements
+    i = {'seattle', 'san-diego', 'i1', 'i2', 'i3', 'i4', 'i5', '0', '1', '2',
+         'i6', 'i7', 'i8'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: bare name
+    scen.remove_set('i', 'i2')
+    i -= {'i2'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: Iterable of names, length >1
+    scen.remove_set('i', ['i4', 'i5'])
+    i -= {'i4', 'i5'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from a 1D set: Dict
+    scen.remove_set('foo', dict(dim_i=['i7', 'i8']))
+    # Added elements from above; minus directly removed elements; minus i2
+    # because it was removed from the set i that indexes dim_i of foo
+    foo = {'i1', 'i2', 'i3', 'i6', 'i7', 'i8'} - {'i2'} - {'i7', 'i8'}
+    assert foo == set(scen.set('foo')['dim_i'])
 
 
 # make sure that changes to a scenario are copied over during clone

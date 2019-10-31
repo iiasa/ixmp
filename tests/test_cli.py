@@ -22,7 +22,8 @@ def test_jvm_warn(recwarn):
     """
 
     # Start the JVM for the first time in the test session
-    ix.start_jvm()
+    from ixmp.backend.jdbc import start_jvm
+    start_jvm()
 
     if jpype.__version__ > '0.7':
         # Zero warnings were recorded

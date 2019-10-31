@@ -1,10 +1,5 @@
 import collections
 import logging
-import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
 
 import pandas as pd
 import six
@@ -24,6 +19,27 @@ def logger():
         _LOGGER = logging.getLogger()
         _LOGGER.setLevel('INFO')
     return _LOGGER
+
+
+def as_str_list(arg, idx_names=None):
+    """Convert various *arg* to list of str.
+
+    Several types of arguments are handled:
+    - None: returned as None.
+    - str: returned as a length-1 list of str.
+    - list of values: returned as a list with each value converted to str
+    - dict, with list of idx_names: the idx_names are used to look up values
+      in the dict, the resulting list has the corresponding values in the same
+      order.
+
+    """
+    if arg is None:
+        return None
+    elif idx_names is None:
+        # arg must be iterable
+        return list(map(str, arg)) if islistable(arg) else [str(arg)]
+    else:
+        return [str(arg[idx]) for idx in idx_names]
 
 
 def isstr(x):
@@ -75,9 +91,22 @@ def pd_write(df, f, *args, **kwargs):
 
 
 def numcols(df):
+    """Return the indices of the numeric columns of *df*."""
     dtypes = df.dtypes
     return [i for i in dtypes.index
             if dtypes.loc[i].name.startswith(('float', 'int'))]
+
+
+def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
+    if filters is None:
+        return df
+
+    mask = pd.Series(True, index=df.index)
+    for k, v in filters.items():
+        isin = df[k].isin(v)
+        mask = mask & isin
+    return df[mask]
 
 
 def import_timeseries(mp, data, model, scenario, version=None,
@@ -110,15 +139,3 @@ def import_timeseries(mp, data, model, scenario, version=None,
     if lastyear is not None:
         annot = '{} until {}'.format(annot, lastyear)
     scen.commit(annot)
-
-
-def harmonize_path(path_or_str):
-    """Harmonize mixed '\' and '/' separators in pathlib.Path or str.
-
-    On Windows, R's file.path(...) uses '/', not '\', as a path separator.
-    Python's str(WindowsPath(...)) uses '\'. Mixing outputs from the two
-    functions (e.g. through rixmp) produces path strings with both kinds of
-    separators.
-    """
-    args = ('/', '\\') if os.name == 'nt' else ('\\', '/')
-    return Path(str(path_or_str).replace(*args))

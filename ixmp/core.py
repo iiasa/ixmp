@@ -309,7 +309,7 @@ class TimeSeries:
         if version == 'new':
             self._backend('init_ts', annotation)
         elif isinstance(version, int) or version is None:
-            self._backend('get_ts', version)
+            self._backend('get', version)
         else:
             raise ValueError(f'version={version!r}')
 
@@ -568,7 +568,7 @@ class Scenario(TimeSeries):
         if version == 'new':
             self._backend('init_s', scheme, annotation)
         elif isinstance(version, int) or version is None:
-            self._backend('get_s', version)
+            self._backend('get', version)
         else:
             raise ValueError(f'version={version!r}')
 

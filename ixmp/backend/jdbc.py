@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ixmp.config import _config
+from ixmp.core import Scenario
 from ixmp.utils import islistable, logger
 from . import FIELDS
 from .base import Backend
@@ -184,14 +185,14 @@ class JDBCBackend(Backend):
     def init_ts(self, ts, annotation=None):
         self._common_init(ts, 'TimeSeries', annotation)
 
-    def _common_get(self, ts, klass, version):
-        """Common code for ts_get and s_get."""
+    def get(self, ts, version):
         args = [ts.model, ts.scenario]
         if isinstance(version, int):
             # Load a TimeSeries of specific version
             args.append(version)
 
-        method = getattr(self.jobj, 'get' + klass)
+        # either getTimeSeries or getScenario
+        method = getattr(self.jobj, 'get' + ts.__class__.__name__)
         jobj = method(*args)
         # Add to index
         self.jindex[ts] = jobj
@@ -202,8 +203,9 @@ class JDBCBackend(Backend):
         else:
             assert version == jobj.getVersion()
 
-    def get_ts(self, ts, version):
-        self._common_get(ts, 'TimeSeries', version)
+        if isinstance(ts, Scenario):
+            # Also retrieve the scheme
+            ts.scheme = jobj.getScheme()
 
     def check_out(self, ts, timeseries_only):
         self.jindex[ts].checkOut(timeseries_only)
@@ -318,11 +320,6 @@ class JDBCBackend(Backend):
 
     def init_s(self, s, scheme, annotation):
         self._common_init(s, 'Scenario', scheme, annotation)
-
-    def get_s(self, s, version):
-        self._common_get(s, 'Scenario', version)
-        # Also retrieve the scheme
-        s.scheme = self.jindex[s].getScheme()
 
     def clone(self, s, platform_dest, model, scenario, annotation,
               keep_solution, first_model_year=None):

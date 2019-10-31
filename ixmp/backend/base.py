@@ -211,11 +211,14 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_ts(self, ts: TimeSeries, version):
-        """Retrieve the existing TimeSeries *ts*.
+    def get(self, ts: TimeSeries, version):
+        """Retrieve the existing TimeSeries or Scenario *ts*.
 
         The TimeSeries is identified based on its (:attr:`~.TimeSeries.model`,
         :attr:`~.TimeSeries.scenario`) and *version*.
+
+        If *ts* is a Scenario, :meth:`get` **must** set the
+        :attr:`~.Scenario.scheme` attribute on it.
 
         Parameters
         ----------
@@ -481,29 +484,6 @@ class Backend(ABC):
         Returns
         -------
         None
-        """
-
-    @abstractmethod
-    def get_s(self, s: Scenario, version):
-        """Retrieve the existing Scenario *s*.
-
-        The Scenario is identified based on its (:attr:`~.TimeSeries.model`,
-        :attr:`~.TimeSeries.scenario`) and *version*. s_get **must** set
-        the :attr:`.Scenario.scheme` attribute on *s*.
-
-        Parameters
-        ----------
-        version : str or None
-            If :obj:`None`, the version marked as the default is returned, and
-            s_get **must** set :attr:`.TimeSeries.version` attribute on *s*.
-
-        Returns
-        -------
-        None
-
-        See also
-        --------
-        ts_set_as_default
         """
 
     @abstractmethod

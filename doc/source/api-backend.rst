@@ -99,7 +99,7 @@ Backend API
       delete
       delete_geo
       discard_changes
-      get_ts
+      get
       get_data
       get_geo
       init_ts
@@ -120,7 +120,6 @@ Backend API
 
       clone
       delete_item
-      get_s
       get_meta
       has_solution
       init_s

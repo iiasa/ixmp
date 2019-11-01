@@ -491,8 +491,7 @@ def test_reporting_cli(test_mp, test_data_path):
     assert result.exit_code == 0
 
     # Reporting produces the expected command-line output
-    assert result.output.endswith("""
-<xarray.DataArray 'value' (i: 2, j: 3)>
+    assert result.output.endswith("""<xarray.DataArray 'value' (i: 2, j: 3)>
 array([[1.8, 2.5, 1.4],
        [1.7, 2.5, 1.8]])
 Coordinates:

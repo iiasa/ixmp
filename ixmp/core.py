@@ -83,8 +83,17 @@ class Platform:
             # Retrieve platform configuration for *name*
             self.name, kwargs = config.get_platform_info(name)
 
-        if kwargs['class'] == 'jdbc' and len(args):
-            # Copy positional args for the default JDBC backend
+        if len(args):
+            if backend and backend != 'jdbc':
+                message = ("backend={!r} conflicts with deprecated positional "
+                           " arguments for JDBCBackend (dbprops, dbtype, "
+                           " jvmargs)").format(backend)
+                raise ValueError(message)
+            else:
+                # Providing positional args implies JDBCBackend
+                kwargs['class'] = 'jdbc'
+
+            # Copy positional args to keyword args
             warn('positional arguments to Platform(…) for JDBCBackend. '
                  'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
                  DeprecationWarning)

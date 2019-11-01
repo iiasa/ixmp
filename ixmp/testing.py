@@ -16,12 +16,14 @@ import shutil
 import subprocess
 import sys
 
+from click.testing import CliRunner
 import pandas as pd
 from pandas.testing import assert_series_equal
 import pytest
 from xarray import DataArray
 from xarray.testing import assert_equal as assert_xr_equal
 
+from . import cli
 from ._config import config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
 from .reporting.utils import AttrSeries, Quantity
@@ -49,6 +51,16 @@ def pytest_sessionstart(session):
 def pytest_report_header(config, startdir):
     """Add the ixmp configuration to the pytest report header."""
     return 'ixmp config: {!r}'.format(ixmp_config.values)
+
+
+@pytest.fixture(scope='session')
+def ixmp_cli():
+    """A CliRunner object that invokes the ixmp command-line interface."""
+    class Runner(CliRunner):
+        def invoke(self, *args, **kwargs):
+            return super().invoke(cli.main, *args, **kwargs)
+
+    yield Runner()
 
 
 @pytest.fixture(scope='session')

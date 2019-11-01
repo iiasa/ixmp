@@ -29,3 +29,15 @@ def test_locate_nonexistent(cfg):
 def test_get(cfg):
     # This key has a value even with no configuration provided
     assert cfg.get('DEFAULT_LOCAL_DB_PATH')
+
+
+def test_config_default(cfg):
+    # Default platform is 'local'
+    assert cfg.values['platform']['default'] == 'local'
+
+    # Set another platform as the default
+    cfg.add_platform('dummy', 'jdbc', 'oracle', 'url', 'user', 'password')
+    cfg.add_platform('default', 'dummy')
+
+    # Now the default platform is 'dummy'
+    assert cfg.values['platform']['default'] == 'dummy'

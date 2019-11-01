@@ -150,6 +150,9 @@ class Config:
         if name == 'default':
             assert len(args) == 1
             info = args[0]
+
+            if info not in self.values['platform']:
+                raise ValueError("cannot set unknown {!r} as default platform")
         else:
             cls = args.pop(0)
             info = {'class': cls}
@@ -162,7 +165,7 @@ class Config:
                     info['user'] = args.pop(0)
                     info['password'] = args.pop(0)
                 elif info['driver'] == 'hsqldb':
-                    info['path'] = args.pop(0)
+                    info['path'] = Path(args.pop(0)).resolve()
                 assert len(args) == 0
             else:
                 raise ValueError(cls)

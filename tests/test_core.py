@@ -14,27 +14,11 @@ can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
-def test_default_dbprops_file(tmp_env, test_mp_props, caplog):
-    # Configure
-    cmd = 'ixmp-config --default_dbprops_file {}'.format(test_mp_props)
-    subprocess.check_call(cmd.split(), env=tmp_env)
-
-    # Force configuration reload
-    ixmp.config.read()
-
-    # Platform is instantiated using the default database properties file
-    mp = ixmp.Platform()
-
-    # NB. Scenario.__init__() does not store the name of the dbprops file.
-    #     Use captured log output to confirm the expected file is used.
-    assert launch_log_msg.format(test_mp_props) in caplog.text
-
-    # Platform contains the expected scenarios
-    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
 def test_db_config_path(tmp_env, test_mp_props, caplog):
+    # TODO replace with tests that
+    # - CLI can accept an absolute path to a dbprops file.
+    # - CLI can accept a relative path to a dbprops file.
+
     # Configure
     cmd = 'ixmp-config --db_config_path {}'.format(test_mp_props.parent)
     subprocess.check_call(cmd.split(), env=tmp_env)

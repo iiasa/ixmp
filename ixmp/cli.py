@@ -1,41 +1,13 @@
-import argparse
-
 import click
 import ixmp
 
 
-def import_timeseries():
-    # construct cli
-    parser = argparse.ArgumentParser()
-    dbprops = 'dbprops'
-    parser.add_argument('--dbprops', help=dbprops, default=None)
-    data = 'data'
-    parser.add_argument('--data', help=data)
-    model = 'model'
-    parser.add_argument('--model', help=model)
-    scenario = 'scenario'
-    parser.add_argument('--scenario', help=scenario)
-    version = 'version'
-    parser.add_argument('--version', help=version, type=str, default=None)
-    firstyear = 'firstyear'
-    parser.add_argument('--firstyear', help=firstyear, type=str, default=None)
-    lastyear = 'lastyear'
-    parser.add_argument('--lastyear', help=lastyear, type=str, default=None)
-    args = parser.parse_args()
-
-    # do the import
-    mp = ixmp.Platform(args.dbprops)
-    ixmp.utils.import_timeseries(mp, args.data, args.model, args.scenario,
-                                 args.version, args.firstyear, args.lastyear)
-    mp.close_db()
-
-
 @click.group()
-@click.option('--platform', help='Configured platform name', default=None)
-@click.option('--dbprops', help='Database properties file', default=None)
-@click.option('--model', help='Model name', default=None)
-@click.option('--scenario', help='Scenario name', default=None)
-@click.option('--version', help='Scenario version', default=None)
+@click.option('--platform', help='Configured platform name.', default=None)
+@click.option('--dbprops', help='Database properties file.', default=None)
+@click.option('--model', help='Model name.', default=None)
+@click.option('--scenario', help='Scenario name.', default=None)
+@click.option('--version', help='Scenario version.', type=int, default=None)
 @click.pass_context
 def main(ctx, platform, dbprops, model, scenario, version):
     """Command interface, e.g. $ ixmp COMMAND """
@@ -56,7 +28,9 @@ def main(ctx, platform, dbprops, model, scenario, version):
 
     # With a Platform, load the indicated Scenario
     if model and scenario:
+        print('main 1')
         scen = ixmp.Scenario(mp, model, scenario, version=version)
+        print('main 2')
         ctx.obj['scen'] = scen
 
 
@@ -103,6 +77,23 @@ def config(action, key, value):
 
         # Save the configuration to file
         ixmp.config.save()
+
+
+@main.command('import')
+@click.option('--firstyear', type=int, default=None,
+              help='First year of data to include.')
+@click.option('--lastyear', type=int, default=None,
+              help='Final year of data to include.')
+@click.argument('data', type=click.Path(exists=True, dir_okay=False))
+@click.pass_obj
+def import_command(context, firstyear, lastyear, data):
+    """Import time series data.
+
+    DATA is the path to a file containing input data in CSV or Excel format.
+    """
+    from ixmp.utils import import_timeseries
+
+    import_timeseries(context['scen'], data, firstyear, lastyear)
 
 
 @main.command()

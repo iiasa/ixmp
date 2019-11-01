@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
-import subprocess
 
-import ixmp as ix
+import ixmp
 import jpype
-import numpy.testing as npt
 import pandas as pd
+import pandas.testing as pdt
 
 
 def test_jvm_warn(recwarn):
@@ -63,22 +61,33 @@ def test_platform(ixmp_cli, tmp_path):
     assert Path(rel).resolve() == config.get_platform_info('p3')[1]['path']
 
 
-def test_import_timeseries(test_mp_props, test_data_path):
+def test_import(ixmp_cli, test_mp, test_data_path):
     fname = test_data_path / 'timeseries_canning.csv'
 
-    cmd = ('import-timeseries --dbprops="{}" --data="{}" --model="{}" '
-           '--scenario="{}" --version="{}" --firstyear="{}"').format(
-        test_mp_props, fname, 'canning problem', 'standard', 1, 2020)
+    platform_name = test_mp.name
+    del test_mp
 
-    win = os.name == 'nt'
-    subprocess.check_call(cmd, shell=not win)
+    result = ixmp_cli.invoke([
+        '--platform', platform_name,
+        '--model', 'canning problem',
+        '--scenario', 'standard',
+        '--version', '1',
+        'import',
+        '--firstyear', '2020',
+        str(fname),
+    ])
+    assert result.exit_code == 0
 
-    mp = ix.Platform(test_mp_props)
-    scen = ix.Scenario(mp, 'canning problem', 'standard', 1)
-    obs = scen.timeseries()
-    df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
-          'year': [2020], 'value': [28.3]}
-    exp = pd.DataFrame.from_dict(df)
-    cols_str = ['region', 'variable', 'unit', 'year']
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
-    npt.assert_array_almost_equal(exp['value'], obs['value'])
+    # Check that the TimeSeries now contains the expected content
+    mp = ixmp.Platform(name=platform_name)
+    scen = ixmp.Scenario(mp, 'canning problem', 'standard', 1)
+    exp = pd.DataFrame.from_dict({
+        'region': ['World'],
+        'variable': ['Testing'],
+        'unit': ['???'],
+        'year': [2020],
+        'value': [28.3],
+        'model': ['canning problem'],
+        'scenario': ['standard'],
+    })
+    pdt.assert_frame_equal(exp, scen.timeseries())

@@ -49,7 +49,6 @@ setup(
     entry_points={
         'console_scripts': [
             'ixmp=ixmp.cli:main',
-            'import-timeseries=ixmp.cli:import_timeseries',
         ],
     },
 )

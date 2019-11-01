@@ -222,7 +222,7 @@ class Backend(ABC):
 
         Parameters
         ----------
-        version : str or None
+        version : int or None
             If :obj:`None`, the version marked as the default is returned, and
             ts_get **must** set :attr:`.TimeSeries.version` attribute on *ts*.
 

@@ -256,7 +256,7 @@ class JDBCBackend(Backend):
 
     def get(self, ts, version):
         args = [ts.model, ts.scenario]
-        if isinstance(version, int):
+        if version is not None:
             # Load a TimeSeries of specific version
             args.append(version)
 

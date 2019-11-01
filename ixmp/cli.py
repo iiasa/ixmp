@@ -31,23 +31,33 @@ def import_timeseries():
 
 
 @click.group()
+@click.option('--platform', help='Configured platform name', default=None)
 @click.option('--dbprops', help='Database properties file', default=None)
 @click.option('--model', help='Model name', default=None)
 @click.option('--scenario', help='Scenario name', default=None)
 @click.option('--version', help='Scenario version', default=None)
 @click.pass_context
-def main(ctx, dbprops, model, scenario, version):
+def main(ctx, platform, dbprops, model, scenario, version):
     """Command interface, e.g. $ ixmp COMMAND """
 
     # Load the indicated Platform
-    if dbprops:
-        mp = ixmp.Platform(dbprops)
-        ctx.obj = dict(mp=mp)
+    if dbprops and platform:
+        raise click.BadOptionUsage('give either --platform or --dbprops')
 
-        # With a Platform, load the indicated Scenario
-        if model and scenario:
-            scen = ixmp.Scenario(mp, model, scenario, version=version)
-            ctx.obj['scen'] = scen
+    if platform:
+        mp = ixmp.Platform(name=platform)
+    elif dbprops:
+        mp = ixmp.Platform(backend='jdbc', dbprops=dbprops)
+
+    try:
+        ctx.obj = dict(mp=mp)
+    except NameError:
+        return
+
+    # With a Platform, load the indicated Scenario
+    if model and scenario:
+        scen = ixmp.Scenario(mp, model, scenario, version=version)
+        ctx.obj['scen'] = scen
 
 
 @main.command()

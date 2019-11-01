@@ -8,10 +8,11 @@ Configuration for ixmp and its storage backends has been streamlined.
 
 - Instead of ``DB_CONFIG_PATH``:
   - Platform configuration is stored in the ``config.json`` configuration file.
-  - Platform storage backends may accept relative or absolute paths to backend-specific configuration files.
+  - The :class:`Platform` constructor accepts the name of a stored platform configuration.
+  - Different storage backends may accept relative or absolute paths to backend-specific configuration files.
 - Instead of ``DEFAULT_DBPROPS_FILE``:
-  - Use ``ixmp platform add NAME ARGS`` followed by ``ixmp platform add default NAME``.
-- Instead of ``DEFAULT_LOCAL_DB_PATH``: :obj:`ixmp.config` automatically contains a platform named 'local' that is located below the configuration path, in the directory 'localdb/default'.
+  - On the command-line, use ``ixmp platform add NAME ARGS`` followed by ``ixmp platform add default NAME``.
+- Instead of ``DEFAULT_LOCAL_DB_PATH``: :obj:`ixmp.config` always contains a platform named 'local' that is located below the configuration path, in the directory 'localdb/default'.
   - To change this path, use, e.g.: ``ixmp platform add local jdbc hsqldb PATH``.
 
 

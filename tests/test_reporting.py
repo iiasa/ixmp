@@ -2,6 +2,7 @@
 import os
 import subprocess
 
+from click.testing import CliRunner
 import ixmp
 import numpy as np
 import pandas as pd
@@ -463,25 +464,34 @@ def test_reporter_visualize(test_mp, tmp_path):
     # TODO compare to a specimen
 
 
-def test_reporting_cli(test_mp_props, test_data_path):
-    # Put something in the database
-    mp = ixmp.Platform(dbprops=test_mp_props)
-    make_dantzig(mp)
-    mp.close_db()
-    del mp
+def test_reporting_cli(test_mp, test_data_path):
+    from ixmp.cli import main as ixmp_cli
 
-    cmd = ['ixmp',
-           '--dbprops', str(test_mp_props),
+    runner = CliRunner()
+
+    # Put something in the database
+    make_dantzig(test_mp)
+    test_mp.close_db()
+
+    platform_name = test_mp.name
+
+    # Delete the platform/close the database connection
+    del test_mp
+
+    cmd = ['--platform', platform_name,
            '--model', 'canning problem',
            '--scenario', 'standard',
            'report',
            '--config', str(test_data_path / 'report-config-0.yaml'),
            '--default', 'd_check',
            ]
-    out = subprocess.check_output(cmd, encoding='utf-8')
+
+    # 'report' command runs
+    result = runner.invoke(ixmp_cli, cmd)
+    assert result.exit_code == 0
 
     # Reporting produces the expected command-line output
-    assert out.endswith("""
+    assert result.output.endswith("""
 <xarray.DataArray 'value' (i: 2, j: 3)>
 array([[1.8, 2.5, 1.4],
        [1.7, 2.5, 1.8]])

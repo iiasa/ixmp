@@ -81,7 +81,7 @@ class Platform:
 
         if name:
             # Retrieve platform configuration for *name*
-            kwargs = config.get_platform_info(name)
+            self.name, kwargs = config.get_platform_info(name)
 
         if kwargs['class'] == 'jdbc' and len(args):
             # Copy positional args for the default JDBC backend
@@ -99,7 +99,6 @@ class Platform:
         try:
             backend_class = BACKENDS[kwargs.pop('class')]
         except KeyError:
-            print(kwargs)
             raise ValueError('backend class {!r} not among {}'
                              .format(kwargs['class'], sorted(BACKENDS.keys())))
 

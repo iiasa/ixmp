@@ -53,11 +53,11 @@ def pytest_report_header(config, startdir):
 
 
 @pytest.fixture(scope='session')
-def ixmp_cli():
+def ixmp_cli(tmp_env):
     """A CliRunner object that invokes the ixmp command-line interface."""
     class Runner(CliRunner):
         def invoke(self, *args, **kwargs):
-            return super().invoke(cli.main, *args, **kwargs)
+            return super().invoke(cli.main, *args, env=tmp_env, **kwargs)
 
     yield Runner()
 

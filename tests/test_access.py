@@ -4,33 +4,29 @@ from time import sleep
 
 from pretenders.client.http import HTTPMock
 from pretenders.common.constants import FOREVER
+import pytest
 
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from pathlib import Path
 import ixmp
 import shutil
 
 
-def with_mock_server(test_fn):
-    # def mocked_test(*args, **kwargs):
-    def mocked_test(tmpdir, test_data_path):
-        proc = Popen(
-            [sys.executable, '-m',
-             'pretenders.server.server',
-             '--host', 'localhost',
-             '--port', '8000'])
-        print('Mock server started with pid ' + str(proc.pid))
-        sleep(1)
-        try:
-            # test_fn(*args, **kwargs)
-            test_fn(tmpdir, test_data_path)
-        finally:
-            proc.terminate()
-            print('Mock server terminated')
+@pytest.fixture(scope='function')
+def mock():
+    proc = Popen(
+        [sys.executable, '-m',
+         'pretenders.server.server',
+         '--host', 'localhost',
+         '--port', '8000'])
+    print('Mock server started with pid {}'.format(proc.pid))
 
-    return mocked_test
+    # Wait for server to start up
+    sleep(0.5)
+
+    yield HTTPMock('localhost', 8000)
+
+    proc.terminate()
+    print('Mock server terminated')
 
 
 def create_local_testdb(db_path, data_path, db='ixmptest',
@@ -57,9 +53,7 @@ def create_local_testdb(db_path, data_path, db='ixmptest',
     return test_props
 
 
-@with_mock_server
-def test_check_single_model_access(tmpdir, test_data_path):
-    mock = HTTPMock('localhost', 8000)
+def test_check_single_model_access(mock, tmpdir, test_data_path):
     mock.when(
         'POST /login'
     ).reply(
@@ -98,9 +92,7 @@ def test_check_single_model_access(tmpdir, test_data_path):
     assert not granted
 
 
-@with_mock_server
-def test_check_multi_model_access(tmpdir, test_data_path):
-    mock = HTTPMock('localhost', 8000)
+def test_check_multi_model_access(mock, tmpdir, test_data_path):
     mock.when(
         'POST /login'
     ).reply(

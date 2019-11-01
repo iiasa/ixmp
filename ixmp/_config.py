@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 import json
 import logging
 import os
@@ -178,7 +178,7 @@ class Config:
             # The 'default' key stores the name of another config'd platform
             name = self.values['platform'].get(name, None)
         try:
-            return self.values['platform'][name]
+            return name, copy(self.values['platform'][name])
         except KeyError:
             message = 'platform name {!r} not among {!r}\nfrom {}' \
                 .format(name, sorted(self.values['platform'].keys()),

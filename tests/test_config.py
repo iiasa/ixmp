@@ -5,7 +5,7 @@ except ImportError:
 
 import pytest
 
-from ixmp.config import Config
+from ixmp._config import Config
 
 
 try:

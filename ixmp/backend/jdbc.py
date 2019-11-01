@@ -1,21 +1,27 @@
 from collections import ChainMap
 from collections.abc import Collection, Iterable
+from contextlib import contextmanager
 from functools import lru_cache
+import logging
 import os
 from pathlib import Path
 import re
+from tempfile import mkstemp
 from types import SimpleNamespace
+from warnings import warn
 
 import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
 
-from ixmp.config import _config
 from ixmp.core import Scenario
-from ixmp.utils import islistable, logger
+from ixmp.utils import islistable
 from . import FIELDS
 from .base import Backend
+
+
+log = logging.getLogger(__name__)
 
 
 # Map of Python to Java log levels
@@ -44,6 +50,50 @@ JAVA_CLASSES = [
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
 ]
+
+
+def _read_dbprops(path):
+    return str(path), path.read_text()
+
+
+def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
+    """Create a temporary dbprops file."""
+    # Lines to appear in the file
+    lines = [
+        'jdbc.driver = {driver}',
+        'jdbc.url = {full_url}',
+        'jdbc.user = {user}',
+        'jdbc.pwd = {password}',
+    ]
+
+    # Handle arguments
+    if driver == 'oracle':
+        driver = 'oracle.jdbc.driver.OracleDriver'
+
+        if url is None or path is not None:
+            raise ValueError("use JDBCBackend(driver='oracle', url=…)")
+
+        full_url = 'jdbc:oracle:thin:@{}'.format(url)
+    elif driver == 'hsqldb':
+        driver = 'org.hsqldb.jdbcDriver'
+
+        if path is None or url is not None:
+            print(driver, path, url, user, password)
+            raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
+
+        full_url = 'jdbc:hsqldb:file:{}'.format(Path(path).resolve())
+        user = user or 'ixmp'
+        password = password or 'ixmp'
+    else:
+        raise ValueError(type)
+
+    fmt = locals()
+    contents = '\n'.join(line.format(**fmt) for line in lines)
+
+    file = Path(mkstemp(suffix='.properties', text=True)[1])
+    file.write_text(contents)
+
+    return str(file), full_url
 
 
 class JDBCBackend(Backend):
@@ -90,34 +140,48 @@ class JDBCBackend(Backend):
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
     jindex = {}
 
-    def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
+    def __init__(self, jvmargs=None, **kwargs):
+        # Handle arguments
+        try:
+            # Use an existing file
+            dbprops = Path(kwargs.pop('dbprops'))
+            if dbprops.exists():
+                properties_file, info = _read_dbprops(dbprops)
+            else:
+                raise FileNotFoundError(dbprops)
+        except KeyError:
+            # No 'dbprops' kwargs
+
+            # Move 'dbtype' to 'driver'
+            if 'dbtype' in kwargs:
+                warn("'dbtype' argument to JDBCBackend; use 'driver'",
+                     DeprecationWarning)
+                if 'driver' in kwargs:
+                    message = ('ambiguous: both driver={driver!r} and '
+                               'dbtype={!r}').format(**kwargs)
+                    raise ValueError(message)
+                kwargs['driver'] = kwargs.pop('dbtype').lower()
+
+            # Create dbprops in a temporary file
+            properties_file, info = _temp_dbprops(**kwargs)
+            self._properties_file = properties_file
+
+        log.info('launching ixmp.Platform connected to {}'.format(info))
+
         start_jvm(jvmargs)
-        self.dbtype = dbtype
 
         try:
-            # if no dbtype is specified, launch Platform with properties file
-            if dbtype is None:
-                dbprops = _config.find_dbprops(dbprops)
-                if dbprops is None:
-                    raise ValueError("Not found database properties file "
-                                     "to launch platform")
-                logger().info("launching ixmp.Platform using config file at "
-                              "'{}'".format(dbprops))
-                self.jobj = java.Platform('Python', str(dbprops))
-            # if dbtype is specified, launch Platform with local database
-            elif dbtype == 'HSQLDB':
-                dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
-                logger().info("launching ixmp.Platform with local {} database "
-                              "at '{}'".format(dbtype, dbprops))
-                self.jobj = java.Platform('Python', str(dbprops), dbtype)
-            else:
-                raise ValueError('Unknown dbtype: {}'.format(dbtype))
+            self.jobj = java.Platform('Python', properties_file)
         except TypeError:
-            msg = ("Could not launch the JVM for the ixmp.Platform."
-                   "Make sure that all dependencies of ixmp.jar"
-                   "are included in the 'ixmp/lib' folder.")
-            logger().info(msg)
+            log.info('Make sure that all dependencies of ixmp.jar are included'
+                     " in 'ixmp/lib'.")
             raise
+
+    def __del__(self):
+        try:
+            Path(self._properties_file).unlink()
+        except AttributeError:
+            return
 
     # Platform methods
 

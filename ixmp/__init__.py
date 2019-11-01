@@ -5,6 +5,7 @@ from ixmp.core import (  # noqa: F401
     TimeSeries,
     Scenario,
 )
+from ._config import config  # noqa: F401
 from .backend import BACKENDS
 from .backend.jdbc import JDBCBackend
 from .model import MODELS

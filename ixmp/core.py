@@ -5,6 +5,7 @@ from warnings import warn
 
 import pandas as pd
 
+from ._config import config
 from .backend import BACKENDS, FIELDS
 from .model import get_model
 from .utils import (
@@ -69,17 +70,41 @@ class Platform:
         'close_db',
     ]
 
-    def __init__(self, *args, backend='jdbc', **backend_args):
-        if backend != 'jdbc':
-            raise ValueError(f'unknown ixmp backend {backend!r}')
-        else:
+    def __init__(self, *args, name=None, backend=None, **backend_args):
+        if name is None:
+            if backend is None and not len(backend_args):
+                # No arguments given: use the default configuration
+                name = 'default'
+            else:
+                # backend and/or backend_args were given
+                kwargs = {'class': backend}
+
+        if name:
+            # Retrieve platform configuration for *name*
+            kwargs = config.get_platform_info(name)
+
+        if kwargs['class'] == 'jdbc' and len(args):
             # Copy positional args for the default JDBC backend
+            warn('positional arguments to Platform(…) for JDBCBackend. '
+                 'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
+                 DeprecationWarning)
             for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
                 if len(args) > i:
                     backend_args[arg] = args[i]
 
-        backend_cls = BACKENDS[backend]
-        self._backend = backend_cls(**backend_args)
+        # Overwrite configuration with keyword arguments
+        kwargs.update(backend_args)
+
+        # Identify the Backend class
+        try:
+            backend_class = BACKENDS[kwargs.pop('class')]
+        except KeyError:
+            print(kwargs)
+            raise ValueError('backend class {!r} not among {}'
+                             .format(kwargs['class'], sorted(BACKENDS.keys())))
+
+        # Instantiate the backend
+        self._backend = backend_class(**kwargs)
 
     def __getattr__(self, name):
         """Convenience for methods of Backend."""

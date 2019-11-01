@@ -81,14 +81,35 @@ def report(ctx, config, default):
                                    'default_local_db_path']))
 @click.argument('value', nargs=-1, type=click.Path())
 def config(action, key, value):
+    """Set/get configuration keys."""
     key = key.upper()
 
     if action == 'get':
         if len(value):
             raise click.BadArgumentUsage("VALUE given for 'get' action")
-        print(ixmp.config._config.get(key))
-    else:
-        ixmp.config._config.set(key, value[0])
+        print(ixmp.config.get(key))
+    elif action == 'set':
+        ixmp.config.set(key, value[0])
 
         # Save the configuration to file
-        ixmp.config._config.save()
+        ixmp.config.save()
+
+
+@main.command()
+@click.argument('action', type=click.Choice(['add', 'remove', 'list']))
+@click.argument('name', required=False)
+@click.argument('values', nargs=-1)
+def platform(action, name, values):
+    """Set/get platform configuration."""
+    if action == 'remove':
+        assert len(values) == 0
+        ixmp.config.remove_platform(name)
+        print('Removed platform config for {!r}'.format(name))
+    elif action == 'add':
+        ixmp.config.add_platform(name, *values)
+
+        # Save the configuration to file
+        ixmp.config.save()
+    elif action == 'list':
+        for key, info in ixmp.config.values['platform'].items():
+            print(key, info)

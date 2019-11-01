@@ -1,10 +1,17 @@
-from itertools import chain
+from copy import deepcopy
 import json
 import logging
 import os
 from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+
+class _JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Path):
+            return str(o)
+        return json.JSONEncoder.default(self, o)
 
 
 class Config:
@@ -16,11 +23,11 @@ class Config:
         Read `config.json` on startup.
     """
     # User configuration keys
-    _keys = [
-        'DB_CONFIG_PATH',
-        'DEFAULT_DBPROPS_FILE',
-        'DEFAULT_LOCAL_DB_PATH',
-    ]
+    _keys = {
+        'platform': dict,
+    }
+
+    path = None
 
     def __init__(self, read=True):
         # Default values
@@ -46,34 +53,22 @@ class Config:
         yield 'default', Path.home() / '.local' / 'share' / 'ixmp'
         yield 'default (ixmp<=1.1)', Path.home() / '.local' / 'ixmp'
 
-    def _locate(self, filename=None, dirs=[]):
+    def _locate(self, filename=None):
         """Locate an existing *filename* in the ixmp config directories.
 
         If *filename* is None (the default), only directories are located.
-        If *dirs* are provided, they are tried in order before the ixmp config
-        directories.
         """
         tried = []
-        dirs = map(lambda d: ('arg', d), dirs)
-        for label, directory in chain(dirs, self._iter_paths()):
-            try:
-                directory = Path(directory)
-            except TypeError:
-                # e.g. 'DB_CONFIG_PATH' via find_dbprops() is None
-                continue
-
+        for label, directory in self._iter_paths():
             if filename:
                 # Locate a specific file
                 if (directory / filename).exists():
                     return directory / filename
-                else:
-                    tried.append(str(directory))
             else:
                 # Locate an existing directory
                 if directory.exists():
                     return directory
-                else:
-                    tried.append(str(directory))
+            tried.append(str(directory))
 
         if filename:
             raise FileNotFoundError('Could not find {} in {!r}'
@@ -91,7 +86,7 @@ class Config:
             config_path = self._locate('config.json')
             contents = config_path.read_text()
             self.values.update(json.loads(contents))
-            self.values['CONFIG_PATH'] = config_path
+            self.path = config_path
         except FileNotFoundError:
             pass
         except json.JSONDecodeError:
@@ -113,13 +108,18 @@ class Config:
 
     def clear(self):
         """Clear all configuration keys by setting their values to None."""
-        self.values = {key: None for key in self._keys}
+        self.values = {key: val_type() for key, val_type in self._keys.items()}
 
-        # Set 'DEFAULT_LOCAL_DB_PATH'
-        # Use the first identifiable path
+        # Set the default local database path
         _, config_dir = next(self._iter_paths())
-        self.values['DEFAULT_LOCAL_DB_PATH'] = (config_dir / 'localdb' /
-                                                'default')
+        self.values['platform'] = {
+            'default': 'local',
+            'local': {
+                'class': 'jdbc',
+                'driver': 'hsqldb',
+                'path': config_dir / 'localdb' / 'default',
+            }
+        }
 
     def save(self):
         """Write configuration keys to file.
@@ -136,40 +136,57 @@ class Config:
         # Make the directory to contain the configuration file
         path.parent.mkdir(parents=True, exist_ok=True)
 
+        values = deepcopy(self.values)
+        for key, value_type in self._keys.items():
+            if value_type is str and values[key] == '':
+                values.pop(key)
+
         # Write the file
         log.info('Updating configuration file: {}'.format(path))
-        with open(path, 'w') as f:
-            json.dump({k: str(self.values[k]) for k in self._keys if
-                       self.values[k] is not None}, f, indent=2)
+        path.write_text(_JSONEncoder(indent=2).encode(values))
 
-    def find_dbprops(self, fname):
-        """Return the absolute path to a database properties file.
-
-        Searches for a file named *fname*, first in the current working
-        directory (`.`), then in the ixmp default location.
-
-        Parameters
-        ----------
-        fname : str
-            Name of a database properties file to locate.
-
-        Returns
-        -------
-        str
-            Absolute path to *fname*.
-
-        Raises
-        ------
-        FileNotFoundError
-            *fname* is not found in any of the search paths.
-        """
-        if fname is None:
-            # Use the default
-            return self.get('DEFAULT_DBPROPS_FILE')
+    def add_platform(self, name, *args):
+        args = list(args)
+        if name == 'default':
+            assert len(args) == 1
+            info = args[0]
         else:
-            # Look in the current directory first, then the config directories
-            return self._locate(fname,
-                                dirs=[Path.cwd(), self.get('DB_CONFIG_PATH')])
+            cls = args.pop(0)
+            info = {'class': cls}
+
+            if cls == 'jdbc':
+                info['driver'] = args.pop(0)
+                assert info['driver'] in ('oracle', 'hsqldb'), info['driver']
+                if info['driver'] == 'oracle':
+                    info['url'] = args.pop(0)
+                    info['user'] = args.pop(0)
+                    info['password'] = args.pop(0)
+                elif info['driver'] == 'hsqldb':
+                    info['path'] = args.pop(0)
+                assert len(args) == 0
+            else:
+                raise ValueError(cls)
+
+        if name in self.values['platform']:
+            log.warning('Overwriting existing config: {!r}'
+                        .format(self.values['platform'][name]))
+
+        self.values['platform'][name] = info
+
+    def get_platform_info(self, name):
+        if name == 'default':
+            # The 'default' key stores the name of another config'd platform
+            name = self.values['platform'].get(name, None)
+        try:
+            return self.values['platform'][name]
+        except KeyError:
+            message = 'platform name {!r} not among {!r}\nfrom {}' \
+                .format(name, sorted(self.values['platform'].keys()),
+                        self.path)
+            raise ValueError(message)
+
+    def remove_platform(self, name):
+        self.values['platform'].pop(name)
 
 
-_config = Config()
+config = Config()

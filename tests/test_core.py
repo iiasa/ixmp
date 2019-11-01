@@ -20,7 +20,7 @@ def test_default_dbprops_file(tmp_env, test_mp_props, caplog):
     subprocess.check_call(cmd.split(), env=tmp_env)
 
     # Force configuration reload
-    ixmp.config._config.read()
+    ixmp.config.read()
 
     # Platform is instantiated using the default database properties file
     mp = ixmp.Platform()
@@ -40,7 +40,7 @@ def test_db_config_path(tmp_env, test_mp_props, caplog):
     subprocess.check_call(cmd.split(), env=tmp_env)
 
     # Force configuration reload
-    ixmp.config._config.read()
+    ixmp.config.read()
 
     # Platform is instantiated used a relative filename, found in the
     # database configuration path

@@ -11,21 +11,18 @@ These include:
 """
 import io
 import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
-import pytest
+from pathlib import Path
 import shutil
-import sys
 import subprocess
+import sys
 
 import pandas as pd
 from pandas.testing import assert_series_equal
+import pytest
 from xarray import DataArray
 from xarray.testing import assert_equal as assert_xr_equal
 
-from .config import _config as ixmp_config
+from ._config import config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
 from .reporting.utils import AttrSeries, Quantity
 
@@ -44,6 +41,9 @@ models = {
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
     ixmp_config.clear()
+    # Further clear an automatic reference to the user's home directory.
+    # See fixture tmp_env below
+    ixmp_config.values['platform']['local'].pop('path')
 
 
 def pytest_report_header(config, startdir):
@@ -60,13 +60,29 @@ def tmp_env(tmp_path_factory):
     written and read in this directory without modifying the current user's
     configuration.
     """
-    os.environ['IXMP_DATA'] = str(tmp_path_factory.mktemp('config'))
+    os.environ['IXMP_DATA'] = str(tmp_path_factory.getbasetemp())
 
     yield os.environ
 
 
+@pytest.fixture(scope='session')
+def tmp_cfg(tmp_env, tmp_path_factory):
+    # Clear keys
+    ixmp_config.clear()
+
+    # Set the path for the default/local platform in the test directory set by
+    # tmp_env
+    localdb = Path(os.environ['IXMP_DATA']) / 'localdb' / 'default'
+    ixmp_config.values['platform']['local']['path'] = localdb
+
+    # Save for other processes
+    ixmp_config.save()
+
+    return ixmp_config
+
+
 @pytest.fixture(scope='function')
-def test_mp(tmp_path_factory, test_data_path):
+def test_mp(request, tmp_env, test_data_path):
     """An ixmp.Platform connected to a temporary, local database.
 
     *test_mp* is used across the entire test session, so the contents of the
@@ -77,14 +93,30 @@ def test_mp(tmp_path_factory, test_data_path):
     # python2's pathlib which is incompatible with python3's pathlib Path
     # objects.  This can be taken out once it is resolved upstream and CI is
     # setup on multiple Python3.x distros.
-    db_path = Path(str(tmp_path_factory.mktemp('test_mp')))
-    test_props = create_local_testdb(db_path, test_data_path / 'testdb')
+
+    # Name of the test function, without the preceding 'test_'
+    dirname = request.node.name.split('test_', 1)[1]
+    # Long, unique name for the platform
+    platform_name = request.node.nodeid
+
+    # Path to the database
+    db_path = Path(os.environ['IXMP_DATA']) / 'localdb' / dirname
+    db_path.parent.mkdir(exist_ok=True)
+
+    # Create the database
+    create_local_testdb(db_path, test_data_path / 'testdb')
+
+    # Add a platform
+    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb', db_path)
 
     # launch Platform and connect to testdb (reconnect if closed)
-    mp = Platform(test_props)
+    mp = Platform(name=platform_name)
     mp.open_db()
 
     yield mp
+
+    # Teardown: remove from config
+    ixmp_config.remove_platform(platform_name)
 
 
 @pytest.fixture(scope='session')
@@ -118,23 +150,16 @@ TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path, db='ixmptest'):
-    """Create a local database for testing in the directory *db_path*.
+def create_local_testdb(db_path, data_path):
+    """Create a local database for testing at *db_path*.
 
-    Returns the path to a database properties file in the directory. Contents
-    are copied from *data_path*.
+    The files ixmptest.lobs and ixmptest.script are copied and renamed from
+    *data_path*.
     """
-    # Copy test database
-    dst = Path(db_path) / 'testdb'
-    shutil.copytree(data_path, str(dst))
-
-    # Create properties file
-    props = (Path(data_path) / 'test.properties_template').read_text()
-    test_props = dst / 'test.properties'
-    test_props.write_text(props.format(here=str(dst).replace("\\", "/"),
-                          db=db))
-
-    return test_props
+    for name in 'ixmptest.lobs', 'ixmptest.script':
+        src = data_path / name
+        dst = db_path.with_suffix(src.suffix)
+        shutil.copyfile(str(src), str(dst))
 
 
 def make_dantzig(mp, solve=False):

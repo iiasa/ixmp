@@ -180,6 +180,12 @@ class JDBCBackend(Backend):
             log.info('Make sure that all dependencies of ixmp.jar are included'
                      " in 'ixmp/lib'.")
             raise
+        except jpype.JException as e:
+            message = (
+                'unhandled Javaexception in JDBCBackend/ixmp_source:\n'
+                + '{}\n'.format(e.__class__.__name__)
+                + '{}'.format(e))
+            raise RuntimeError(message)
 
     def __del__(self):
         try:

@@ -1,10 +1,14 @@
 import numpy as np
 import pytest
 
+import ixmp
 from ixmp.testing import get_cell_output, run_notebook
 
 
 def test_py_transport(tutorial_path, tmp_path, tmp_env):
+    # FIXME ixmp_source raises exceptions if this is not explicitly done first
+    ixmp.Platform().close_db()
+
     fname = tutorial_path / 'transport' / 'py_transport.ipynb'
     nb, errors = run_notebook(fname, tmp_path, tmp_env)
     assert errors == []
@@ -14,6 +18,9 @@ def test_py_transport(tutorial_path, tmp_path, tmp_env):
 
 
 def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
+    # FIXME ixmp_source raises exceptions if this is not explicitly done first
+    ixmp.Platform().close_db()
+
     fname = tutorial_path / 'transport' / 'py_transport_scenario.ipynb'
     nb, errors = run_notebook(fname, tmp_path, tmp_env)
     assert errors == []

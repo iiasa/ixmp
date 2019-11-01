@@ -23,8 +23,7 @@ import pytest
 from xarray import DataArray
 from xarray.testing import assert_equal as assert_xr_equal
 
-from . import cli
-from ._config import config as ixmp_config
+from . import cli, config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
 from .reporting.utils import AttrSeries, Quantity
 
@@ -72,25 +71,17 @@ def tmp_env(tmp_path_factory):
     written and read in this directory without modifying the current user's
     configuration.
     """
-    os.environ['IXMP_DATA'] = str(tmp_path_factory.getbasetemp())
+    base_temp = tmp_path_factory.getbasetemp()
+    os.environ['IXMP_DATA'] = str(base_temp)
 
-    yield os.environ
-
-
-@pytest.fixture(scope='session')
-def tmp_cfg(tmp_env, tmp_path_factory):
-    # Clear keys
-    ixmp_config.clear()
-
-    # Set the path for the default/local platform in the test directory set by
-    # tmp_env
-    localdb = Path(os.environ['IXMP_DATA']) / 'localdb' / 'default'
+    # Set the path for the default/local platform in the test directory
+    localdb = base_temp / 'localdb' / 'default'
     ixmp_config.values['platform']['local']['path'] = localdb
 
     # Save for other processes
     ixmp_config.save()
 
-    return ixmp_config
+    yield os.environ
 
 
 @pytest.fixture(scope='function')

@@ -14,6 +14,7 @@ can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
+@pytest.mark.skip
 def test_db_config_path(tmp_env, test_mp_props, caplog):
     # TODO replace with tests that
     # - CLI can accept an absolute path to a dbprops file.
@@ -35,7 +36,13 @@ def test_db_config_path(tmp_env, test_mp_props, caplog):
     assert scenario[0] == 'Hitchhiker'
 
 
-def test_platform_init_raises():
+def test_platform_deprecated(tmp_env):
+    """Deprecated semantics for Platform/JDBCBackend."""
+    msg = r"'dbtype' argument to JDBCBackend; use 'driver'"
+    with pytest.warns(DeprecationWarning, match=msg):
+        ixmp.Platform(dbtype='HSQLDB')
+
+    # Initializing with an invalid dbtype
     pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
 
 

@@ -145,6 +145,9 @@ class Config:
         log.info('Updating configuration file: {}'.format(path))
         path.write_text(_JSONEncoder(indent=2).encode(values))
 
+        # Update the path attribute to match the written file
+        self.path = path
+
     def add_platform(self, name, *args):
         args = list(args)
         if name == 'default':

@@ -14,6 +14,7 @@ from jpype import JClass
 import numpy as np
 import pandas as pd
 
+from ixmp import config
 from ixmp.core import Scenario
 from ixmp.utils import islistable
 from . import FIELDS
@@ -159,7 +160,12 @@ class JDBCBackend(Backend):
                     message = ('ambiguous: both driver={driver!r} and '
                                'dbtype={!r}').format(**kwargs)
                     raise ValueError(message)
-                kwargs['driver'] = kwargs.pop('dbtype').lower()
+                elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
+                    log.info("using platform 'local' for dbtype='hsqldb'")
+                    _, kwargs = config.get_platform_info('local')
+                    assert kwargs.pop('class') == 'jdbc'
+                else:
+                    kwargs['driver'] = kwargs.pop('dbtype').lower()
 
             # Create dbprops in a temporary file
             properties_file, info = _temp_dbprops(**kwargs)

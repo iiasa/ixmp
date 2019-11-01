@@ -15,6 +15,8 @@ from .utils import (
     logger,
 )
 
+log = logging.getLogger(__name__)
+
 # %% default settings for column headers
 
 IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
@@ -73,38 +75,44 @@ class Platform:
     def __init__(self, *args, name=None, backend=None, **backend_args):
         if name is None:
             if backend is None and not len(backend_args):
-                # No arguments given: use the default configuration
+                # No arguments given: use the default platform config
                 name = 'default'
+            elif backend is None:
+                # Only backend_args given
+                log.info('Using default JDBC backend')
+                kwargs = {'class': 'jdbc'}
             else:
-                # backend and/or backend_args were given
+                # Backend and maybe backend_args were given
                 kwargs = {'class': backend}
 
         if name:
-            # Retrieve platform configuration for *name*
+            # Using a named platform config; retrieve it
             self.name, kwargs = config.get_platform_info(name)
 
         if len(args):
+            # Handle deprecated positional arguments
             if backend and backend != 'jdbc':
-                message = ("backend={!r} conflicts with deprecated positional "
-                           " arguments for JDBCBackend (dbprops, dbtype, "
-                           " jvmargs)").format(backend)
+                message = ('backend={!r} conflicts with deprecated positional '
+                           ' arguments for JDBCBackend (dbprops, dbtype, '
+                           ' jvmargs)').format(backend)
                 raise ValueError(message)
-            else:
+            elif backend is None:
                 # Providing positional args implies JDBCBackend
                 kwargs['class'] = 'jdbc'
 
-            # Copy positional args to keyword args
             warn('positional arguments to Platform(…) for JDBCBackend. '
                  'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
                  DeprecationWarning)
+
+            # Copy positional args to keyword args
             for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
                 if len(args) > i:
                     backend_args[arg] = args[i]
 
-        # Overwrite configuration with keyword arguments
+        # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)
 
-        # Identify the Backend class
+        # Retrieve the Backend class
         try:
             backend_class = BACKENDS[kwargs.pop('class')]
         except KeyError:

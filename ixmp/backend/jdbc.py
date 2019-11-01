@@ -78,7 +78,6 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
         driver = 'org.hsqldb.jdbcDriver'
 
         if path is None or url is not None:
-            print(driver, path, url, user, password)
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
         full_url = 'jdbc:hsqldb:file:{}'.format(Path(path).resolve())

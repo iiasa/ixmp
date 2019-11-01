@@ -3,15 +3,14 @@ import ixmp
 
 
 @click.group()
-@click.option('--platform', help='Configured platform name.', default=None)
-@click.option('--dbprops', help='Database properties file.', default=None)
-@click.option('--model', help='Model name.', default=None)
-@click.option('--scenario', help='Scenario name.', default=None)
-@click.option('--version', help='Scenario version.', type=int, default=None)
+@click.option('--platform', help='Configured platform name.')
+@click.option('--dbprops', type=click.Path(exists=True, dir_okay=False),
+              help='Database properties file.')
+@click.option('--model', help='Model name.')
+@click.option('--scenario', help='Scenario name.')
+@click.option('--version', type=int, help='Scenario version.')
 @click.pass_context
 def main(ctx, platform, dbprops, model, scenario, version):
-    """Command interface, e.g. $ ixmp COMMAND """
-
     # Load the indicated Platform
     if dbprops and platform:
         raise click.BadOptionUsage('give either --platform or --dbprops')
@@ -60,14 +59,10 @@ def report(ctx, config, default):
 
 @main.command()
 @click.argument('action', type=click.Choice(['set', 'get']))
-@click.argument('key', metavar='KEY',
-                type=click.Choice(['db_config_path', 'default_dbprops_file',
-                                   'default_local_db_path']))
-@click.argument('value', nargs=-1, type=click.Path())
+@click.argument('key', metavar='KEY')
+@click.argument('value', nargs=-1)
 def config(action, key, value):
     """Set/get configuration keys."""
-    key = key.upper()
-
     if action == 'get':
         if len(value):
             raise click.BadArgumentUsage("VALUE given for 'get' action")
@@ -80,10 +75,8 @@ def config(action, key, value):
 
 
 @main.command('import')
-@click.option('--firstyear', type=int, default=None,
-              help='First year of data to include.')
-@click.option('--lastyear', type=int, default=None,
-              help='Final year of data to include.')
+@click.option('--firstyear', type=int, help='First year of data to include.')
+@click.option('--lastyear', type=int, help='Final year of data to include.')
 @click.argument('data', type=click.Path(exists=True, dir_okay=False))
 @click.pass_obj
 def import_command(context, firstyear, lastyear, data):

@@ -26,10 +26,32 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
+def test_main(ixmp_cli, tmp_path):
+    # Giving both --platform and --dbprops is bad option usage
+    r = ixmp_cli.invoke(['--platform', 'pname', '--dbprops', str(tmp_path)])
+    assert r.exit_code == 2
+
+
+def test_config(ixmp_cli):
+    # ixmp has no string keys by default, so we insert a fake one
+    ixmp.config._keys['test key'] = str
+    ixmp.config.values['test key'] = 'foo'
+
+    # get() works
+    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'foo\n'
+
+    # set() changes the value
+    result = ixmp_cli.invoke(['config', 'set', 'test key', 'bar'])
+    assert result.exit_code == 0
+    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'bar\n'
+
+    # get() with a value is an invalid call
+    result = ixmp_cli.invoke(['config', 'get', 'test key', 'BADVALUE'])
+    assert result.exit_code != 0
+
+
 def test_platform(ixmp_cli, tmp_path):
     """Test 'platform' command."""
-    from ixmp import config
-
     def call(*args, exit_0=True):
         result = ixmp_cli.invoke(['platform'] + list(map(str, args)))
         assert not exit_0 or result.exit_code == 0
@@ -53,12 +75,25 @@ def test_platform(ixmp_cli, tmp_path):
 
     # JDBC HSQLDB platform can be added with absolute path
     r = call('add', 'p2', 'jdbc', 'hsqldb', tmp_path)
-    assert config.get_platform_info('p2')[1]['path'] == tmp_path
+    assert ixmp.config.get_platform_info('p2')[1]['path'] == tmp_path
 
     # JDBC HSQLDB platform can be added with relative path
     rel = './foo'
     r = call('add', 'p3', 'jdbc', 'hsqldb', rel)
-    assert Path(rel).resolve() == config.get_platform_info('p3')[1]['path']
+    assert Path(rel).resolve() == \
+        ixmp.config.get_platform_info('p3')[1]['path']
+
+    # Platform can be removed
+    r = call('remove', 'p3')
+    assert r.output == "Removed platform config for 'p3'\n"
+
+    # Non-existent platform can't be removed
+    r = call('remove', 'p3', exit_0=False)  # Already removed
+    assert r.exit_code == 1
+
+    # Extra args to 'remove' are invalid
+    r = call('remove', 'p2', 'BADARG', exit_0=False)
+    assert r.exit_code == 1
 
 
 def test_import(ixmp_cli, test_mp, test_data_path):

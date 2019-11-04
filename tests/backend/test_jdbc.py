@@ -30,4 +30,5 @@ def test_deprecated(tmp_env):
         ixmp.Platform(dbtype='HSQLDB')
 
     # Initializing with an invalid dbtype
-    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
+    with pytest.warns(DeprecationWarning, match=msg):
+        pytest.raises(ValueError, ixmp.Platform, dbtype='foo')

@@ -1,6 +1,5 @@
 """Tests for ixmp.reporting."""
 import os
-import subprocess
 
 from click.testing import CliRunner
 import ixmp
@@ -487,7 +486,9 @@ def test_reporting_cli(test_mp, test_data_path):
            ]
 
     # 'report' command runs
-    result = runner.invoke(ixmp_cli, cmd)
+    with pytest.warns(UserWarning,
+                      match=r"Unrecognized sections \['notarealsection'\]"):
+        result = runner.invoke(ixmp_cli, cmd)
     assert result.exit_code == 0
 
     # Reporting produces the expected command-line output

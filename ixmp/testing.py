@@ -160,8 +160,10 @@ def create_local_testdb(db_path, data_path):
     *data_path*.
     """
     for name in 'ixmptest.lobs', 'ixmptest.script':
-        src = data_path / name
-        dst = db_path.with_suffix(src.suffix)
+        # NB explicit Path(...) here is necessary because this function is
+        #    called directly from rixmp; see conftest.R
+        src = Path(data_path) / name
+        dst = Path(db_path).with_suffix(src.suffix)
         shutil.copyfile(str(src), str(dst))
 
 

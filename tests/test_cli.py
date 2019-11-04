@@ -13,7 +13,7 @@ def test_main(ixmp_cli, tmp_path):
 
 def test_config(ixmp_cli):
     # ixmp has no string keys by default, so we insert a fake one
-    ixmp.config._keys['test key'] = str
+    ixmp.config.register('test key', str)
     ixmp.config.values['test key'] = 'foo'
 
     # get() works

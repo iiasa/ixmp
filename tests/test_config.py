@@ -1,6 +1,6 @@
 import pytest
 
-from ixmp._config import Config
+from ixmp._config import KEYS, Config
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def test_locate(cfg):
 
 def test_set_get(cfg):
     # ixmp has no string keys by default, so we insert a fake one
-    cfg._keys['test key'] = str
+    KEYS['test key'] = str
     cfg.values['test key'] = 'foo'
 
     # get() works

@@ -7,6 +7,12 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
+# Recognized configuration keys
+KEYS = {
+    'platform': dict,
+}
+
+
 class _JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Path):
@@ -28,11 +34,6 @@ class Config:
     read : bool
         Read ``config.json`` on startup.
     """
-    # Recognized configuration keys.
-    _keys = {
-        'platform': dict,
-    }
-
     #: Full-resolved path of the ``config.json`` file.
     path = None
 
@@ -106,12 +107,27 @@ class Config:
         """Return the value of a configuration *key*."""
         return self.values[key]
 
-    def set(self, key, value):
+    def register(self, name, type, default=None):
+        if name in KEYS:
+            raise KeyError('configuration key {!r} already defined'
+                           .format(name))
+        KEYS[name] = type
+        self.values[name] = type()
+
+        if default:
+            self.set(name, default)
+
+    def set(self, name, value):
         """Set configuration *key* to *value*."""
-        assert key in self.values
         if value is None:
             return
-        self.values[key] = value
+
+        type_ = KEYS[name]
+        if not isinstance(value, type_):
+            raise ValueError('expected {} for key {!r}; got {} {!r}'
+                             .format(type_, name, type(value), value))
+
+        self.values[name] = value
 
     def clear(self):
         """Clear all configuration keys by setting empty values.
@@ -128,7 +144,7 @@ class Config:
               },
           }
         """
-        self.values = {key: val_type() for key, val_type in self._keys.items()}
+        self.values = {key: val_type() for key, val_type in KEYS.items()}
 
         # Set the default local database path
         _, config_dir = next(self._iter_paths())
@@ -157,7 +173,7 @@ class Config:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         values = deepcopy(self.values)
-        for key, value_type in self._keys.items():
+        for key, value_type in KEYS.items():
             if value_type is str and values[key] == '':
                 values.pop(key)
 

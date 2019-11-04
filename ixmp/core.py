@@ -728,8 +728,11 @@ class Scenario(TimeSeries):
 
         Raises
         ------
-        :class:`jpype.JavaException`
+        ValueError
             If the set (or another object with the same *name*) already exists.
+        RuntimeError
+            If the Scenario is not checked out (see
+            :meth:`~TimeSeries.check_out`).
         """
         return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
@@ -1206,8 +1209,8 @@ class Scenario(TimeSeries):
 
         if shift_first_model_year is not None:
             if keep_solution:
-                logger().warn('Overriding keep_solution=True for '
-                              'shift_first_model_year')
+                logger().warning('Overriding keep_solution=True for '
+                                 'shift_first_model_year')
                 keep_solution = False
 
         platform = platform or self.platform

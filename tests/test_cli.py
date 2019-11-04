@@ -1,29 +1,8 @@
 from pathlib import Path
 
 import ixmp
-import jpype
 import pandas as pd
 import pandas.testing as pdt
-
-
-def test_jvm_warn(recwarn):
-    """Test that no warnings are issued on JVM start-up.
-
-    A warning message is emitted e.g. for JPype 0.7 if the 'convertStrings'
-    kwarg is not provided to jpype.startJVM.
-
-    NB this function should be in test_core.py, but because pytest executes
-    tests in file, then code order, it must be before the call to ix.Platform()
-    below.
-    """
-
-    # Start the JVM for the first time in the test session
-    from ixmp.backend.jdbc import start_jvm
-    start_jvm()
-
-    if jpype.__version__ > '0.7':
-        # Zero warnings were recorded
-        assert len(recwarn) == 0, recwarn.pop().message
 
 
 def test_main(ixmp_cli, tmp_path):
@@ -68,6 +47,8 @@ def test_platform(ixmp_cli, tmp_path):
     r = call('add', 'default', 'p1')
     r = call('list')
     assert 'default p1\n' in r.output
+    # Reset to avoid disturbing other tests
+    call('add', 'default', 'local')
 
     # Setting the default using a non-existent platform fails
     r = call('add', 'default', 'nonexistent', exit_0=False)

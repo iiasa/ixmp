@@ -1,6 +1,5 @@
 import subprocess
 
-import jpype
 import pandas as pd
 import pytest
 from numpy import testing as npt
@@ -34,16 +33,6 @@ def test_db_config_path(tmp_env, test_mp_props, caplog):
 
     scenario = mp.scenario_list(model='Douglas Adams')['scenario']
     assert scenario[0] == 'Hitchhiker'
-
-
-def test_platform_deprecated(tmp_env):
-    """Deprecated semantics for Platform/JDBCBackend."""
-    msg = r"'dbtype' argument to JDBCBackend; use 'driver'"
-    with pytest.warns(DeprecationWarning, match=msg):
-        ixmp.Platform(dbtype='HSQLDB')
-
-    # Initializing with an invalid dbtype
-    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
 
 
 def test_scen_list(test_mp):
@@ -108,7 +97,7 @@ def test_init_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add set on a locked scenario
-    with pytest.raises(jpype.JException,
+    with pytest.raises(RuntimeError,
                        match="This Scenario cannot be edited, do a checkout "
                              "first!"):
         scen.init_set('foo')
@@ -118,8 +107,7 @@ def test_init_set(test_mp):
     scen.init_set('foo')
 
     # Initialize an already-existing set
-    with pytest.raises(jpype.JException,
-                       match="An Item with the name 'foo' already exists!"):
+    with pytest.raises(ValueError, match="'foo' already exists"):
         scen.init_set('foo')
 
 

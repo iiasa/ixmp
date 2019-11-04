@@ -45,6 +45,7 @@ JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
+    'java.lang.NoClassDefFoundError',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
@@ -140,32 +141,38 @@ class JDBCBackend(Backend):
     jindex = {}
 
     def __init__(self, jvmargs=None, **kwargs):
+        properties_file = None
+
         # Handle arguments
-        try:
+        if 'dbtype' in kwargs:
+            warn("'dbtype' argument to JDBCBackend; use 'driver'",
+                 DeprecationWarning)
+
+            if 'driver' in kwargs:
+                message = ('ambiguous: both driver={driver!r} and '
+                           'dbtype={!r}').format(**kwargs)
+                raise ValueError(message)
+            elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
+                log.info("using platform 'local' for dbtype='hsqldb'")
+                _, kwargs = config.get_platform_info('local')
+                assert kwargs.pop('class') == 'jdbc'
+            else:
+                kwargs['driver'] = kwargs.pop('dbtype').lower()
+
+        if 'dbprops' in kwargs:
             # Use an existing file
             dbprops = Path(kwargs.pop('dbprops'))
             if dbprops.exists():
+                # Existing properties file
                 properties_file, info = _read_dbprops(dbprops)
+            elif dbprops.with_suffix('.lobs').exists():
+                # Actually the basename for a HSQLDB
+                kwargs.setdefault('driver', 'hsqldb')
+                kwargs.setdefault('path', dbprops)
             else:
                 raise FileNotFoundError(dbprops)
-        except KeyError:
-            # No 'dbprops' kwargs
 
-            # Move 'dbtype' to 'driver'
-            if 'dbtype' in kwargs:
-                warn("'dbtype' argument to JDBCBackend; use 'driver'",
-                     DeprecationWarning)
-                if 'driver' in kwargs:
-                    message = ('ambiguous: both driver={driver!r} and '
-                               'dbtype={!r}').format(**kwargs)
-                    raise ValueError(message)
-                elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
-                    log.info("using platform 'local' for dbtype='hsqldb'")
-                    _, kwargs = config.get_platform_info('local')
-                    assert kwargs.pop('class') == 'jdbc'
-                else:
-                    kwargs['driver'] = kwargs.pop('dbtype').lower()
-
+        if not properties_file:
             # Create dbprops in a temporary file
             properties_file, info = _temp_dbprops(**kwargs)
             self._properties_file = properties_file
@@ -176,16 +183,21 @@ class JDBCBackend(Backend):
 
         try:
             self.jobj = java.Platform('Python', properties_file)
-        except TypeError:
-            log.info('Make sure that all dependencies of ixmp.jar are included'
-                     " in 'ixmp/lib'.")
-            raise
+        except java.NoClassDefFoundError as e:
+            raise NameError(
+                '{}\nCheck that dependencies of ixmp.jar are included in {}'
+                .format(e, Path(__file__).parents[2] / 'lib'))
         except jpype.JException as e:
-            message = (
-                'unhandled Javaexception in JDBCBackend/ixmp_source:\n'
-                + '{}\n'.format(e.__class__.__name__)
-                + '{}'.format(e))
-            raise RuntimeError(message)
+            # Handle Java exceptions
+            jclass = e.__class__.__name__
+            info = ':\n{}\n(Java: {})'.format(e, jclass)
+            if jclass.endswith('HikariPool.PoolInitializationException'):
+                raise ValueError(
+                    'unable to connect to database:\n{}'.format(kwargs))
+            elif jclass.endswith('FlywayException'):
+                raise RuntimeError('when initializing database' + info)
+            else:
+                raise RuntimeError('unhandled exception in JDBCBackend' + info)
 
     def __del__(self):
         try:
@@ -440,7 +452,16 @@ class JDBCBackend(Backend):
 
         # The constructor returns a reference to the Java Item, but these
         # aren't exposed by Backend, so don't return here
-        func(name, idx_sets, idx_names)
+        try:
+            func(name, idx_sets, idx_names)
+        except jpype.JException as e:
+            e = str(e)
+            if e.startswith('This Scenario cannot be edited'):
+                raise RuntimeError(e)
+            elif 'already exists' in e:
+                raise ValueError('{!r} already exists'.format(name))
+            else:
+                raise
 
     def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')()

@@ -3,7 +3,7 @@ from collections.abc import Collection, Iterable
 from functools import lru_cache
 import logging
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 from tempfile import mkstemp
 from types import SimpleNamespace
@@ -81,7 +81,10 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
         if path is None or url is not None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
-        full_url = 'jdbc:hsqldb:file:{}'.format(Path(path).resolve())
+        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
+        # spec
+        url_path = PurePosixPath(Path(path).resolve()).replace('\\', '')
+        full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         user = user or 'ixmp'
         password = password or 'ixmp'
     else:

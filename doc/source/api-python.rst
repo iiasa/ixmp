@@ -158,33 +158,43 @@ Scenario
 Configuration
 -------------
 
-.. currentmodule:: ixmp.config
+When imported, :mod:`ixmp` reads configuration from the first file named
+``config.json`` found in one of the following directories:
 
-.. autoclass:: Config
+1. The directory given by the environment variable ``IXMP_DATA``, if
+   defined,
+2. ``${XDG_DATA_HOME}/ixmp``, if the environment variable is defined,
+3. ``$HOME/.local/share/ixmp``, or
+4. ``$HOME/.local/ixmp`` (deprecated; retained for compatibility with ixmp
+   <= 1.1).
 
-   When imported, :mod:`ixmp` reads configuration from the first file named
-   ``config.json`` found in one of the following directories:
+.. tip::
+   For most users, #2 or #3 is a sensible default; platform information for many local and remote databases can be stored in ``config.json`` and retrieved by name.
 
-   1. The directory given by the environment variable ``IXMP_DATA``, if
-      defined,
-   2. ``${XDG_DATA_HOME}/ixmp``, if the environment variable is defined,
-   3. ``$HOME/.local/share/ixmp``, or
-   4. ``$HOME/.local/ixmp`` (deprecated; retained for compatibility with ixmp
-      <= 1.1).
+   Advanced users wishing to use a project-specific ``config.json`` can set ``IXMP_DATA`` to the directory containing this file.
 
-   The file may define either or both of the following configuration keys, in
-   JSON format:
+To manipulate the configuration file, use the ``platform`` command in the ixmp command-line interface::
 
-   - `DB_CONFIG_PATH`: location for database properties files. A
-     :class:`ixmp.Platform` instantiated with a relative path name for the
-     `dbprops` argument will locate the file first in the current working
-     directory, then in `DB_CONFIG_PATH`, then in the four directories above.
-   - `DEFAULT_DBPROPS_FILE`: path to a default database properties file.
-     A :class:`ixmp.Platform` instantiated with no arguments will use this
-     file.
-   - `DEFAULT_LOCAL_DB_PATH`: path to a directory where a local directory
-     should be created. A :class:`ixmp.Platform` instantiated with
-     `dbtype='HSQLDB'` will create or reuse a database in this path.
+  # Add a platform named 'p1' backed by a local HSQL database
+  $ ixmp platform add p1 jdbc hsqldb /path/to/database/files
+
+  # Add a platform named 'p2' backed by a remote Oracle database
+  $ ixmp platform add p2 jdbc oracle \
+         database.server.example.com:PORT:SCHEMA username password
+
+  # Make 'p2' the default Platform
+  $ ixmp platform add default p2
+
+…or, use the methods of :obj:`ixmp.config`.
+
+.. currentmodule:: ixmp
+
+.. data:: ixmp.config
+
+   An instance of :class:`~.Config`.
+
+.. autoclass:: ixmp._config.Config
+   :members:
 
 
 Testing utilities

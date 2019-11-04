@@ -17,16 +17,23 @@ class _JSONEncoder(json.JSONEncoder):
 class Config:
     """Configuration for ixmp.
 
+    Config stores two kinds of data: simple keys with a single value, and
+    structured Platform information.
+
+    ixmp has no built-in simple keys; however, it can store keys for other
+    packages that build on ixmp, such as :mod:`message_ix`.
+
     Parameters
     ----------
     read : bool
-        Read `config.json` on startup.
+        Read ``config.json`` on startup.
     """
-    # User configuration keys
+    # Recognized configuration keys.
     _keys = {
         'platform': dict,
     }
 
+    #: Full-resolved path of the ``config.json`` file.
     path = None
 
     def __init__(self, read=True):
@@ -79,14 +86,14 @@ class Config:
     def read(self):
         """Try to read configuration keys from file.
 
-        If successful, the configuration key 'CONFIG_PATH' is set to the path
-        of the file.
+        If successful, the attribute :attr:`path` is set to the path of the
+        file.
         """
         try:
             config_path = self._locate('config.json')
             contents = config_path.read_text()
             self.values.update(json.loads(contents))
-            self.path = config_path
+            self.path = config_path.resolve()
         except FileNotFoundError:
             pass
         except json.JSONDecodeError:
@@ -107,7 +114,20 @@ class Config:
         self.values[key] = value
 
     def clear(self):
-        """Clear all configuration keys by setting their values to None."""
+        """Clear all configuration keys by setting empty values.
+
+        :meth:`clear` also sets the default local platform::
+
+          {
+            "platform": {
+              "default": "local",
+              "local": {
+                "class": "jdbc",
+                "driver": "hsqldb",
+                "path": "~/.local/share/ixmp/localdb/default"
+              },
+          }
+        """
         self.values = {key: val_type() for key, val_type in self._keys.items()}
 
         # Set the default local database path
@@ -124,7 +144,7 @@ class Config:
     def save(self):
         """Write configuration keys to file.
 
-        `config.json` is created in the first of the ixmp configuration
+        ``config.json`` is created in the first of the ixmp configuration
         directories that exists. Only non-null values are written.
         """
         # Use the first identifiable path
@@ -149,6 +169,19 @@ class Config:
         self.path = path
 
     def add_platform(self, name, *args):
+        """Add or overwrite information about a platform.
+
+        Parameters
+        ----------
+        name : str
+            New or existing platform name.
+        args
+            Positional arguments. If *name* is 'default', *args* must be a
+            single string: the name of an existing configured Platform.
+            Otherwise, the first of *args* specifies one of the
+            :obj:`~.BACKENDS`, and the remaining *args* are specific to that
+            backend.
+        """
         args = list(args)
         if name == 'default':
             assert len(args) == 1
@@ -180,6 +213,25 @@ class Config:
         self.values['platform'][name] = info
 
     def get_platform_info(self, name):
+        """Return information on configured Platform *name*.
+
+        Parameters
+        ----------
+        name : str
+            Existing platform. If *name* is 'default', then the information for
+            the default platform is returned.
+
+        Returns
+        -------
+        dict
+            The 'class' key specifies one of the :obj:`~.BACKENDS`.
+            Other keys vary by backend class.
+
+        Raises
+        ------
+        KeyError
+            If *name* is not configured as a platform.
+        """
         if name == 'default':
             # The 'default' key stores the name of another config'd platform
             name = self.values['platform'].get(name, None)
@@ -192,7 +244,9 @@ class Config:
             raise ValueError(message)
 
     def remove_platform(self, name):
+        """Remove the configuration for platform *name*."""
         self.values['platform'].pop(name)
 
 
+#: Default |ixmp| configuration object.
 config = Config()

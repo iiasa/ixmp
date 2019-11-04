@@ -1,10 +1,8 @@
-import collections
+from collections.abc import Iterable
 import logging
 
 import pandas as pd
 import six
-
-import ixmp
 
 
 # globally accessible logger
@@ -49,12 +47,12 @@ def isstr(x):
 
 def isscalar(x):
     """Returns True if x is a scalar"""
-    return not isinstance(x, collections.Iterable) or isstr(x)
+    return not isinstance(x, Iterable) or isstr(x)
 
 
 def islistable(x):
     """Returns True if x is a list but not a string"""
-    return isinstance(x, collections.Iterable) and not isstr(x)
+    return isinstance(x, Iterable) and not isstr(x)
 
 
 def check_year(y, s):

@@ -83,7 +83,7 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
 
         # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
         # spec
-        url_path = PurePosixPath(Path(path).resolve()).replace('\\', '')
+        url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
         full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         user = user or 'ixmp'
         password = password or 'ixmp'

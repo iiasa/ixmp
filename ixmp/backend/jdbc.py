@@ -224,7 +224,14 @@ class JDBCBackend(Backend):
         time. Any existing connection must be closed before a new one can be
         opened.
         """
-        self.jobj.closeDB()
+        try:
+            self.jobj.closeDB()
+        except java.IxException as e:
+            if str(e) == 'Error closing the database connection!':
+                log.warning('Database connection could not be closed or was '
+                            'already closed')
+            else:
+                log.warning(str(e))
 
     def get_auth(self, user, models, kind):
         return self.jobj.checkModelAccess(user, kind, to_jlist2(models))

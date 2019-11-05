@@ -6,9 +6,29 @@ import pandas.testing as pdt
 
 
 def test_main(ixmp_cli, tmp_path):
+    # Name of a temporary file that doesn't exist
+    tmp_path /= 'temp.properties'
+
+    # Giving --dbprops and a nonexistent file is an invalid argument
+    cmd = [
+        '--platform', 'pname',
+        '--dbprops', str(tmp_path),
+        'platform', 'list',  # Doesn't get executed; fails in cli.main()
+    ]
+    r = ixmp_cli.invoke(cmd)
+    assert r.exit_code == 2  # click retcode for bad option usage; --
+
+    # Create the file
+    tmp_path.write_text('')
+
     # Giving both --platform and --dbprops is bad option usage
-    r = ixmp_cli.invoke(['--platform', 'pname', '--dbprops', str(tmp_path)])
-    assert r.exit_code == 2
+    r = ixmp_cli.invoke(cmd)
+    assert r.exit_code == 1
+
+    # --dbprops alone causes backend='jdbc' to be inferred (but an error
+    # because temp.properties is empty)
+    r = ixmp_cli.invoke(cmd[2:])
+    assert 'JDBCBackend' in r.exception.args[0]
 
 
 def test_config(ixmp_cli):

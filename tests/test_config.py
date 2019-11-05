@@ -1,12 +1,18 @@
 import pytest
 
-from ixmp._config import KEYS, Config, _locate
+from ixmp._config import KEYS, _JSONEncoder, Config, _locate
 
 
 @pytest.fixture
 def cfg():
     """Return a :class:`ixmp.config.Config` object that doesn't read a file."""
     yield Config(read=False)
+
+
+def test_encoder():
+    # Custom encoder properly raises TypeError for unhandled value
+    with pytest.raises(TypeError):
+        _JSONEncoder().encode({'foo': range(10)})
 
 
 def test_locate(cfg):
@@ -37,6 +43,22 @@ def test_set_get(cfg):
     # set() with None makes no change
     cfg.set('test key', None)
     assert cfg.get('test key') == 'bar'
+
+    # set() with invalid type raises exception
+    with pytest.raises(TypeError):
+        cfg.set('test key', 12)
+
+
+def test_register(cfg):
+    # New key can be registered
+    cfg.register('new key', int, 42)
+
+    # Default value is set on the instance
+    assert cfg.get('new key') == 42
+
+    # Can't re-register an existing key
+    with pytest.raises(KeyError):
+        cfg.register('new key', int, 43)
 
 
 def test_config_platform(cfg):

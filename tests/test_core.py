@@ -11,6 +11,12 @@ can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
+def test_platform_init():
+    with pytest.raises(ValueError, match="backend class 'foo' not among "
+                       r"\['jdbc'\]"):
+        ixmp.Platform(backend='foo')
+
+
 def test_scen_list(test_mp):
     scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
     assert scenario[0] == 'Hitchhiker'

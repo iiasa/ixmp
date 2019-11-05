@@ -112,10 +112,11 @@ class Platform:
 
         # Retrieve the Backend class
         try:
-            backend_class = BACKENDS[kwargs.pop('class')]
+            backend_class = kwargs.pop('class')
+            backend_class = BACKENDS[backend_class]
         except KeyError:
             raise ValueError('backend class {!r} not among {}'
-                             .format(kwargs['class'], sorted(BACKENDS.keys())))
+                             .format(backend_class, sorted(BACKENDS.keys())))
 
         # Instantiate the backend
         self._backend = backend_class(**kwargs)

@@ -151,10 +151,10 @@ class Config:
         if value is None:
             return
 
-        type_ = KEYS[name]
+        type_, _ = KEYS[name]
         if not isinstance(value, type_):
-            raise ValueError('expected {} for key {!r}; got {} {!r}'
-                             .format(type_, name, type(value), value))
+            raise TypeError('expected {} for {!r}; got {} {!r}'
+                            .format(type_, name, type(value), value))
 
         self.values[name] = value
 

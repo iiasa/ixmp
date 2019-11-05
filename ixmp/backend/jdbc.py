@@ -186,11 +186,11 @@ class JDBCBackend(Backend):
 
         try:
             self.jobj = java.Platform('Python', properties_file)
-        except java.NoClassDefFoundError as e:
+        except java.NoClassDefFoundError as e:  # pragma: no cover
             raise NameError(
                 '{}\nCheck that dependencies of ixmp.jar are included in {}'
                 .format(e, Path(__file__).parents[2] / 'lib'))
-        except jpype.JException as e:
+        except jpype.JException as e:  # pragma: no cover
             # Handle Java exceptions
             jclass = e.__class__.__name__
             info = ':\n{}\n(Java: {})'.format(e, jclass)
@@ -421,8 +421,9 @@ class JDBCBackend(Backend):
               keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
-            raise NotImplementedError(f'Clone between {self.__class__} and'
-                                      f'{platform_dest._backend.__class__}')
+            raise NotImplementedError(  # pragma: no cover
+                f'Clone between {self.__class__} and'
+                f'{platform_dest._backend.__class__}')
         elif platform_dest._backend is not self:
             msg = 'Cross-platform clone of {}.Scenario with'.format(
                 s.__class__.__module__.split('.')[0])
@@ -555,7 +556,7 @@ class JDBCBackend(Backend):
             if 'does not have an element' in msg:
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
-            else:
+            else:  # pragma: no cover
                 raise RuntimeError('Unhandled Java exception') from e
 
     def item_delete_elements(self, s, type, name, keys):
@@ -642,7 +643,7 @@ class JDBCBackend(Backend):
                 # Re-raise as a Python KeyError
                 raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
                                'Scenario!') from None
-            else:
+            else:  # pragma: no cover
                 raise RuntimeError('Unhandled Java exception') from e
 
 

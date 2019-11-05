@@ -105,9 +105,7 @@ class Platform:
                  DeprecationWarning)
 
             # Copy positional args to keyword args
-            for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
-                if len(args) > i:
-                    backend_args[arg] = args[i]
+            backend_args.update(zip(['dbprops', 'dbtype', 'jvmargs'], args))
 
         # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)

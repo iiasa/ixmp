@@ -1,6 +1,6 @@
 import pytest
 
-from ixmp._config import KEYS, Config
+from ixmp._config import KEYS, Config, _locate
 
 
 @pytest.fixture
@@ -14,17 +14,17 @@ def test_locate(cfg):
         # The result of this test depends on the user's environment. If
         # $HOME/.local/share/ixmp exists, the call will succeed; otherwise,
         # it will fail.
-        cfg._locate()
+        _locate()
     except FileNotFoundError:
         pass
 
     with pytest.raises(FileNotFoundError):
-        cfg._locate('nonexistent')
+        _locate('nonexistent')
 
 
 def test_set_get(cfg):
     # ixmp has no string keys by default, so we insert a fake one
-    KEYS['test key'] = str
+    KEYS['test key'] = (str, None)
     cfg.values['test key'] = 'foo'
 
     # get() works

@@ -88,7 +88,7 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
         user = user or 'ixmp'
         password = password or 'ixmp'
     else:
-        raise ValueError(type)
+        raise ValueError(driver)
 
     fmt = locals()
     contents = '\n'.join(line.format(**fmt) for line in lines)

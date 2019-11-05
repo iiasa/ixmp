@@ -7,17 +7,64 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
-# Recognized configuration keys
-KEYS = {
-    'platform': dict,
-}
-
-
 class _JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Path):
             return str(o)
         return json.JSONEncoder.default(self, o)
+
+
+def _iter_config_paths():
+    """Yield recognized configuration paths, in order of priority."""
+    try:
+        yield 'environment (IXMP_DATA)', Path(os.environ['IXMP_DATA'])
+    except KeyError:
+        pass
+
+    try:
+        yield 'environment (XDG_DATA_HOME)', \
+            Path(os.environ['XDG_DATA_HOME'], 'ixmp')
+    except KeyError:
+        pass
+
+    yield 'default', Path.home() / '.local' / 'share' / 'ixmp'
+    yield 'default (ixmp<=1.1)', Path.home() / '.local' / 'ixmp'
+
+
+# Recognized configuration keys
+KEYS = {
+    'platform': (dict, {
+        'default': 'local',
+        'local': {
+            'class': 'jdbc',
+            'driver': 'hsqldb',
+            'path': next(_iter_config_paths())[1] / 'localdb' / 'default',
+        }}),
+}
+
+
+def _locate(filename=None):
+    """Locate an existing *filename* in the ixmp config directories.
+
+    If *filename* is None (the default), only directories are located.
+    """
+    tried = []
+    for label, directory in _iter_config_paths():
+        if filename:
+            # Locate a specific file
+            if (directory / filename).exists():
+                return directory / filename
+        else:
+            # Locate an existing directory
+            if directory.exists():
+                return directory
+        tried.append(str(directory))
+
+    if filename:
+        raise FileNotFoundError('Could not find {} in {!r}'
+                                .format(filename, tried))
+    else:
+        raise FileNotFoundError('Could not find any of {!r}'.format(tried))
 
 
 class Config:
@@ -37,6 +84,9 @@ class Config:
     #: Full-resolved path of the ``config.json`` file.
     path = None
 
+    # Configuration values
+    values = dict()
+
     def __init__(self, read=True):
         # Default values
         self.clear()
@@ -45,45 +95,6 @@ class Config:
         if read:
             self.read()
 
-    def _iter_paths(self):
-        """Yield recognized paths, in order of priority."""
-        try:
-            yield 'environment (IXMP_DATA)', Path(os.environ['IXMP_DATA'])
-        except KeyError:
-            pass
-
-        try:
-            yield 'environment (XDG_DATA_HOME)', \
-                Path(os.environ['XDG_DATA_HOME'], 'ixmp')
-        except KeyError:
-            pass
-
-        yield 'default', Path.home() / '.local' / 'share' / 'ixmp'
-        yield 'default (ixmp<=1.1)', Path.home() / '.local' / 'ixmp'
-
-    def _locate(self, filename=None):
-        """Locate an existing *filename* in the ixmp config directories.
-
-        If *filename* is None (the default), only directories are located.
-        """
-        tried = []
-        for label, directory in self._iter_paths():
-            if filename:
-                # Locate a specific file
-                if (directory / filename).exists():
-                    return directory / filename
-            else:
-                # Locate an existing directory
-                if directory.exists():
-                    return directory
-            tried.append(str(directory))
-
-        if filename:
-            raise FileNotFoundError('Could not find {} in {!r}'
-                                    .format(filename, tried))
-        else:
-            raise FileNotFoundError('Could not find any of {!r}'.format(tried))
-
     def read(self):
         """Try to read configuration keys from file.
 
@@ -91,7 +102,7 @@ class Config:
         file.
         """
         try:
-            config_path = self._locate('config.json')
+            config_path = _locate('config.json')
             contents = config_path.read_text()
             self.values.update(json.loads(contents))
             self.path = config_path.resolve()
@@ -111,11 +122,11 @@ class Config:
         if name in KEYS:
             raise KeyError('configuration key {!r} already defined'
                            .format(name))
-        KEYS[name] = type
-        self.values[name] = type()
+        # Register the key for future clear()
+        KEYS[name] = (type, default)
 
-        if default:
-            self.set(name, default)
+        # Also set on the current config object
+        self.values[name] = default or type()
 
     def set(self, name, value):
         """Set configuration *key* to *value*."""
@@ -130,7 +141,7 @@ class Config:
         self.values[name] = value
 
     def clear(self):
-        """Clear all configuration keys by setting empty values.
+        """Clear all configuration keys by setting empty or default values.
 
         :meth:`clear` also sets the default local platform::
 
@@ -144,18 +155,14 @@ class Config:
               },
           }
         """
-        self.values = {key: val_type() for key, val_type in KEYS.items()}
+        self.values = dict()
+        for name, (value_type, default) in KEYS.items():
+            self.values[name] = default or value_type()
 
-        # Set the default local database path
-        _, config_dir = next(self._iter_paths())
-        self.values['platform'] = {
-            'default': 'local',
-            'local': {
-                'class': 'jdbc',
-                'driver': 'hsqldb',
-                'path': config_dir / 'localdb' / 'default',
-            }
-        }
+        # Set the default local database path; changed versus KEYS if IXMP_DATA
+        # has been altered since the module was imported
+        self.values['platform']['local']['path'] = \
+            next(_iter_config_paths())[1] / 'localdb' / 'default'
 
     def save(self):
         """Write configuration keys to file.
@@ -164,7 +171,7 @@ class Config:
         directories that exists. Only non-null values are written.
         """
         # Use the first identifiable path
-        _, config_dir = next(self._iter_paths())
+        _, config_dir = next(_iter_config_paths())
         path = config_dir / 'config.json'
 
         # TODO merge with existing configuration

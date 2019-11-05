@@ -85,7 +85,7 @@ def tmp_env(tmp_path_factory):
 
 
 @pytest.fixture(scope='function')
-def test_mp(request, tmp_env, test_data_path):
+def test_mp(request, tmp_env, test_data_path, name='ixmptest'):
     """An ixmp.Platform connected to a temporary, local database.
 
     *test_mp* is used across the entire test session, so the contents of the
@@ -107,7 +107,7 @@ def test_mp(request, tmp_env, test_data_path):
     db_path.parent.mkdir(exist_ok=True)
 
     # Create the database
-    create_local_testdb(db_path, test_data_path / 'testdb')
+    create_local_testdb(db_path, test_data_path / 'testdb', name)
 
     # Add a platform
     ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb', db_path)
@@ -153,16 +153,16 @@ TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path):
+def create_local_testdb(db_path, data_path, name='ixmptest'):
     """Create a local database for testing at *db_path*.
 
-    The files ixmptest.lobs and ixmptest.script are copied and renamed from
+    The files {name}.lobs and {name}.script are copied and renamed from
     *data_path*.
     """
-    for name in 'ixmptest.lobs', 'ixmptest.script':
+    for suffix in '.lobs', '.script':
         # NB explicit Path(...) here is necessary because this function is
         #    called directly from rixmp; see conftest.R
-        src = Path(data_path) / name
+        src = (Path(data_path) / name).with_suffix(suffix)
         dst = Path(db_path).with_suffix(src.suffix)
         shutil.copyfile(str(src), str(dst))
 

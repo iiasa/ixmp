@@ -1,6 +1,7 @@
 import ixmp
 import jpype
 import pytest
+from pytest import raises, warns
 
 
 def test_jvm_warn(recwarn):
@@ -34,38 +35,42 @@ def test_close(test_mp, caplog):
         'Database connection could not be closed or was already closed'
 
 
-def test_deprecated(tmp_env):
-    """Deprecated semantics for JDBCBackend."""
-    msg = r"'dbtype' argument to JDBCBackend; use 'driver'"
-    with pytest.warns(DeprecationWarning, match=msg):
-        ixmp.Platform(dbtype='HSQLDB')
-
-    # Initialize with an invalid dbtype
-    with pytest.warns(DeprecationWarning, match=msg):
-        pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
-
-    # …with driver='oracle' and path
-    with pytest.raises(ValueError):
-        ixmp.Platform(backend='jdbc', driver='oracle', path='foo/bar')
-
-    # …with driver='oracle' and no url
-    with pytest.raises(ValueError):
-        ixmp.Platform(backend='jdbc', driver='oracle')
-
-    # …with driver='hsqldb' and no path
-    with pytest.raises(ValueError):
-        ixmp.Platform(backend='jdbc', driver='hsqldb')
-
-    # …with driver='hsqldb' and url
-    with pytest.raises(ValueError):
-        ixmp.Platform(backend='jdbc', driver='hsqldb',
-                      url='example.com:1234:SCHEMA')
-
+DEPRECATED = (
+    # Handled in Platform:
     # Positional arguments that clash raise an error
-    with pytest.raises(ValueError, match="backend='foo' conflicts with "
-                       "deprecated positional arguments for JDBCBackend"):
-        ixmp.Platform('nonexistent.properties', backend='foo')
+    (['nonexistent.properties'], dict(backend='foo'), raises, ValueError,
+     "backend='foo' conflicts with deprecated positional arguments for "
+     "JDBCBackend"),
 
-    with pytest.warns(DeprecationWarning, match="positional arguments to "
-                      " Platform(…) for JDBCBackend"):
-        ixmp.Platform('nonexistent.properties')
+    # Handled in JDBCBackend:
+    (['nonexistent.properties'], dict(), raises, FileNotFoundError, None),
+    ([], dict(dbtype='HSQLDB'), warns, DeprecationWarning,
+     r"'dbtype' argument to JDBCBackend; use 'driver'"),
+    # Initialize with an invalid dbtype
+    ([], dict(dbtype='foo'), raises, ValueError, None),
+    # …with driver='oracle' and path
+    ([], dict(backend='jdbc', driver='oracle', path='foo/bar'), raises,
+     ValueError, None),
+    # …with driver='oracle' and no url
+    ([], dict(backend='jdbc', driver='oracle'), raises, ValueError, None),
+    # …with driver='hsqldb' and no path
+    ([], dict(backend='jdbc', driver='hsqldb'), raises, ValueError, None),
+    # …with driver='hsqldb' and url
+    ([], dict(backend='jdbc', driver='hsqldb', url='example.com:1234:SCHEMA'),
+     raises, ValueError, None),
+)
+
+
+@pytest.mark.parametrize('args,kwargs,action,kind,match', DEPRECATED)
+def test_deprecated(tmp_env, args, kwargs, action, kind, match):
+    """Deprecated semantics for JDBCBackend."""
+    with action(kind, match=match):
+        ixmp.Platform(*args, **kwargs)
+
+
+def test_deprecated_warns(tmp_env):
+    # Both warns AND raises
+    with pytest.raises(FileNotFoundError):
+        with pytest.warns(DeprecationWarning, match="positional arguments to "
+                          "Platform(…) for JDBCBackend"):
+            ixmp.Platform('nonexistent.properties', name='default')

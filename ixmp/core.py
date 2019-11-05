@@ -93,8 +93,8 @@ class Platform:
             # Handle deprecated positional arguments
             if backend and backend != 'jdbc':
                 message = ('backend={!r} conflicts with deprecated positional '
-                           ' arguments for JDBCBackend (dbprops, dbtype, '
-                           ' jvmargs)').format(backend)
+                           'arguments for JDBCBackend (dbprops, dbtype, '
+                           'jvmargs)').format(backend)
                 raise ValueError(message)
             elif backend is None:
                 # Providing positional args implies JDBCBackend

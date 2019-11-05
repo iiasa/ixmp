@@ -8,6 +8,11 @@ log = logging.getLogger(__name__)
 
 
 class _JSONEncoder(json.JSONEncoder):
+    """Helper for writing config to file.
+
+    The default JSONEncoder does not automatically convert pathlib.Path
+    objects.
+    """
     def default(self, o):
         if isinstance(o, Path):
             return str(o)
@@ -31,7 +36,7 @@ def _iter_config_paths():
     yield 'default (ixmp<=1.1)', Path.home() / '.local' / 'ixmp'
 
 
-# Recognized configuration keys
+# Recognized configuration keys; name -> (type, default value)
 KEYS = {
     'platform': (dict, {
         'default': 'local',
@@ -119,6 +124,19 @@ class Config:
         return self.values[key]
 
     def register(self, name, type, default=None):
+        """Register a new configuration key.
+
+        Parameters
+        ----------
+        name : str
+            Name of the new key; must not already exist.
+        type : object
+            Type of the key's value, such as :obj:`str` or
+            :class:`pathlib.Path`.
+        default : any, optional
+            Default value for the key. If not supplied, the *type* is called
+            to supply the default, value, e.g. ``str()``.
+        """
         if name in KEYS:
             raise KeyError('configuration key {!r} already defined'
                            .format(name))

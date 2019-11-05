@@ -1,3 +1,4 @@
+from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
 from functools import lru_cache
@@ -193,14 +194,16 @@ class JDBCBackend(Backend):
         except jpype.JException as e:  # pragma: no cover
             # Handle Java exceptions
             jclass = e.__class__.__name__
-            info = ':\n{}\n(Java: {})'.format(e, jclass)
+            info = '\n{}\n(Java: {})'.format(e, jclass)
             if jclass.endswith('HikariPool.PoolInitializationException'):
-                raise ValueError(
-                    'unable to connect to database:\n{}'.format(kwargs))
+                redacted = copy(kwargs)
+                redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
+                raise RuntimeError('unable to connect to database:\n{!r}{}'
+                                   .format(redacted, info)) from None
             elif jclass.endswith('FlywayException'):
-                raise RuntimeError('when initializing database' + info)
+                raise RuntimeError('when initializing database:' + info)
             else:
-                raise RuntimeError('unhandled exception in JDBCBackend' + info)
+                raise RuntimeError('unhandled Java exception:' + info) from e
 
     def __del__(self):
         try:
@@ -557,7 +560,7 @@ class JDBCBackend(Backend):
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
             else:  # pragma: no cover
-                raise RuntimeError('Unhandled Java exception') from e
+                raise RuntimeError('unhandled Java exception') from e
 
     def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
@@ -644,7 +647,7 @@ class JDBCBackend(Backend):
                 raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
                                'Scenario!') from None
             else:  # pragma: no cover
-                raise RuntimeError('Unhandled Java exception') from e
+                raise RuntimeError('unhandled Java exception') from e
 
 
 def start_jvm(jvmargs=None):

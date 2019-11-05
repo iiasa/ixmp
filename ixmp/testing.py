@@ -85,18 +85,12 @@ def tmp_env(tmp_path_factory):
 
 
 @pytest.fixture(scope='function')
-def test_mp(request, tmp_env, test_data_path, name='ixmptest'):
-    """An ixmp.Platform connected to a temporary, local database.
+def test_mp(request, tmp_env, test_data_path):
+    """An ixmp.Platform connected to a temporary, local database."""
+    yield from create_test_mp(request, test_data_path, 'ixmptest')
 
-    *test_mp* is used across the entire test session, so the contents of the
-    database may reflect other tests already run.
-    """
-    # casting to Path(str()) is a hotfix due to errors upstream in pytest on
-    # Python 3.5 (at least, perhaps others), there is an implicit cast to
-    # python2's pathlib which is incompatible with python3's pathlib Path
-    # objects.  This can be taken out once it is resolved upstream and CI is
-    # setup on multiple Python3.x distros.
 
+def create_test_mp(request, path, name):
     # Name of the test function, without the preceding 'test_'
     dirname = request.node.name.split('test_', 1)[1]
     # Long, unique name for the platform
@@ -107,7 +101,7 @@ def test_mp(request, tmp_env, test_data_path, name='ixmptest'):
     db_path.parent.mkdir(exist_ok=True)
 
     # Create the database
-    create_local_testdb(db_path, test_data_path / 'testdb', name)
+    create_local_testdb(db_path, path / 'testdb', name)
 
     # Add a platform
     ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb', db_path)

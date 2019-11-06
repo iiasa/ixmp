@@ -28,7 +28,7 @@ def test_main(ixmp_cli, tmp_path):
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
     r = ixmp_cli.invoke(cmd[2:])
-    assert 'JDBCBackend' in r.exception.args[0]
+    assert 'unhandled Java exception' in r.exception.args[0]
 
 
 def test_config(ixmp_cli):

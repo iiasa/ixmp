@@ -1,18 +1,6 @@
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
-
 import pytest
 
-from ixmp.config import Config
-
-
-try:
-    FileNotFoundError
-except NameError:
-    # Python 2.7
-    FileNotFoundError = OSError
+from ixmp._config import KEYS, _JSONEncoder, Config, _locate
 
 
 @pytest.fixture
@@ -21,26 +9,75 @@ def cfg():
     yield Config(read=False)
 
 
-def test_locate_nonexistent(cfg):
+def test_encoder():
+    # Custom encoder properly raises TypeError for unhandled value
+    with pytest.raises(TypeError):
+        _JSONEncoder().encode({'foo': range(10)})
+
+
+def test_locate(cfg):
+    try:
+        # The result of this test depends on the user's environment. If
+        # $HOME/.local/share/ixmp exists, the call will succeed; otherwise,
+        # it will fail.
+        _locate()
+    except FileNotFoundError:
+        pass
+
     with pytest.raises(FileNotFoundError):
-        cfg._locate('nonexistent')
+        _locate('nonexistent')
 
 
-def test_get(cfg):
-    # This key has a value even with no configuration provided
-    assert cfg.get('DEFAULT_LOCAL_DB_PATH')
+def test_set_get(cfg):
+    # ixmp has no string keys by default, so we insert a fake one
+    KEYS['test key'] = (str, None)
+    cfg.values['test key'] = 'foo'
+
+    # get() works
+    assert cfg.get('test key') == 'foo'
+
+    # set() changes the value
+    cfg.set('test key', 'bar')
+    assert cfg.get('test key') == 'bar'
+
+    # set() with None makes no change
+    cfg.set('test key', None)
+    assert cfg.get('test key') == 'bar'
+
+    # set() with invalid type raises exception
+    with pytest.raises(TypeError):
+        cfg.set('test key', 12)
 
 
-def test_find_dbprops(cfg):
-    # Returns an absolute path
-    expected_abs_path = Path.cwd() / 'foo.properties'
-    # u'' here is for python2 compatibility
-    expected_abs_path.write_text(u'bar')
+def test_register(cfg):
+    # New key can be registered
+    cfg.register('new key', int, 42)
 
-    assert cfg.find_dbprops('foo.properties') == Path(expected_abs_path)
+    # Default value is set on the instance
+    assert cfg.get('new key') == 42
 
-    expected_abs_path.unlink()
+    # Can't re-register an existing key
+    with pytest.raises(KeyError):
+        cfg.register('new key', int, 43)
 
-    # Exception raised on missing file
-    with pytest.raises(FileNotFoundError):
-        cfg.find_dbprops('foo.properties')
+
+def test_config_platform(cfg):
+    # Default platform is 'local'
+    assert cfg.values['platform']['default'] == 'local'
+
+    # Set another platform as the default
+    cfg.add_platform('dummy', 'jdbc', 'oracle', 'url', 'user', 'password')
+    cfg.add_platform('default', 'dummy')
+
+    # Now the default platform is 'dummy'
+    assert cfg.values['platform']['default'] == 'dummy'
+
+    # Same info is retrieved for 'default' and the actual name
+    assert cfg.get_platform_info('default') == cfg.get_platform_info('dummy')
+
+    # Invalid calls
+    with pytest.raises(ValueError):
+        cfg.add_platform('invalid', 'notabackend', 'other', 'args')
+
+    with pytest.raises(ValueError):
+        cfg.get_platform_info('nonexistent')

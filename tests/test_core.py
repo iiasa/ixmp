@@ -1,9 +1,6 @@
-import subprocess
-
-import jpype
+import numpy.testing as npt
 import pandas as pd
 import pytest
-from numpy import testing as npt
 
 import ixmp
 from ixmp.testing import make_dantzig
@@ -14,45 +11,10 @@ can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
-def test_default_dbprops_file(tmp_env, test_mp_props, caplog):
-    # Configure
-    cmd = 'ixmp-config --default_dbprops_file {}'.format(test_mp_props)
-    subprocess.check_call(cmd.split(), env=tmp_env)
-
-    # Force configuration reload
-    ixmp.config._config.read()
-
-    # Platform is instantiated using the default database properties file
-    mp = ixmp.Platform()
-
-    # NB. Scenario.__init__() does not store the name of the dbprops file.
-    #     Use captured log output to confirm the expected file is used.
-    assert launch_log_msg.format(test_mp_props) in caplog.text
-
-    # Platform contains the expected scenarios
-    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
-def test_db_config_path(tmp_env, test_mp_props, caplog):
-    # Configure
-    cmd = 'ixmp-config --db_config_path {}'.format(test_mp_props.parent)
-    subprocess.check_call(cmd.split(), env=tmp_env)
-
-    # Force configuration reload
-    ixmp.config._config.read()
-
-    # Platform is instantiated used a relative filename, found in the
-    # database configuration path
-    mp = ixmp.Platform(test_mp_props)
-    assert launch_log_msg.format(test_mp_props) in caplog.text
-
-    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
-def test_platform_init_raises():
-    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
+def test_platform_init():
+    with pytest.raises(ValueError, match="backend class 'foo' not among "
+                       r"\['jdbc'\]"):
+        ixmp.Platform(backend='foo')
 
 
 def test_scen_list(test_mp):
@@ -117,7 +79,7 @@ def test_init_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add set on a locked scenario
-    with pytest.raises(jpype.JException,
+    with pytest.raises(RuntimeError,
                        match="This Scenario cannot be edited, do a checkout "
                              "first!"):
         scen.init_set('foo')
@@ -127,8 +89,7 @@ def test_init_set(test_mp):
     scen.init_set('foo')
 
     # Initialize an already-existing set
-    with pytest.raises(jpype.JException,
-                       match="An Item with the name 'foo' already exists!"):
+    with pytest.raises(ValueError, match="'foo' already exists"):
         scen.init_set('foo')
 
 

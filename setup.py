@@ -48,8 +48,6 @@ setup(
     package_data={'ixmp': ['ixmp.jar'] + LIB_FILES},
     entry_points={
         'console_scripts': [
-            'import-timeseries=ixmp.cli:import_timeseries',
-            'ixmp-config=ixmp.cli:config',
             'ixmp=ixmp.cli:main',
         ],
     },

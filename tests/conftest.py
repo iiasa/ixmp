@@ -13,13 +13,8 @@ Notes:
         # etc.
 
 """
-import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from pathlib import Path
 
-import ixmp
 import pytest
 
 
@@ -42,25 +37,15 @@ def pytest_runtest_setup(item):
         pytest.skip('skipping rixmp test without --test-r flag')
 
 
-def pytest_sessionstart(session):
-    """Unset any configuration read from the user's directory."""
-    ixmp.config._config.clear()
-
-
-def pytest_report_header(config):
-    """Add the ixmp import path to the pytest report header."""
-    return 'ixmp location: {}'.format(os.path.dirname(ixmp.__file__))
-
-
 # Fixtures
 
 @pytest.fixture(scope='session')
-def test_data_path(request):
+def test_data_path():
     """Path to the directory containing test data."""
     return Path(__file__).parent / 'data'
 
 
 @pytest.fixture(scope='session')
-def tutorial_path(request):
+def tutorial_path():
     """Path to the directory containing the tutorials."""
-    return Path(__file__).parent / '..' / 'tutorial'
+    return Path(__file__).parents[1] / 'tutorial'

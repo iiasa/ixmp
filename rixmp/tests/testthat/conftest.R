@@ -4,7 +4,8 @@ test_mp <- function () {
   # An ixmp.Platform connected to a temporary, local database.
   #
   # This function mirrors the pytest fixture of the same name, defined in
-  # tests/conftest.py.
+  # ixmp.testing.
+  # FIXME use pytest internals to call the fixture functions directly
 
   # Path for the test database
   db_path <- file.path(Sys.getenv('IXMP_TEST_TMP_PATH'), .test_mp_count)
@@ -14,10 +15,10 @@ test_mp <- function () {
   db_data_path <- file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'testdb')
 
   # Create the database
-  test_props <- ixmp$testing$create_local_testdb(db_path, db_data_path)
+  ixmp$testing$create_local_testdb(db_path, db_data_path)
 
   # launch Platform and connect to testdb (reconnect if closed)
-  mp <- ixmp$Platform(test_props)
+  mp <- ixmp$Platform(backend='jdbc', driver='hsqldb', path=db_path)
   mp$open_db()
 
   return(mp)

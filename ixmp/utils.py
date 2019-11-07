@@ -75,29 +75,17 @@ def parse_url(url):
         ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]
         MODEL/SCENARIO[#VERSION]
 
-    Details:
+    where:
 
-    - The ``PLATFORM`` is interpreted as follows:
-
-      - The exact string 'local': the default local database.
-      - Any string ending in '.local' (e.g. 'foo.local'): the local database
-        of that name (e.g. 'foo') in the ``DEFAULT_LOCAL_DB_PATH``.
-      - Any other string (e.g. 'bar'): the remote database described by a
-        corresponding database properties file (e.g. 'bar.properties') located
-        in the current directory or the ``DB_CONFIG_PATH``.
-
-      See :class:`Config <ixmp.config.Config>` for more information about
-      search paths.
-
+    - The ``PLATFORM`` is a configured platform name; see :obj:`ixmp.config`.
     - ``MODEL`` may not contain the forward slash character ('/'); ``SCENARIO``
       may contain any number of forward slashes. Both must be supplied.
-    - ``VERSION`` is optional, but if supplied must be an integer.
+    - ``VERSION`` is optional but, if supplied, must be an integer.
 
     Returns
     -------
     platform_info : dict
-        Keyword arguments 'dbprops' and 'dbtype' for the :class:`Platform`
-        constructor. Depending on input, one or both may be absent.
+        Keyword argument 'name' for the :class:`Platform` constructor.
     scenario_info : dict
         Keyword arguments for a :class:`Scenario` on the above platform:
         'model', 'scenario' and, optionally, 'version'.
@@ -105,26 +93,15 @@ def parse_url(url):
     Raises
     ------
     ValueError
-        For malformed urls.
+        For malformed URLs.
     """
     components = urlparse(url)
     if components.scheme not in ('ixmp', ''):
         raise ValueError('URL must begin with ixmp:// or //')
 
     platform_info = dict()
-
-    platform = components.netloc
-
-    # Determine the backend information for the platform
-    if platform == 'local':
-        platform_info['dbtype'] = 'HSQLDB'
-    elif platform.endswith('.local'):
-        platform_info['dbtype'] = 'HSQLDB'
-        platform_info['dbprops'] = platform.split('.local')[0]
-    elif platform:
-        if not platform.endswith('.properties'):
-            platform += '.properties'
-        platform_info = dict(dbprops=platform)
+    if components.netloc:
+        platform_info['name'] = components.netloc
 
     scenario_info = dict()
 

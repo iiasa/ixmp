@@ -45,23 +45,26 @@ def test_pd_io_xlsx_multi():
 m_s = dict(model='m', scenario='s')
 
 URLS = [
-    ('ixmp://example/m/s', dict(dbprops='example.properties'), m_s),
-    ('ixmp://example/m/s#42', dict(dbprops='example.properties'),
+    ('ixmp://example/m/s', dict(name='example'), m_s),
+    ('ixmp://example/m/s#42', dict(name='example'),
      dict(model='m', scenario='s', version=42)),
-    ('ixmp://example.local/m/s', dict(dbprops='example', dbtype='HSQLDB'),
-     m_s),
-    ('ixmp://local/m/s', dict(dbtype='HSQLDB'), m_s),
-    ('ixmp://local/m/s/foo/bar', dict(dbtype='HSQLDB'),
+    ('ixmp://example/m/s', dict(name='example'), m_s),
+    ('ixmp://local/m/s', dict(name='local'), m_s),
+    ('ixmp://local/m/s/foo/bar', dict(name='local'),
      dict(model='m', scenario='s/foo/bar')),
     ('m/s#42', dict(), dict(model='m', scenario='s', version=42)),
 
     # Invalid values
+    # Wrong scheme
     param('foo://example/m/s', None, None,
           marks=mark.xfail(raises=ValueError)),
+    # No Scenario name
     param('ixmp://example/m', None, None,
           marks=mark.xfail(raises=ValueError)),
+    # Version not an integer
     param('ixmp://example/m#notaversion', None, None,
           marks=mark.xfail(raises=ValueError)),
+    # Query string not supported
     param('ixmp://example/m/s?querystring', None, None,
           marks=mark.xfail(raises=ValueError)),
 ]

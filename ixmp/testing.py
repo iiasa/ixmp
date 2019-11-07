@@ -93,8 +93,9 @@ def test_mp(request, tmp_env, test_data_path):
 def create_test_mp(request, path, name):
     # Name of the test function, without the preceding 'test_'
     dirname = request.node.name.split('test_', 1)[1]
-    # Long, unique name for the platform
-    platform_name = request.node.nodeid
+    # Long, unique name for the platform.
+    # Remove '/' so that the name can be used in URL tests.
+    platform_name = request.node.nodeid.replace('/', ' ')
 
     # Path to the database
     db_path = Path(os.environ['IXMP_DATA']) / 'localdb' / dirname

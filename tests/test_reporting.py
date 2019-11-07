@@ -20,7 +20,6 @@ from ixmp.reporting import (
     configure,
     computations,
 )
-from ixmp.reporting import UNITS
 from ixmp.reporting.attrseries import AttrSeries
 from ixmp.reporting.utils import Quantity, as_quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
@@ -476,11 +475,7 @@ def test_reporter_visualize(test_mp, tmp_path):
     # TODO compare to a specimen
 
 
-def test_reporting_cli(test_mp, test_data_path):
-    from ixmp.cli import main as ixmp_cli
-
-    runner = CliRunner()
-
+def test_reporting_cli(ixmp_cli, test_mp, test_data_path):
     # Put something in the database
     make_dantzig(test_mp)
     test_mp.close_db()
@@ -495,14 +490,14 @@ def test_reporting_cli(test_mp, test_data_path):
            '--scenario', 'standard',
            'report',
            '--config', str(test_data_path / 'report-config-0.yaml'),
-           '--default', 'd_check',
+           'd_check',
            ]
 
     # 'report' command runs
-    with pytest.warns(UserWarning,
-                      match=r"Unrecognized sections \['notarealsection'\]"):
-        result = runner.invoke(ixmp_cli, cmd)
+    result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0
+
+    # TODO warning should be logged
 
     # Reporting produces the expected command-line output
     assert result.output.endswith("""<xarray.DataArray 'value' (i: 2, j: 3)>

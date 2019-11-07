@@ -50,10 +50,9 @@ def test_scenario_from_url(test_mp, caplog):
     scen, mp = ixmp.Scenario.from_url(url + 'foo')
     assert scen is None and isinstance(mp, ixmp.Platform)
     assert re.match(
-        "at.ac.iiasa.ixmp.exceptions.IxException: There was a problem "
-        "getting 'Hitchhikerfoo' in table 'SCENARIO' from the database!"
-        "\nwhen loading Scenario from url ixmp://[^/]*test_scenario_from_url/"
-        "Douglas Adams/Hitchhikerfoo",
+        "RuntimeError: There was a problem getting 'Hitchhikerfoo' in table "
+        "'SCENARIO' from the database!\nwhen loading Scenario from url "
+        "ixmp://[^/]*test_scenario_from_url/Douglas Adams/Hitchhikerfoo",
         caplog.records[-1].message)
 
 

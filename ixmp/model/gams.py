@@ -138,7 +138,7 @@ class GAMSModel(Model):
         # Read model solution
         scenario._backend('read_gdx', self.out_file,
                           self.check_solution,
-                          self.comment,
-                          as_str_list(self.equ_list),
-                          as_str_list(self.var_list),
+                          self.comment or '',
+                          as_str_list(self.equ_list) or [],
+                          as_str_list(self.var_list) or [],
                           )

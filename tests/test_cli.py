@@ -1,51 +1,129 @@
-# See also:
-# - test_core.test_default_dbprops_file, testing 'ixmp-config'.
-# - test_core.test_db_config_path, testing 'ixmp-config'.
-import os
-import subprocess
+from pathlib import Path
 
-import ixmp as ix
-import jpype
-import numpy.testing as npt
+import ixmp
 import pandas as pd
+import pandas.testing as pdt
 
 
-def test_jvm_warn(recwarn):
-    """Test that no warnings are issued on JVM start-up.
+def test_main(ixmp_cli, tmp_path):
+    # Name of a temporary file that doesn't exist
+    tmp_path /= 'temp.properties'
 
-    A warning message is emitted e.g. for JPype 0.7 if the 'convertStrings'
-    kwarg is not provided to jpype.startJVM.
+    # Giving --dbprops and a nonexistent file is an invalid argument
+    cmd = [
+        '--platform', 'pname',
+        '--dbprops', str(tmp_path),
+        'platform', 'list',  # Doesn't get executed; fails in cli.main()
+    ]
+    r = ixmp_cli.invoke(cmd)
+    assert r.exit_code == 2  # click retcode for bad option usage; --
 
-    NB this function should be in test_core.py, but because pytest executes
-    tests in file, then code order, it must be before the call to ix.Platform()
-    below.
-    """
+    # Create the file
+    tmp_path.write_text('')
 
-    # Start the JVM for the first time in the test session
-    from ixmp.backend.jdbc import start_jvm
-    start_jvm()
+    # Giving both --platform and --dbprops is bad option usage
+    r = ixmp_cli.invoke(cmd)
+    assert r.exit_code == 1
 
-    if jpype.__version__ > '0.7':
-        # Zero warnings were recorded
-        assert len(recwarn) == 0, recwarn.pop().message
+    # --dbprops alone causes backend='jdbc' to be inferred (but an error
+    # because temp.properties is empty)
+    r = ixmp_cli.invoke(cmd[2:])
+    assert 'unhandled Java exception' in r.exception.args[0]
 
 
-def test_import_timeseries(test_mp_props, test_data_path):
+def test_config(ixmp_cli):
+    # ixmp has no string keys by default, so we insert a fake one
+    ixmp.config.register('test key', str)
+    ixmp.config.values['test key'] = 'foo'
+
+    # get() works
+    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'foo\n'
+
+    # set() changes the value
+    result = ixmp_cli.invoke(['config', 'set', 'test key', 'bar'])
+    assert result.exit_code == 0
+    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'bar\n'
+
+    # get() with a value is an invalid call
+    result = ixmp_cli.invoke(['config', 'get', 'test key', 'BADVALUE'])
+    assert result.exit_code != 0
+
+
+def test_platform(ixmp_cli, tmp_path):
+    """Test 'platform' command."""
+    def call(*args, exit_0=True):
+        result = ixmp_cli.invoke(['platform'] + list(map(str, args)))
+        assert not exit_0 or result.exit_code == 0
+        return result
+
+    # The default platform is 'local'
+    r = call('list')
+    assert 'default local\n' in r.output
+
+    # JBDC Oracle platform can be added
+    r = call('add', 'p1', 'jdbc', 'oracle', 'HOSTNAME', 'USER', 'PASSWORD')
+
+    # Default platform can be changed
+    r = call('add', 'default', 'p1')
+    r = call('list')
+    assert 'default p1\n' in r.output
+    # Reset to avoid disturbing other tests
+    call('add', 'default', 'local')
+
+    # Setting the default using a non-existent platform fails
+    r = call('add', 'default', 'nonexistent', exit_0=False)
+    assert r.exit_code == 1
+
+    # JDBC HSQLDB platform can be added with absolute path
+    r = call('add', 'p2', 'jdbc', 'hsqldb', tmp_path)
+    assert ixmp.config.get_platform_info('p2')[1]['path'] == tmp_path
+
+    # JDBC HSQLDB platform can be added with relative path
+    rel = './foo'
+    r = call('add', 'p3', 'jdbc', 'hsqldb', rel)
+    assert Path(rel).resolve() == \
+        ixmp.config.get_platform_info('p3')[1]['path']
+
+    # Platform can be removed
+    r = call('remove', 'p3')
+    assert r.output == "Removed platform config for 'p3'\n"
+
+    # Non-existent platform can't be removed
+    r = call('remove', 'p3', exit_0=False)  # Already removed
+    assert r.exit_code == 1
+
+    # Extra args to 'remove' are invalid
+    r = call('remove', 'p2', 'BADARG', exit_0=False)
+    assert r.exit_code == 1
+
+
+def test_import(ixmp_cli, test_mp, test_data_path):
     fname = test_data_path / 'timeseries_canning.csv'
 
-    cmd = ('import-timeseries --dbprops="{}" --data="{}" --model="{}" '
-           '--scenario="{}" --version="{}" --firstyear="{}"').format(
-        test_mp_props, fname, 'canning problem', 'standard', 1, 2020)
+    platform_name = test_mp.name
+    del test_mp
 
-    win = os.name == 'nt'
-    subprocess.check_call(cmd, shell=not win)
+    result = ixmp_cli.invoke([
+        '--platform', platform_name,
+        '--model', 'canning problem',
+        '--scenario', 'standard',
+        '--version', '1',
+        'import',
+        '--firstyear', '2020',
+        str(fname),
+    ])
+    assert result.exit_code == 0
 
-    mp = ix.Platform(test_mp_props)
-    scen = ix.Scenario(mp, 'canning problem', 'standard', 1)
-    obs = scen.timeseries()
-    df = {'region': ['World'], 'variable': ['Testing'], 'unit': ['???'],
-          'year': [2020], 'value': [28.3]}
-    exp = pd.DataFrame.from_dict(df)
-    cols_str = ['region', 'variable', 'unit', 'year']
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
-    npt.assert_array_almost_equal(exp['value'], obs['value'])
+    # Check that the TimeSeries now contains the expected content
+    mp = ixmp.Platform(name=platform_name)
+    scen = ixmp.Scenario(mp, 'canning problem', 'standard', 1)
+    exp = pd.DataFrame.from_dict({
+        'region': ['World'],
+        'variable': ['Testing'],
+        'unit': ['???'],
+        'year': [2020],
+        'value': [28.3],
+        'model': ['canning problem'],
+        'scenario': ['standard'],
+    })
+    pdt.assert_frame_equal(exp, scen.timeseries())

@@ -1,21 +1,28 @@
+from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
 from functools import lru_cache
+import logging
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+from tempfile import mkstemp
 from types import SimpleNamespace
+from warnings import warn
 
 import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
 
-from ixmp.config import _config
+from ixmp import config
 from ixmp.core import Scenario
-from ixmp.utils import islistable, logger
+from ixmp.utils import islistable
 from . import FIELDS
 from .base import Backend
+
+
+log = logging.getLogger(__name__)
 
 
 # Map of Python to Java log levels
@@ -39,11 +46,58 @@ JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
+    'java.lang.NoClassDefFoundError',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
 ]
+
+
+def _read_dbprops(path):
+    return str(path), path.read_text()
+
+
+def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
+    """Create a temporary dbprops file."""
+    # Lines to appear in the file
+    lines = [
+        'jdbc.driver = {driver}',
+        'jdbc.url = {full_url}',
+        'jdbc.user = {user}',
+        'jdbc.pwd = {password}',
+    ]
+
+    # Handle arguments
+    if driver == 'oracle':
+        driver = 'oracle.jdbc.driver.OracleDriver'
+
+        if url is None or path is not None:
+            raise ValueError("use JDBCBackend(driver='oracle', url=…)")
+
+        full_url = 'jdbc:oracle:thin:@{}'.format(url)
+    elif driver == 'hsqldb':
+        driver = 'org.hsqldb.jdbcDriver'
+
+        if path is None or url is not None:
+            raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
+
+        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
+        # spec
+        url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
+        full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+        user = user or 'ixmp'
+        password = password or 'ixmp'
+    else:
+        raise ValueError(driver)
+
+    fmt = locals()
+    contents = '\n'.join(line.format(**fmt) for line in lines)
+
+    file = Path(mkstemp(suffix='.properties', text=True)[1])
+    file.write_text(contents)
+
+    return str(file), full_url
 
 
 class JDBCBackend(Backend):
@@ -90,34 +144,72 @@ class JDBCBackend(Backend):
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
     jindex = {}
 
-    def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
+    def __init__(self, jvmargs=None, **kwargs):
+        properties_file = None
+
+        # Handle arguments
+        if 'dbtype' in kwargs:
+            warn("'dbtype' argument to JDBCBackend; use 'driver'",
+                 DeprecationWarning)
+
+            if 'driver' in kwargs:
+                message = ('ambiguous: both driver={driver!r} and '
+                           'dbtype={!r}').format(**kwargs)
+                raise ValueError(message)
+            elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
+                log.info("using platform 'local' for dbtype='hsqldb'")
+                _, kwargs = config.get_platform_info('local')
+                assert kwargs.pop('class') == 'jdbc'
+            else:
+                kwargs['driver'] = kwargs.pop('dbtype').lower()
+
+        if 'dbprops' in kwargs:
+            # Use an existing file
+            dbprops = Path(kwargs.pop('dbprops'))
+            if dbprops.exists():
+                # Existing properties file
+                properties_file, info = _read_dbprops(dbprops)
+            elif dbprops.with_suffix('.lobs').exists():
+                # Actually the basename for a HSQLDB
+                kwargs.setdefault('driver', 'hsqldb')
+                kwargs.setdefault('path', dbprops)
+            else:
+                raise FileNotFoundError(dbprops)
+
+        if not properties_file:
+            # Create dbprops in a temporary file
+            properties_file, info = _temp_dbprops(**kwargs)
+            self._properties_file = properties_file
+
+        log.info('launching ixmp.Platform connected to {}'.format(info))
+
         start_jvm(jvmargs)
-        self.dbtype = dbtype
 
         try:
-            # if no dbtype is specified, launch Platform with properties file
-            if dbtype is None:
-                dbprops = _config.find_dbprops(dbprops)
-                if dbprops is None:
-                    raise ValueError("Not found database properties file "
-                                     "to launch platform")
-                logger().info("launching ixmp.Platform using config file at "
-                              "'{}'".format(dbprops))
-                self.jobj = java.Platform('Python', str(dbprops))
-            # if dbtype is specified, launch Platform with local database
-            elif dbtype == 'HSQLDB':
-                dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
-                logger().info("launching ixmp.Platform with local {} database "
-                              "at '{}'".format(dbtype, dbprops))
-                self.jobj = java.Platform('Python', str(dbprops), dbtype)
+            self.jobj = java.Platform('Python', properties_file)
+        except java.NoClassDefFoundError as e:  # pragma: no cover
+            raise NameError(
+                '{}\nCheck that dependencies of ixmp.jar are included in {}'
+                .format(e, Path(__file__).parents[2] / 'lib'))
+        except jpype.JException as e:  # pragma: no cover
+            # Handle Java exceptions
+            jclass = e.__class__.__name__
+            info = '\n{}\n(Java: {})'.format(e, jclass)
+            if jclass.endswith('HikariPool.PoolInitializationException'):
+                redacted = copy(kwargs)
+                redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
+                raise RuntimeError('unable to connect to database:\n{!r}{}'
+                                   .format(redacted, info)) from None
+            elif jclass.endswith('FlywayException'):
+                raise RuntimeError('when initializing database:' + info)
             else:
-                raise ValueError('Unknown dbtype: {}'.format(dbtype))
-        except TypeError:
-            msg = ("Could not launch the JVM for the ixmp.Platform."
-                   "Make sure that all dependencies of ixmp.jar"
-                   "are included in the 'ixmp/lib' folder.")
-            logger().info(msg)
-            raise
+                raise RuntimeError('unhandled Java exception:' + info) from e
+
+    def __del__(self):
+        try:
+            Path(self._properties_file).unlink()
+        except AttributeError:
+            return
 
     # Platform methods
 
@@ -135,7 +227,14 @@ class JDBCBackend(Backend):
         time. Any existing connection must be closed before a new one can be
         opened.
         """
-        self.jobj.closeDB()
+        try:
+            self.jobj.closeDB()
+        except java.IxException as e:
+            if str(e) == 'Error closing the database connection!':
+                log.warning('Database connection could not be closed or was '
+                            'already closed')
+            else:
+                log.warning(str(e))
 
     def get_auth(self, user, models, kind):
         return self.jobj.checkModelAccess(user, kind, to_jlist2(models))
@@ -187,7 +286,7 @@ class JDBCBackend(Backend):
 
     def get(self, ts, version):
         args = [ts.model, ts.scenario]
-        if isinstance(version, int):
+        if version is not None:
             # Load a TimeSeries of specific version
             args.append(version)
 
@@ -325,8 +424,9 @@ class JDBCBackend(Backend):
               keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
-            raise NotImplementedError(f'Clone between {self.__class__} and'
-                                      f'{platform_dest._backend.__class__}')
+            raise NotImplementedError(  # pragma: no cover
+                f'Clone between {self.__class__} and'
+                f'{platform_dest._backend.__class__}')
         elif platform_dest._backend is not self:
             msg = 'Cross-platform clone of {}.Scenario with'.format(
                 s.__class__.__module__.split('.')[0])
@@ -366,7 +466,16 @@ class JDBCBackend(Backend):
 
         # The constructor returns a reference to the Java Item, but these
         # aren't exposed by Backend, so don't return here
-        func(name, idx_sets, idx_names)
+        try:
+            func(name, idx_sets, idx_names)
+        except jpype.JException as e:
+            e = str(e)
+            if e.startswith('This Scenario cannot be edited'):
+                raise RuntimeError(e)
+            elif 'already exists' in e:
+                raise ValueError('{!r} already exists'.format(name))
+            else:
+                raise
 
     def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')()
@@ -450,8 +559,8 @@ class JDBCBackend(Backend):
             if 'does not have an element' in msg:
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
-            else:
-                raise RuntimeError('Unhandled Java exception') from e
+            else:  # pragma: no cover
+                raise RuntimeError('unhandled Java exception') from e
 
     def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
@@ -537,8 +646,8 @@ class JDBCBackend(Backend):
                 # Re-raise as a Python KeyError
                 raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
                                'Scenario!') from None
-            else:
-                raise RuntimeError('Unhandled Java exception') from e
+            else:  # pragma: no cover
+                raise RuntimeError('unhandled Java exception') from e
 
 
 def start_jvm(jvmargs=None):

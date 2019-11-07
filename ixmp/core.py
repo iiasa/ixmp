@@ -5,6 +5,7 @@ from warnings import warn
 
 import pandas as pd
 
+from ._config import config
 from .backend import BACKENDS, FIELDS
 from .model import get_model
 from .utils import (
@@ -13,6 +14,8 @@ from .utils import (
     filtered,
     logger,
 )
+
+log = logging.getLogger(__name__)
 
 # %% default settings for column headers
 
@@ -69,17 +72,54 @@ class Platform:
         'close_db',
     ]
 
-    def __init__(self, *args, backend='jdbc', **backend_args):
-        if backend != 'jdbc':
-            raise ValueError(f'unknown ixmp backend {backend!r}')
-        else:
-            # Copy positional args for the default JDBC backend
-            for i, arg in enumerate(['dbprops', 'dbtype', 'jvmargs']):
-                if len(args) > i:
-                    backend_args[arg] = args[i]
+    def __init__(self, *args, name=None, backend=None, **backend_args):
+        if name is None:
+            if backend is None and not len(backend_args):
+                # No arguments given: use the default platform config
+                name = 'default'
+            elif backend is None:
+                # Only backend_args given
+                log.info('Using default JDBC backend')
+                kwargs = {'class': 'jdbc'}
+            else:
+                # Backend and maybe backend_args were given
+                kwargs = {'class': backend}
 
-        backend_cls = BACKENDS[backend]
-        self._backend = backend_cls(**backend_args)
+        if name:
+            # Using a named platform config; retrieve it
+            self.name, kwargs = config.get_platform_info(name)
+
+        if len(args):
+            # Handle deprecated positional arguments
+            if backend and backend != 'jdbc':
+                message = ('backend={!r} conflicts with deprecated positional '
+                           'arguments for JDBCBackend (dbprops, dbtype, '
+                           'jvmargs)').format(backend)
+                raise ValueError(message)
+            elif backend is None:
+                # Providing positional args implies JDBCBackend
+                kwargs['class'] = 'jdbc'
+
+            warn('positional arguments to Platform(…) for JDBCBackend. '
+                 'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
+                 DeprecationWarning)
+
+            # Copy positional args to keyword args
+            backend_args.update(zip(['dbprops', 'dbtype', 'jvmargs'], args))
+
+        # Overwrite any platform config with explicit keyword arguments
+        kwargs.update(backend_args)
+
+        # Retrieve the Backend class
+        try:
+            backend_class = kwargs.pop('class')
+            backend_class = BACKENDS[backend_class]
+        except KeyError:
+            raise ValueError('backend class {!r} not among {}'
+                             .format(backend_class, sorted(BACKENDS.keys())))
+
+        # Instantiate the backend
+        self._backend = backend_class(**kwargs)
 
     def __getattr__(self, name):
         """Convenience for methods of Backend."""
@@ -687,8 +727,11 @@ class Scenario(TimeSeries):
 
         Raises
         ------
-        :class:`jpype.JavaException`
+        ValueError
             If the set (or another object with the same *name*) already exists.
+        RuntimeError
+            If the Scenario is not checked out (see
+            :meth:`~TimeSeries.check_out`).
         """
         return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
@@ -1165,8 +1208,8 @@ class Scenario(TimeSeries):
 
         if shift_first_model_year is not None:
             if keep_solution:
-                logger().warn('Overriding keep_solution=True for '
-                              'shift_first_model_year')
+                logger().warning('Overriding keep_solution=True for '
+                                 'shift_first_model_year')
                 keep_solution = False
 
         platform = platform or self.platform

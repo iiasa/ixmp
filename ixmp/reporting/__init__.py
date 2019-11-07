@@ -150,7 +150,7 @@ class Reporter:
         """
         path = Path(path)
         with open(path, 'r') as f:
-            self.configure(config_dir=path.parent, **yaml.load(f))
+            self.configure(config_dir=path.parent, **yaml.safe_load(f))
 
     def configure(self, path=None, **config):
         """Configure the Reporter.
@@ -619,7 +619,7 @@ def _config_args(path, keys, sections={}):
     if path:
         path = Path(path)
         with open(path, 'r') as f:
-            result = yaml.load(f)
+            result = yaml.safe_load(f)
 
         # Also store the directory where the configuration file was located
         result['config_dir'] = path.parent

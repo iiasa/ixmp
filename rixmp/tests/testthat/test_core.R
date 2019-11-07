@@ -8,13 +8,13 @@ source('conftest.R')
 
 
 test_that('a local Platform can be instantiated', {
-  mp <- ixmp$Platform(dbtype = 'HSQLDB')
-  expect_equal(mp$dbtype, 'HSQLDB')
+  mp <- ixmp$Platform(name='default')
+  succeed()
 })
 
 
 test_that('set, mapping sets and par values can be set on a Scenario', {
-  mp <- ixmp$Platform(dbtype = 'HSQLDB')
+  mp <- test_mp()
 
   # Details for creating a new scenario in the ix modeling platform
   model <- 'test_model'

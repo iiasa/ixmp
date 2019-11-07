@@ -2,6 +2,7 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
+from pathlib import Path
 
 import pandas as pd
 import xarray as xr
@@ -38,13 +39,36 @@ def sum(quantity, weights=None, dimensions=None):
 
 
 def aggregate(quantity, groups, keep):
-    """Aggregate *quantity* by *groups*."""
+    """Aggregate *quantity* by *groups*.
+
+    Parameters
+    ----------
+    quantity : :class:`Quantity <ixmp.reporting.utils.Quantity>`
+    groups: dict of dict
+        Top-level keys are the names of dimensions in `quantity`. Second-level
+        keys are group names; second-level values are lists of labels along the
+        dimension to sum into a group.
+    keep : bool
+        If True, the members that are aggregated into a group are returned with
+        the group sums. If False, they are discarded.
+
+    Returns
+    -------
+    :class:`Quantity <ixmp.reporting.utils.Quantity>`
+        Same dimensionality as `quantity`.
+
+    """
+    # NB .transpose() below is necessary only for Quantity == AttrSeries. It
+    #   can be removed when Quantity = xr.DataArray.
+    dim_order = quantity.dims
+
     for dim, dim_groups in groups.items():
         values = []
         for group, members in dim_groups.items():
             values.append(quantity.sel({dim: members})
                                   .sum(dim=dim)
-                                  .assign_coords(**{dim: group}))
+                                  .assign_coords(**{dim: group})
+                                  .transpose(*dim_order))
         if keep:
             # Prepend the original values
             values.insert(0, quantity)
@@ -137,7 +161,15 @@ def load_file(path):
 
 
 def write_report(quantity, path):
-    """Write the report identified by *key* to the file at *path*."""
+    """Write a quantity to a file.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the file to be written.
+    """
+    path = Path(path)
+
     if path.suffix == '.csv':
         quantity.to_dataframe().to_csv(path)
     elif path.suffix == '.xlsx':

@@ -1,7 +1,26 @@
 
 # Next Release
 
+
+## Migration notes
+
+Configuration for ixmp and its storage backends has been streamlined.
+
+- Instead of ``DB_CONFIG_PATH``:
+  - Platform configuration is stored in the ``config.json`` configuration file.
+  - The :class:`Platform` constructor accepts the name of a stored platform configuration.
+  - Different storage backends may accept relative or absolute paths to backend-specific configuration files.
+- Instead of ``DEFAULT_DBPROPS_FILE``:
+  - On the command-line, use ``ixmp platform add NAME ARGS`` followed by ``ixmp platform add default NAME``.
+- Instead of ``DEFAULT_LOCAL_DB_PATH``: :obj:`ixmp.config` always contains a platform named 'local' that is located below the configuration path, in the directory 'localdb/default'.
+  - To change this path, use, e.g.: ``ixmp platform add local jdbc hsqldb PATH``.
+
+
+## All changes
+
 - [#189](https://github.com/iiasa/ixmp/pull/189): Identify and load Scenarios using URLs.
+- [#182](https://github.com/iiasa/ixmp/pull/182): Add new Backend, Model APIs and JDBCBackend, GAMSModel classes.
+- [#188](https://github.com/iiasa/ixmp/pull/188): Enhance reporting.
 - [#177](https://github.com/iiasa/ixmp/pull/177): add ability to pass `gams_args` through `Scenario.solve()`
 - [#175](https://github.com/iiasa/ixmp/pull/175): Drop support for Python 2.
 - [#174](https://github.com/iiasa/ixmp/pull/174): Set `convertStrings=True` for JPype >= 0.7; see the [JPype changelog](https://jpype.readthedocs.io/en/latest/CHANGELOG.html).

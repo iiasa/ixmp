@@ -1,21 +1,11 @@
-'filters':
-- {{}}
-
-'i':
-- ['seattle', 'san-diego']
-
-'j':
-- ['new-york', 'chicago', 'topeka']
-
-'scenario':
-- <ixmp.core.Scenario object at {id}>
-
 'a:':
 - sum(dimensions=['i'], weights=None, ...)
 - 'a:i':
   - data_for_quantity('par', 'a', 'value', ...)
-  - 'scenario' (above)
-  - 'filters' (above)
+  - 'scenario':
+    - <ixmp.core.Scenario object at {id}>
+  - 'filters':
+    - {{}}
 
 'b:':
 - sum(dimensions=['j'], weights=None, ...)
@@ -55,6 +45,12 @@
 - data_for_quantity('par', 'f', 'value', ...)
 - 'scenario' (above)
 - 'filters' (above)
+
+'i':
+- ['seattle', 'san-diego']
+
+'j':
+- ['new-york', 'chicago', 'topeka']
 
 'x:':
 - sum(dimensions=['i', 'j'], weights=None, ...)

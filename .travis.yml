@@ -45,8 +45,8 @@ install:
   - source ci/travis-install.sh
   # Install the Python package
   - pip install --editable .[docs,tests,tutorial]
-  # Install the R package and its dependencies
-  - Rscript -e 'devtools::install("rixmp", dep = T)'
+  # Install the R package
+  - Rscript -e "devtools::install('rixmp')"
 
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"

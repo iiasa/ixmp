@@ -1,3 +1,5 @@
+import re
+
 import numpy.testing as npt
 import pandas as pd
 import pytest
@@ -32,17 +34,27 @@ def test_default_version(test_mp):
     assert scen.version == 2
 
 
-def test_scenario_from_url(test_mp):
+def test_scenario_from_url(test_mp, caplog):
     url = 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name)
 
     # Default version is loaded
     scen, mp = ixmp.Scenario.from_url(url)
     assert scen.version == 1
 
-    # Giving an invalid version raises an exception
+    # Giving an invalid version with errors='raise' raises an exception
     with pytest.raises(Exception, match='There was a problem getting the run '
                                         'id from the database!'):
-        scen, mp = ixmp.Scenario.from_url(url + '#10000')
+        scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
+
+    # Giving an invalid scenario with errors='warn' raises an exception
+    scen, mp = ixmp.Scenario.from_url(url + 'foo')
+    assert scen is None and isinstance(mp, ixmp.Platform)
+    assert re.match(
+        "at.ac.iiasa.ixmp.exceptions.IxException: There was a problem "
+        "getting 'Hitchhikerfoo' in table 'SCENARIO' from the database!"
+        "\nwhen loading Scenario from url ixmp://[^/]*test_scenario_from_url/"
+        "Douglas Adams/Hitchhikerfoo",
+        caplog.records[-1].message)
 
 
 def test_has_set(test_mp):

@@ -5,7 +5,7 @@ import pandas as pd
 import pandas.testing as pdt
 
 
-def test_main(ixmp_cli, tmp_path):
+def test_main(ixmp_cli, test_mp, tmp_path):
     # Name of a temporary file that doesn't exist
     tmp_path /= 'temp.properties'
 
@@ -16,7 +16,7 @@ def test_main(ixmp_cli, tmp_path):
         'platform', 'list',  # Doesn't get executed; fails in cli.main()
     ]
     r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 2  # click retcode for bad option usage; --
+    assert r.exit_code == 2  # click retcode for bad option usage
 
     # Create the file
     tmp_path.write_text('')
@@ -29,6 +29,16 @@ def test_main(ixmp_cli, tmp_path):
     # because temp.properties is empty)
     r = ixmp_cli.invoke(cmd[2:])
     assert 'unhandled Java exception' in r.exception.args[0]
+
+    # --url argument can be given
+    cmd = ['--url', 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name),
+           'platform', 'list']
+    r = ixmp_cli.invoke(cmd)
+    assert r.exit_code == 0
+
+    # --url and other Platform/Scenario specifiers are bad option usage
+    r = ixmp_cli.invoke(cmd + ['--version', '1'])
+    assert r.exit_code == 2
 
 
 def test_config(ixmp_cli):

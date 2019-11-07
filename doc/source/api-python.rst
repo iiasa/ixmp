@@ -196,13 +196,6 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
 .. autoclass:: ixmp._config.Config
    :members:
 
-Configuration
--------------
-
-.. currentmodule:: ixmp.config
-
-.. automethod:: ixmp.config.Config
-
 
 Utilities
 ---------

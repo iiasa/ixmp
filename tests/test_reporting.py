@@ -110,6 +110,24 @@ def test_reporter_add():
     assert 'foo:b' in r
 
 
+def test_reporter_add_product(test_mp):
+    scen = ixmp.Scenario(test_mp, 'reporter_add_product',
+                         'reporter_add_product', 'new')
+    *_, x = add_test_data(scen)
+    rep = Reporter.from_scenario(scen)
+
+    # add_product() works
+    key = rep.add_product('x squared', 'x', 'x', sums=True)
+
+    # Product has the expected dimensions
+    assert key == 'x squared:t-y'
+
+    # Product has the expected value
+    exp = as_quantity(x * x)
+    exp.attrs['_unit'] = UNITS('kilogram ** 2').units
+    assert_qty_equal(exp, rep.get(key))
+
+
 def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)
 

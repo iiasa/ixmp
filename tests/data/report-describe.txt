@@ -14,6 +14,16 @@
   - 'scenario' (above)
   - 'filters' (above)
 
+'cost-margin:':
+- data_for_quantity('equ', 'cost', 'mrg', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
+'cost:':
+- data_for_quantity('equ', 'cost', 'lvl', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
 'd:':
 - sum(dimensions=['i', 'j'], weights=None, ...)
 - 'd:i-j':
@@ -52,6 +62,18 @@
 'j':
 - ['new-york', 'chicago', 'topeka']
 
+'supply-margin:i':
+- data_for_quantity('equ', 'supply', 'mrg', ...)
+- 'scenario' (above)
+- 'filters' (above)
+
+'supply:':
+- sum(dimensions=['i'], weights=None, ...)
+- 'supply:i':
+  - data_for_quantity('equ', 'supply', 'lvl', ...)
+  - 'scenario' (above)
+  - 'filters' (above)
+
 'x:':
 - sum(dimensions=['i', 'j'], weights=None, ...)
 - 'x:i-j':
@@ -76,9 +98,13 @@
 - list of:
   - 'a:i' (above)
   - 'b:j' (above)
+  - 'cost-margin:' (above)
+  - 'cost:' (above)
   - 'd:i-j' (above)
   - 'demand-margin:j' (above)
   - 'demand:j' (above)
   - 'f:' (above)
+  - 'supply-margin:i' (above)
+  - 'supply:i' (above)
   - 'x:i-j' (above)
   - 'z:' (above)

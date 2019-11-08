@@ -175,7 +175,8 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
     # 'all' key retrieves all quantities
     obs = {da.name for da in rep.get('all')}
-    exp = set('a b d f demand demand-margin z x'.split())
+    exp = set(('a b d f x z cost cost-margin demand demand-margin supply '
+               'supply-margin').split())
     assert obs == exp
 
     # Shorthand for retrieving a full key name

@@ -1,6 +1,5 @@
-from functools import lru_cache, partial, reduce
+from functools import lru_cache, partial
 import logging
-from operator import mul
 
 import numpy
 import pandas as pd
@@ -294,7 +293,7 @@ def as_attrseries(obj):
     return AttrSeries(obj)
 
 
-def as_sparse_xarray(obj):
+def as_sparse_xarray(obj):  # pragma: no cover
     """Convert *obj* to an xr.DataArray with sparse.COO storage."""
     import sparse
     from xarray.core.dtypes import maybe_promote

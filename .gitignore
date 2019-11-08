@@ -28,6 +28,8 @@
 
 # sphinx
 doc/build
+# Compiled SVG
+doc/source/_static/*.svg
 
 # setuptools
 build

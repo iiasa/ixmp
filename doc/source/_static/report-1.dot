@@ -1,0 +1,10 @@
+digraph {
+  rankdir = LR;
+
+  C [ label = "C\n<sum inputs>" ];
+  output [label = "", style = invis];
+
+  A -> C [label=1];
+  B -> C [label=2];
+  C -> output [label=3];
+}

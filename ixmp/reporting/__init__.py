@@ -21,11 +21,7 @@
 from functools import partial
 from itertools import chain, repeat
 import logging
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
-from warnings import warn
+from pathlib import Path
 
 import dask
 
@@ -237,11 +233,13 @@ class Reporter:
             `computation` does not exist; or ``sums=True`` and the key for one
             of the partial sums of `key` is already in the Reporter.
         """
-        to_add = [(key, computation)]
         added = []
 
         if sums:
-            to_add = chain(to_add, Key.from_str_or_key(key).iter_sums())
+            key = Key.from_str_or_key(key)
+            to_add = chain([(key, computation)], key.iter_sums())
+        else:
+            to_add = [(key, computation)]
 
         for k, comp in to_add:
             if strict:
@@ -378,11 +376,21 @@ class Reporter:
     def set_filters(self, **filters):
         """Apply *filters* ex ante (before computations occur).
 
-        *filters* has the same form as the argument of the same name to
-        :meth:`ixmp.Scenario.par` and analogous methods. A value of
-        :const:`None` will clear the filter for the named dimension.
+        Filters are stored in the reporter at the ``'filters'`` key, and are
+        passed to :meth:`ixmp.Scenario.par` and similar methods. All quantity
+        values read from the Scenario are filtered *before* any other
+        computations take place.
+
+        Parameters
+        ----------
+        filters : mapping of str → (list of str or None)
+            Argument names are dimension names; values are lists of allowable
+            labels along the respective dimension, *or* None to clear any
+            existing filters for the dimension.
+
+            If no arguments are provided, *all* filters are cleared.
         """
-        if self.graph['filters'] is None:
+        if self.graph['filters'] is None or len(filters) == 0:
             self.graph['filters'] = {}
 
         # Update
@@ -411,7 +419,8 @@ class Reporter:
             The full key of the new quantity.
         """
         # Fetch the full key for each quantity
-        base_keys = self.check_keys(*quantities)
+        base_keys = list(map(Key.from_str_or_key,
+                             self.check_keys(*quantities)))
 
         # Compute a key for the result
         key = Key.product(name, *base_keys)
@@ -426,7 +435,8 @@ class Reporter:
 
         return key
 
-    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True):
+    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True,
+                  sums=False):
         """Add a computation that aggregates *qty*.
 
         Parameters
@@ -438,8 +448,13 @@ class Reporter:
             quantity.
         dims_or_groups: str or iterable of str or dict
             Name(s) of the dimension(s) to sum over, or nested dict.
-        weights : xr.DataArray
+        weights : xr.DataArray, optional
             Weights for weighted aggregation.
+        keep : bool, optional
+            Passed to :meth:`computations.aggregate
+            <imxp.reporting.computations.aggregate>`.
+        sums : bool, optional
+            Passed to :meth:`add`.
 
         Returns
         -------
@@ -462,7 +477,7 @@ class Reporter:
             key = Key.from_str_or_key(qty, drop=dims, tag=tag)
             comp = (partial(computations.sum, dimensions=dims), qty, weights)
 
-        return self.add(key, comp, strict=True, index=True)
+        return self.add(key, comp, strict=True, index=True, sums=sums)
 
     def disaggregate(self, qty, new_dim, method='shares', args=[]):
         """Add a computation that disaggregates *var* using *method*.
@@ -516,19 +531,24 @@ class Reporter:
         key = key if key else 'file:{}'.format(path.name)
         return self.add(key, (partial(computations.load_file, path),), True)
 
-    def describe(self, key=None):
+    def describe(self, key=None, quiet=False):
         """Return a string describing the computations that produce *key*.
 
         If *key* is not provided, all keys in the Reporter are described.
+
+        The string is also printed. If *quiet*, do not print to the console.
         """
-        # TODO allow key to be an iterable of keys
         if key is None:
             # Sort with 'all' at the end
             key = tuple(sorted(filter(lambda k: k != 'all',
                                       self.graph.keys())) + ['all'])
         else:
             key = (key,)
-        return describe_recursive(self.graph, key) + '\n'
+
+        result = describe_recursive(self.graph, key)
+        if not quiet:
+            print(result, end='\n')
+        return result
 
     def visualize(self, filename, **kwargs):
         """Generate an image describing the reporting structure.
@@ -541,6 +561,7 @@ class Reporter:
     def write(self, key, path):
         """Write the report *key* to the file *path*."""
         # Call the method directly without adding it to the graph
+        key = self.check_keys(key)[0]
         computations.write_report(self.get(key), path)
 
 
@@ -610,8 +631,9 @@ def _config_args(path, keys, sections={}):
     if sections:
         extra_sections = set(result.keys()) - sections - {'config_dir'}
         if len(extra_sections):
-            warn(('Unrecognized sections {!r} in reporting configuration will '
-                  'have no effect').format(sorted(extra_sections)))
+            log.warning(('Unrecognized sections {!r} in reporting '
+                         'configuration will have no effect')
+                        .format(sorted(extra_sections)))
 
     return result
 

@@ -5,7 +5,6 @@ from click.testing import CliRunner
 import ixmp
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_series_equal
 import pytest
 import xarray as xr
 
@@ -21,7 +20,8 @@ from ixmp.reporting import (
     configure,
     computations,
 )
-from ixmp.reporting.utils import Quantity
+from ixmp.reporting.attrseries import AttrSeries
+from ixmp.reporting.utils import Quantity, as_quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
@@ -110,6 +110,24 @@ def test_reporter_add():
     assert 'foo:b' in r
 
 
+def test_reporter_add_product(test_mp):
+    scen = ixmp.Scenario(test_mp, 'reporter_add_product',
+                         'reporter_add_product', 'new')
+    *_, x = add_test_data(scen)
+    rep = Reporter.from_scenario(scen)
+
+    # add_product() works
+    key = rep.add_product('x squared', 'x', 'x', sums=True)
+
+    # Product has the expected dimensions
+    assert key == 'x squared:t-y'
+
+    # Product has the expected value
+    exp = as_quantity(x * x)
+    exp.attrs['_unit'] = UNITS('kilogram ** 2').units
+    assert_qty_equal(exp, rep.get(key))
+
+
 def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)
 
@@ -132,8 +150,9 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
-    assert len(d) == 1
-    assert np.isclose(d.iloc[0], 11.7)
+    assert d.shape == ((1,) if Quantity is AttrSeries else tuple())
+    assert d.size == 1
+    assert np.isclose(d.values, 11.7)
 
     # Weighted sum
     weights = Quantity(xr.DataArray(
@@ -148,17 +167,18 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
 
     # ...produces the expected new value
     obs = rep.get(new_key)
-    exp = (rep.get('d:i-j') * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    # TODO: attrs has to be explicitly copied here because math is done which
-    # returns a pd.Series
-    exp = Quantity(exp, attrs=rep.get('d:i-j').attrs)
+    d_ij = rep.get('d:i-j')
+    exp = (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j'])
+    # FIXME attrs has to be explicitly copied here because math is done which
+    #       returns a pd.Series
+    exp.attrs = d_ij.attrs
 
-    assert_series_equal(obs.sort_index(), exp.sort_index())
+    assert_qty_equal(exp, obs)
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
+    new_key = rep.disaggregate('b:j', 'p', args=[as_quantity(shares)])
 
     # ...produces the expected key with new dimension added
     assert new_key == 'b:j-p'
@@ -181,15 +201,18 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     assert rep.full_key('d') == 'd:i-j' and isinstance(rep.full_key('d'), Key)
 
 
-def test_reporter_read_config(test_mp, test_data_path):
+def test_reporter_read_config(test_mp, test_data_path, caplog):
     scen = make_dantzig(test_mp)
 
     rep = Reporter.from_scenario(scen)
 
+    caplog.clear()
+
     # Warning is raised when reading configuration with unrecognized section(s)
-    with pytest.warns(UserWarning,
-                      match=r"Unrecognized sections \['notarealsection'\]"):
-        rep.read_config(test_data_path / 'report-config-0.yaml')
+    rep.read_config(test_data_path / 'report-config-0.yaml')
+
+    assert ("Unrecognized sections ['notarealsection'] in reporting "
+            "configuration will have no effect") == caplog.records[0].message
 
     # Data from configured file is available
     assert rep.get('d_check').loc['seattle', 'chicago'] == 1.7
@@ -429,7 +452,7 @@ def test_reporting_platform_units(test_mp, caplog):
                rec.message for rec in caplog.records)
 
 
-def test_reporter_describe(test_mp, test_data_path):
+def test_reporter_describe(test_mp, test_data_path, capsys):
     scen = make_dantzig(test_mp)
     r = Reporter.from_scenario(scen)
 
@@ -438,21 +461,28 @@ def test_reporter_describe(test_mp, test_data_path):
         '{:#018X}'.format(id(scen)).replace('X', 'x')
 
     # Describe one key
-    expected = """'d:i':
+    desc1 = """'d:i':
 - sum(dimensions=['j'], weights=None, ...)
 - 'd:i-j':
   - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario':
     - <ixmp.core.Scenario object at {id}>
   - 'filters':
-    - {{}}
-""".format(id=id_)
-    assert expected == r.describe('d:i')
+    - {{}}""".format(id=id_)
+    assert desc1 == r.describe('d:i')
 
-    # Describe all keys
-    expected = (test_data_path / 'report-describe.txt').read_text() \
-                                                       .format(id=id_)
-    assert expected == r.describe()
+    # Description was also written to stdout
+    out1, _ = capsys.readouterr()
+    assert desc1 + '\n' == out1
+
+    # Description of all keys is as expected
+    desc2 = (test_data_path / 'report-describe.txt').read_text() \
+                                                    .format(id=id_)
+    assert desc2 == r.describe() + '\n'
+
+    # Result was also written to stdout
+    out2, _ = capsys.readouterr()
+    assert desc2 == out2
 
 
 def test_reporter_visualize(test_mp, tmp_path):
@@ -464,11 +494,7 @@ def test_reporter_visualize(test_mp, tmp_path):
     # TODO compare to a specimen
 
 
-def test_reporting_cli(test_mp, test_data_path):
-    from ixmp.cli import main as ixmp_cli
-
-    runner = CliRunner()
-
+def test_reporting_cli(ixmp_cli, test_mp, test_data_path):
     # Put something in the database
     make_dantzig(test_mp)
     test_mp.close_db()
@@ -483,14 +509,14 @@ def test_reporting_cli(test_mp, test_data_path):
            '--scenario', 'standard',
            'report',
            '--config', str(test_data_path / 'report-config-0.yaml'),
-           '--default', 'd_check',
+           'd_check',
            ]
 
     # 'report' command runs
-    with pytest.warns(UserWarning,
-                      match=r"Unrecognized sections \['notarealsection'\]"):
-        result = runner.invoke(ixmp_cli, cmd)
+    result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0
+
+    # TODO warning should be logged
 
     # Reporting produces the expected command-line output
     assert result.output.endswith("""<xarray.DataArray 'value' (i: 2, j: 3)>
@@ -601,45 +627,45 @@ def test_reporting_aggregate(test_mp):
     # Define some groups
     t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
 
-    # Add aggregates
-    key1 = rep.aggregate('x:t-y', 'agg1', {'t': t_groups}, keep=True)
-
-    # Group has expected key and contents
-    assert key1 == 'x:t-y:agg1'
-
-    # Aggregate is computed without error
-    agg1 = rep.get(key1)
+    # Use the computation directly
+    agg1 = computations.aggregate(as_quantity(x), {'t': t_groups}, True)
 
     # Expected set of keys along the aggregated dimension
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())
 
     # Sums are as expected
-    # TODO: the check_dtype arg assumes Quantity backend is a AttrSeries,
-    # should that be made default in assert_qty_allclose?
-    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'),
-                        check_dtype=False)
-    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'),
-                        check_dtype=False)
+    assert_qty_allclose(agg1.sel(t='foo', drop=True), x.sel(t=t_foo).sum('t'))
+    assert_qty_allclose(agg1.sel(t='bar', drop=True), x.sel(t=t_bar).sum('t'))
     assert_qty_allclose(agg1.sel(t='baz', drop=True),
-                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'),
-                        check_dtype=False)
+                        x.sel(t=['foo1', 'bar5', 'bar6']).sum('t'))
+
+    # Use Reporter convenience method
+    key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=True)
+
+    # Group has expected key and contents
+    assert key2 == 'x:t-y:agg2'
+
+    # Aggregate is computed without error
+    agg2 = rep.get(key2)
+
+    assert_qty_equal(agg1, agg2)
 
     # Add aggregates, without keeping originals
-    key2 = rep.aggregate('x:t-y', 'agg2', {'t': t_groups}, keep=False)
+    key3 = rep.aggregate('x:t-y', 'agg3', {'t': t_groups}, keep=False)
 
     # Distinct keys
-    assert key2 != key1
+    assert key3 != key2
 
     # Only the aggregated and no original keys along the aggregated dimension
-    agg2 = rep.get(key2)
-    assert set(agg2.coords['t'].values) == set(t_groups.keys())
+    agg3 = rep.get(key3)
+    assert set(agg3.coords['t'].values) == set(t_groups.keys())
 
     with pytest.raises(NotImplementedError):
         # Not yet supported; requires two separate operations
         rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})
 
 
-def test_reporting_filters(test_mp, tmp_path):
+def test_reporting_filters(test_mp, tmp_path, caplog):
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, 'Reporting filters', 'Reporting filters',
                          'new')
@@ -649,7 +675,7 @@ def test_reporting_filters(test_mp, tmp_path):
     x_key = rep.full_key('x')
 
     def assert_t_indices(labels):
-        assert set(rep.get(x_key).index.levels[0]) == set(labels)
+        assert set(rep.get(x_key).coords['t'].values) == set(labels)
 
     # 1. Set filters directly
     rep.graph['filters'] = {'t': t_foo}
@@ -671,6 +697,12 @@ def test_reporting_filters(test_mp, tmp_path):
     rep.set_filters(t=None)
     assert_t_indices(t)
 
+    # Clear using the convenience method with no args
+    rep.set_filters(t=t_foo)
+    assert_t_indices(t_foo)
+    rep.set_filters()
+    assert_t_indices(t)
+
     # 3. Set filters via configuration keys
     # NB passes through from_scenario() -> __init__() -> configure()
     rep = Reporter.from_scenario(scen, filters={'t': t_foo})
@@ -688,3 +720,19 @@ def test_reporting_filters(test_mp, tmp_path):
 
     rep.configure(config_file)
     assert_t_indices(t_bar)
+
+    # Filtering too heavily:
+    # Remove one value from the database at valid coordinates
+    removed = {'t': t[:1], 'y': list(x.coords['y'].values)[:1]}
+    scen.remove_par('x', removed)
+
+    # Set filters to retrieve only this coordinate
+    rep.set_filters(**removed)
+
+    # A warning is logged
+    caplog.clear()
+    rep.get(x_key)
+
+    msg = (f"0 values for par 'x' using filters:\n  {removed!r}\n  "
+           "Subsequent computations may fail.")
+    assert msg == caplog.records[-1].message

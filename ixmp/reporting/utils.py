@@ -1,7 +1,7 @@
-from functools import partial, reduce
+from functools import lru_cache, partial
 import logging
-from operator import mul
 
+import numpy
 import pandas as pd
 import pint
 import xarray as xr
@@ -88,6 +88,23 @@ def dims_for_qty(data):
 
     # Rename dimensions
     return [RENAME_DIMS.get(d, d) for d in dims]
+
+
+def filter_concat_args(args):
+    """Filter out str and Key from *args*.
+
+    A warning is logged for each element removed.
+    """
+    for arg in args:
+        if isinstance(arg, (str, Key)):
+            log.warn('concat() argument {arg!r} missing; will be omitted')
+            continue
+        yield arg
+
+
+@lru_cache(1)
+def get_reversed_rename_dims():
+    return {v: k for k, v in RENAME_DIMS.items()}
 
 
 def keys_for_quantity(ix_type, name, scenario):
@@ -189,12 +206,36 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         Data for *name*.
     """
     log.debug('Retrieving data for {}'.format(name))
+
+    # Only use the relevant filters
+    if filters:
+        # Dimensions of the object
+        dims = dims_for_qty(scenario.idx_names(name))
+
+        # Mapping from renamed dimensions to Scenario dimension names
+        MAP = get_reversed_rename_dims()
+
+        filters_to_use = {}
+        for dim, values in filters.items():
+            if dim in dims:
+                # *dim* is in this ixmp object, so the filter can be used
+                filters_to_use[MAP.get(dim, dim)] = values
+
+        filters = filters_to_use
+
     # Retrieve quantity data
     data = scenario._element(ix_type, name, filters)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):
         data = pd.DataFrame.from_records([data])
+
+    # Warn if no values are returned.
+    # TODO construct an empty Quantity with the correct dimensions *even if* no
+    #      values are returned.
+    if len(data) == 0:
+        log.warning(f'0 values for {ix_type} {name!r} using filters:'
+                    f'\n  {filters!r}\n  Subsequent computations may fail.')
 
     # List of the dimensions
     dims = dims_for_qty(data)
@@ -221,22 +262,20 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         data.set_index(dims, inplace=True)
 
     # Check sparseness
-    try:
-        shape = list(map(len, data.index.levels))
-    except AttributeError:
-        shape = [data.index.size]
-    size = reduce(mul, shape)
-    filled = 100 * len(data) / size if size else 'NA'
-    need_to_chunk = size > 1e7 and filled < 1
-    info = (name, shape, filled, size, need_to_chunk)
-    log.debug(' '.join(map(str, info)))
+    # try:
+    #     shape = list(map(len, data.index.levels))
+    # except AttributeError:
+    #     shape = [data.index.size]
+    # size = reduce(mul, shape)
+    # filled = 100 * len(data) / size if size else 'NA'
+    # need_to_chunk = size > 1e7 and filled < 1
+    # info = (name, shape, filled, size, need_to_chunk)
+    # log.debug(' '.join(map(str, info)))
 
     # Convert to a Dataset, assign attrbutes and name
     # ds = xr.Dataset.from_dataframe(data)[column]
     # or to a new "Attribute Series"
-    ds = Quantity(data[column])
-
-    ds = ds \
+    ds = as_quantity(data[column]) \
         .assign_attrs(attrs) \
         .rename(name + ('-margin' if column == 'mrg' else ''))
 
@@ -249,9 +288,32 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     return ds
 
 
-def concat(*args, **kwargs):
-    if Quantity is AttrSeries:
-        kwargs.pop('dim')
-        return pd.concat(*args, **kwargs)
-    elif Quantity is xr.DataArray:
-        return xr.concat(*args, **kwargs)
+def as_attrseries(obj):
+    """Convert obj to an AttrSeries."""
+    return AttrSeries(obj)
+
+
+def as_sparse_xarray(obj):  # pragma: no cover
+    """Convert *obj* to an xr.DataArray with sparse.COO storage."""
+    import sparse
+    from xarray.core.dtypes import maybe_promote
+
+    if isinstance(obj, xr.DataArray) and isinstance(obj.data, numpy.ndarray):
+        return xr.DataArray(
+            data=sparse.COO.from_numpy(
+                obj.data,
+                fill_value=maybe_promote(obj.data.dtype)[1]),
+            coords=obj.coords,
+            dims=obj.dims,
+            name=obj.name,
+            attrs=obj.attrs,
+        )
+    elif isinstance(obj, pd.Series):
+        return xr.DataArray.from_series(obj, sparse=True)
+
+    else:
+        print(type(obj), type(obj.data))
+        return obj
+
+
+as_quantity = as_attrseries if Quantity is AttrSeries else as_sparse_xarray

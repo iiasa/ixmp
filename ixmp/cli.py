@@ -42,27 +42,24 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 
 
 @main.command()
-@click.option('--config', help='Path to reporting configuration file')
-@click.option('--default', help='Default reporting key')
-@click.pass_context
-def report(ctx, config, default):
+@click.option('--config', help='Path to reporting configuration file.')
+@click.argument('key')
+@click.pass_obj
+def report(context, config, key):
+    """Run reporting for KEY."""
     # Import here to avoid importing reporting dependencies when running
     # other commands
     from ixmp.reporting import Reporter
 
     # Instantiate the Reporter with the Scenario loaded by main()
-    r = Reporter.from_scenario(ctx.obj['scen'])
+    r = Reporter.from_scenario(context['scen'])
 
     # Read the configuration file, if any
     if config:
         r.read_config(config)
 
-    # Process remaining configuration from command-line arguments
-    if default:
-        r.configure(default=default)
-
-    # Print the default target
-    print(r.get())
+    # Print the target
+    print(r.get(key))
 
 
 @main.command()

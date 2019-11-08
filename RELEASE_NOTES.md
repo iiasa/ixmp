@@ -21,7 +21,8 @@ Configuration for ixmp and its storage backends has been streamlined.
 - [#189](https://github.com/iiasa/ixmp/pull/189): Identify and load Scenarios using URLs.
 - [#182](https://github.com/iiasa/ixmp/pull/182),
   [#200](https://github.com/iiasa/ixmp/pull/200): Add new Backend, Model APIs and JDBCBackend, GAMSModel classes.
-- [#188](https://github.com/iiasa/ixmp/pull/188): Enhance reporting.
+- [#188](https://github.com/iiasa/ixmp/pull/188),
+  [#195](https://github.com/iiasa/ixmp/pull/195): Enhance reporting.
 - [#177](https://github.com/iiasa/ixmp/pull/177): add ability to pass `gams_args` through `Scenario.solve()`
 - [#175](https://github.com/iiasa/ixmp/pull/175): Drop support for Python 2.
 - [#174](https://github.com/iiasa/ixmp/pull/174): Set `convertStrings=True` for JPype >= 0.7; see the [JPype changelog](https://jpype.readthedocs.io/en/latest/CHANGELOG.html).

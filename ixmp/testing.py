@@ -226,9 +226,11 @@ def make_dantzig(mp, solve=False):
     scen.init_scalar('f', 90.0, 'USD_per_km')
 
     # initialize the decision variables and equations
-    scen.init_var('z', None, None)
     scen.init_var('x', idx_sets=['i', 'j'])
+    scen.init_var('z', None, None)
+    scen.init_equ('cost')
     scen.init_equ('demand', idx_sets=['j'])
+    scen.init_equ('supply', idx_sets=['i'])
 
     # commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")

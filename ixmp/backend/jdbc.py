@@ -627,8 +627,8 @@ class JDBCBackend(Backend):
             Variables to be imported.
         """
         self.jindex[s].readSolutionFromGDX(
-            str(path.parent), path.name, comment, var_list, equ_list,
-            check_solution)
+            str(path.parent), path.name, comment, to_jlist2(var_list),
+            to_jlist2(equ_list), check_solution)
 
     def _get_item(self, s, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.

@@ -5,7 +5,7 @@ from ixmp._config import KEYS, _JSONEncoder, Config, _locate
 
 @pytest.fixture
 def cfg():
-    """Return a :class:`ixmp.config.Config` object that doesn't read a file."""
+    """Return a :class:`ixmp._config.Config` object that doesn't read a file."""
     yield Config(read=False)
 
 

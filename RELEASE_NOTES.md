@@ -18,6 +18,7 @@ Configuration for ixmp and its storage backends has been streamlined.
 
 ## All changes
 
+- [#189](https://github.com/iiasa/ixmp/pull/189): Identify and load Scenarios using URLs.
 - [#182](https://github.com/iiasa/ixmp/pull/182),
   [#200](https://github.com/iiasa/ixmp/pull/200): Add new Backend, Model APIs and JDBCBackend, GAMSModel classes.
 - [#188](https://github.com/iiasa/ixmp/pull/188): Enhance reporting.

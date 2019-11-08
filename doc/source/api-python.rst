@@ -197,6 +197,14 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
    :members:
 
 
+Utilities
+---------
+
+.. currentmodule:: ixmp.utils
+
+.. automethod:: ixmp.utils.parse_url
+
+
 Testing utilities
 -----------------
 

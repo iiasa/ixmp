@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import logging
+from urllib.parse import urlparse
 
 import pandas as pd
 import six
@@ -61,6 +62,67 @@ def check_year(y, s):
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
         return True
+
+
+def parse_url(url):
+    """Parse *url* and return Platform and Scenario information.
+
+    A URL (Uniform Resource Locator), as the name implies, uniquely identifies
+    a specific scenario and (optionally) version of a model, as well as
+    (optionally) the database in which it is stored. ixmp URLs take forms
+    like::
+
+        ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]
+        MODEL/SCENARIO[#VERSION]
+
+    where:
+
+    - The ``PLATFORM`` is a configured platform name; see :obj:`ixmp.config`.
+    - ``MODEL`` may not contain the forward slash character ('/'); ``SCENARIO``
+      may contain any number of forward slashes. Both must be supplied.
+    - ``VERSION`` is optional but, if supplied, must be an integer.
+
+    Returns
+    -------
+    platform_info : dict
+        Keyword argument 'name' for the :class:`Platform` constructor.
+    scenario_info : dict
+        Keyword arguments for a :class:`Scenario` on the above platform:
+        'model', 'scenario' and, optionally, 'version'.
+
+    Raises
+    ------
+    ValueError
+        For malformed URLs.
+    """
+    components = urlparse(url)
+    if components.scheme not in ('ixmp', ''):
+        raise ValueError('URL must begin with ixmp:// or //')
+
+    platform_info = dict()
+    if components.netloc:
+        platform_info['name'] = components.netloc
+
+    scenario_info = dict()
+
+    path = components.path.split('/')
+    if len(path):
+        # If netloc was given, path begins with '/'; discard
+        path = path if len(path[0]) else path[1:]
+
+        if len(path) < 2:
+            raise ValueError("URL path must be 'MODEL/SCENARIO'")
+
+        scenario_info['model'] = path[0]
+        scenario_info['scenario'] = '/'.join(path[1:])
+
+    if len(components.query):
+        raise ValueError(f"queries ({components.query}) not supported in URLs")
+
+    if len(components.fragment):
+        scenario_info['version'] = int(components.fragment)
+
+    return platform_info, scenario_info
 
 
 def pd_read(f, *args, **kwargs):

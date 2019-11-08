@@ -13,6 +13,7 @@ from .utils import (
     check_year,
     filtered,
     logger,
+    parse_url
 )
 
 log = logging.getLogger(__name__)
@@ -619,6 +620,52 @@ class Scenario(TimeSeries):
         # Initialize cache
         self._cache = cache
         self._pycache = {}
+
+    @classmethod
+    def from_url(cls, url, errors='warn'):
+        """Instantiate a Scenario given an ixmp-scheme URL.
+
+        The following are equivalent::
+
+            from ixmp import Platform, Scenario
+            mp = Platform(name='example')
+            scen = Scenario(mp 'model', 'scenario', version=42)
+
+        and::
+
+            from ixmp import Scenario
+            scen, mp = Scenario.from_url('ixmp://example/model/scenario#42')
+
+        Parameters
+        ----------
+        url : str
+            See :meth:`parse_url <ixmp.utils.parse_url>`.
+        errors : 'warn' or 'raise'
+            If 'warn', a failure to load the Scenario is logged as a warning,
+            and the platform is still returned. If 'raise', the exception
+            is raised.
+
+        Returns
+        -------
+        scenario, platform : 2-tuple of (Scenario, :class:`Platform`)
+            The Scenario and Platform referred to by the URL.
+        """
+        assert errors in ('warn', 'raise'), "errors= must be 'warn' or 'raise'"
+
+        platform_info, scenario_info = parse_url(url)
+        platform = Platform(**platform_info)
+
+        try:
+            scenario = cls(platform, **scenario_info)
+        except Exception as e:
+            if errors == 'warn':
+                log.warning('{}: {}\nwhen loading Scenario from url {}'
+                            .format(e.__class__.__name__, e.args[0], url))
+                return None, platform
+            else:
+                raise
+        else:
+            return scenario, platform
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.

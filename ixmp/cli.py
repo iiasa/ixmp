@@ -3,6 +3,8 @@ import ixmp
 
 
 @click.group()
+@click.option('--url', metavar='ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]',
+              help='Scenario URL.')
 @click.option('--platform', help='Configured platform name.')
 @click.option('--dbprops', type=click.Path(exists=True, dir_okay=False),
               help='Database properties file.')
@@ -10,12 +12,20 @@ import ixmp
 @click.option('--scenario', help='Scenario name.')
 @click.option('--version', type=int, help='Scenario version.')
 @click.pass_context
-def main(ctx, platform, dbprops, model, scenario, version):
+def main(ctx, url, platform, dbprops, model, scenario, version):
     # Load the indicated Platform
+    if url:
+        if dbprops or platform or model or scenario or version:
+            raise click.BadOptionUsage('--platform --model --scenario and/or'
+                                       '--version redundant with --url')
+
+        scen, mp = ixmp.Scenario.from_url(url)
+        ctx.obj = dict(scen=scen, mp=mp)
+        return
+
     if dbprops and platform:
         raise click.BadOptionUsage('give either --platform or --dbprops')
-
-    if platform:
+    elif platform:
         mp = ixmp.Platform(name=platform)
     elif dbprops:
         mp = ixmp.Platform(backend='jdbc', dbprops=dbprops)
@@ -27,9 +37,7 @@ def main(ctx, platform, dbprops, model, scenario, version):
 
     # With a Platform, load the indicated Scenario
     if model and scenario:
-        print('main 1')
         scen = ixmp.Scenario(mp, model, scenario, version=version)
-        print('main 2')
         ctx.obj['scen'] = scen
 
 

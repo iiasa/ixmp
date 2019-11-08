@@ -292,7 +292,11 @@ class JDBCBackend(Backend):
 
         # either getTimeSeries or getScenario
         method = getattr(self.jobj, 'get' + ts.__class__.__name__)
-        jobj = method(*args)
+        try:
+            jobj = method(*args)
+        except java.IxException as e:
+            raise RuntimeError(*e.args)
+
         # Add to index
         self.jindex[ts] = jobj
 

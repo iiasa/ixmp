@@ -181,10 +181,10 @@ Computations
       load_file
       write_report
 
-   Conversion:
+   Data manipulation:
 
    .. autosummary::
-      make_dataframe
+      concat
 
 
 Utilities

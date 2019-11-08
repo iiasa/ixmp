@@ -19,7 +19,7 @@ __all__ = [
     'concat',
     'disaggregate_shares',
     'load_file',
-    'make_dataframe',
+    'product',
     'sum',
     'write_report',
 ]
@@ -96,7 +96,7 @@ def concat(*objs, **kwargs):
     if Quantity is AttrSeries:
         kwargs.pop('dim')
         return pd.concat(objs, **kwargs)
-    elif Quantity is xr.DataArray:
+    elif Quantity is xr.DataArray:  # pragma: no cover
         return xr.concat(objs, **kwargs)
 
 
@@ -158,13 +158,6 @@ def ratio(numerator, denominator):
     return result
 
 
-# Conversion
-def make_dataframe(*quantities):
-    """Concatenate *quantities* into a single pd.DataFrame."""
-    # TODO also rename
-    raise NotImplementedError
-
-
 # Input and output
 def load_file(path):
     """Read the file at *path* and return its contents.
@@ -186,10 +179,10 @@ def load_file(path):
         return xr.DataArray.from_series(data.set_index(index_columns)['value'])
     elif path.suffix in ('.xls', '.xlsx'):
         # TODO define expected Excel data input format
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
     elif path.suffix == '.yaml':
         # TODO define expected YAML data input format
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
     else:
         # Default
         return open(path).read()

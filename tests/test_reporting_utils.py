@@ -94,16 +94,24 @@ class TestQuantity:
 
 class TestAttrSeries:
     """Tests of AttrSeries in particular."""
-    def test_sum(self):
+    @pytest.fixture
+    def foo(self):
         idx = pd.MultiIndex.from_product([['a1', 'a2'], ['b1', 'b2']],
                                          names=['a', 'b'])
-        foo = AttrSeries([0, 1, 2, 3], index=idx)
+        yield AttrSeries([0, 1, 2, 3], index=idx)
 
+    def test_sum(self, foo):
         # AttrSeries can be summed across all dimensions
         result = foo.sum(dim=['a', 'b'])
         assert isinstance(result, AttrSeries)  # returns an AttrSeries
         assert len(result) == 1                # with one element
         assert result[0] == 6                  # that has the correct value
+
+    def test_others(self, foo):
+        # Exercise other compatibility functions
+        assert isinstance(foo.as_xarray(), xr.DataArray)
+        assert type(foo.to_frame()) is pd.DataFrame
+        assert foo.drop('a').dims == ('b',)
 
 
 @pytest.mark.skipif(Quantity is AttrSeries, reason='For xr.DataArray only')

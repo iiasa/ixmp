@@ -41,6 +41,14 @@ def test_pd_io_xlsx_multi():
         _obs = obs[k]
         pdt.assert_frame_equal(_obs, _exp)
 
+def test_ispanda():
+    
+    fname = 'test.csv'
+    data_frame = [1,2,3,4]
+     
+    with pytest.raises(ValueError):
+        assert utils.pd_write(data_frame, fname)
+
 
 m_s = dict(model='m', scenario='s')
 

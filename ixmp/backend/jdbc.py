@@ -352,7 +352,8 @@ class JDBCBackend(Backend):
         # Iterate over returned rows
         for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
             # Get the value of each field and maybe convert its type
-            yield tuple(ftype.get(f, str)(row.get(f))
+            yield tuple(ftype.get(f, str)
+                        (getattr(row, 'get' + f.capitalize())())
                         for f in FIELDS['ts_get'])
 
     def get_geo(self, ts):

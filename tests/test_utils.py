@@ -41,13 +41,41 @@ def test_pd_io_xlsx_multi():
         _obs = obs[k]
         pdt.assert_frame_equal(_obs, _exp)
 
-def test_ispanda():
-    
+
+def test_pd_write(tmp_path):
+
     fname = 'test.csv'
-    data_frame = [1,2,3,4]
-     
+    d = tmp_path / "sub"
+    d.mkdir()
+
+    data_frame = [1, 2, 3, 4]
+
     with pytest.raises(ValueError):
         assert utils.pd_write(data_frame, fname)
+
+
+def test_check_year():
+
+    # If y is a string value, raise a Value Error.
+
+    y1 = "a"
+    s1 = "a"
+    with pytest.raises(ValueError):
+        assert utils.check_year(y1, s1)
+
+    # If y = None.
+
+    y2 = None
+    s2 = None
+
+    assert utils.check_year(y2, s2) is None
+
+    # If y is integer.
+
+    y3 = 4
+    s3 = 4
+
+    assert utils.check_year(y3, s3) is True
 
 
 m_s = dict(model='m', scenario='s')

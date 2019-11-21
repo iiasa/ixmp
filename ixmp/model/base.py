@@ -18,6 +18,60 @@ class Model(ABC):  # pragma: no cover
         """
         pass
 
+    @classmethod
+    def initialize(cls, scenario):
+        """Set up *scenario* with required items.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Scenario object to initialize.
+
+        See also
+        --------
+        initialize_items
+        """
+        pass
+
+    @classmethod
+    def initialize_items(cls, scenario, items):
+        """Helper for :meth:`initialize`.
+
+        All of the *items* are added to *scenario*. Existing items are not
+        modified.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Scenario object to initialize.
+        items : list of dict
+            Each entry is one ixmp item (set, parameter, equation, or variable)
+            to initialize. Each dict **must** have the key 'ix_type'; one of
+            'set', 'par', 'equ', or 'var'; any other entries are keyword
+            arguments to the methods :meth:`.init_set` etc.
+
+        See also
+        --------
+        .init_equ
+        .init_par
+        .init_set
+        .init_var
+        """
+        for item_info in items:
+            # Copy so that pop() below does not modify *items*
+            item_info = item_info.copy()
+
+            # Get the appropriate method, e.g. init_set or init_par
+            ix_type = item_info.pop('ix_type')
+            init_method = getattr(scenario, 'init_{}'.format(ix_type))
+
+            try:
+                # Add the item
+                init_method(**item_info)
+            except ValueError:
+                # Item already exists
+                pass
+
     @abstractmethod
     def run(self, scenario):
         """Execute the model.

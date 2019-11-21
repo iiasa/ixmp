@@ -508,26 +508,28 @@ class JDBCBackend(Backend):
             idx_sets = list(item.getIdxSets())
 
             data = {}
-            types = {}
 
             # Retrieve index columns
             for d, (d_name, d_set) in enumerate(zip(idx_names, idx_sets)):
-                data[d_name] = item.getCol(d, jList)
-                if d_set == 'year':
-                    # Record column for later type conversion
-                    types[d_name] = int
+                log.debug('converting {}...'.format(d_name))
+                dtype = 'int16' if d_set == 'year' else 'category'
+                # apply trick from
+                # https://github.com/jpype-project/jpype/issues/71
+                data[d_name] = pd.Series(item.getCol(d, jList)[:], dtype=dtype)
+                log.debug('bytes consumed {}'.format(
+                    data[d_name].memory_usage(deep=True)))
 
             # Retrieve value columns
             if type == 'par':
-                data['value'] = item.getValues(jList)
-                data['unit'] = item.getUnits(jList)
+                data['value'] = pd.Series(item.getValues(jList)[:])
+                data['unit'] = pd.Series(item.getUnits(jList)[:],
+                                         dtype="category")
 
             if type in ('equ', 'var'):
-                data['lvl'] = item.getLevels(jList)
-                data['mrg'] = item.getMarginals(jList)
+                data['lvl'] = pd.Series(item.getLevels(jList)[:])
+                data['mrg'] = pd.Series(item.getMarginals(jList)[:])
 
-            return pd.DataFrame.from_dict(data, orient='columns') \
-                               .astype(types)
+            return pd.DataFrame.from_dict(data, orient='columns')
         elif type == 'set':
             # Index sets
             return pd.Series(item.getCol(0, jList))

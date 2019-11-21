@@ -14,6 +14,7 @@ import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 
 from ixmp import config
 from ixmp.core import Scenario
@@ -524,30 +525,40 @@ class JDBCBackend(CachingBackend):
 
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
-            idx_names = list(item.getIdxNames())
+            columns = list(item.getIdxNames())
             idx_sets = list(item.getIdxSets())
 
-            data = {}
-            types = {}
+            # Prepare dtypes for index columns
+            dtypes = {}
+            for idx_name, idx_set in zip(columns, idx_sets):
+                if idx_set == 'year':
+                    dtypes[idx_name] = int
+                else:
+                    dtypes[idx_name] = CategoricalDtype(
+                        self.item_get_elements(s, 'set', idx_set))
 
-            # Retrieve index columns
-            for d, (d_name, d_set) in enumerate(zip(idx_names, idx_sets)):
-                data[d_name] = item.getCol(d, jList)
-                if d_set == 'year':
-                    # Record column for later type conversion
-                    types[d_name] = int
-
-            # Retrieve value columns
+            # Prepare dtypes for additional columns
             if type == 'par':
-                data['value'] = item.getValues(jList)
-                data['unit'] = item.getUnits(jList)
+                columns.extend(['value', 'unit'])
+                dtypes['value'] = float
+                dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+            elif type in ('equ', 'var'):
+                columns.extend(['lvl', 'mrg'])
+                dtypes.update({'lvl': float, 'mrg': float})
 
-            if type in ('equ', 'var'):
-                data['lvl'] = item.getLevels(jList)
-                data['mrg'] = item.getMarginals(jList)
+            # Prepare empty DataFrame
+            result = pd.DataFrame(index=pd.RangeIndex(len(jList)),
+                                  columns=columns) \
+                       .astype(dtypes)
 
-            result = pd.DataFrame.from_dict(data, orient='columns') \
-                                 .astype(types)
+            for i in range(len(idx_sets)):
+                result.iloc[:, i] = item.getCol(i, jList)
+            if type == 'par':
+                result.loc[:, 'value'] = item.getValues(jList)
+                result.loc[:, 'unit'] = item.getUnits(jList)
+            elif type in ('equ', 'var'):
+                result.loc[:, 'lvl'] = item.getLevels(jList)
+                result.loc[:, 'mrg'] = item.getMarginals(jList)
         elif type == 'set':
             # Index sets
             result = pd.Series(item.getCol(0, jList))

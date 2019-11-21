@@ -10,7 +10,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_clone(test_mp, test_data_path, caplog):
+def test_run_clone(test_mp, caplog):
     # this test is designed to cover the full functionality of the GAMS API
     # - initialize a new platform instance
     # - creates a new scenario and exports a gdx file
@@ -18,7 +18,7 @@ def test_run_clone(test_mp, test_data_path, caplog):
     # - reads back the solution from the output
     # - performs the test on the objective value and the timeseries data
     mp = test_mp
-    scen = make_dantzig(mp, solve=test_data_path)
+    scen = make_dantzig(mp, solve=True)
     assert np.isclose(scen.var('z')['lvl'], 153.675)
     assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
 
@@ -49,15 +49,15 @@ def test_run_clone(test_mp, test_data_path, caplog):
     assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
 
 
-def test_run_remove_solution(test_mp, test_data_path):
+def test_run_remove_solution(test_mp):
     # create a new instance of the transport problem and solve it
     mp = test_mp
-    scen = make_dantzig(mp, solve=test_data_path)
+    scen = make_dantzig(mp, solve=True)
     assert np.isclose(scen.var('z')['lvl'], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists
     pytest.raises(ValueError, scen.solve,
-                  model=str(test_data_path / 'transport_ixmp'), case='fail')
+                  model='dantzig', case='fail')
 
     # remove the solution, check that variables are empty
     # and timeseries not marked `meta=True` are removed
@@ -94,10 +94,10 @@ def get_distance(scen):
     )
 
 
-def test_multi_db_run(tmpdir, test_data_path):
+def test_multi_db_run(tmpdir):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(backend='jdbc', driver='hsqldb', path=tmpdir / 'mp1')
-    scen1 = make_dantzig(mp1, solve=test_data_path)
+    scen1 = make_dantzig(mp1, solve=True)
 
     mp2 = ixmp.Platform(backend='jdbc', driver='hsqldb', path=tmpdir / 'mp2')
     # add other unit to make sure that the mapping is correct during clone

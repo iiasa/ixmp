@@ -1,7 +1,6 @@
 """Tests for ixmp.reporting."""
 import os
 
-from click.testing import CliRunner
 import ixmp
 import numpy as np
 import pandas as pd

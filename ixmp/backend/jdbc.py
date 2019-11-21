@@ -551,14 +551,16 @@ class JDBCBackend(CachingBackend):
                                   columns=columns) \
                        .astype(dtypes)
 
+            # Copy vectors from Java into DataFrame columns
+            # NB [:] causes JPype to use a faster code path
             for i in range(len(idx_sets)):
-                result.iloc[:, i] = item.getCol(i, jList)
+                result.iloc[:, i] = item.getCol(i, jList)[:]
             if type == 'par':
-                result.loc[:, 'value'] = item.getValues(jList)
-                result.loc[:, 'unit'] = item.getUnits(jList)
+                result.loc[:, 'value'] = item.getValues(jList)[:]
+                result.loc[:, 'unit'] = item.getUnits(jList)[:]
             elif type in ('equ', 'var'):
-                result.loc[:, 'lvl'] = item.getLevels(jList)
-                result.loc[:, 'mrg'] = item.getMarginals(jList)
+                result.loc[:, 'lvl'] = item.getLevels(jList)[:]
+                result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
         elif type == 'set':
             # Index sets
             result = pd.Series(item.getCol(0, jList))

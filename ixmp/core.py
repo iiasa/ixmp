@@ -611,7 +611,7 @@ class Scenario(TimeSeries):
     scheme = None
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
-                 annotation=None, cache=False):
+                 annotation=None, cache=False, **model_init_args):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
@@ -634,6 +634,15 @@ class Scenario(TimeSeries):
     @property
     def _cache(self):
         return hasattr(self.platform._backend, '_cache')
+
+        # Retrieve the Model class correlating to the *scheme*
+        try:
+            model_class = get_model(scheme).__class__
+        except KeyError:
+            pass
+        else:
+            # Use the model class to initialize the Scenario
+            model_class.initialize(self, **model_init_args)
 
     @classmethod
     def from_url(cls, url, errors='warn'):

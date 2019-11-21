@@ -447,7 +447,7 @@ def test_log_level_raises(test_mp):
     pytest.raises(ValueError, test_mp.set_log_level, level='foo')
 
 
-def test_solve_callback(test_mp, test_data_path):
+def test_solve_callback(test_mp):
     """Test the callback argument to Scenario.solve().
 
     In real usage, callback() would compute some kind of convergence criterion.
@@ -460,8 +460,7 @@ def test_solve_callback(test_mp, test_data_path):
     scen = make_dantzig(test_mp)
 
     # Solve the scenario as configured
-    solve_args = dict(model=str(test_data_path / 'transport_ixmp'),
-                      case='transport_standard', gams_args=['LogOption=2'])
+    solve_args = dict(model='dantzig', gams_args=['LogOption=2'])
     scen.solve(**solve_args)
 
     # Store the expected value of the decision variable, x

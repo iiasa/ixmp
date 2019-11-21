@@ -206,8 +206,7 @@ def make_dantzig(mp, solve=False):
 
     if solve:
         # Solve the model using the GAMS code provided in the `tests` folder
-        scen.solve(model=str(Path(solve) / 'transport_ixmp'),
-                   case='transport_standard')
+        scen.solve(model='dantzig', case='transport_standard')
 
     # add timeseries data for testing `clone(keep_solution=False)`
     # and `remove_solution()`

@@ -135,8 +135,8 @@ def test_reporter_from_scenario(scenario):
     assert 'scenario' in r.graph
 
 
-def test_reporter_from_dantzig(test_mp, test_data_path):
-    scen = make_dantzig(test_mp, solve=test_data_path)
+def test_reporter_from_dantzig(test_mp):
+    scen = make_dantzig(test_mp, solve=True)
 
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)

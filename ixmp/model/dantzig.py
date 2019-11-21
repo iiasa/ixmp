@@ -1,3 +1,6 @@
+from collections import ChainMap
+from pathlib import Path
+
 import pandas as pd
 
 from .gams import GAMSModel
@@ -30,6 +33,13 @@ class DantzigModel(GAMSModel):
 
     Provided for testing :mod:`ixmp` code.
     """
+    name = 'dantzig'
+
+    defaults = ChainMap({
+        # Override keys from GAMSModel
+        'model_file': Path(__file__).with_name('dantzig.gms'),
+    }, GAMSModel.defaults)
+
     @classmethod
     def initialize(cls, scenario, with_data=False):
         """Initialize the problem.

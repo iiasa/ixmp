@@ -179,6 +179,10 @@ def make_dantzig(mp, solve=False):
         If not :obj:`False`, then *solve* is interpreted as a path to a
         directory, and the model ``transport_ixmp.gms`` in the directory is run
         for the scenario.
+
+    See also
+    --------
+    .DantzigModel
     """
     # add custom units and region for timeseries data
     try:

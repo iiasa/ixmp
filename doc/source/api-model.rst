@@ -15,12 +15,21 @@ Provided models
 .. automodule:: ixmp.model
    :members: get_model, MODELS
 
+.. currentmodule:: ixmp.model.gams
+
 .. autoclass:: ixmp.model.gams.GAMSModel
+   :members:
+
+.. currentmodule:: ixmp.model.dantzig
+
+.. autoclass:: ixmp.model.dantzig.DantzigModel
    :members:
 
 
 Model API
 ---------
+
+.. currentmodule:: ixmp.model.base
 
 .. autoclass:: ixmp.model.base.Model
    :members: name, __init__, initialize, initialize_items, run

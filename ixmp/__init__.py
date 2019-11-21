@@ -10,6 +10,7 @@ from .backend import BACKENDS, ItemType  # noqa: F401
 from .backend.jdbc import JDBCBackend
 from .model import MODELS
 from .model.gams import GAMSModel
+from .model.dantzig import DantzigModel
 from ixmp.reporting import Reporter  # noqa: F401
 
 __version__ = get_versions()['version']
@@ -22,4 +23,5 @@ BACKENDS['jdbc'] = JDBCBackend
 MODELS.update({
     'default': GAMSModel,
     'gams': GAMSModel,
+    'dantzig': DantzigModel,
 })

@@ -46,7 +46,6 @@ import pytest
 
 from . import cli, config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
-from .model.dantzig import DantzigModel
 
 
 models = {
@@ -189,12 +188,11 @@ def make_dantzig(mp, solve=False):
         pass
     mp.add_region('DantzigLand', 'country')
 
-    # initialize a new (empty) instance of an `ixmp.Scenario`
+    # Initialize a new Scenario, and use the DantzigModel class' initialize()
+    # method to populate it
     annot = "Dantzig's transportation problem for illustration and testing"
-    scen = Scenario(mp, version='new', annotation=annot, **models['dantzig'])
-
-    # Use the model class' initalize() method to populate the Scenario
-    DantzigModel.initialize(scen, with_data=True)
+    scen = Scenario(mp, **models['dantzig'], version='new', annotation=annot,
+                    scheme='dantzig', with_data=True)
 
     # commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")

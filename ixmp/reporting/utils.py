@@ -224,7 +224,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         filters = filters_to_use
 
     # Retrieve quantity data
-    data = scenario._element(ix_type, name, filters)
+    data = getattr(scenario, ix_type)(name, filters)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):

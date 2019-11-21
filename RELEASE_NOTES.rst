@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#212 <https://github.com/iiasa/ixmp/pull/212>`_: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.
 - `#261 <https://github.com/iiasa/ixmp/pull/261>`_: Increase minimum pandas
   version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
 - `#243 <https://github.com/iiasa/ixmp/pull/243>`_: Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV.

@@ -17,9 +17,9 @@ import pandas as pd
 
 from ixmp import config
 from ixmp.core import Scenario
-from ixmp.utils import islistable
+from ixmp.utils import filtered, islistable
 from . import FIELDS
-from .base import Backend
+from .base import CachingBackend
 
 
 log = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
     return str(file), full_url
 
 
-class JDBCBackend(Backend):
+class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQLDB instances.
 
     Parameters
@@ -204,6 +204,9 @@ class JDBCBackend(Backend):
                 raise RuntimeError('when initializing database:' + info)
             else:
                 raise RuntimeError('unhandled Java exception:' + info) from e
+
+        # Invoke the parent constructor to initialize the cache
+        super().__init__()
 
     def __del__(self):
         try:
@@ -450,7 +453,7 @@ class JDBCBackend(Backend):
 
         # Instantiate same class as the original object
         return s.__class__(platform_dest, model, scenario,
-                           version=jclone.getVersion(), cache=s._cache)
+                           version=jclone.getVersion())
 
     def has_solution(self, s):
         return self.jindex[s].hasSolution()
@@ -483,12 +486,30 @@ class JDBCBackend(Backend):
 
     def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')()
+        self.cache_invalidate(s, type, name)
 
     def item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def item_get_elements(self, s, type, name, filters=None):
+        try:
+            # Retrieve the cached value with this exact set of filters
+            return self.cache_get(s, type, name, filters)
+        except KeyError:
+            pass  # Cache miss
+
+        try:
+            # Retrieve a cached, unfiltered value of the same item
+            unfiltered = self.cache_get(s, type, name, None)
+        except KeyError:
+            pass  # Cache miss
+        else:
+            # Success; filter and return
+            return filtered(unfiltered, filters)
+
+        # Failed to load item from cache
+
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
 
@@ -525,19 +546,24 @@ class JDBCBackend(Backend):
                 data['lvl'] = item.getLevels(jList)
                 data['mrg'] = item.getMarginals(jList)
 
-            return pd.DataFrame.from_dict(data, orient='columns') \
-                               .astype(types)
+            result = pd.DataFrame.from_dict(data, orient='columns') \
+                                 .astype(types)
         elif type == 'set':
             # Index sets
-            return pd.Series(item.getCol(0, jList))
+            result = pd.Series(item.getCol(0, jList))
         elif type == 'par':
             # Scalar parameters
-            return dict(value=item.getScalarValue().floatValue(),
-                        unit=str(item.getScalarUnit()))
+            result = dict(value=item.getScalarValue().floatValue(),
+                          unit=str(item.getScalarUnit()))
         elif type in ('equ', 'var'):
             # Scalar equations and variables
-            return dict(lvl=item.getScalarLevel().floatValue(),
-                        mrg=item.getScalarMarginal().floatValue())
+            result = dict(lvl=item.getScalarLevel().floatValue(),
+                          mrg=item.getScalarMarginal().floatValue())
+
+        # Store cache
+        self.cache(s, type, name, filters, result)
+
+        return result
 
     def item_set_elements(self, s, type, name, elements):
         jobj = self._get_item(s, type, name)
@@ -566,10 +592,14 @@ class JDBCBackend(Backend):
             else:  # pragma: no cover
                 raise RuntimeError('unhandled Java exception') from e
 
+        self.cache_invalidate(s, type, name)
+
     def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
         for key in keys:
             jitem.removeElement(to_jlist2(key))
+
+        self.cache_invalidate(s, type, name)
 
     def get_meta(self, s):
         def unwrap(v):
@@ -592,6 +622,8 @@ class JDBCBackend(Backend):
             self.jindex[s].removeSolution(from_year)
         else:
             self.jindex[s].removeSolution()
+
+        self.cache_invalidate(s)
 
     # MsgScenario methods
 
@@ -629,6 +661,8 @@ class JDBCBackend(Backend):
         self.jindex[s].readSolutionFromGDX(
             str(path.parent), path.name, comment, to_jlist2(var_list),
             to_jlist2(equ_list), check_solution)
+
+        self.cache_invalidate(s)
 
     def _get_item(self, s, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.

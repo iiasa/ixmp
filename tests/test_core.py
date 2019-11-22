@@ -307,25 +307,32 @@ def test_meta(test_mp):
 
 
 def test_load_scenario_data(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=True)
+    """load_scenario_data() caches all data."""
+    scen = ixmp.Scenario(test_mp, *can_args)
     scen.load_scenario_data()
-    assert ('par', 'd') in scen._pycache  # key exists
-    df = scen.par('d', filters={'i': ['seattle']})
-    obs = df.loc[0, 'unit']
-    exp = 'km'
-    assert obs == exp
+
+    cache_key = scen.platform._backend._cache_key(scen, 'par', 'd')
+
+    # Item exists in cache
+    assert cache_key in scen.platform._backend._cache
+
+    # Cache has not been used
+    hits_before = scen.platform._backend._cache_hit.get(cache_key, 0)
+    assert hits_before == 0
+
+    # Retrieving the expected value
+    assert 'km' == scen.par('d', filters={'i': ['seattle']}).loc[0, 'unit']
+
+    # Cache was used to return the value
+    hits_after = scen.platform._backend._cache_hit[cache_key]
+    assert hits_after == hits_before + 1
 
 
 def test_load_scenario_data_clear_cache(test_mp):
     # this fails on commit: 4376f54
     scen = ixmp.Scenario(test_mp, *can_args, cache=True)
     scen.load_scenario_data()
-    scen.clear_cache(name='d')
-
-
-def test_load_scenario_data_raises(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=False)
-    pytest.raises(ValueError, scen.load_scenario_data)
+    scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
 
 def test_log_level(test_mp):

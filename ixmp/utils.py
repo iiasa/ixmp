@@ -164,7 +164,7 @@ def filtered(df, filters):
 
     mask = pd.Series(True, index=df.index)
     for k, v in filters.items():
-        isin = df[k].isin(v)
+        isin = df[k].isin(as_str_list(v))
         mask = mask & isin
     return df[mask]
 

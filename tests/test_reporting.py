@@ -1,7 +1,6 @@
 """Tests for ixmp.reporting."""
 import os
 
-from click.testing import CliRunner
 import ixmp
 import numpy as np
 import pandas as pd
@@ -537,9 +536,10 @@ def test_report_size(test_mp):
     # test_mp.add_unit('kg')
     scen = ixmp.Scenario(test_mp, 'size test', 'base', version='new')
 
-    # Dimensions and their lengths
-    dims = 'abcdef'
-    sizes = [1, 5, 21, 21, 89, 377]  # Fibonacci #s; next 1597, 6765
+    # Dimensions and their lengths (Fibonacci numbers)
+    N_dims = 6
+    dims = 'abcdefgh'[:N_dims + 1]
+    sizes = [1, 5, 21, 21, 89, 377, 1597, 6765][:N_dims + 1]
 
     # commented: "377 / 73984365 elements = 0.00051% full"
     # from functools import reduce

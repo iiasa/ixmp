@@ -11,7 +11,6 @@ from .model import get_model
 from .utils import (
     as_str_list,
     check_year,
-    filtered,
     logger,
     parse_url
 )
@@ -617,9 +616,9 @@ class Scenario(TimeSeries):
             warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios is '
                  'deprecated, please use `message_ix.Scenario`')
 
-        # Initialize cache
-        self._cache = cache
-        self._pycache = {}
+    @property
+    def _cache(self):
+        return hasattr(self.platform._backend, '_cache')
 
     @classmethod
     def from_url(cls, url, errors='warn'):
@@ -678,37 +677,11 @@ class Scenario(TimeSeries):
         if not self._cache:
             raise ValueError('Cache must be enabled to load scenario data')
 
-        funcs = {
-            'set': (self.set_list, self.set),
-            'par': (self.par_list, self.par),
-            'var': (self.var_list, self.var),
-            'equ': (self.equ_list, self.equ),
-        }
-        for ix_type, (list_func, get_func) in funcs.items():
+        for ix_type in 'equ', 'par', 'set', 'var':
             logger().info('Caching {} data'.format(ix_type))
-            for item in list_func():
-                get_func(item)
-
-    def _element(self, ix_type, name, filters=None, cache=None):
-        """Return a pd.DataFrame of item elements."""
-        cache_key = (ix_type, name)
-
-        # if dataframe in python cache, retrieve from there
-        if cache_key in self._pycache:
-            return filtered(self._pycache[cache_key], filters)
-
-        # if no cache, retrieve from Backend with filters
-        if filters is not None and not self._cache:
-            return self._backend('item_get_elements', ix_type, name, filters)
-
-        # otherwise, retrieve from Java and keep in python cache
-        df = self._backend('item_get_elements', ix_type, name, None)
-
-        # save if using memcache
-        if self._cache:
-            self._pycache[cache_key] = df
-
-        return filtered(df, filters)
+            get_func = getattr(self, ix_type)
+            for name in getattr(self, '{}_list'.format(ix_type))():
+                get_func(name)
 
     def idx_sets(self, name):
         """Return the list of index sets for an item (set, par, var, equ)
@@ -799,7 +772,7 @@ class Scenario(TimeSeries):
         -------
         pandas.DataFrame
         """
-        return self._element('set', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'set', name, filters)
 
     def add_set(self, name, key, comment=None):
         """Add elements to an existing set.
@@ -825,7 +798,6 @@ class Scenario(TimeSeries):
         """
         # TODO expand docstring (here or in doc/source/api.rst) with examples,
         #      per test_core.test_add_set.
-        self.clear_cache(name=name, ix_type='set')
 
         # Get index names for set *name*, may raise KeyError
         idx_names = self.idx_names(name)
@@ -915,8 +887,6 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name=name, ix_type='set')
-
         if key is None:
             self._backend('delete_item', 'set', name)
         else:
@@ -955,7 +925,17 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._element('par', name, filters, **kwargs)
+        result = self._backend('item_get_elements', 'par', name, filters)
+
+        # FIXME message_ix requires 'year' columns to be returned as integers
+        #       This code should be in a message_ix override of this method.
+        dtypes = {}
+        for idx_set, col_name in zip(self.idx_sets(name),
+                                     self.idx_names(name)):
+            if idx_set == 'year':
+                dtypes[col_name] = int
+
+        return result.astype(dtypes) if len(dtypes) else result
 
     def add_par(self, name, key_or_data=None, value=None, unit=None,
                 comment=None, key=None, val=None):
@@ -1060,9 +1040,6 @@ class Scenario(TimeSeries):
         # Store
         self._backend('item_set_elements', 'par', name, elements)
 
-        # Clear cache
-        self.clear_cache(name=name, ix_type='par')
-
     def init_scalar(self, name, val, unit, comment=None):
         """Initialize a new scalar.
 
@@ -1108,7 +1085,6 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the change.
         """
-        self.clear_cache(name=name, ix_type='par')
         self._backend('item_set_elements', 'par', name,
                       [(None, float(val), unit, comment)])
 
@@ -1122,8 +1098,6 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string, optional
             elements to be removed
         """
-        self.clear_cache(name=name, ix_type='par')
-
         if key is None:
             self._backend('delete_item', 'par', name)
         else:
@@ -1162,7 +1136,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._element('var', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'var', name, filters)
 
     def equ_list(self):
         """List all defined equations."""
@@ -1196,7 +1170,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._element('equ', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'equ', name, filters)
 
     def clone(self, model=None, scenario=None, annotation=None,
               keep_solution=True, shift_first_model_year=None, platform=None,
@@ -1295,7 +1269,6 @@ class Scenario(TimeSeries):
             If Scenario has no solution or if `first_model_year` is not `int`.
         """
         if self.has_solution():
-            self.clear_cache()  # reset Python data cache
             check_year(first_model_year, 'first_model_year')
             self._backend('clear_solution', first_model_year)
         else:
@@ -1389,35 +1362,6 @@ class Scenario(TimeSeries):
             if cb_result:
                 # Callback indicates convergence is reached
                 break
-
-    def clear_cache(self, name=None, ix_type=None):
-        """clear the Python cache of item elements
-
-        Parameters
-        ----------
-        name : str, optional
-            item name (`None` clears entire Python cache)
-        ix_type : str, optional
-            type of item (if provided, cache clearing is faster)
-        """
-        # if no name is given, clean the entire cache
-        if name is None:
-            self._pycache = {}
-            return  # exit early
-
-        # remove this element from the cache if it exists
-        key = None
-        keys = self._pycache.keys()
-        if ix_type is not None:
-            key = (ix_type, name) if (ix_type, name) in keys else None
-        else:  # look for it
-            hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
-            if len(hits) > 1:
-                raise ValueError('Multiple values named {}'.format(name))
-            if len(hits) == 1:
-                key = hits[0]
-        if key is not None:
-            self._pycache.pop(key)
 
     def get_meta(self, name=None):
         """get scenario metadata

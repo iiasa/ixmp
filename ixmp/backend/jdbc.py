@@ -14,7 +14,6 @@ import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
-from pandas.api.types import CategoricalDtype
 
 from ixmp import config
 from ixmp.core import Scenario
@@ -529,36 +528,24 @@ class JDBCBackend(CachingBackend):
             columns = list(item.getIdxNames())
             idx_sets = list(item.getIdxSets())
 
-            # Prepare dtypes for index columns
-            dtypes = {}
-            for idx_name, idx_set in zip(columns, idx_sets):
-                dtypes[idx_name] = CategoricalDtype(
-                    self.item_get_elements(s, 'set', idx_set))
-
-            # Prepare dtypes for additional columns
-            if type == 'par':
-                columns.extend(['value', 'unit'])
-                dtypes['value'] = float
-                dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
-            elif type in ('equ', 'var'):
-                columns.extend(['lvl', 'mrg'])
-                dtypes.update({'lvl': float, 'mrg': float})
-
-            # Prepare empty DataFrame
-            result = pd.DataFrame(index=pd.RangeIndex(len(jList)),
-                                  columns=columns) \
-                       .astype(dtypes)
-
-            # Copy vectors from Java into DataFrame columns
+            data = {}
+            # Prepare arrays with column values column
             # NB [:] causes JPype to use a faster code path
-            for i in range(len(idx_sets)):
-                result.iloc[:, i] = item.getCol(i, jList)[:]
+            for i, (idx_name, idx_set) in enumerate(zip(columns, idx_sets)):
+                dtype = 'int16' if 'year' in idx_name else 'category'
+                data[idx_name] = pd.Series(item.getCol(i, jList)[:], dtype=dtype)
+
+            # Add type-specific columns
             if type == 'par':
-                result.loc[:, 'value'] = item.getValues(jList)[:]
-                result.loc[:, 'unit'] = item.getUnits(jList)[:]
+                data['value'] = pd.Series(item.getValues(jList)[:], dtype='float')
+                data['unit'] = pd.Series(item.getUnits(jList)[:], dtype='category')
             elif type in ('equ', 'var'):
-                result.loc[:, 'lvl'] = item.getLevels(jList)[:]
-                result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
+                data['lvl'] = pd.Series(item.getLevels(jList)[:], dtype='float')
+                data['mrg'] = pd.Series(item.getMarginals(jList)[:], dtype='float')
+
+            # Construct DataFrame
+            result = pd.DataFrame.from_dict(data, orient='columns')
+
         elif type == 'set':
             # Index sets
             result = pd.Series(item.getCol(0, jList))

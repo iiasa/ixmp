@@ -83,6 +83,7 @@ def test_gh_216(test_mp):
 
     filters = dict(i=['seattle', 'beijing'])
 
-    # ixmp_source raises an exception because 'beijing' is not in set i
-    # (https://github.com/iiasa/ixmp/issues/216)
+    # Java code in ixmp_source would raise an exception because 'beijing' is
+    # not in set i; but JDBCBackend removes 'beijing' from the filters before
+    # calling the underlying method (https://github.com/iiasa/ixmp/issues/216)
     scen.par('a', filters=filters)

@@ -22,13 +22,8 @@ Provided backends
 
    JDBCBackend supports:
 
-   - ``dbtype='HSQLDB'``: HyperSQL databases in local files.
-   - Remote databases. This is accomplished by creating a :class:`ixmp.Platform` with the ``dbprops`` argument pointing a file that specifies JDBC information. For instance::
-
-       jdbc.driver = oracle.jdbc.driver.OracleDriver
-       jdbc.url = jdbc:oracle:thin:@database-server.example.com:1234:SCHEMA
-       jdbc.user = USER
-       jdbc.pwd = PASSWORD
+   - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
+   - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
 
    It has the following methods that are not part of the overall :class:`Backend` API:
 
@@ -38,10 +33,29 @@ Provided backends
       read_gdx
       write_gdx
 
+   JDBCBackend caches values in memory to improve performance when repeatedly reading data from the same items with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
+
+   .. tip:: If repeatedly accessing the same item with different *filters*:
+
+      1. First, access the item by calling e.g. :meth:`.par` *without* any filters.
+         This causes the full contents of the item to be loaded into cache.
+      2. Then, access by making multiple :meth:`.par` calls with different *filters* arguments.
+         The cache value is filtered and returned without further access to the database.
+
+   .. tip:: Modifying an item by adding or deleting elements invalidates its cache.
+
 .. automethod:: ixmp.backend.jdbc.start_jvm
 
 Backend API
 -----------
+
+.. currentmodule:: ixmp.backend.base
+
+.. autosummary::
+
+   ixmp.backend.FIELDS
+   ixmp.backend.base.Backend
+   ixmp.backend.base.CachingBackend
 
 - :class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
   This means its methods can take many types of arguments, check, and transform them—in a way that provides modeler-users with easy, intuitive workflows.
@@ -56,8 +70,6 @@ Backend API
 
 
 .. autodata:: ixmp.backend.FIELDS
-
-.. currentmodule:: ixmp.backend.base
 
 .. autoclass:: ixmp.backend.base.Backend
    :members:

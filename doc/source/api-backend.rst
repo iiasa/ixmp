@@ -51,6 +51,10 @@ Backend API
   - :class:`Platform <ixmp.Platform>` code is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
   - :class:`Backend` code does not need to perform argument checking; merely store and retrieve data reliably.
 
+- Additional Backends may inherit from :class:`Backend` or
+  :class:`CachingBackend`.
+
+
 .. autodata:: ixmp.backend.FIELDS
 
 .. currentmodule:: ixmp.backend.base
@@ -143,3 +147,12 @@ Backend API
       cat_get_elements
       cat_list
       cat_set_elements
+
+
+.. autoclass:: ixmp.backend.base.CachingBackend
+   :members:
+   :private-members:
+
+   CachingBackend stores cache values for multiple :class:`.TimeSeries`/:class:`Scenario` objects, and for multiple values of a *filters* argument.
+
+   Subclasses **must** call :meth:`cache`, :meth:`cache_get`, and :meth:`cache_invalidate` as appropriate to manage the cache; CachingBackend does not enforce any such logic.

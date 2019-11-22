@@ -124,7 +124,6 @@ Scenario
       add_par
       add_set
       change_scalar
-      clear_cache
       clone
       equ
       equ_list

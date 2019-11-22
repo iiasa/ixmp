@@ -3,6 +3,8 @@ import jpype
 import pytest
 from pytest import raises, warns
 
+from ixmp.testing import make_dantzig
+
 
 def test_jvm_warn(recwarn):
     """Test that no warnings are issued on JVM start-up.
@@ -74,3 +76,13 @@ def test_deprecated_warns(tmp_env):
         with pytest.warns(DeprecationWarning, match="positional arguments to "
                           "Platform(…) for JDBCBackend"):
             ixmp.Platform('nonexistent.properties', name='default')
+
+
+def test_gh_216(test_mp):
+    scen = make_dantzig(test_mp)
+
+    filters = dict(i=['seattle', 'beijing'])
+
+    # ixmp_source raises an exception because 'beijing' is not in set i
+    # (https://github.com/iiasa/ixmp/issues/216)
+    scen.par('a', filters=filters)

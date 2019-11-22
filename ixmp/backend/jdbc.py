@@ -531,11 +531,8 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for index columns
             dtypes = {}
             for idx_name, idx_set in zip(columns, idx_sets):
-                if idx_set == 'year':
-                    dtypes[idx_name] = int
-                else:
-                    dtypes[idx_name] = CategoricalDtype(
-                        self.item_get_elements(s, 'set', idx_set))
+                dtypes[idx_name] = CategoricalDtype(
+                    self.item_get_elements(s, 'set', idx_set))
 
             # Prepare dtypes for additional columns
             if type == 'par':

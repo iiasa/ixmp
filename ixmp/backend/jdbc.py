@@ -69,23 +69,26 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
     ]
 
     # Handle arguments
-    if driver == 'oracle':
+    if 'oracle' in driver.lower():
         driver = 'oracle.jdbc.driver.OracleDriver'
 
         if url is None or path is not None:
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
 
         full_url = 'jdbc:oracle:thin:@{}'.format(url)
-    elif driver == 'hsqldb':
+    elif 'hsqldb' in driver.lower():
         driver = 'org.hsqldb.jdbcDriver'
 
-        if path is None or url is not None:
+        if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
-        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
-        # spec
-        url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
-        full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+        if path is not None:
+            # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
+            # spec
+            url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
+            full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+        else:
+            full_url = url
         user = user or 'ixmp'
         password = password or 'ixmp'
     else:
@@ -165,7 +168,7 @@ class JDBCBackend(CachingBackend):
 
         if 'dbprops' in kwargs:
             # Use an existing file
-            dbprops = Path(kwargs.pop('dbprops'))
+            dbprops = Path(kwargs.pop('dbprops')).resolve()
             if dbprops.exists():
                 # Existing properties file
                 properties_file, info = _read_dbprops(dbprops)
@@ -533,15 +536,20 @@ class JDBCBackend(CachingBackend):
             # NB [:] causes JPype to use a faster code path
             for i, (idx_name, idx_set) in enumerate(zip(columns, idx_sets)):
                 dtype = 'int16' if 'year' in idx_name else 'category'
-                data[idx_name] = pd.Series(item.getCol(i, jList)[:], dtype=dtype)
+                data[idx_name] = pd.Series(item.getCol(i, jList)[:],
+                                           dtype=dtype)
 
             # Add type-specific columns
             if type == 'par':
-                data['value'] = pd.Series(item.getValues(jList)[:], dtype='float')
-                data['unit'] = pd.Series(item.getUnits(jList)[:], dtype='category')
+                data['value'] = pd.Series(item.getValues(jList)[:],
+                                          dtype='float')
+                data['unit'] = pd.Series(item.getUnits(jList)[:],
+                                         dtype='category')
             elif type in ('equ', 'var'):
-                data['lvl'] = pd.Series(item.getLevels(jList)[:], dtype='float')
-                data['mrg'] = pd.Series(item.getMarginals(jList)[:], dtype='float')
+                data['lvl'] = pd.Series(item.getLevels(jList)[:],
+                                        dtype='float')
+                data['mrg'] = pd.Series(item.getMarginals(jList)[:],
+                                        dtype='float')
 
             # Construct DataFrame
             result = pd.DataFrame.from_dict(data, orient='columns')

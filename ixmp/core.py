@@ -925,17 +925,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        result = self._backend('item_get_elements', 'par', name, filters)
-
-        # FIXME message_ix requires 'year' columns to be returned as integers
-        #       This code should be in a message_ix override of this method.
-        dtypes = {}
-        for idx_set, col_name in zip(self.idx_sets(name),
-                                     self.idx_names(name)):
-            if idx_set == 'year':
-                dtypes[col_name] = int
-
-        return result.astype(dtypes) if len(dtypes) else result
+        return self._backend('item_get_elements', 'par', name, filters)
 
     def add_par(self, name, key_or_data=None, value=None, unit=None,
                 comment=None, key=None, val=None):

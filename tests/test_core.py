@@ -280,6 +280,21 @@ def test_par_filters_unit(test_mp):
     assert obs == exp
 
 
+def test_filter_str(test_mp):
+    scen = ixmp.Scenario(test_mp, 'model', 'scenario', version='new')
+
+    elements = ['foo', 42, object()]
+    expected = list(map(str, elements))
+
+    scen.init_set('s')
+
+    # Set elements can be added which are not str
+    scen.add_set('s', elements)
+
+    # Elements are stored and returned as str
+    assert expected == scen.set('s').tolist()
+
+
 def test_meta(test_mp):
     test_dict = {
         "test_string": 'test12345',

@@ -514,20 +514,29 @@ class JDBCBackend(CachingBackend):
 
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
+        idx_names = list(item.getIdxNames())
+        idx_sets = list(item.getIdxSets())
 
         # Get list of elements, using filters if provided
         if filters is not None:
             jFilter = java.HashMap()
-            for dim, values in filters.items():
-                jFilter.put(dim, to_jlist(values))
+
+            for idx_name, values in filters.items():
+                # Retrieve the elements of the index set as a list
+                idx_set = idx_sets[idx_names.index(idx_name)]
+                elements = self.item_get_elements(s, 'set', idx_set).tolist()
+
+                # Filter for only included values and store
+                jFilter.put(idx_name,
+                            to_jlist2(filter(lambda e: e in values, elements)))
+
             jList = item.getElements(jFilter)
         else:
             jList = item.getElements()
 
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
-            columns = list(item.getIdxNames())
-            idx_sets = list(item.getIdxSets())
+            columns = copy(idx_names)
 
             # Prepare dtypes for index columns
             dtypes = {}

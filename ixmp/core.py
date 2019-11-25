@@ -916,14 +916,18 @@ class Scenario(TimeSeries):
         return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific parameter
+        """Return parameter data.
+
+        If *filters* is provided, only a subset of data, matching the filters,
+        is returned.
 
         Parameters
         ----------
         name : str
-            name of the parameter
-        filters : dict
-            index names mapped list of index set elements
+            Name of the parameter
+        filters : dict (str -> list of str), optional
+            Index names mapped to lists of index set elements. Elements not
+            appearing in the respective index set(s) are silently ignored.
         """
         return self._backend('item_get_elements', 'par', name, filters)
 

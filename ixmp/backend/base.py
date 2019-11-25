@@ -591,6 +591,9 @@ class Backend(ABC):
             If provided, a mapping from dimension names to allowed values
             along that dimension.
 
+            item_get_elements **must** silently accept values that are *not*
+            members of the set indexing a dimension.
+
         Returns
         -------
         pandas.Series

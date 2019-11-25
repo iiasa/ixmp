@@ -3,6 +3,7 @@ from copy import copy
 import json
 
 from ixmp.core import TimeSeries, Scenario
+from ixmp.utils import as_str_list
 
 
 class Backend(ABC):
@@ -809,7 +810,9 @@ class CachingBackend(Backend):
             return (ts, ix_type, name)
         else:
             # Convert filters into a hashable object
-            filters = hash(json.dumps(sorted(filters.items())))
+            filters = hash(json.dumps(sorted(
+                (k, as_str_list(v)) for k, v in filters.items())))
+            print((ts, ix_type, name, filters))
             return (ts, ix_type, name, filters)
 
     def cache_get(self, ts, ix_type, name, filters):

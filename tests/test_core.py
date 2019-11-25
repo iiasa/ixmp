@@ -2,6 +2,7 @@ import re
 
 import numpy.testing as npt
 import pandas as pd
+import pandas.testing as pdt
 import pytest
 
 import ixmp
@@ -293,6 +294,18 @@ def test_filter_str(test_mp):
 
     # Elements are stored and returned as str
     assert expected == scen.set('s').tolist()
+
+    # Parameter defined over 's'
+    scen.init_par('p', ['s'])
+    p = pd.DataFrame.from_records(zip(elements, [1, 2, 3]),
+                                  columns=['s', 'value'])
+    scen.add_par('p', p)
+
+    # Values can be retrieved using string filters
+    scen.par(p, filters={'s': expected[1:]})
+
+    # Values can be retrieved using non-string filters
+    scen.par(p, filters={'s': elements[1:]})
 
 
 def test_meta(test_mp):

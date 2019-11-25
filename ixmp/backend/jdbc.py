@@ -83,9 +83,10 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
         if path is not None:
-            # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
-            # spec
-            url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
+            # Convert Windows paths to use forward slashes
+            # per HyperSQL JDBC URL spec
+            url_path = (str(PurePosixPath(Path(path).resolve()))
+                        .replace('\\', ''))
             full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         else:
             full_url = url

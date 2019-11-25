@@ -87,6 +87,14 @@ def test_mp(request, tmp_env, test_data_path):
     yield from create_test_mp(request, test_data_path, 'ixmptest')
 
 
+@pytest.fixture(scope='function')
+def test_mp_mem():
+    """An ixmp.Platform connected to an in-memory database."""
+    return Platform(backend='jdbc', driver='org.hsqldb.jdbcDriver',
+                    url='jdbc:hsqldb:mem:ixmptest',
+                    user='ixmp', password='ixmp')
+
+
 def create_test_mp(request, path, name):
     # Name of the test function, without the preceding 'test_'
     dirname = request.node.name.split('test_', 1)[1]

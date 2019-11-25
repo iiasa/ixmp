@@ -79,8 +79,11 @@ def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
     elif 'hsqldb' in driver.lower():
         driver = 'org.hsqldb.jdbcDriver'
 
-        if path is None and url is None:
-            raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
+        if path is None:
+            if url is None:
+                raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
+            elif re.match('^jdbc:hsqldb:(file|mem):.+$', url) is None:
+                raise ValueError('invalid JDBC URL provided: '.format(url))
 
         if path is not None:
             # Convert Windows paths to use forward slashes

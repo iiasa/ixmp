@@ -496,7 +496,23 @@ class JDBCBackend(CachingBackend):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
-    def item_get_elements(self, s, type, name, filters=None):
+    def item_get_elements(self, s, type, name, filters=None,
+                          dtypes_map=None, default_dtype='category'):
+        """ Get item elements (GAMS symbol records) as a dataframe
+
+        :param s: scenario
+        :param type: type of item (parameter, variable, equation or set)
+        :param name: name of item
+        :param filters: filters to limit item contant
+        :param dtypes_map: post-processing of raw symbol dimension/column data
+        :param default_dtype: default dtype to use for dimensions not defined
+                              in dtypes_map
+        :return: a dataframe
+        """
+        if dtypes_map is None:
+            dtypes_map = {
+                'category': lambda dim_name: 'year' in dim_name
+            }
         try:
             # Retrieve the cached value with this exact set of filters
             return self.cache_get(s, type, name, filters)
@@ -535,9 +551,13 @@ class JDBCBackend(CachingBackend):
             # Prepare arrays with column values column
             # NB [:] causes JPype to use a faster code path
             for i, (idx_name, idx_set) in enumerate(zip(columns, idx_sets)):
-                dtype = 'int16' if 'year' in idx_name else 'category'
-                data[idx_name] = pd.Series(item.getCol(i, jList)[:],
-                                           dtype=dtype)
+                for dtype in dtypes_map:
+                    if dtypes_map[dtype](idx_name):
+                        data[idx_name] = pd.Series(item.getCol(i, jList)[:],
+                                                   dtype=dtype)
+                else:
+                    data[idx_name] = pd.Series(item.getCol(i, jList)[:],
+                                               dtype=default_dtype)
 
             # Add type-specific columns
             if type == 'par':

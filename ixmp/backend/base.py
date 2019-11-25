@@ -812,7 +812,6 @@ class CachingBackend(Backend):
             # Convert filters into a hashable object
             filters = hash(json.dumps(sorted(
                 (k, as_str_list(v)) for k, v in filters.items())))
-            print((ts, ix_type, name, filters))
             return (ts, ix_type, name, filters)
 
     def cache_get(self, ts, ix_type, name, filters):

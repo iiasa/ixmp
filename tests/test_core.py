@@ -301,11 +301,11 @@ def test_filter_str(test_mp):
                                   columns=['s', 'value'])
     scen.add_par('p', p)
 
-    # Values can be retrieved using string filters
-    scen.par(p, filters={'s': expected[1:]})
-
     # Values can be retrieved using non-string filters
-    scen.par(p, filters={'s': elements[1:]})
+    pdt.assert_frame_equal(
+        p.loc[1:, 1],
+        scen.par('p', filters={'s': elements[1:]})
+    )
 
 
 def test_meta(test_mp):

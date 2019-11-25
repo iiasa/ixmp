@@ -587,12 +587,15 @@ class Backend(ABC):
         type : 'equ' or 'par' or 'set' or 'var'
         name : str
             Name of the item.
-        filters : dict (str -> list of str), optional
+        filters : dict (str -> list), optional
             If provided, a mapping from dimension names to allowed values
             along that dimension.
 
             item_get_elements **must** silently accept values that are *not*
-            members of the set indexing a dimension.
+            members of the set indexing a dimension. Elements which are not
+            :type:`str` **must** be handled as equivalent to their string
+            representation; i.e. item_get_elements must return the same data
+            for `filters={'foo': [42]}` and `filters={'foo': ['42']}`.
 
         Returns
         -------

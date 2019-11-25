@@ -495,6 +495,10 @@ class JDBCBackend(CachingBackend):
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def item_get_elements(self, s, type, name, filters=None):
+        if filters:
+            # Convert filter elements to strings
+            filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
+
         try:
             # Retrieve the cached value with this exact set of filters
             return self.cache_get(s, type, name, filters)
@@ -527,8 +531,7 @@ class JDBCBackend(CachingBackend):
                 elements = self.item_get_elements(s, 'set', idx_set).tolist()
 
                 # Filter for only included values and store
-                filtered_elements = filter(lambda e: e in as_str_list(values),
-                                           elements)
+                filtered_elements = filter(lambda e: e in values, elements)
                 jFilter.put(idx_name, to_jlist2(filtered_elements))
 
             jList = item.getElements(jFilter)

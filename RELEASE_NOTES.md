@@ -18,6 +18,7 @@ Configuration for ixmp and its storage backends has been streamlined.
 
 ## All changes
 
+- [#225](https://github.com/iiasa/ixmp/pull/225): Ensure filters are always converted to string.
 - [#189](https://github.com/iiasa/ixmp/pull/189): Identify and load Scenarios using URLs.
 - [#182](https://github.com/iiasa/ixmp/pull/182),
   [#200](https://github.com/iiasa/ixmp/pull/200),

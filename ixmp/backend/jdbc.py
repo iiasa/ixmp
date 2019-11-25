@@ -18,7 +18,7 @@ from pandas.api.types import CategoricalDtype
 
 from ixmp import config
 from ixmp.core import Scenario
-from ixmp.utils import filtered, islistable
+from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS
 from .base import CachingBackend
 
@@ -527,8 +527,9 @@ class JDBCBackend(CachingBackend):
                 elements = self.item_get_elements(s, 'set', idx_set).tolist()
 
                 # Filter for only included values and store
-                jFilter.put(idx_name,
-                            to_jlist2(filter(lambda e: e in values, elements)))
+                filtered_elements = filter(lambda e: e in as_str_list(values),
+                                           elements)
+                jFilter.put(idx_name, to_jlist2(filtered_elements))
 
             jList = item.getElements(jFilter)
         else:
@@ -805,6 +806,7 @@ def to_jlist2(arg, convert=None):
         [jlist.add(value) for value in arg]
     else:
         raise ValueError(arg)
+
     return jlist
 
 

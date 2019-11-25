@@ -302,10 +302,8 @@ def test_filter_str(test_mp):
     scen.add_par('p', p)
 
     # Values can be retrieved using non-string filters
-    pdt.assert_frame_equal(
-        p.loc[1:, 1],
-        scen.par('p', filters={'s': elements[1:]})
-    )
+    obs = scen.par('p', filters={'s': elements[1:]})
+    pdt.assert_frame_equal(p.loc[1:, :], obs)
 
 
 def test_meta(test_mp):

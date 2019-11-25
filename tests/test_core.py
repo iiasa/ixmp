@@ -296,14 +296,17 @@ def test_filter_str(test_mp):
     assert expected == scen.set('s').tolist()
 
     # Parameter defined over 's'
-    scen.init_par('p', ['s'])
-    p = pd.DataFrame.from_records(zip(elements, [1, 2, 3]),
+    p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
                                   columns=['s', 'value'])
+    p_exp = p.astype({'s': str})
+
+    scen.init_par('p', ['s'])
     scen.add_par('p', p)
 
     # Values can be retrieved using non-string filters
+    exp = p_exp.loc[1:, :].reset_index(drop=True)
     obs = scen.par('p', filters={'s': elements[1:]})
-    pdt.assert_frame_equal(p.loc[1:, :], obs)
+    pdt.assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
 
 
 def test_meta(test_mp):

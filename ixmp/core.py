@@ -916,26 +916,20 @@ class Scenario(TimeSeries):
         return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific parameter
+        """Return parameter data.
+
+        If *filters* is provided, only a subset of data, matching the filters,
+        is returned.
 
         Parameters
         ----------
         name : str
-            name of the parameter
-        filters : dict
-            index names mapped list of index set elements
+            Name of the parameter
+        filters : dict (str -> list of str), optional
+            Index names mapped to lists of index set elements. Elements not
+            appearing in the respective index set(s) are silently ignored.
         """
-        result = self._backend('item_get_elements', 'par', name, filters)
-
-        # FIXME message_ix requires 'year' columns to be returned as integers
-        #       This code should be in a message_ix override of this method.
-        dtypes = {}
-        for idx_set, col_name in zip(self.idx_sets(name),
-                                     self.idx_names(name)):
-            if idx_set == 'year':
-                dtypes[col_name] = int
-
-        return result.astype(dtypes) if len(dtypes) else result
+        return self._backend('item_get_elements', 'par', name, filters)
 
     def add_par(self, name, key_or_data=None, value=None, unit=None,
                 comment=None, key=None, val=None):

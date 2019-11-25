@@ -14,9 +14,11 @@ def make_obs(fname, exp, **kwargs):
     return obs
 
 
-def test_pd_io_csv():
+def test_pd_io_csv(tmp_path):
     fname = 'test.csv'
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
+    d = tmp_path / "sub"
+    d.mkdir()
     obs = make_obs(fname, exp)
     pdt.assert_frame_equal(obs, exp)
 

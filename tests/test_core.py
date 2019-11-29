@@ -298,11 +298,9 @@ def test_filter_str(test_mp):
     p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
                                   columns=['s', 'value'])
 
+    # Expected return dtypes of index and value columns
     dtypes = {'s': str, 'value': float}
-    p_exp = (pd.DataFrame
-             .from_records(zip(map(str, elements), [1., 2., 3.]),
-                           columns=['s', 'value'])
-             .astype(dtypes))
+    p_exp = p.astype(dtypes)
 
     scen.init_par('p', ['s'])
     scen.add_par('p', p)

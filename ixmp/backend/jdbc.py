@@ -14,7 +14,6 @@ import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
-from pandas.api.types import CategoricalDtype
 
 from ixmp import config
 from ixmp.core import Scenario
@@ -545,22 +544,26 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for index columns
             dtypes = {}
             for idx_name, idx_set in zip(columns, idx_sets):
-                dtypes[idx_name] = CategoricalDtype(
-                    self.item_get_elements(s, 'set', idx_set))
+                # NB using categoricals could be more memory-efficient, but
+                #    requires adjustment of tests/documentation. See
+                #    https://github.com/iiasa/ixmp/issues/228
+                # dtypes[idx_name] = CategoricalDtype(
+                #     self.item_get_elements(s, 'set', idx_set))
+                dtypes[idx_name] = str
 
             # Prepare dtypes for additional columns
             if type == 'par':
                 columns.extend(['value', 'unit'])
                 dtypes['value'] = float
-                dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+                # Same as above
+                # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+                dtypes['unit'] = str
             elif type in ('equ', 'var'):
                 columns.extend(['lvl', 'mrg'])
                 dtypes.update({'lvl': float, 'mrg': float})
-
             # Prepare empty DataFrame
             result = pd.DataFrame(index=pd.RangeIndex(len(jList)),
-                                  columns=columns) \
-                       .astype(dtypes)
+                                  columns=columns)
 
             # Copy vectors from Java into DataFrame columns
             # NB [:] causes JPype to use a faster code path
@@ -572,6 +575,9 @@ class JDBCBackend(CachingBackend):
             elif type in ('equ', 'var'):
                 result.loc[:, 'lvl'] = item.getLevels(jList)[:]
                 result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
+
+            # .loc assignment above modifies dtypes; set afterwards
+            result = result.astype(dtypes)
         elif type == 'set':
             # Index sets
             result = pd.Series(item.getCol(0, jList))

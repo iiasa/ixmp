@@ -8,7 +8,6 @@ import pytest
 import ixmp
 from ixmp.testing import make_dantzig
 
-
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
@@ -298,7 +297,10 @@ def test_filter_str(test_mp):
     # Parameter defined over 's'
     p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
                                   columns=['s', 'value'])
-    p_exp = p.astype({'s': str})
+
+    # Expected return dtypes of index and value columns
+    dtypes = {'s': str, 'value': float}
+    p_exp = p.astype(dtypes)
 
     scen.init_par('p', ['s'])
     scen.add_par('p', p)

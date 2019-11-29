@@ -544,12 +544,19 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for index columns
             dtypes = {}
             for idx_name, idx_set in zip(columns, idx_sets):
+                # NB using categoricals could be more memory-efficient, but
+                #    requires adjustment of tests/documentation. See
+                #    https://github.com/iiasa/ixmp/issues/228
+                # dtypes[idx_name] = CategoricalDtype(
+                #     self.item_get_elements(s, 'set', idx_set))
                 dtypes[idx_name] = str
 
             # Prepare dtypes for additional columns
             if type == 'par':
                 columns.extend(['value', 'unit'])
                 dtypes['value'] = float
+                # Same as above
+                # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
                 dtypes['unit'] = str
             elif type in ('equ', 'var'):
                 columns.extend(['lvl', 'mrg'])
@@ -569,6 +576,7 @@ class JDBCBackend(CachingBackend):
                 result.loc[:, 'lvl'] = item.getLevels(jList)[:]
                 result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
 
+            # .loc assignment above modifies dtypes; set afterwards
             result = result.astype(dtypes)
         elif type == 'set':
             # Index sets

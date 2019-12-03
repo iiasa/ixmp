@@ -14,11 +14,10 @@ import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
-from pandas.api.types import CategoricalDtype
 
 from ixmp import config
 from ixmp.core import Scenario
-from ixmp.utils import filtered, islistable
+from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS
 from .base import CachingBackend
 
@@ -495,6 +494,10 @@ class JDBCBackend(CachingBackend):
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def item_get_elements(self, s, type, name, filters=None):
+        if filters:
+            # Convert filter elements to strings
+            filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
+
         try:
             # Retrieve the cached value with this exact set of filters
             return self.cache_get(s, type, name, filters)
@@ -527,8 +530,8 @@ class JDBCBackend(CachingBackend):
                 elements = self.item_get_elements(s, 'set', idx_set).tolist()
 
                 # Filter for only included values and store
-                jFilter.put(idx_name,
-                            to_jlist2(filter(lambda e: e in values, elements)))
+                filtered_elements = filter(lambda e: e in values, elements)
+                jFilter.put(idx_name, to_jlist2(filtered_elements))
 
             jList = item.getElements(jFilter)
         else:
@@ -541,22 +544,26 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for index columns
             dtypes = {}
             for idx_name, idx_set in zip(columns, idx_sets):
-                dtypes[idx_name] = CategoricalDtype(
-                    self.item_get_elements(s, 'set', idx_set))
+                # NB using categoricals could be more memory-efficient, but
+                #    requires adjustment of tests/documentation. See
+                #    https://github.com/iiasa/ixmp/issues/228
+                # dtypes[idx_name] = CategoricalDtype(
+                #     self.item_get_elements(s, 'set', idx_set))
+                dtypes[idx_name] = str
 
             # Prepare dtypes for additional columns
             if type == 'par':
                 columns.extend(['value', 'unit'])
                 dtypes['value'] = float
-                dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+                # Same as above
+                # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+                dtypes['unit'] = str
             elif type in ('equ', 'var'):
                 columns.extend(['lvl', 'mrg'])
                 dtypes.update({'lvl': float, 'mrg': float})
-
             # Prepare empty DataFrame
             result = pd.DataFrame(index=pd.RangeIndex(len(jList)),
-                                  columns=columns) \
-                       .astype(dtypes)
+                                  columns=columns)
 
             # Copy vectors from Java into DataFrame columns
             # NB [:] causes JPype to use a faster code path
@@ -568,6 +575,9 @@ class JDBCBackend(CachingBackend):
             elif type in ('equ', 'var'):
                 result.loc[:, 'lvl'] = item.getLevels(jList)[:]
                 result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
+
+            # .loc assignment above modifies dtypes; set afterwards
+            result = result.astype(dtypes)
         elif type == 'set':
             # Index sets
             result = pd.Series(item.getCol(0, jList))
@@ -805,6 +815,7 @@ def to_jlist2(arg, convert=None):
         [jlist.add(value) for value in arg]
     else:
         raise ValueError(arg)
+
     return jlist
 
 

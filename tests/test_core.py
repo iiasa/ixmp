@@ -2,11 +2,11 @@ import re
 
 import numpy.testing as npt
 import pandas as pd
+import pandas.testing as pdt
 import pytest
 
 import ixmp
 from ixmp.testing import make_dantzig
-
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
@@ -278,6 +278,37 @@ def test_par_filters_unit(test_mp):
     obs = df.loc[0, 'unit']
     exp = 'km'
     assert obs == exp
+
+
+def test_filter_str(test_mp):
+    scen = ixmp.Scenario(test_mp, 'model', 'scenario', version='new')
+
+    elements = ['foo', 42, object()]
+    expected = list(map(str, elements))
+
+    scen.init_set('s')
+
+    # Set elements can be added which are not str
+    scen.add_set('s', elements)
+
+    # Elements are stored and returned as str
+    assert expected == scen.set('s').tolist()
+
+    # Parameter defined over 's'
+    p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
+                                  columns=['s', 'value'])
+
+    # Expected return dtypes of index and value columns
+    dtypes = {'s': str, 'value': float}
+    p_exp = p.astype(dtypes)
+
+    scen.init_par('p', ['s'])
+    scen.add_par('p', p)
+
+    # Values can be retrieved using non-string filters
+    exp = p_exp.loc[1:, :].reset_index(drop=True)
+    obs = scen.par('p', filters={'s': elements[1:]})
+    pdt.assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
 
 
 def test_meta(test_mp):

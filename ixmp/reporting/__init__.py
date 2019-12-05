@@ -90,7 +90,7 @@ class Reporter:
         Returns
         -------
         :class:`Reporter <ixmp.reporting.Reporter>`
-            A Reporter instance containing:
+        A Reporter instance containing:
 
             - A 'scenario' key referring to the *scenario* object.
             - Each parameter, equation, and variable in the *scenario*.
@@ -415,7 +415,7 @@ class Reporter:
 
         Returns
         -------
-        Key
+        :class:`Key`
             The full key of the new quantity.
         """
         # Fetch the full key for each quantity
@@ -442,13 +442,13 @@ class Reporter:
         Parameters
         ----------
         qty: :class:`Key` or str
-            Key of the quantity to be disaggregated.
+            Key of the quantity to be aggregated.
         tag: str
             Additional string to add to the end the key for the aggregated
             quantity.
         dims_or_groups: str or iterable of str or dict
             Name(s) of the dimension(s) to sum over, or nested dict.
-        weights : xr.DataArray, optional
+        weights : :class:`xarray.DataArray`, optional
             Weights for weighted aggregation.
         keep : bool, optional
             Passed to :meth:`computations.aggregate
@@ -480,12 +480,12 @@ class Reporter:
         return self.add(key, comp, strict=True, index=True, sums=sums)
 
     def disaggregate(self, qty, new_dim, method='shares', args=[]):
-        """Add a computation that disaggregates *var* using *method*.
+        """Add a computation that disaggregates *qty* using *method*.
 
         Parameters
         ----------
-        var: hashable
-            Key of the variable to be disaggregated.
+        qty: hashable
+            Key of the quantity to be disaggregated.
         new_dim: str
             Name of the new dimension of the disaggregated variable.
         method: callable or str
@@ -498,7 +498,7 @@ class Reporter:
 
         Returns
         -------
-        Key
+        :class:`Key`
             The key of the newly-added node.
         """
         # Compute the new key

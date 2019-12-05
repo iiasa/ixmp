@@ -82,7 +82,9 @@ Others:
 
       - Provide an alias from one *key* to another:
 
-        >>> r.add('aliased name', 'original name')
+        >>> from message_ix.reporting import Reporter
+        >>> rep = Reporter()  # Create a new Reporter object
+        >>> rep.add('aliased name', 'original name')
 
       - Define an arbitrarily complex computation in a Python function that
         operates directly on the :class:`ixmp.Scenario`:
@@ -90,9 +92,9 @@ Others:
         >>> def my_report(scenario):
         >>>     # many lines of code
         >>>     return 'foo'
-        >>> r.add('my report', (my_report, 'scenario'))
-        >>> r.finalize(scenario)
-        >>> r.get('my report')
+        >>> rep.add('my report', (my_report, 'scenario'))
+        >>> rep.finalize(scenario)
+        >>> rep.get('my report')
         foo
 
       .. note::
@@ -138,7 +140,7 @@ Others:
 
    Some notes:
 
-   - A Key has the same hash, and compares equal to its ``str()``.
+   - A Key has the same hash, and compares equal (NOT CLEAR THIS SENTENCE) to its ``str()``.
      ``repr(key)`` prints the Key in angle brackets ('<>') to signify it is a Key object.
 
      >>> repr(k1)

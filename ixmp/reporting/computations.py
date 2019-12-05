@@ -20,6 +20,7 @@ __all__ = [
     'disaggregate_shares',
     'load_file',
     'product',
+    'ratio',
     'sum',
     'write_report',
 ]

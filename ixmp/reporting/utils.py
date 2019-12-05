@@ -296,7 +296,8 @@ def as_attrseries(obj):
 
 
 def as_sparse_xarray(obj):  # pragma: no cover
-    """Convert *obj* to an :class:`xarray.DataArray` with sparse.COO storage."""
+    """Convert *obj* to an :class:`xarray.DataArray` with sparse.COO
+    storage."""
     import sparse
     from xarray.core.dtypes import maybe_promote
 

@@ -55,7 +55,13 @@ JAVA_CLASSES = [
 
 
 def _read_dbprops(path):
-    return str(path), path.read_text()
+    config_lines = path.read_text().split('\n')
+    db_url_line = next(filter(lambda line: line.startswith('jdbc.url'),
+                              config_lines), None)
+    if db_url_line is None:
+        raise ValueError('Config file contains no database URL')
+    db_url = re.search('jdbc.url\\s*=\\s*(.+)\\s*', db_url_line).group(1)
+    return str(Path(path).resolve()), db_url
 
 
 def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
@@ -166,10 +172,11 @@ class JDBCBackend(CachingBackend):
         if 'dbprops' in kwargs:
             # Use an existing file
             dbprops = Path(kwargs.pop('dbprops'))
-            if dbprops.exists():
+            if dbprops.exists() and dbprops.is_file():
                 # Existing properties file
                 properties_file, info = _read_dbprops(dbprops)
-            elif dbprops.with_suffix('.lobs').exists():
+            elif (not dbprops.exists()
+                  and dbprops.with_suffix('.lobs').exists()):
                 # Actually the basename for a HSQLDB
                 kwargs.setdefault('driver', 'hsqldb')
                 kwargs.setdefault('path', dbprops)

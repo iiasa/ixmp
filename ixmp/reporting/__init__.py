@@ -90,7 +90,7 @@ class Reporter:
         Returns
         -------
         :class:`Reporter <ixmp.reporting.Reporter>`
-        A Reporter instance containing:
+            A Reporter instance containing:
 
             - A 'scenario' key referring to the *scenario* object.
             - Each parameter, equation, and variable in the *scenario*.

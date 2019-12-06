@@ -126,6 +126,8 @@ Others:
      >>> k1 == 'foo:a-b-c'
      True
 
+     Notice that a Key has the same hash, and compares equal (`==`) to its ``str()``.
+
    - in a partial sum over one dimension, e.g. summed along c with dimensions
      a and b:
 
@@ -138,22 +140,22 @@ Others:
      >>> k1.drop('a', 'c') == k2.drop('a') == 'foo:b'
      True
 
-   Some notes:
+   .. note::
+        Some remarks:
 
-   - A Key has the same hash, and compares equal (NOT CLEAR THIS SENTENCE) to its ``str()``.
-     ``repr(key)`` prints the Key in angle brackets ('<>') to signify it is a Key object.
+        - ``repr(key)`` prints the Key in angle brackets ('<>') to signify it is a Key object.
 
-     >>> repr(k1)
-     <foo:a-b-c>
+          >>> repr(k1)
+          <foo:a-b-c>
 
-   - Keys are *immutable*: the properties :attr:`name`, :attr:`dims`, and :attr:`tag` are read-only, and the methods :meth:`append`, :meth:`drop`, and :meth:`add_tag` return *new* Key objects.
+        - Keys are *immutable*: the properties :attr:`name`, :attr:`dims`, and :attr:`tag` are read-only, and the methods :meth:`append`, :meth:`drop`, and :meth:`add_tag` return *new* Key objects.
 
-   - Keys may be generated concisely by defining a convenience method:
+        - Keys may be generated concisely by defining a convenience method:
 
-     >>> def foo(dims):
-     >>>     return Key('foo', dims.split())
-     >>> foo('a b c')
-     foo:a-b-c
+          >>> def foo(dims):
+          >>>     return Key('foo', dims.split())
+          >>> foo('a b c')
+          foo:a-b-c
 
 
 Computations

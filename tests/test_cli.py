@@ -28,7 +28,7 @@ def test_main(ixmp_cli, test_mp, tmp_path):
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
     r = ixmp_cli.invoke(cmd[2:])
-    assert 'unhandled Java exception' in r.exception.args[0]
+    assert 'Config file contains no database URL' in r.exception.args[0]
 
     # --url argument can be given
     cmd = ['--url', 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name),

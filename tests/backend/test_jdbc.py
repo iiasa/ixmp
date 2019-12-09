@@ -1,8 +1,7 @@
-import ixmp
 import jpype
 import pytest
 from pytest import raises, warns
-
+import ixmp
 from ixmp.testing import make_dantzig
 
 
@@ -35,6 +34,13 @@ def test_close(test_mp, caplog):
     test_mp.close_db()
     assert caplog.records[0].message == \
         'Database connection could not be closed or was already closed'
+
+
+def test_connect_message(caplog, test_data_path):
+    sample_props = test_data_path / 'testdb' / 'test.properties.sample'
+    ixmp.Platform(dbprops=sample_props)
+    assert caplog.records[-1].message == \
+        'launching ixmp.Platform connected to jdbc:hsqldb:mem://ixmptest'
 
 
 DEPRECATED = (

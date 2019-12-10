@@ -98,9 +98,9 @@ Others:
         foo
 
       .. note::
-         Use care when adding literal :class:`str` values (2); these may
-         conflict with keys that identify the results of other
-         computations.
+         Use care when adding literal ``str()`` values as a *computation*
+         argument for :meth:`add`; these may conflict with keys that
+         identify the results of other computations.
 
 
 .. autoclass:: ixmp.reporting.Key

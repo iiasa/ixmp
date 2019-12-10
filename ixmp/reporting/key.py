@@ -27,7 +27,7 @@ class Key:
 
         Returns
         -------
-        Key
+        :class:`Key`
         """
         # Determine the base Key
         if isinstance(value, cls):

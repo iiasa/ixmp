@@ -30,7 +30,7 @@ REPLACE_UNITS = {
 RENAME_DIMS = {}
 
 #: :doc:`pint <pint:index>` unit registry for processing quantity units.
-#: All units handled by :mod:`imxp.reporting` must be either standard SI units,
+#: All units handled by :mod:`ixmp.reporting` must be either standard SI units,
 #: or added to this registry.
 UNITS = pint.UnitRegistry()
 
@@ -296,7 +296,8 @@ def as_attrseries(obj):
 
 
 def as_sparse_xarray(obj):  # pragma: no cover
-    """Convert *obj* to an xr.DataArray with sparse.COO storage."""
+    """Convert *obj* to an :class:`xarray.DataArray` with sparse.COO
+    storage."""
     import sparse
     from xarray.core.dtypes import maybe_promote
 

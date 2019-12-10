@@ -60,6 +60,6 @@ rixmp/source/.Rhistory
 coverage.xml
 htmlcov/
 
-# idea
-.idea/
+# JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
+/**/.idea
 *.iml

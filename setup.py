@@ -18,13 +18,14 @@ INSTALL_REQUIRES = [
     'pandas',
     'pint',
     'PyYAML',
-    'xarray<0.12',
+    'xarray',
     'xlsxwriter',
     'xlrd',
 ]
 
 EXTRAS_REQUIRE = {
-    'tests': ['pytest>=3.9', 'jupyter', 'pretenders>=1.4.4'],
+    'tests': ['codecov', 'jupyter', 'pretenders>=1.4.4', 'pytest-cov',
+              'pytest>=3.9'],
     'docs': ['numpydoc', 'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-bibtex'],
     'tutorial': ['jupyter'],
 }
@@ -48,8 +49,6 @@ setup(
     package_data={'ixmp': ['ixmp.jar'] + LIB_FILES},
     entry_points={
         'console_scripts': [
-            'import-timeseries=ixmp.cli:import_timeseries',
-            'ixmp-config=ixmp.cli:config',
             'ixmp=ixmp.cli:main',
         ],
     },

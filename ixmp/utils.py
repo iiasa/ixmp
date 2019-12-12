@@ -1,15 +1,9 @@
-import collections
+from collections.abc import Iterable
 import logging
-import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 import six
-
-import ixmp
 
 
 # globally accessible logger
@@ -26,6 +20,27 @@ def logger():
     return _LOGGER
 
 
+def as_str_list(arg, idx_names=None):
+    """Convert various *arg* to list of str.
+
+    Several types of arguments are handled:
+    - None: returned as None.
+    - str: returned as a length-1 list of str.
+    - list of values: returned as a list with each value converted to str
+    - dict, with list of idx_names: the idx_names are used to look up values
+      in the dict, the resulting list has the corresponding values in the same
+      order.
+
+    """
+    if arg is None:
+        return None
+    elif idx_names is None:
+        # arg must be iterable
+        return list(map(str, arg)) if islistable(arg) else [str(arg)]
+    else:
+        return [str(arg[idx]) for idx in idx_names]
+
+
 def isstr(x):
     """Returns True if x is a string"""
     return isinstance(x, six.string_types)
@@ -33,12 +48,12 @@ def isstr(x):
 
 def isscalar(x):
     """Returns True if x is a scalar"""
-    return not isinstance(x, collections.Iterable) or isstr(x)
+    return not isinstance(x, Iterable) or isstr(x)
 
 
 def islistable(x):
     """Returns True if x is a list but not a string"""
-    return isinstance(x, collections.Iterable) and not isstr(x)
+    return isinstance(x, Iterable) and not isstr(x)
 
 
 def check_year(y, s):
@@ -47,6 +62,67 @@ def check_year(y, s):
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
         return True
+
+
+def parse_url(url):
+    """Parse *url* and return Platform and Scenario information.
+
+    A URL (Uniform Resource Locator), as the name implies, uniquely identifies
+    a specific scenario and (optionally) version of a model, as well as
+    (optionally) the database in which it is stored. ixmp URLs take forms
+    like::
+
+        ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]
+        MODEL/SCENARIO[#VERSION]
+
+    where:
+
+    - The ``PLATFORM`` is a configured platform name; see :obj:`ixmp.config`.
+    - ``MODEL`` may not contain the forward slash character ('/'); ``SCENARIO``
+      may contain any number of forward slashes. Both must be supplied.
+    - ``VERSION`` is optional but, if supplied, must be an integer.
+
+    Returns
+    -------
+    platform_info : dict
+        Keyword argument 'name' for the :class:`Platform` constructor.
+    scenario_info : dict
+        Keyword arguments for a :class:`Scenario` on the above platform:
+        'model', 'scenario' and, optionally, 'version'.
+
+    Raises
+    ------
+    ValueError
+        For malformed URLs.
+    """
+    components = urlparse(url)
+    if components.scheme not in ('ixmp', ''):
+        raise ValueError('URL must begin with ixmp:// or //')
+
+    platform_info = dict()
+    if components.netloc:
+        platform_info['name'] = components.netloc
+
+    scenario_info = dict()
+
+    path = components.path.split('/')
+    if len(path):
+        # If netloc was given, path begins with '/'; discard
+        path = path if len(path[0]) else path[1:]
+
+        if len(path) < 2:
+            raise ValueError("URL path must be 'MODEL/SCENARIO'")
+
+        scenario_info['model'] = path[0]
+        scenario_info['scenario'] = '/'.join(path[1:])
+
+    if len(components.query):
+        raise ValueError(f"queries ({components.query}) not supported in URLs")
+
+    if len(components.fragment):
+        scenario_info['version'] = int(components.fragment)
+
+    return platform_info, scenario_info
 
 
 def pd_read(f, *args, **kwargs):
@@ -77,25 +153,30 @@ def pd_write(df, f, *args, **kwargs):
 
 
 def numcols(df):
+    """Return the indices of the numeric columns of *df*."""
     dtypes = df.dtypes
     return [i for i in dtypes.index
             if dtypes.loc[i].name.startswith(('float', 'int'))]
 
 
-def import_timeseries(mp, data, model, scenario, version=None,
-                      firstyear=None, lastyear=None):
-    if not isinstance(mp, ixmp.Platform):
-        raise ValueError("{} is not a valid 'ixmp.Platform' instance".
-                         format(mp))
+def filtered(df, filters):
+    """Returns a filtered dataframe based on a filters dictionary"""
+    if filters is None:
+        return df
 
-    if version is not None:
-        version = int(version)
-    scen = ixmp.Scenario(mp, model, scenario, version)
+    mask = pd.Series(True, index=df.index)
+    for k, v in filters.items():
+        isin = df[k].isin(as_str_list(v))
+        mask = mask & isin
+    return df[mask]
 
-    df = ixmp.utils.pd_read(data)
+
+def import_timeseries(scenario, data, firstyear=None, lastyear=None):
+    """Import from a *data* file into *scenario*."""
+    df = pd_read(data)
     df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
-    cols = ixmp.utils.numcols(df)
+    cols = numcols(df)
     years = [int(i) for i in cols]
     fyear = int(firstyear or min(years))
     lyear = int(lastyear or max(years))
@@ -103,24 +184,13 @@ def import_timeseries(mp, data, model, scenario, version=None,
     df = df[['region', 'variable', 'unit'] + cols]
     df.region = [x if x == 'World' else 'R11_' + x for x in df.region]
 
-    scen.check_out(timeseries_only=True)
-    scen.add_timeseries(df)
+    scenario.check_out(timeseries_only=True)
+    scenario.add_timeseries(df)
 
     annot = 'adding timeseries data from file {}'.format(data)
     if firstyear is not None:
         annot = '{} from {}'.format(annot, firstyear)
     if lastyear is not None:
         annot = '{} until {}'.format(annot, lastyear)
-    scen.commit(annot)
 
-
-def harmonize_path(path_or_str):
-    """Harmonize mixed '\' and '/' separators in pathlib.Path or str.
-
-    On Windows, R's file.path(...) uses '/', not '\', as a path separator.
-    Python's str(WindowsPath(...)) uses '\'. Mixing outputs from the two
-    functions (e.g. through rixmp) produces path strings with both kinds of
-    separators.
-    """
-    args = ('/', '\\') if os.name == 'nt' else ('\\', '/')
-    return Path(str(path_or_str).replace(*args))
+    scenario.commit(annot)

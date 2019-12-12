@@ -31,6 +31,5 @@ conda remove -n testing --force --yes ixmp
 # Show information
 conda info --all
 
-# Install R packages needed for testing
-Rscript -e "install.packages(c('devtools', 'IRkernel'), lib = '$R_LIBS_USER')"
+# Install IR kernel spec for Jupyter notebook
 Rscript -e "IRkernel::installspec()"

@@ -27,7 +27,7 @@ class Key:
 
         Returns
         -------
-        Key
+        :class:`Key`
         """
         # Determine the base Key
         if isinstance(value, cls):
@@ -137,7 +137,7 @@ class Key:
         from . import computations
 
         for agg_dims, others in combo_partition(self.dims):
-            yield Key(self._name, agg_dims), \
+            yield Key(self.name, agg_dims, self.tag), \
                 (partial(computations.sum, dimensions=others, weights=None),
                  self)
 

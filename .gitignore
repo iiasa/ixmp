@@ -28,6 +28,8 @@
 
 # sphinx
 doc/build
+# Compiled SVG
+doc/source/_static/*.svg
 
 # setuptools
 build
@@ -53,11 +55,11 @@ rixmp/source/.Rhistory
 
 # pytest and related
 *.pid
-.coverage
+.coverage*
 .pytest_cache/
 coverage.xml
 htmlcov/
 
-# idea
-.idea/
+# JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
+/**/.idea
 *.iml

@@ -41,6 +41,10 @@ class AttrSeries(pd.Series):
 
         self.attrs = attrs
 
+    @classmethod
+    def from_series(cls, series, sparse=None):
+        return cls(series)
+
     def assign_attrs(self, d):
         self.attrs.update(d)
         return self
@@ -56,6 +60,15 @@ class AttrSeries(pd.Series):
     @property
     def dims(self):
         return tuple(self.index.names)
+
+    def drop(self, label):
+        return self.droplevel(label)
+
+    def rename(self, new_name_or_name_dict):
+        if isinstance(new_name_or_name_dict, dict):
+            return self.rename_axis(index=new_name_or_name_dict)
+        else:
+            return super().rename(new_name_or_name_dict)
 
     def sel(self, indexers=None, drop=False, **indexers_kwargs):
         indexers = indexers or {}

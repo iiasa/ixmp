@@ -24,7 +24,7 @@ def test_get_timeseries(test_mp):
 
 def test_get_timeseries_iamc(test_mp):
     scen = ixmp.TimeSeries(test_mp, *test_args)
-    obs = scen.timeseries(iamc=True, regions='World', variables='Testing')
+    obs = scen.timeseries(region='World', variable='Testing', iamc=True)
 
     exp = TS_DF.pivot_table(index=['region', 'variable', 'unit'],
                             columns='year')['value'].reset_index()

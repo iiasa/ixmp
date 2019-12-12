@@ -11,23 +11,18 @@ These include:
 """
 import io
 import os
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
-import pytest
+from pathlib import Path
 import shutil
-import sys
 import subprocess
+import sys
 
+from click.testing import CliRunner
 import pandas as pd
 from pandas.testing import assert_series_equal
-from xarray import DataArray
-from xarray.testing import assert_equal as assert_xr_equal
+import pytest
 
-from .config import _config as ixmp_config
+from . import cli, config as ixmp_config
 from .core import Platform, Scenario, IAMC_IDX
-from .reporting.utils import AttrSeries, Quantity
 
 
 models = {
@@ -44,11 +39,24 @@ models = {
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
     ixmp_config.clear()
+    # Further clear an automatic reference to the user's home directory.
+    # See fixture tmp_env below
+    ixmp_config.values['platform']['local'].pop('path')
 
 
 def pytest_report_header(config, startdir):
     """Add the ixmp configuration to the pytest report header."""
     return 'ixmp config: {!r}'.format(ixmp_config.values)
+
+
+@pytest.fixture(scope='session')
+def ixmp_cli(tmp_env):
+    """A CliRunner object that invokes the ixmp command-line interface."""
+    class Runner(CliRunner):
+        def invoke(self, *args, **kwargs):
+            return super().invoke(cli.main, *args, env=tmp_env, **kwargs)
+
+    yield Runner()
 
 
 @pytest.fixture(scope='session')
@@ -60,31 +68,50 @@ def tmp_env(tmp_path_factory):
     written and read in this directory without modifying the current user's
     configuration.
     """
-    os.environ['IXMP_DATA'] = str(tmp_path_factory.mktemp('config'))
+    base_temp = tmp_path_factory.getbasetemp()
+    os.environ['IXMP_DATA'] = str(base_temp)
+
+    # Set the path for the default/local platform in the test directory
+    localdb = base_temp / 'localdb' / 'default'
+    ixmp_config.values['platform']['local']['path'] = localdb
+
+    # Save for other processes
+    ixmp_config.save()
 
     yield os.environ
 
 
 @pytest.fixture(scope='function')
-def test_mp(tmp_path_factory, test_data_path):
-    """An ixmp.Platform connected to a temporary, local database.
+def test_mp(request, tmp_env, test_data_path):
+    """An ixmp.Platform connected to a temporary, local database."""
+    yield from create_test_mp(request, test_data_path, 'ixmptest')
 
-    *test_mp* is used across the entire test session, so the contents of the
-    database may reflect other tests already run.
-    """
-    # casting to Path(str()) is a hotfix due to errors upstream in pytest on
-    # Python 3.5 (at least, perhaps others), there is an implicit cast to
-    # python2's pathlib which is incompatible with python3's pathlib Path
-    # objects.  This can be taken out once it is resolved upstream and CI is
-    # setup on multiple Python3.x distros.
-    db_path = Path(str(tmp_path_factory.mktemp('test_mp')))
-    test_props = create_local_testdb(db_path, test_data_path / 'testdb')
+
+def create_test_mp(request, path, name):
+    # Name of the test function, without the preceding 'test_'
+    dirname = request.node.name.split('test_', 1)[1]
+    # Long, unique name for the platform.
+    # Remove '/' so that the name can be used in URL tests.
+    platform_name = request.node.nodeid.replace('/', ' ')
+
+    # Path to the database
+    db_path = Path(os.environ['IXMP_DATA']) / 'localdb' / dirname
+    db_path.parent.mkdir(exist_ok=True)
+
+    # Create the database
+    create_local_testdb(db_path, path / 'testdb', name)
+
+    # Add a platform
+    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb', db_path)
 
     # launch Platform and connect to testdb (reconnect if closed)
-    mp = Platform(test_props)
+    mp = Platform(name=platform_name)
     mp.open_db()
 
     yield mp
+
+    # Teardown: remove from config
+    ixmp_config.remove_platform(platform_name)
 
 
 @pytest.fixture(scope='session')
@@ -118,23 +145,18 @@ TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path, db='ixmptest'):
-    """Create a local database for testing in the directory *db_path*.
+def create_local_testdb(db_path, data_path, name='ixmptest'):
+    """Create a local database for testing at *db_path*.
 
-    Returns the path to a database properties file in the directory. Contents
-    are copied from *data_path*.
+    The files {name}.lobs and {name}.script are copied and renamed from
+    *data_path*.
     """
-    # Copy test database
-    dst = Path(db_path) / 'testdb'
-    shutil.copytree(data_path, str(dst))
-
-    # Create properties file
-    props = (Path(data_path) / 'test.properties_template').read_text()
-    test_props = dst / 'test.properties'
-    test_props.write_text(props.format(here=str(dst).replace("\\", "/"),
-                          db=db))
-
-    return test_props
+    for suffix in '.lobs', '.script':
+        # NB explicit Path(...) here is necessary because this function is
+        #    called directly from rixmp; see conftest.R
+        src = (Path(data_path) / name).with_suffix(suffix)
+        dst = Path(db_path).with_suffix(src.suffix)
+        shutil.copyfile(str(src), str(dst))
 
 
 def make_dantzig(mp, solve=False):
@@ -201,9 +223,11 @@ def make_dantzig(mp, solve=False):
     scen.init_scalar('f', 90.0, 'USD_per_km')
 
     # initialize the decision variables and equations
-    scen.init_var('z', None, None)
     scen.init_var('x', idx_sets=['i', 'j'])
+    scen.init_var('z', None, None)
+    scen.init_equ('cost')
     scen.init_equ('demand', idx_sets=['j'])
+    scen.init_equ('supply', idx_sets=['i'])
 
     # commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")
@@ -311,16 +335,26 @@ def get_cell_output(nb, name_or_index):
         raise ValueError('no cell named {!r}'.format(name_or_index))
 
 
-# special ixmp-based assertions
+# Assertions for testing
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
-    a = Quantity(a)
-    b = Quantity(b)
+    """Assert that Quantity objects *a* and *b* are equal.
 
-    # check type-specific equal
+    When Quantity is AttrSeries, *a* and *b* are first passed through
+    :meth:`as_quantity`.
+    """
+    from xarray import DataArray
+    from xarray.testing import assert_equal as assert_xr_equal
+
+    from .reporting.utils import AttrSeries, Quantity, as_quantity
+
     if Quantity is AttrSeries:
-        assert_series_equal(a, b, **kwargs)
+        # Convert pd.Series automatically
+        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
+        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
+
+        assert_series_equal(a, b, check_dtype=False, **kwargs)
     elif Quantity is DataArray:
         assert_xr_equal(a, b, **kwargs)
 
@@ -330,19 +364,24 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
 
 
 def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+    """Assert that Quantity objects *a* and *b* have numerically close values.
+
+    When Quantity is AttrSeries, *a* and *b* are first passed through
+    :meth:`as_quantity`.
+    """
     from xarray import DataArray
     from xarray.testing import assert_allclose as assert_xr_allclose
 
-    from .reporting.utils import Quantity, AttrSeries
+    from .reporting.utils import AttrSeries, Quantity, as_quantity
 
-    a = Quantity(a)
-    b = Quantity(b)
-
-    # check type-specific allclose
     if Quantity is AttrSeries:
-        # we may
+        # Convert pd.Series automatically
+        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
+        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
+
         assert_series_equal(a, b, **kwargs)
     elif Quantity is DataArray:
+        kwargs.pop('check_dtype', None)
         assert_xr_allclose(a, b, **kwargs)
 
     # check attributes are equal

@@ -58,15 +58,19 @@ Others:
    .. autosummary::
       add
       add_file
+      add_product
       aggregate
       apply
+      check_keys
       configure
       describe
       disaggregate
       finalize
       full_key
       get
+      keys
       read_config
+      set_filters
       visualize
       write
 
@@ -78,7 +82,9 @@ Others:
 
       - Provide an alias from one *key* to another:
 
-        >>> r.add('aliased name', 'original name')
+        >>> from message_ix.reporting import Reporter
+        >>> rep = Reporter()  # Create a new Reporter object
+        >>> rep.add('aliased name', 'original name')
 
       - Define an arbitrarily complex computation in a Python function that
         operates directly on the :class:`ixmp.Scenario`:
@@ -86,42 +92,70 @@ Others:
         >>> def my_report(scenario):
         >>>     # many lines of code
         >>>     return 'foo'
-        >>> r.add('my report', (my_report, 'scenario'))
-        >>> r.finalize(scenario)
-        >>> r.get('my report')
+        >>> rep.add('my report', (my_report, 'scenario'))
+        >>> rep.finalize(scenario)
+        >>> rep.get('my report')
         foo
 
       .. note::
-         Use care when adding literal :class:`str` values (2); these may
-         conflict with keys that identify the results of other
-         computations.
+         Use care when adding literal ``str()`` values as a *computation*
+         argument for :meth:`add`; these may conflict with keys that
+         identify the results of other computations.
 
 
 .. autoclass:: ixmp.reporting.Key
    :members:
 
    Quantities in a :class:`Scenario` can be indexed by one or more dimensions.
-   For example, a parameter with three dimensions can be initialized with:
+   A Key refers to a quantity using three components:
+
+   1. a string :attr:`name`,
+   2. zero or more ordered :attr:`dims`, and
+   3. an optional :attr:`tag`.
+
+   For example, an ixmp parameter with three dimensions can be initialized
+   with:
 
    >>> scenario.init_par('foo', ['a', 'b', 'c'], ['apple', 'bird', 'car'])
 
-   Computations for this scenario might use the quantity ``foo`` in different
-   ways:
+   Key allows a specific, explicit reference to various forms of “foo”:
 
-   1. in its full resolution, i.e. indexed by a, b, and c;
-   2. aggregated (e.g. summed) over any one dimension, e.g. aggregated over c
-      and thus indexed by a and b;
-   3. aggregated over any two dimensions; etc.
+   - in its full resolution, i.e. indexed by a, b, and c:
 
-   A Key for (1) will hash, display, and evaluate as equal to ``'foo:a-b-c'``.
-   A Key for (2) corresponds to ``'foo:a-b'``, and so forth.
+     >>> k1 = Key('foo', ['a', 'b', 'c'])
+     >>> k1 == 'foo:a-b-c'
+     True
 
-   Keys may be generated concisely by defining a convenience method:
+     Notice that a Key has the same hash, and compares equal (`==`) to its ``str()``.
 
-   >>> def foo(dims):
-   >>>     return Key('foo', dims.split(''))
-   >>> foo('a b')
-   foo:a-b
+   - in a partial sum over one dimension, e.g. summed along c with dimensions
+     a and b:
+
+     >>> k2 = k1.drop('c')
+     >>> k2 == 'foo:a-b'
+     True
+
+   - in a partial sum over multiple dimensions, etc.:
+
+     >>> k1.drop('a', 'c') == k2.drop('a') == 'foo:b'
+     True
+
+   .. note::
+        Some remarks:
+
+        - ``repr(key)`` prints the Key in angle brackets ('<>') to signify it is a Key object.
+
+          >>> repr(k1)
+          <foo:a-b-c>
+
+        - Keys are *immutable*: the properties :attr:`name`, :attr:`dims`, and :attr:`tag` are read-only, and the methods :meth:`append`, :meth:`drop`, and :meth:`add_tag` return *new* Key objects.
+
+        - Keys may be generated concisely by defining a convenience method:
+
+          >>> def foo(dims):
+          >>>     return Key('foo', dims.split())
+          >>> foo('a b c')
+          foo:a-b-c
 
 
 Computations
@@ -149,10 +183,10 @@ Computations
       load_file
       write_report
 
-   Conversion:
+   Data manipulation:
 
    .. autosummary::
-      make_dataframe
+      concat
 
 
 Utilities

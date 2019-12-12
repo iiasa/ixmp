@@ -1,58 +1,22 @@
-import subprocess
+import re
 
-import jpype
+import numpy.testing as npt
 import pandas as pd
+import pandas.testing as pdt
 import pytest
-from numpy import testing as npt
 
 import ixmp
 from ixmp.testing import make_dantzig
-
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
 
 
-def test_default_dbprops_file(tmp_env, test_mp_props, caplog):
-    # Configure
-    cmd = 'ixmp-config --default_dbprops_file {}'.format(test_mp_props)
-    subprocess.check_call(cmd.split(), env=tmp_env)
-
-    # Force configuration reload
-    ixmp.config._config.read()
-
-    # Platform is instantiated using the default database properties file
-    mp = ixmp.Platform()
-
-    # NB. Scenario.__init__() does not store the name of the dbprops file.
-    #     Use captured log output to confirm the expected file is used.
-    assert launch_log_msg.format(test_mp_props) in caplog.text
-
-    # Platform contains the expected scenarios
-    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
-def test_db_config_path(tmp_env, test_mp_props, caplog):
-    # Configure
-    cmd = 'ixmp-config --db_config_path {}'.format(test_mp_props.parent)
-    subprocess.check_call(cmd.split(), env=tmp_env)
-
-    # Force configuration reload
-    ixmp.config._config.read()
-
-    # Platform is instantiated used a relative filename, found in the
-    # database configuration path
-    mp = ixmp.Platform(test_mp_props)
-    assert launch_log_msg.format(test_mp_props) in caplog.text
-
-    scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-    assert scenario[0] == 'Hitchhiker'
-
-
-def test_platform_init_raises():
-    pytest.raises(ValueError, ixmp.Platform, dbtype='foo')
+def test_platform_init():
+    with pytest.raises(ValueError, match="backend class 'foo' not among "
+                       r"\['jdbc'\]"):
+        ixmp.Platform(backend='foo')
 
 
 def test_scen_list(test_mp):
@@ -70,16 +34,47 @@ def test_default_version(test_mp):
     assert scen.version == 2
 
 
+def test_scenario_from_url(test_mp, caplog):
+    url = 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name)
+
+    # Default version is loaded
+    scen, mp = ixmp.Scenario.from_url(url)
+    assert scen.version == 1
+
+    # Giving an invalid version with errors='raise' raises an exception
+    with pytest.raises(Exception, match='There was a problem getting the run '
+                                        'id from the database!'):
+        scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
+
+    # Giving an invalid scenario with errors='warn' raises an exception
+    scen, mp = ixmp.Scenario.from_url(url + 'foo')
+    assert scen is None and isinstance(mp, ixmp.Platform)
+    assert re.match(
+        "RuntimeError: There was a problem getting 'Hitchhikerfoo' in table "
+        "'SCENARIO' from the database!\nwhen loading Scenario from url "
+        "ixmp://[^/]*test_scenario_from_url/Douglas Adams/Hitchhikerfoo",
+        caplog.records[-1].message)
+
+
 def test_has_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
     assert scen.has_set('i')
     assert not scen.has_set('k')
 
 
-def test_init_par_35(test_mp):
+def test_range(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args, version='new')
+
     scen.init_set('ii')
+    ii = range(1, 20, 2)
+
+    # range instance is automatically converted to list of str in add_set
+    scen.add_set('ii', ii)
+
     scen.init_par('new_par', idx_sets='ii')
+
+    # range instance is a valid key argument to add_par
+    scen.add_par('new_par', ii, [1.2] * len(ii))
 
 
 def test_get_scalar(test_mp):
@@ -108,7 +103,7 @@ def test_init_set(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add set on a locked scenario
-    with pytest.raises(jpype.JException,
+    with pytest.raises(RuntimeError,
                        match="This Scenario cannot be edited, do a checkout "
                              "first!"):
         scen.init_set('foo')
@@ -118,19 +113,95 @@ def test_init_set(test_mp):
     scen.init_set('foo')
 
     # Initialize an already-existing set
-    with pytest.raises(jpype.JException,
-                       match="An Item with the name 'foo' already exists!"):
+    with pytest.raises(ValueError, match="'foo' already exists"):
         scen.init_set('foo')
 
 
-def test_add_set(test_mp):
-    """Test ixmp.Scenario.add_set()."""
+def test_set(test_mp):
+    """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = ixmp.Scenario(test_mp, *can_args)
 
     # Add element to a non-existent set
-    with pytest.raises(jpype.JException,
-                       match="No Set 'foo' exists in this Scenario!"):
+    with pytest.raises(KeyError,
+                       match="No Item 'foo' exists in this Scenario!"):
         scen.add_set('foo', 'bar')
+
+    scen.remove_solution()
+    scen.check_out()
+
+    # Add elements to a 0-D set
+    scen.add_set('i', 'i1')  # Name only
+    scen.add_set('i', 'i2', 'i2 comment')  # Name and comment
+    scen.add_set('i', ['i3'])  # List of names, length 1
+    scen.add_set('i', ['i4', 'i5'])  # List of names, length >1
+    scen.add_set('i', range(0, 3))  # Generator (range object)
+    # Lists of names and comments, length 1
+    scen.add_set('i', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('i', ['i7', 'i8'], ['i7 comment', 'i8 comment'])
+
+    # Incorrect usage
+
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+
+    # Add elements to a 1D set
+    scen.init_set('foo', 'i', 'dim_i')
+    scen.add_set('foo', ['i1'])  # Single key
+    scen.add_set('foo', ['i2'], 'i2 in foo')  # Single key and comment
+    scen.add_set('foo', 'i3')  # Bare name automatically wrapped
+    # Lists of names and comments, length 1
+    scen.add_set('foo', ['i6'], ['i6 comment'])
+    # Lists of names and comments, length >1
+    scen.add_set('foo', [['i7'], ['i8']], ['i7 comment', 'i8 comment'])
+    # Dict
+    scen.add_set('foo', dict(dim_i=['i7', 'i8']))
+
+    # Incorrect usage
+    # Improperly wrapped keys
+    with pytest.raises(ValueError, match=r"2-D key \['i4', 'i5'\] invalid for "
+                                         r"1-D set foo\['dim_i'\]"):
+        scen.add_set('foo', ['i4', 'i5'])
+    with pytest.raises(ValueError):
+        scen.add_set('foo', range(0, 3))
+    # Lists of different length
+    with pytest.raises(ValueError,
+                       match="Comment 'extra' without matching key"):
+        scen.add_set('i', ['i9'], ['i9 comment', 'extra'])
+    with pytest.raises(ValueError,
+                       match="Key 'extra' without matching comment"):
+        scen.add_set('i', ['i9', 'extra'], ['i9 comment'])
+    # Missing element in the index set
+    with pytest.raises(ValueError, match="The index set 'i' does not have an "
+                                         "element 'bar'!"):
+        scen.add_set('foo', 'bar')
+
+    # Retrieve set elements
+    i = {'seattle', 'san-diego', 'i1', 'i2', 'i3', 'i4', 'i5', '0', '1', '2',
+         'i6', 'i7', 'i8'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: bare name
+    scen.remove_set('i', 'i2')
+    i -= {'i2'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from an 0D set: Iterable of names, length >1
+    scen.remove_set('i', ['i4', 'i5'])
+    i -= {'i4', 'i5'}
+    assert i == set(scen.set('i'))
+
+    # Remove elements from a 1D set: Dict
+    scen.remove_set('foo', dict(dim_i=['i7', 'i8']))
+    # Added elements from above; minus directly removed elements; minus i2
+    # because it was removed from the set i that indexes dim_i of foo
+    foo = {'i1', 'i2', 'i3', 'i6', 'i7', 'i8'} - {'i2'} - {'i7', 'i8'}
+    assert foo == set(scen.set('foo')['dim_i'])
 
 
 # make sure that changes to a scenario are copied over during clone
@@ -209,6 +280,37 @@ def test_par_filters_unit(test_mp):
     assert obs == exp
 
 
+def test_filter_str(test_mp):
+    scen = ixmp.Scenario(test_mp, 'model', 'scenario', version='new')
+
+    elements = ['foo', 42, object()]
+    expected = list(map(str, elements))
+
+    scen.init_set('s')
+
+    # Set elements can be added which are not str
+    scen.add_set('s', elements)
+
+    # Elements are stored and returned as str
+    assert expected == scen.set('s').tolist()
+
+    # Parameter defined over 's'
+    p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
+                                  columns=['s', 'value'])
+
+    # Expected return dtypes of index and value columns
+    dtypes = {'s': str, 'value': float}
+    p_exp = p.astype(dtypes)
+
+    scen.init_par('p', ['s'])
+    scen.add_par('p', p)
+
+    # Values can be retrieved using non-string filters
+    exp = p_exp.loc[1:, :].reset_index(drop=True)
+    obs = scen.par('p', filters={'s': elements[1:]})
+    pdt.assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
+
+
 def test_meta(test_mp):
     test_dict = {
         "test_string": 'test12345',
@@ -236,25 +338,32 @@ def test_meta(test_mp):
 
 
 def test_load_scenario_data(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=True)
+    """load_scenario_data() caches all data."""
+    scen = ixmp.Scenario(test_mp, *can_args)
     scen.load_scenario_data()
-    assert ('par', 'd') in scen._pycache  # key exists
-    df = scen.par('d', filters={'i': ['seattle']})
-    obs = df.loc[0, 'unit']
-    exp = 'km'
-    assert obs == exp
+
+    cache_key = scen.platform._backend._cache_key(scen, 'par', 'd')
+
+    # Item exists in cache
+    assert cache_key in scen.platform._backend._cache
+
+    # Cache has not been used
+    hits_before = scen.platform._backend._cache_hit.get(cache_key, 0)
+    assert hits_before == 0
+
+    # Retrieving the expected value
+    assert 'km' == scen.par('d', filters={'i': ['seattle']}).loc[0, 'unit']
+
+    # Cache was used to return the value
+    hits_after = scen.platform._backend._cache_hit[cache_key]
+    assert hits_after == hits_before + 1
 
 
 def test_load_scenario_data_clear_cache(test_mp):
     # this fails on commit: 4376f54
     scen = ixmp.Scenario(test_mp, *can_args, cache=True)
     scen.load_scenario_data()
-    scen.clear_cache(name='d')
-
-
-def test_load_scenario_data_raises(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=False)
-    pytest.raises(ValueError, scen.load_scenario_data)
+    scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
 
 def test_log_level(test_mp):

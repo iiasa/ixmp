@@ -1,148 +1,132 @@
-# coding=utf-8
-import os
-import sys
-from pathlib import Path
-from subprocess import check_call
-import warnings
+from functools import partial
+from itertools import repeat, zip_longest
+import logging
+from warnings import warn
 
-import jpype
-from jpype import (
-    JClass,
-    JPackage as java,
-)
-import numpy as np
 import pandas as pd
 
-import ixmp as ix
-from ixmp import model_settings
-from ixmp.config import _config
-from ixmp.utils import logger, islistable, check_year, harmonize_path
+from ._config import config
+from .backend import BACKENDS, FIELDS
+from .model import get_model
+from .utils import (
+    as_str_list,
+    check_year,
+    logger,
+    parse_url
+)
+
+log = logging.getLogger(__name__)
 
 # %% default settings for column headers
 
 IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
 
 
-def start_jvm(jvmargs=None):
-    """Start the Java Virtual Machine via JPype.
-
-    Parameters
-    ----------
-    jvmargs : str or list of str, optional
-        Additional arguments to pass to :meth:`jpype.startJVM`.
-    """
-    # TODO change the jvmargs default to [] instead of None
-    if jpype.isJVMStarted():
-        return
-
-    jvmargs = jvmargs or []
-
-    # Arguments
-    args = [jpype.getDefaultJVMPath()]
-
-    # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
-    # the classpath
-    module_root = Path(__file__).parent
-    jarfile = module_root / 'ixmp.jar'
-    module_jars = list(module_root.glob('lib/*'))
-    classpath = map(str, [module_root, jarfile] + list(module_jars))
-
-    sep = ';' if os.name == 'nt' else ':'
-    args.append('-Djava.class.path={}'.format(sep.join(classpath)))
-
-    # Add user args
-    args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
-
-    # For JPype 0.7 (raises a warning) and 0.8 (default is False).
-    # 'True' causes Java string objects to be converted automatically to Python
-    # str(), as expected by ixmp Python code.
-    kwargs = dict(convertStrings=True)
-
-    jpype.startJVM(*args, **kwargs)
-
-    # define auxiliary references to Java classes
-    java.ixmp = java('at.ac.iiasa.ixmp')
-    java.Integer = java('java.lang').Integer
-    java.Double = java('java.lang').Double
-    java.LinkedList = java('java.util').LinkedList
-    java.HashMap = java('java.util').HashMap
-    java.LinkedHashMap = java('java.util').LinkedHashMap
-
-
 class Platform:
-    """Database-backed instance of the ixmp.
+    """Instance of the modeling platform.
 
-    Each Platform connects three components:
+    A Platform connects two key components:
 
-    1. A **database** for storing model inputs and outputs. This may either be
-       a local file (``dbtype='HSQLDB'``) or a database server accessed via a
-       network connection. In the latter case, connection information is read
-       from a `properties file`.
-    2. A Java Virtual Machine (**JVM**) to run core ixmp logic and access the
-       database.
-    3. One or more **model(s)**, implemented in GAMS or another language or
-       framework.
+    1. A **back end** for storing data such as model inputs and outputs.
+    2. One or more **model(s)**; codes in Python or other languages or
+       frameworks that run, via :meth:`Scenario.solve`, on the data stored in
+       the Platform.
 
-    The constructor parameters control these components. :class:`TimeSeries`
-    and :class:`Scenario` objects are specific to one Platform; to move data
-    between platforms, see :meth:`Scenario.clone`.
+    The Platform parameters control these components. :class:`TimeSeries` and
+    :class:`Scenario` objects tied to a single Platform; to move data between
+    platforms, see :meth:`Scenario.clone`.
 
     Parameters
     ----------
-    dbprops : path-like, optional
-        If `dbtype` is :obj:`None`, the name of a database properties file
-        (default: 'default.properties') in the properties file directory
-        (default: ???) or the path of a properties file.
+    backend : 'jdbc'
+        Storage backend type. 'jdbc' corresponds to the built-in
+        :class:`.JDBCBackend`; see :obj:`.BACKENDS`.
+    backend_args
+        Keyword arguments to specific to the `backend`. The “Other Parameters”
+        shown below are specific to :class:`.JDBCBackend`.
 
-        If `dbtype == 'HSQLDB'`, the path of a local database,
-        (default: "$HOME/.local/ixmp/localdb/default") or name of a
-        database file in the local database directory (default:
-        "$HOME/.local/ixmp/localdb/").
-
+    Other parameters
+    ----------------
     dbtype : 'HSQLDB', optional
-        Database type to use. If `None`, a remote database is accessed. If
+        Database type to use. If :obj:`None`, a remote database is accessed. If
         'HSQLDB', a local database is created and used at the path given by
         `dbprops`.
 
-    jvmargs : str, optional
-        Options for launching the Java Virtual Machine, e.g., the maximum heap
-        space: "-Xmx4G". See the `JVM documentation`_ for a list of options.
+    dbprops : path-like, optional
+        If `dbtype` is :obj:`None`, the name of a *database properties file*
+        (default: ``default.properties``) in the properties file directory
+        (see :class:`.Config`) or a path to a properties file.
 
-        .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
-           /technotes/tools/windows/java.html)
+        If `dbtype` is 'HSQLDB'`, the path of a local database,
+        (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
+        database file in the local database directory (default:
+        ``$HOME/.local/ixmp/localdb/``).
+
+    jvmargs : str, optional
+        Java Virtual Machine arguments. See :func:`.start_jvm`.
     """
 
-    def __init__(self, dbprops=None, dbtype=None, jvmargs=None):
-        start_jvm(jvmargs)
-        self.dbtype = dbtype
+    # List of method names which are handled directly by the backend
+    _backend_direct = [
+        'open_db',
+        'close_db',
+    ]
 
-        try:
-            # if no dbtype is specified, launch Platform with properties file
-            if dbtype is None:
-                dbprops = _config.find_dbprops(dbprops)
-                if dbprops is None:
-                    raise ValueError("Not found database properties file "
-                                     "to launch platform")
-                logger().info("launching ixmp.Platform using config file at "
-                              "'{}'".format(dbprops))
-                self._jobj = java.ixmp.Platform("Python", str(dbprops))
-            # if dbtype is specified, launch Platform with local database
-            elif dbtype == 'HSQLDB':
-                dbprops = dbprops or _config.get('DEFAULT_LOCAL_DB_PATH')
-                logger().info("launching ixmp.Platform with local {} database "
-                              "at '{}'".format(dbtype, dbprops))
-                self._jobj = java.ixmp.Platform("Python", str(dbprops), dbtype)
+    def __init__(self, *args, name=None, backend=None, **backend_args):
+        if name is None:
+            if backend is None and not len(backend_args):
+                # No arguments given: use the default platform config
+                name = 'default'
+            elif backend is None:
+                # Only backend_args given
+                log.info('Using default JDBC backend')
+                kwargs = {'class': 'jdbc'}
             else:
-                raise ValueError('Unknown dbtype: {}'.format(dbtype))
-        except TypeError:
-            msg = ("Could not launch the JVM for the ixmp.Platform."
-                   "Make sure that all dependencies of ixmp.jar"
-                   "are included in the 'ixmp/lib' folder.")
-            logger().info(msg)
-            raise
+                # Backend and maybe backend_args were given
+                kwargs = {'class': backend}
+
+        if name:
+            # Using a named platform config; retrieve it
+            self.name, kwargs = config.get_platform_info(name)
+
+        if len(args):
+            # Handle deprecated positional arguments
+            if backend and backend != 'jdbc':
+                message = ('backend={!r} conflicts with deprecated positional '
+                           'arguments for JDBCBackend (dbprops, dbtype, '
+                           'jvmargs)').format(backend)
+                raise ValueError(message)
+            elif backend is None:
+                # Providing positional args implies JDBCBackend
+                kwargs['class'] = 'jdbc'
+
+            warn('positional arguments to Platform(…) for JDBCBackend. '
+                 'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
+                 DeprecationWarning)
+
+            # Copy positional args to keyword args
+            backend_args.update(zip(['dbprops', 'dbtype', 'jvmargs'], args))
+
+        # Overwrite any platform config with explicit keyword arguments
+        kwargs.update(backend_args)
+
+        # Retrieve the Backend class
+        try:
+            backend_class = kwargs.pop('class')
+            backend_class = BACKENDS[backend_class]
+        except KeyError:
+            raise ValueError('backend class {!r} not among {}'
+                             .format(backend_class, sorted(BACKENDS.keys())))
+
+        # Instantiate the backend
+        self._backend = backend_class(**kwargs)
+
+    def __getattr__(self, name):
+        """Convenience for methods of Backend."""
+        return getattr(self._backend, name)
 
     def set_log_level(self, level):
-        """Set global logger level (for both Python and Java)
+        """Set global logger level.
 
         Parameters
         ----------
@@ -150,41 +134,15 @@ class Platform:
             set the logger level if specified, see
             https://docs.python.org/3/library/logging.html#logging-levels
         """
-        py_to_java = {
-            'CRITICAL': 'ALL',
-            'ERROR': 'ERROR',
-            'WARNING': 'WARN',
-            'INFO': 'INFO',
-            'DEBUG': 'DEBUG',
-            'NOTSET': 'OFF',
-        }
-        if level not in py_to_java.keys():
+        if level not in dir(logging):
             msg = '{} not a valid Python logger level, see ' + \
                 'https://docs.python.org/3/library/logging.html#logging-level'
             raise ValueError(msg.format(level))
         logger().setLevel(level)
-        self._jobj.setLogLevel(py_to_java[level])
-
-    def open_db(self):
-        """(Re-)open the database connection.
-
-        The database connection is opened automatically for many operations.
-        After calling :meth:`close_db`, it must be re-opened.
-
-        """
-        self._jobj.openDB()
-
-    def close_db(self):
-        """Close the database connection.
-
-        A HSQL database can only be used by one :class:`Platform` instance at a
-        time. Any existing connection must be closed before a new one can be
-        opened.
-        """
-        self._jobj.closeDB()
+        self._backend.set_log_level(level)
 
     def scenario_list(self, default=True, model=None, scen=None):
-        """Return information on TimeSeries and Scenarios in the database.
+        """Return information about TimeSeries and Scenarios on the Platform.
 
         Parameters
         ----------
@@ -217,24 +175,8 @@ class Platform:
               lock time.
             - ``annotation``: description of the Scenario or changelog.
         """
-        mod_scen_list = self._jobj.getScenarioList(default, model, scen)
-
-        mod_range = range(mod_scen_list.size())
-        cols = ['model', 'scenario', 'scheme', 'is_default', 'is_locked',
-                'cre_user', 'cre_date', 'upd_user', 'upd_date',
-                'lock_user', 'lock_date', 'annotation']
-
-        data = {}
-        for i in cols:
-            data[i] = [str(mod_scen_list.get(j).get(i)) for j in mod_range]
-
-        data['version'] = [int(str(mod_scen_list.get(j).get('version')))
-                           for j in mod_range]
-        cols.append("version")
-
-        df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
-        df = df[cols]
-        return df
+        return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
+                            columns=FIELDS['get_scenarios'])
 
     def Scenario(self, model, scen, version=None,
                  scheme=None, annotation=None, cache=False):
@@ -248,19 +190,10 @@ class Platform:
            >>> ixmp.Scenario(mp, …)
         """
 
-        warnings.warn('The constructor `mp.Scenario()` is deprecated, '
-                      'please use `ixmp.Scenario(mp, ...)`')
+        warn('The constructor `mp.Scenario()` is deprecated, please use '
+             '`ixmp.Scenario(mp, ...)`')
 
         return Scenario(self, model, scen, version, scheme, annotation, cache)
-
-    def units(self):
-        """Return all units described in the database.
-
-        Returns
-        -------
-        list
-        """
-        return to_pylist(self._jobj.getUnitList())
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.
@@ -273,11 +206,15 @@ class Platform:
             Annotation describing the unit or why it was added. The current
             database user and timestamp are appended automatically.
         """
-        if unit not in self.units():
-            self._jobj.addUnitToDB(unit, comment)
-        else:
+        if unit in self.units():
             msg = 'unit `{}` is already defined in the platform instance'
             logger().info(msg.format(unit))
+            return
+
+        self._backend.set_unit(unit, comment)
+
+    def units(self):
+        return self._backend.get_units()
 
     def regions(self):
         """Return all regions defined for the IAMC-style timeseries format
@@ -287,14 +224,8 @@ class Platform:
         -------
         :class:`pandas.DataFrame`
         """
-        lst = []
-        for r in self._jobj.listNodes('%'):
-            n, p, h = (r.getName(), r.getParent(), r.getHierarchy())
-            lst.extend([(n, None, p, h)])
-            lst.extend([(s, n, p, h) for s in (r.getSynonyms() or [])])
-        region = pd.DataFrame(lst)
-        region.columns = ['region', 'mapped_to', 'parent', 'hierarchy']
-        return region
+        return pd.DataFrame(self._backend.get_nodes(),
+                            columns=FIELDS['get_nodes'])
 
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
@@ -308,16 +239,17 @@ class Platform:
         ----------
         region : str
             Name of the region.
-        hierarchy : str
-            Hierarchy level of the region (e.g., country, R11, basin)
         parent : str, default 'World'
             Assign a 'parent' region.
+        hierarchy : str
+            Hierarchy level of the region (e.g., country, R11, basin)
         """
-        _regions = self.regions()
-        if region not in list(_regions['region']):
-            self._jobj.addNode(region, parent, hierarchy)
-        else:
-            _logger_region_exists(_regions, region)
+        for r in self._backend.get_nodes():
+            if r[1] == region:
+                _logger_region_exists(self.regions(), region)
+                return
+
+        self._backend.set_node(region, parent, hierarchy)
 
     def add_region_synonym(self, region, mapped_to):
         """Define a synonym for a `region`.
@@ -332,14 +264,15 @@ class Platform:
         mapped_to : str
             Name of the region to which the synonym should be mapped.
         """
-        _regions = self.regions()
-        if region not in list(_regions['region']):
-            self._jobj.addNodeSynonym(mapped_to, region)
-        else:
-            _logger_region_exists(_regions, region)
+        for r in self._backend.get_nodes():
+            if r[1] == region:
+                _logger_region_exists(self.regions(), region)
+                return
+
+        self._backend.set_node(region, synonym=mapped_to)
 
     def check_access(self, user, models, access='view'):
-        """Check access to specific model
+        """Check access to specific models.
 
         Parameters
         ----------
@@ -349,19 +282,17 @@ class Platform:
             Model(s) name
         access : str, optional
             Access type - view or edit
-        """
 
+        Returns
+        -------
+        bool or dict of bool
+        """
+        models_list = as_str_list(models)
+        result = self._backend.get_auth(user, models_list, access)
         if isinstance(models, str):
-            return self._jobj.checkModelAccess(user, access, models)
+            return result[models]
         else:
-            models_list = java.LinkedList()
-            for model in models:
-                models_list.add(model)
-            access_map = self._jobj.checkModelAccess(user, access, models_list)
-            result = {}
-            for model in models:
-                result[model] = access_map.get(model) == 1
-            return result
+            return {model: result.get(model) == 1 for model in models_list}
 
 
 def _logger_region_exists(_regions, r):
@@ -377,34 +308,9 @@ def _logger_region_exists(_regions, r):
 
 
 class TimeSeries:
-    """Generic collection of data in time series format.
+    """Collection of data in time series format.
 
     TimeSeries is the parent/super-class of :class:`Scenario`.
-
-    A TimeSeries is uniquely identified on its :class:`Platform` by three
-    values:
-
-    1. `model`: the name of a model used to perform calculations between input
-       and output data.
-
-       - In TimeSeries storing non-model data, arbitrary strings can be used.
-       - In a :class:`Scenario`, the `model` is a reference to a GAMS program
-         registered to the :class:`Platform` that can be solved with
-         :meth:`Scenario.solve`. See
-         :meth:`ixmp.model_settings.register_model`.
-
-    2. `scenario`: the name of a specific, coherent description of the real-
-       world system being modeled. Any `model` may be used to represent mutiple
-       alternate, or 'counter-factual', `scenarios`.
-    3. `version`: an integer identifying a specific iteration of a
-       (`model`, `scenario`). A new `version` is created by:
-
-       - Instantiating a new TimeSeries with the same `model` and `scenario` as
-         an existing TimeSeries.
-       - Calling :meth:`Scenario.clone`.
-
-       Optionally, one `version` may be set as a **default version**. See
-       :meth:`set_as_default`.
 
     Parameters
     ----------
@@ -422,79 +328,86 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+    #: Name of the model associated with the TimeSeries
+    model = None
 
-    # Version of the TimeSeries
+    #: Name of the scenario associated with the TimeSeries
+    scenario = None
+
+    #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
-    _timespans = {}
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if version == 'new':
-            self._jobj = mp._jobj.newTimeSeries(model, scenario, annotation)
-        elif isinstance(version, int):
-            self._jobj = mp._jobj.getTimeSeries(model, scenario, version)
-        else:
-            self._jobj = mp._jobj.getTimeSeries(model, scenario)
-
+        # Set attributes
         self.platform = mp
         self.model = model
         self.scenario = scenario
-        self.version = self._jobj.getVersion()
+
+        if version == 'new':
+            self._backend('init_ts', annotation)
+        elif isinstance(version, int) or version is None:
+            self._backend('get', version)
+        else:
+            raise ValueError(f'version={version!r}')
+
+    def _backend(self, method, *args, **kwargs):
+        """Convenience for calling *method* on the backend."""
+        return self.platform._backend(self, method, *args, **kwargs)
 
     # functions for platform management
 
     def check_out(self, timeseries_only=False):
-        """check out from the ixmp database instance for making changes"""
+        """Check out the TimeSeries for modification."""
         if not timeseries_only and self.has_solution():
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '
                              '`Scenario.clone(..., keep_solution=False)`'
                              )
-        self._jobj.checkOut(timeseries_only)
+        self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
         """Commit all changed data to the database.
 
-        :attr:`version` is not incremented.
+        If the TimeSeries was newly created (with ``version='new'``),
+        :attr:`version` is updated with a new version number assigned by the
+        backend. Otherwise, :meth:`commit` does not change the :attr:`version`.
+
+        Parameters
+        ----------
+        comment : str
+            Description of the changes being committed.
         """
-        self._jobj.commit(comment)
-        # if version == 0, this is a new instance
-        # and a new version number was assigned after the initial commit
-        if self.version == 0:
-            self.version = self._jobj.getVersion()
+        self._backend('commit', comment)
 
     def discard_changes(self):
         """Discard all changes and reload from the database."""
-        self._jobj.discardChanges()
+        self._backend('discard_changes')
 
     def set_as_default(self):
         """Set the current :attr:`version` as the default."""
-        self._jobj.setAsDefaultVersion()
+        self._backend('set_as_default')
 
     def is_default(self):
         """Return :obj:`True` if the :attr:`version` is the default version."""
-        return bool(self._jobj.isDefault())
+        return self._backend('is_default')
 
     def last_update(self):
         """get the timestamp of the last update/edit of this TimeSeries"""
-        return self._jobj.getLastUpdateTimestamp().toString()
+        return self._backend('last_update')
 
     def run_id(self):
         """get the run id of this TimeSeries"""
-        return self._jobj.getRunId()
-
-    def version(self):
-        """get the version number of this TimeSeries"""
-        return self._jobj.getVersion()
+        return self._backend('run_id')
 
     # functions for importing and retrieving timeseries data
 
     def preload_timeseries(self):
         """Preload timeseries data to in-memory cache. Useful for bulk updates.
         """
-        self._jobj.preloadAllTimeseries()
+        self._backend('preload')
 
     def add_timeseries(self, df, meta=False):
         """Add data to the TimeSeries.
@@ -518,54 +431,36 @@ class TimeSeries:
             specially when :meth:`Scenario.clone` is called for Scenarios
             created with ``scheme='MESSAGE'``.
         """
-        meta = 1 if meta else 0
+        meta = bool(meta)
 
+        # Ensure consistent column names
         df = to_iamc_template(df)
 
-        # if in tabular format
-        if ("value" in df.columns):
-            df = df.sort_values(by=['region', 'variable', 'unit', 'year'])\
-                .reset_index(drop=True)
-
-            region = df.region[0]
-            variable = df.variable[0]
-            unit = df.unit[0]
-            time = None
-            jData = java.LinkedHashMap()
-
-            for i in df.index:
-                if not (region == df.region[i] and variable == df.variable[i]
-                        and unit == df.unit[i]):
-                    # if new 'line', pass to Java interface, start a new
-                    # LinkedHashMap
-                    self._jobj.addTimeseries(region, variable, time, jData,
-                                             unit, meta)
-
-                    region = df.region[i]
-                    variable = df.variable[i]
-                    unit = df.unit[i]
-                    jData = java.LinkedHashMap()
-
-                jData.put(java.Integer(int(df.year[i])),
-                          java.Double(float(df.value[i])))
-            # add the final iteration of the loop
-            self._jobj.addTimeseries(region, variable, time, jData, unit, meta)
-
-        # if in 'IAMC-style' format
+        if 'value' in df.columns:
+            # Long format; pivot to wide
+            df = pd.pivot_table(df,
+                                values='value',
+                                index=['region', 'variable', 'unit'],
+                                columns=['year'])
         else:
-            for i in df.index:
-                jData = java.LinkedHashMap()
+            # Wide format: set index columns
+            df.set_index(['region', 'variable', 'unit'], inplace=True)
 
-                for j in ix.utils.numcols(df):
-                    jData.put(java.Integer(int(j)),
-                              java.Double(float(df[j][i])))
+        # Discard non-numeric columns, e.g. 'model', 'scenario'
+        num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
+        df = df.iloc[:, num_cols]
 
-                time = None
-                self._jobj.addTimeseries(df.region[i], df.variable[i], time,
-                                         jData, df.unit[i], meta)
+        # Columns (year) as integer
+        df.columns = df.columns.astype(int)
 
-    def timeseries(self, iamc=False, region=None, variable=None, level=None,
-                   unit=None, year=None, **kwargs):
+        # Add one time series per row
+        for (r, v, u), data in df.iterrows():
+            # Values as float; exclude NA
+            self._backend('set_data', r, v, data.astype(float).dropna(), u,
+                          meta)
+
+    def timeseries(self, region=None, variable=None, unit=None, year=None,
+                   iamc=False):
         """Retrieve TimeSeries data.
 
         Parameters
@@ -587,44 +482,20 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
-        # convert filter lists to Java objects
-        region = ix.to_jlist(region)
-        variable = ix.to_jlist(variable)
-        unit = ix.to_jlist(unit)
-        year = ix.to_jlist(year)
-
-        # retrieve data, convert to pandas.DataFrame
-        data = self._jobj.getTimeseries(region, variable, unit, None, year)
-        dictionary = {}
-
-        # if in tabular format
-        ts_range = range(data.size())
-
-        cols = ['region', 'variable', 'unit']
-        for i in cols:
-            dictionary[i] = [str(data.get(j).get(i)) for j in ts_range]
-
-        dictionary['year'] = [data.get(j).get('year').intValue()
-                              for j in ts_range]
-        cols.append("year")
-
-        dictionary['value'] = [data.get(j).get('value').floatValue()
-                               for j in ts_range]
-        cols.append("value")
-
-        df = pd.DataFrame
-        df = df.from_dict(dictionary, orient='columns', dtype=None)
-
+        # Retrieve data, convert to pandas.DataFrame
+        df = pd.DataFrame(self._backend('get_data',
+                                        as_str_list(region) or [],
+                                        as_str_list(variable) or [],
+                                        as_str_list(unit) or [],
+                                        as_str_list(year) or []),
+                          columns=FIELDS['ts_get'])
         df['model'] = self.model
         df['scenario'] = self.scenario
 
-        df = df[['model', 'scenario'] + cols]
-
         if iamc:
-            df = df.pivot_table(index=IAMC_IDX, columns='year')['value']
-            df.reset_index(inplace=True)
-            df.columns = [c if isinstance(c, str) else int(c)
-                          for c in df.columns]
+            # Convert to wide format
+            df = df.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+                   .reset_index()
             df.columns.names = [None]
 
         return df
@@ -642,15 +513,17 @@ class TimeSeries:
             - `unit`
             - `year`
         """
+        # Ensure consistent column names
         df = to_iamc_template(df)
+
         if 'year' not in df.columns:
+            # Reshape from wide to long format
             df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
                          var_name='year', value_name='value')
-        for name, data in df.groupby(['region', 'variable', 'unit']):
-            years = java.LinkedList()
-            for y in data['year']:
-                years.add(java.Integer(y))
-            self._jobj.removeTimeseries(name[0], name[1], None, years, name[2])
+
+        # Remove all years for a given (r, v, u) combination at once
+        for (r, v, u), data in df.groupby(['region', 'variable', 'unit']):
+            self._backend('delete', r, v, data['year'].tolist(), u)
 
     def add_geodata(self, df):
         """Add geodata (layers) to the TimeSeries.
@@ -668,14 +541,9 @@ class TimeSeries:
             - `value`
             - `meta`
         """
-        for i in df.index:
-            self._jobj.addGeoData(df.region[i],
-                                  df.variable[i],
-                                  df.time[i],
-                                  java.Integer(int(df.year[i])),
-                                  df.value[i],
-                                  df.unit[i],
-                                  int(df.meta[i]))
+        for _, row in df.astype({'year': int, 'meta': int}).iterrows():
+            self._backend('set_geo', row.region, row.variable, row.time,
+                          row.year, row.value, row.unit, row.meta)
 
     def remove_geodata(self, df):
         """Remove geodata from the TimeSeries instance.
@@ -691,26 +559,10 @@ class TimeSeries:
             - `time`
             - `year`
         """
-        for values, _df in df.groupby(['region', 'variable', 'time', 'unit']):
-            years = java.LinkedList()
-            for year in _df['year']:
-                years.add(java.Integer(year))
-            self._jobj.removeGeoData(values[0], values[1], values[2], years,
-                                     values[3])
-
-    def _get_timespans(self):
-        self._timespans = {}
-        timespan_cls = JClass('at.ac.iiasa.ixmp.objects.TimeSeries$TimeSpan')
-        for timespan in timespan_cls.values():
-            self._timespans[timespan.ordinal()] = timespan.name()
-
-    def _get_timespan_name(self, ordinal):
-        """Access the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan"""
-        if isinstance(ordinal, str):
-            ordinal = int(ordinal)
-        if not self._timespans:
-            self._get_timespans()
-        return self._timespans[ordinal]
+        # Remove all years for a given (r, v, t, u) combination at once
+        for (r, v, t, u), data in df.groupby(['region', 'variable', 'time',
+                                              'unit']):
+            self._backend('delete_geo', r, v, t, data['year'].tolist(), u)
 
     def get_geodata(self):
         """Fetch geodata and return it as dataframe.
@@ -720,158 +572,99 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
-        java_geodata = self._jobj.getGeoData()
-        geodata_range = range(java_geodata.size())
-        # auto_cols can be added without any conversion
-        auto_cols = {'nodeName': 'region',
-                     'unitName': 'unit',
-                     'meta': 'meta',
-                     'time': 'time',
-                     'keyString': 'variable'}
-        # Initialize empty dict to have correct columns also for empty results
-        cols = list(auto_cols.values()) + ['year', 'value']
-        geodata = {col: [] for col in cols}
-
-        for i in geodata_range:
-            year_values = java_geodata.get(i).get('yearlyData').entrySet()
-            for year_value in year_values:
-                geodata['year'].append(year_value.getKey())
-                geodata['value'].append(year_value.getValue())
-                for (java_key, python_key) in auto_cols.items():
-                    geodata[python_key].append(str(java_geodata.get(i).get(
-                        java_key)))
-
-        geodata['meta'] = [int(_meta) for _meta in geodata['meta']]
-        geodata['time'] = [self._get_timespan_name(time) for time in
-                           geodata['time']]
-
-        return pd.DataFrame.from_dict(geodata)
+        return pd.DataFrame(self._backend('get_geo'),
+                            columns=FIELDS['ts_get_geo'])
 
 
 # %% class Scenario
 
 class Scenario(TimeSeries):
-    """Collection of model-related input and output data.
+    """Collection of model-related data.
 
-    A Scenario is a :class:`TimeSeries` associated with a particular model that
-    can be run on the current :class:`Platform` by calling :meth:`solve`. The
-    Scenario also stores the output, or 'solution' of a model run; this
-    includes the 'level' and 'marginal' values of GAMS equations and variables.
-
-    Data in a Scenario are closely related to different types in the GAMS data
-    model:
-
-    - A **set** is a named collection of labels. See :meth:`init_set`,
-      :meth:`add_set`, and :meth:`set`. There are two types of sets:
-
-      1. Sets that are lists of labels.
-      2. Sets that are 'indexed' by one or more other set(s). For this type of
-         set, each member is an ordered tuple of the labels in the index sets.
-
-    - A **scalar** is a named, single, numerical value. See
-      :meth:`init_scalar`, :meth:`change_scalar`, and :meth:`scalar`.
-
-    - **Parameters**, **variables**, and **equations** are multi-dimensional
-      arrays of values that are indexed by one or more sets (i.e. with
-      dimension 1 or greater). The Scenario methods for handling these types
-      are very similar; they mainly differ in how they are used within GAMS
-      models registered with ixmp:
-
-      - **Parameters** are generic data that can be defined before a model run.
-        They may be altered by the model solution. See :meth:`init_par`,
-        :meth:`remove_par`, :meth:`par_list`, :meth:`add_par`, and :meth:`par`.
-      - **Variables** are calculated during or after a model run by GAMS code,
-        so they cannot be modified by a Scenario. See :meth:`init_var`,
-        :meth:`var_list`, and :meth:`var`.
-      - **Equations** describe fundamental relationships between other types
-        (parameters, variables, and scalars) in a model. They are defined in
-        GAMS code, so cannot be modified by a Scenario. See :meth:`init_equ`,
-        :meth:`equ_list`, and :meth:`equ`.
+    See :class:`TimeSeries` for the meaning of parameters `mp`, `model`,
+    `scenario`, `version`, and `annotation`.
 
     Parameters
     ----------
-    mp : :class:`Platform`
-        ixmp instance in which to store data.
-    model : str
-        Model name; must be a registered model.
-    scenario : str
-        Scenario name.
-    version : str or int or at.ac.iiasa.ixmp.objects.Scenario, optional
-        If omitted, load the default version of the (`model`, `scenario`).
-        If :class:`int`, load the specified version.
-        If ``'new'``, initialize a new Scenario.
     scheme : str, optional
         Use an explicit scheme for initializing a new scenario.
-    annotation : str, optional
-        A short annotation/comment used when ``version='new'``.
     cache : bool, optional
         Store data in memory and return cached values instead of repeatedly
-        querying the database.
+        querying the backend.
     """
-    # Name of the model associated with the Scenario
-    model = None
-
-    # Name of the Scenario
-    scenario = None
-
-    _java_kwargs = {
-        'set': {},
-        'par': {'has_value': True},
-        'var': {'has_level': True},
-        'equ': {'has_level': True},
-    }
+    #: Scheme of the Scenario.
+    scheme = None
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
                  annotation=None, cache=False):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
-        if version == 'new':
-            self._jobj = mp._jobj.newScenario(model, scenario, scheme,
-                                              annotation)
-        elif isinstance(version, int):
-            self._jobj = mp._jobj.getScenario(model, scenario, version)
-        # constructor for `message_ix.Scenario.__init__` or `clone()` function
-        elif isinstance(version, JClass('at.ac.iiasa.ixmp.objects.Scenario')):
-            self._jobj = version
-        elif version is None:
-            self._jobj = mp._jobj.getScenario(model, scenario)
-        else:
-            raise ValueError('Invalid `version` arg: `{}`'.format(version))
-
+        # Set attributes
         self.platform = mp
         self.model = model
         self.scenario = scenario
-        self.version = self._jobj.getVersion()
-        self.scheme = scheme or self._jobj.getScheme()
+
+        if version == 'new':
+            self._backend('init_s', scheme, annotation)
+        elif isinstance(version, int) or version is None:
+            self._backend('get', version)
+        else:
+            raise ValueError(f'version={version!r}')
+
         if self.scheme == 'MESSAGE' and not hasattr(self, 'is_message_scheme'):
-            warnings.warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios '
-                          'is deprecated, please use `message_ix.Scenario`')
+            warn('Using `ixmp.Scenario` for MESSAGE-scheme scenarios is '
+                 'deprecated, please use `message_ix.Scenario`')
 
-        self._cache = cache
-        self._pycache = {}
+    @property
+    def _cache(self):
+        return hasattr(self.platform._backend, '_cache')
 
-    def _item(self, ix_type, name, load=True):
-        """Return the Java object for item *name* of *ix_type*.
+    @classmethod
+    def from_url(cls, url, errors='warn'):
+        """Instantiate a Scenario given an ixmp-scheme URL.
+
+        The following are equivalent::
+
+            from ixmp import Platform, Scenario
+            mp = Platform(name='example')
+            scen = Scenario(mp 'model', 'scenario', version=42)
+
+        and::
+
+            from ixmp import Scenario
+            scen, mp = Scenario.from_url('ixmp://example/model/scenario#42')
 
         Parameters
         ----------
-        load : bool, optional
-            If *ix_type* is 'par', 'var', or 'equ', the elements of the item
-            are loaded from the database before :meth:`_item` returns. If
-            :const:`False`, the elements can be loaded later using
-            ``item.loadItemElementsfromDB()``.
+        url : str
+            See :meth:`parse_url <ixmp.utils.parse_url>`.
+        errors : 'warn' or 'raise'
+            If 'warn', a failure to load the Scenario is logged as a warning,
+            and the platform is still returned. If 'raise', the exception
+            is raised.
+
+        Returns
+        -------
+        scenario, platform : 2-tuple of (Scenario, :class:`Platform`)
+            The Scenario and Platform referred to by the URL.
         """
-        funcs = {
-            'item': self._jobj.getItem,
-            'set': self._jobj.getSet,
-            'par': self._jobj.getPar,
-            'var': self._jobj.getVar,
-            'equ': self._jobj.getEqu,
-        }
-        # getItem is not overloaded to accept a second bool argument
-        args = [name] + ([load] if ix_type != 'item' else [])
-        return funcs[ix_type](*args)
+        assert errors in ('warn', 'raise'), "errors= must be 'warn' or 'raise'"
+
+        platform_info, scenario_info = parse_url(url)
+        platform = Platform(**platform_info)
+
+        try:
+            scenario = cls(platform, **scenario_info)
+        except Exception as e:
+            if errors == 'warn':
+                log.warning('{}: {}\nwhen loading Scenario from url {}'
+                            .format(e.__class__.__name__, e.args[0], url))
+                return None, platform
+            else:
+                raise
+        else:
+            return scenario, platform
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.
@@ -884,38 +677,11 @@ class Scenario(TimeSeries):
         if not self._cache:
             raise ValueError('Cache must be enabled to load scenario data')
 
-        funcs = {
-            'set': (self.set_list, self.set),
-            'par': (self.par_list, self.par),
-            'var': (self.var_list, self.var),
-            'equ': (self.equ_list, self.equ),
-        }
-        for ix_type, (list_func, get_func) in funcs.items():
+        for ix_type in 'equ', 'par', 'set', 'var':
             logger().info('Caching {} data'.format(ix_type))
-            for item in list_func():
-                get_func(item)
-
-    def _element(self, ix_type, name, filters=None, cache=None):
-        """Return a pd.DataFrame of item elements."""
-        item = self._item(ix_type, name)
-        cache_key = (ix_type, name)
-
-        # if dataframe in python cache, retrieve from there
-        if cache_key in self._pycache:
-            return filtered(self._pycache[cache_key], filters)
-
-        # if no cache, retrieve from Java with filters
-        if filters is not None and not self._cache:
-            return _get_ele_list(item, filters, **self._java_kwargs[ix_type])
-
-        # otherwise, retrieve from Java and keep in python cache
-        df = _get_ele_list(item, None, **self._java_kwargs[ix_type])
-
-        # save if using memcache
-        if self._cache:
-            self._pycache[cache_key] = df
-
-        return filtered(df, filters)
+            get_func = getattr(self, ix_type)
+            for name in getattr(self, '{}_list'.format(ix_type))():
+                get_func(name)
 
     def idx_sets(self, name):
         """Return the list of index sets for an item (set, par, var, equ)
@@ -925,7 +691,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self._item('item', name).getIdxSets())
+        return self._backend('item_index', name, 'sets')
 
     def idx_names(self, name):
         """return the list of index names for an item (set, par, var, equ)
@@ -935,7 +701,20 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return to_pylist(self._item('item', name).getIdxNames())
+        return self._backend('item_index', name, 'names')
+
+    def _keys(self, name, key_or_keys):
+        if isinstance(key_or_keys, (list, pd.Series)):
+            return as_str_list(key_or_keys)
+        elif isinstance(key_or_keys, (pd.DataFrame, dict)):
+            if isinstance(key_or_keys, dict):
+                key_or_keys = pd.DataFrame.from_dict(key_or_keys,
+                                                     orient='columns')
+            idx_names = self.idx_names(name)
+            return [as_str_list(row, idx_names)
+                    for _, row in key_or_keys.iterrows()]
+        else:
+            return [str(key_or_keys)]
 
     def cat_list(self, name):
         raise DeprecationWarning('function was migrated to `message_ix` class')
@@ -948,11 +727,11 @@ class Scenario(TimeSeries):
 
     def set_list(self):
         """List all defined sets."""
-        return to_pylist(self._jobj.getSetList())
+        return self._backend('list_items', 'set')
 
     def has_set(self, name):
-        """check whether the scenario has a set with that name"""
-        return self._jobj.hasSet(name)
+        """Check whether the scenario has a set *name*."""
+        return name in self.set_list()
 
     def init_set(self, name, idx_sets=None, idx_names=None):
         """Initialize a new set.
@@ -968,10 +747,13 @@ class Scenario(TimeSeries):
 
         Raises
         ------
-        :class:`jpype.JavaException`
+        ValueError
             If the set (or another object with the same *name*) already exists.
+        RuntimeError
+            If the Scenario is not checked out (see
+            :meth:`~TimeSeries.check_out`).
         """
-        self._jobj.initializeSet(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
     def set(self, name, filters=None, **kwargs):
         """Return the (filtered) elements of a set.
@@ -990,7 +772,7 @@ class Scenario(TimeSeries):
         -------
         pandas.DataFrame
         """
-        return self._element('set', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'set', name, filters)
 
     def add_set(self, name, key, comment=None):
         """Add elements to an existing set.
@@ -1003,54 +785,96 @@ class Scenario(TimeSeries):
             Element(s) to be added. If *name* exists, the elements are
             appended to existing elements.
         comment : str or iterable of str, optional
-            Comment describing the element(s). Only used if *key* is a string
-            or list/range.
+            Comment describing the element(s). If given, there must be the
+            same number of comments as elements.
 
         Raises
         ------
-        :class:`jpype.JavaException`
+        KeyError
             If the set *name* does not exist. :meth:`init_set` must be called
             before :meth:`add_set`.
+        ValueError
+            For invalid forms or combinations of *key* and *comment*.
         """
-        self.clear_cache(name=name, ix_type='set')
+        # TODO expand docstring (here or in doc/source/api.rst) with examples,
+        #      per test_core.test_add_set.
 
-        jSet = self._item('set', name)
+        # Get index names for set *name*, may raise KeyError
+        idx_names = self.idx_names(name)
 
-        if sys.version_info[0] > 2 and isinstance(key, range):
-            key = list(key)
+        # Check arguments and convert to two lists: keys and comments
+        if len(idx_names) == 0:
+            # Basic set. Keys must be strings.
+            if isinstance(key, (dict, pd.DataFrame)):
+                raise ValueError('dict, DataFrame keys invalid for '
+                                 f'basic set {name!r}')
 
-        if (jSet.getDim() == 0) and isinstance(key, list):
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    jSet.addElement(str(key[i]), str(comment[i]))
-                else:
-                    jSet.addElement(str(key[i]))
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = self.idx_names(name)
-            if "comment" in list(key):
-                for i in key.index:
-                    jSet.addElement(to_jlist(key.loc[i], idx_names),
-                                    str(key['comment'][i]))
-            else:
-                for i in key.index:
-                    jSet.addElement(to_jlist(key.loc[i], idx_names))
-        elif isinstance(key, list):
-            if isinstance(key[0], list):
-                for i in range(len(key)):
-                    if comment and i < len(comment):
-                        jSet.addElement(to_jlist(
-                            key[i]), str(comment[i]))
-                    else:
-                        jSet.addElement(to_jlist(key[i]))
-            else:
-                if comment:
-                    jSet.addElement(to_jlist(key), str(comment[i]))
-                else:
-                    jSet.addElement(to_jlist(key))
+            # Ensure keys is a list of str
+            keys = as_str_list(key)
         else:
-            jSet.addElement(str(key), str(comment))
+            # Set defined over 1+ other sets
+
+            # Check for ambiguous arguments
+            if comment and isinstance(key, (dict, pd.DataFrame)) and \
+                    'comment' in key:
+                raise ValueError("ambiguous; both key['comment'] and comment "
+                                 "given")
+
+            if isinstance(key, pd.DataFrame):
+                # DataFrame of key values and perhaps comments
+                try:
+                    # Pop a 'comment' column off the DataFrame, convert to list
+                    comment = key.pop('comment').to_list()
+                except KeyError:
+                    pass
+
+                # Convert key to list of list of key values
+                keys = []
+                for row in key.to_dict(orient='records'):
+                    keys.append(as_str_list(row, idx_names=idx_names))
+            elif isinstance(key, dict):
+                # Dict of lists of key values
+
+                # Pop a 'comment' list from the dict
+                comment = key.pop('comment', None)
+
+                # Convert to list of list of key values
+                keys = list(map(as_str_list,
+                                zip(*[key[i] for i in idx_names])))
+            elif isinstance(key[0], str):
+                # List of key values; wrap
+                keys = [as_str_list(key)]
+            elif isinstance(key[0], list):
+                # List of lists of key values; convert to list of list of str
+                keys = list(map(as_str_list, key))
+            elif isinstance(key, str) and len(idx_names) == 1:
+                # Bare key given for a 1D set; wrap for convenience
+                keys = [[key]]
+            else:
+                # Other, invalid value
+                raise ValueError(key)
+
+        # Process comments to a list of str, or let them all be None
+        comments = as_str_list(comment) if comment else repeat(None, len(keys))
+
+        # Combine iterators to tuples. If the lengths are mismatched, the
+        # sentinel value 'False' is filled in
+        to_add = list(zip_longest(keys, comments, fillvalue=False))
+
+        # Check processed arguments
+        for e, c in to_add:
+            # Check for sentinel values
+            if e is False:
+                raise ValueError(f'Comment {c!r} without matching key')
+            elif c is False:
+                raise ValueError(f'Key {e!r} without matching comment')
+            elif len(idx_names) and len(idx_names) != len(e):
+                raise ValueError(f'{len(e)}-D key {e!r} invalid for '
+                                 f'{len(idx_names)}-D set {name}{idx_names!r}')
+
+        # Send to backend
+        elements = ((kc[0], None, None, kc[1]) for kc in to_add)
+        self._backend('item_set_elements', 'set', name, elements)
 
     def remove_set(self, name, key=None):
         """delete a set from the scenario
@@ -1063,20 +887,19 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string
             elements to be removed
         """
-        self.clear_cache(name=name, ix_type='set')
-
         if key is None:
-            self._jobj.removeSet(name)
+            self._backend('delete_item', 'set', name)
         else:
-            _remove_ele(self._jobj.getSet(name), key)
+            self._backend('item_delete_elements', 'set', name,
+                          self._keys(name, key))
 
     def par_list(self):
         """List all defined parameters."""
-        return to_pylist(self._jobj.getParList())
+        return self._backend('list_items', 'par')
 
     def has_par(self, name):
         """check whether the scenario has a parameter with that name"""
-        return self._jobj.hasPar(name)
+        return name in self.par_list()
 
     def init_par(self, name, idx_sets, idx_names=None):
         """Initialize a new parameter.
@@ -1090,94 +913,126 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
-        self._jobj.initializePar(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific parameter
+        """Return parameter data.
+
+        If *filters* is provided, only a subset of data, matching the filters,
+        is returned.
 
         Parameters
         ----------
         name : str
-            name of the parameter
-        filters : dict
-            index names mapped list of index set elements
+            Name of the parameter
+        filters : dict (str -> list of str), optional
+            Index names mapped to lists of index set elements. Elements not
+            appearing in the respective index set(s) are silently ignored.
         """
-        return self._element('par', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'par', name, filters)
 
-    def add_par(self, name, key, val=None, unit=None, comment=None):
+    def add_par(self, name, key_or_data=None, value=None, unit=None,
+                comment=None, key=None, val=None):
         """Set the values of a parameter.
 
         Parameters
         ----------
         name : str
             Name of the parameter.
-        key : str, list/range of strings/values, dictionary, dataframe
-            element(s) to be added
-        val : values, list/range of values, optional
-            element values (only used if 'key' is a string or list/range)
-        unit : str, list/range of strings, optional
-            element units (only used if 'key' is a string or list/range)
-        comment : str or list/range of strings, optional
-            comment (optional, only used if 'key' is a string or list/range)
+        key_or_data : str or iterable of str or range or dict or \
+                      pandas.DataFrame
+            Element(s) to be added.
+        value : numeric or iterable of numeric, optional
+            Values.
+        unit : str or iterable of str, optional
+            Unit symbols.
+        comment : str or iterable of str, optional
+            Comment(s) for the added values.
         """
-        self.clear_cache(name=name, ix_type='par')
+        # Number of dimensions in the index of *name*
+        idx_names = self.idx_names(name)
+        N_dim = len(idx_names)
 
-        jPar = self._item('par', name)
+        if key:
+            warn("Scenario.add_par(key=...) deprecated and will be removed in "
+                 "ixmp 2.0; use key_or_data", DeprecationWarning)
+            key_or_data = key
+        if val:
+            warn("Scenario.add_par(val=...) deprecated and will be removed in "
+                 "ixmp 2.0; use value", DeprecationWarning)
+            value = val
 
-        if sys.version_info[0] > 2 and isinstance(key, range):
-            key = list(key)
-
-        if isinstance(key, pd.DataFrame) and "key" in list(key):
-            if "comment" in list(key):
-                for i in key.index:
-                    jPar.addElement(str(key['key'][i]),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]),
-                                    str(key['comment'][i]))
-            else:
-                for i in key.index:
-                    jPar.addElement(str(key['key'][i]),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]))
-
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = self.idx_names(name)
-            if "comment" in list(key):
-                for i in key.index:
-                    jPar.addElement(to_jlist(key.loc[i], idx_names),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]),
-                                    str(key['comment'][i]))
-            else:
-                for i in key.index:
-                    jPar.addElement(to_jlist(key.loc[i], idx_names),
-                                    _jdouble(key['value'][i]),
-                                    str(key['unit'][i]))
-        elif isinstance(key, list) and isinstance(key[0], list):
-            unit = unit or ["???"] * len(key)
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    jPar.addElement(to_jlist(key[i]), _jdouble(val[i]),
-                                    str(unit[i]), str(comment[i]))
-                else:
-                    jPar.addElement(to_jlist(key[i]), _jdouble(val[i]),
-                                    str(unit[i]))
-        elif isinstance(key, list) and isinstance(val, list):
-            unit = unit or ["???"] * len(key)
-            for i in range(len(key)):
-                if comment and i < len(comment):
-                    jPar.addElement(str(key[i]), _jdouble(val[i]),
-                                    str(unit[i]), str(comment[i]))
-                else:
-                    jPar.addElement(str(key[i]), _jdouble(val[i]),
-                                    str(unit[i]))
-        elif isinstance(key, list) and not isinstance(val, list):
-            jPar.addElement(to_jlist(
-                key), _jdouble(val), unit, comment)
+        # Convert valid forms of arguments to pd.DataFrame
+        if isinstance(key_or_data, dict):
+            # dict containing data
+            data = pd.DataFrame.from_dict(key_or_data, orient='columns')
+        elif isinstance(key_or_data, pd.DataFrame):
+            data = key_or_data
+            if 'value' in data.columns and value is not None:
+                raise ValueError('both key_or_data.value and value supplied')
         else:
-            jPar.addElement(str(key), _jdouble(val), unit, comment)
+            # One or more keys; convert to a list of strings
+            if isinstance(key_or_data, range):
+                key_or_data = list(key_or_data)
+            keys = self._keys(name, key_or_data)
+
+            # Check the type of value
+            if isinstance(value, (float, int)):
+                # Single value
+                values = [float(value)]
+
+                if N_dim > 1 and len(keys) == N_dim:
+                    # Ambiguous case: ._key() above returns ['dim_0', 'dim_1'],
+                    # when we really want [['dim_0', 'dim_1']]
+                    keys = [keys]
+            else:
+                # Multiple values
+                values = value
+
+            data = pd.DataFrame(zip_longest(keys, values),
+                                columns=['key', 'value'])
+            if data.isna().any(axis=None):
+                raise ValueError('Length mismatch between keys and values')
+
+        # Column types
+        types = {
+            'key': str if N_dim == 1 else object,
+            'value': float,
+            'unit': str,
+            'comment': str,
+        }
+
+        # Further handle each column
+        if 'key' not in data.columns:
+            # Form the 'key' column from other columns
+            if N_dim > 1:
+                data['key'] = data.apply(partial(as_str_list,
+                                                 idx_names=idx_names),
+                                         axis=1)
+            else:
+                data['key'] = data[idx_names[0]]
+
+        if 'unit' not in data.columns:
+            # Broadcast single unit across all values. pandas raises ValueError
+            # if *unit* is iterable but the wrong length
+            data['unit'] = unit or '???'
+
+        if 'comment' not in data.columns:
+            if comment:
+                # Broadcast single comment across all values. pandas raises
+                # ValueError if *comment* is iterable but the wrong length
+                data['comment'] = comment
+            else:
+                # Store a 'None' comment
+                data['comment'] = None
+                types.pop('comment')
+
+        # Convert types, generate tuples
+        elements = ((e.key, e.value, e.unit, e.comment)
+                    for e in data.astype(types).itertuples())
+
+        # Store
+        self._backend('item_set_elements', 'par', name, elements)
 
     def init_scalar(self, name, val, unit, comment=None):
         """Initialize a new scalar.
@@ -1193,8 +1048,8 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the scalar.
         """
-        jPar = self._jobj.initializePar(name, None, None)
-        jPar.addElement(_jdouble(val), unit, comment)
+        self.init_par(name, None, None)
+        self.change_scalar(name, val, unit, comment)
 
     def scalar(self, name):
         """Return the value and unit of a scalar.
@@ -1208,7 +1063,7 @@ class Scenario(TimeSeries):
         -------
         {'value': value, 'unit': unit}
         """
-        return _get_ele_list(self._jobj.getPar(name), None, has_value=True)
+        return self._backend('item_get_elements', 'par', name, None)
 
     def change_scalar(self, name, val, unit, comment=None):
         """Set the value and unit of a scalar.
@@ -1224,8 +1079,8 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the change.
         """
-        self.clear_cache(name=name, ix_type='par')
-        self._item('par', name).addElement(_jdouble(val), unit, comment)
+        self._backend('item_set_elements', 'par', name,
+                      [(None, float(val), unit, comment)])
 
     def remove_par(self, name, key=None):
         """Remove parameter values or an entire parameter.
@@ -1237,20 +1092,19 @@ class Scenario(TimeSeries):
         key : dataframe or key list or concatenated string, optional
             elements to be removed
         """
-        self.clear_cache(name=name, ix_type='par')
-
         if key is None:
-            self._jobj.removePar(name)
+            self._backend('delete_item', 'par', name)
         else:
-            _remove_ele(self._jobj.getPar(name), key)
+            self._backend('item_delete_elements', 'par', name,
+                          self._keys(name, key))
 
     def var_list(self):
         """List all defined variables."""
-        return to_pylist(self._jobj.getVarList())
+        return self._backend('list_items', 'var')
 
     def has_var(self, name):
         """check whether the scenario has a variable with that name"""
-        return self._jobj.hasVar(name)
+        return name in self.var_list()
 
     def init_var(self, name, idx_sets=None, idx_names=None):
         """initialize a new variable in the scenario
@@ -1264,7 +1118,7 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             index name list
         """
-        self._jobj.initializeVar(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'var', name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific variable
@@ -1276,11 +1130,11 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._element('var', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'var', name, filters)
 
     def equ_list(self):
         """List all defined equations."""
-        return to_pylist(self._jobj.getEquList())
+        return self._backend('list_items', 'equ')
 
     def init_equ(self, name, idx_sets=None, idx_names=None):
         """Initialize a new equation.
@@ -1294,11 +1148,11 @@ class Scenario(TimeSeries):
         idx_names : list of str, optional
             index name list
         """
-        self._jobj.initializeEqu(name, *make_dims(idx_sets, idx_names))
+        return self._backend('init_item', 'equ', name, idx_sets, idx_names)
 
     def has_equ(self, name):
         """check whether the scenario has an equation with that name"""
-        return self._jobj.hasEqu(name)
+        return name in self.equ_list()
 
     def equ(self, name, filters=None, **kwargs):
         """return a dataframe of (filtered) elements for a specific equation
@@ -1310,10 +1164,10 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._element('equ', name, filters, **kwargs)
+        return self._backend('item_get_elements', 'equ', name, filters)
 
     def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, first_model_year=None, platform=None,
+              keep_solution=True, shift_first_model_year=None, platform=None,
               **kwargs):
         """Clone the current scenario and return the clone.
 
@@ -1350,81 +1204,45 @@ class Scenario(TimeSeries):
             Platform to clone to (default: current platform)
         """
         if 'keep_sol' in kwargs:
-            warnings.warn(
-                '`keep_sol` is deprecated and will be removed in the next' +
-                ' release, please use `keep_solution`')
+            warn('`keep_sol` is deprecated and will be removed in the next'
+                 ' release, please use `keep_solution`')
             keep_solution = kwargs.pop('keep_sol')
 
         if 'scen' in kwargs:
-            warnings.warn(
-                '`scen` is deprecated and will be removed in the next' +
-                ' release, please use `scenario`')
+            warn('`scen` is deprecated and will be removed in the next'
+                 ' release, please use `scenario`')
             scenario = kwargs.pop('scen')
 
-        if keep_solution and first_model_year is not None:
-            raise ValueError('Use `keep_solution=False` when cloning with '
-                             '`first_model_year`!')
+        if 'first_model_year' in kwargs:
+            warn('`first_model_year` is deprecated and will be removed in the'
+                 ' next release. Use `shift_first_model_year`.')
+            shift_first_model_year = kwargs.pop('first_model_year')
 
-        if platform is not None and not keep_solution:
-            raise ValueError('Cloning across platforms is only possible '
-                             'with `keep_solution=True`!')
+        if len(kwargs):
+            raise ValueError('Invalid arguments {!r}'.format(kwargs))
+
+        if shift_first_model_year is not None:
+            if keep_solution:
+                logger().warning('Overriding keep_solution=True for '
+                                 'shift_first_model_year')
+                keep_solution = False
 
         platform = platform or self.platform
         model = model or self.model
         scenario = scenario or self.scenario
-        args = [platform._jobj, model, scenario, annotation, keep_solution]
-        if check_year(first_model_year, 'first_model_year'):
-            args.append(first_model_year)
 
-        scenario_class = self.__class__
-        return scenario_class(platform, model, scenario, cache=self._cache,
-                              version=self._jobj.clone(*args))
+        args = [platform, model, scenario, annotation, keep_solution]
+        if check_year(shift_first_model_year, 'first_model_year'):
+            args.append(shift_first_model_year)
 
-    def to_gdx(self, path, filename, include_var_equ=False):
-        """export the scenario data to GAMS gdx
-
-        Parameters
-        ----------
-        path : str
-            path to the folder
-        filename : str
-            name of the gdx file
-        include_var_equ : boolean, optional
-            indicator whether to include variables/equations in gdx
-        """
-        self._jobj.toGDX(path, filename, include_var_equ)
-
-    def read_sol_from_gdx(self, path, filename, comment=None,
-                          var_list=None, equ_list=None, check_solution=True):
-        """read solution from GAMS gdx and import it to the scenario
-
-        Parameters
-        ----------
-        path : str
-            path to the folder
-        filename : str
-            name of the gdx file
-        comment : str
-            comment to be added to the changelog
-        var_list : list of str
-            variables (levels and marginals) to be imported from gdx
-        equ_list : list of str
-            equations (levels and marginals) to be imported from gdx
-        check_solution : boolean, optional
-            raise an error if GAMS did not solve to optimality
-            (only applicable for a MESSAGE-scheme scenario)
-        """
-        self.clear_cache()  # reset Python data cache
-        self._jobj.readSolutionFromGDX(path, filename, comment,
-                                       to_jlist(var_list), to_jlist(equ_list),
-                                       check_solution)
+        return self._backend('clone', *args)
 
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
 
         If ``has_solution() == True``, model solution data exists in the db.
         """
-        return self._jobj.hasSolution()
+        return self._backend('has_solution')
 
     def remove_solution(self, first_model_year=None):
         """Remove the solution from the scenario
@@ -1445,25 +1263,24 @@ class Scenario(TimeSeries):
             If Scenario has no solution or if `first_model_year` is not `int`.
         """
         if self.has_solution():
-            self.clear_cache()  # reset Python data cache
-            if check_year(first_model_year, 'first_model_year'):
-                self._jobj.removeSolution(first_model_year)
-            else:
-                self._jobj.removeSolution()
+            check_year(first_model_year, 'first_model_year')
+            self._backend('clear_solution', first_model_year)
         else:
             raise ValueError('This Scenario does not have a solution!')
 
-    def solve(self, model, case=None, model_file=None, in_file=None,
-              out_file=None, solve_args=None, comment=None, var_list=None,
-              equ_list=None, check_solution=True, callback=None,
-              gams_args=['LogOption=4'], cb_kwargs={}):
+    def solve(self, model=None, callback=None, cb_kwargs={}, **model_options):
         """Solve the model and store output.
 
-        ixmp 'solves' a model using the following steps:
+        ixmp 'solves' a model by invoking the run() method of a :class:`.Model`
+        subclass—for instance, :meth:`.GAMSModel.run`. Depending on the
+        underlying model code, different steps are taken; see each model class
+        for details. In general:
 
-        1. Write all Scenario data to a GDX model input file.
-        2. Run GAMS for the specified `model` to perform calculations.
-        3. Read the model output, or 'solution', into the database.
+        1. Data from the Scenario are written to a **model input file**.
+        2. Code or an external program is invoked to perform calculations or
+           optimizations, **solving the model**.
+        3. Data representing the model outputs or solution are read from a
+           **model output file** and stored in the Scenario.
 
         If the optional argument `callback` is given, then additional steps are
         performed:
@@ -1471,44 +1288,21 @@ class Scenario(TimeSeries):
         4. Execute the `callback` with the Scenario as an argument. The
            Scenario has an `iteration` attribute that stores the number of
            times the underlying model has been solved (#2).
-        5. If the `callback` returns :obj:`False` or similar, go to #1;
-           otherwise exit.
+        5. If the `callback` returns :obj:`False` or similar, iterate by
+           repeating from step #1. Otherwise, exit.
 
         Parameters
         ----------
         model : str
             model (e.g., MESSAGE) or GAMS file name (excluding '.gms')
-        case : str
-            identifier of gdx file names, defaults to 'model_name_scen_name'
-        model_file : str, optional
-            path to GAMS file (including '.gms' extension)
-        in_file : str, optional
-            path to GAMS gdx input file (including '.gdx' extension)
-        out_file : str, optional
-            path to GAMS gdx output file (including '.gdx' extension)
-        solve_args : str, optional
-            arguments to be passed to GAMS (input/output file names, etc.)
-        comment : str, optional
-            additional comment added to changelog when importing the solution
-        var_list : list of str, optional
-            variables to be imported from the solution
-        equ_list : list of str, optional
-            equations to be imported from the solution
-        check_solution : boolean, optional
-            flag whether a non-optimal solution raises an exception
-            (only applies to MESSAGE runs)
         callback : callable, optional
             Method to execute arbitrary non-model code. Must accept a single
-            argument, the Scenario. Must return a non-:obj:`False` value to
+            argument: the Scenario. Must return a non-:obj:`False` value to
             indicate convergence.
-        gams_args : list of str, optional
-            Additional arguments for the CLI call to GAMS. See, e.g.,
-            https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters
-
-            - `LogOption=4` prints output to stdout (not console) and the log
-              file.
         cb_kwargs : dict, optional
             Keyword arguments to pass to `callback`.
+        model_options :
+            Keyword arguments specific to the `model`. See :class:`.GAMSModel`.
 
         Warns
         -----
@@ -1526,27 +1320,8 @@ class Scenario(TimeSeries):
             raise ValueError('This Scenario has already been solved, ',
                              'use `remove_solution()` first!')
 
-        model = str(harmonize_path(model))
-        config = model_settings.model_config(model) \
-            if model_settings.model_registered(model) \
-            else model_settings.model_config('default')
-
-        # define case name for gdx export/import, replace spaces by '_'
-        case = case or '{}_{}'.format(self.model, self.scenario)
-        case = case.replace(" ", "_")
-
-        model_file = model_file or config.model_file.format(model=model)
-
-        # define paths for writing to gdx, running GAMS, and reading a solution
-        inp = in_file or config.inp.format(model=model, case=case)
-        outp = out_file or config.outp.format(model=model, case=case)
-        args = solve_args or [arg.format(model=model, case=case, inp=inp,
-                                         outp=outp) for arg in config.args]
-
-        ipth = os.path.dirname(inp)
-        ingdx = os.path.basename(inp)
-        opth = os.path.dirname(outp)
-        outgdx = os.path.basename(outp)
+        # Instantiate a model
+        model = get_model(model, **model_options)
 
         # Validate *callback* argument
         if callback is not None and not callable(callback):
@@ -1556,19 +1331,12 @@ class Scenario(TimeSeries):
             def callback(scenario, **kwargs):
                 return True
 
+        # Flag to warn if the *callback* appears not to return anything
         warn_none = True
 
         # Iterate until convergence
         while True:
-            # Write model data to file
-            self.to_gdx(ipth, ingdx)
-
-            # Invoke GAMS
-            run_gams(model_file, args, gams_args=gams_args)
-
-            # Read model solution
-            self.read_sol_from_gdx(opth, outgdx, comment,
-                                   var_list, equ_list, check_solution)
+            model.run(self)
 
             # Store an iteration number to help the callback
             if not hasattr(self, 'iteration'):
@@ -1580,59 +1348,14 @@ class Scenario(TimeSeries):
             cb_result = callback(self, **cb_kwargs)
 
             if cb_result is None and warn_none:
-                warnings.warn('solve(callback=...) argument returned None;'
-                              ' will loop indefinitely unless True is'
-                              ' returned.')
+                warn('solve(callback=...) argument returned None; will loop '
+                     'indefinitely unless True is returned.')
                 # Don't repeat the warning
                 warn_none = False
 
             if cb_result:
                 # Callback indicates convergence is reached
                 break
-
-    def clear_cache(self, name=None, ix_type=None):
-        """clear the Python cache of item elements
-
-        Parameters
-        ----------
-        name : str, optional
-            item name (`None` clears entire Python cache)
-        ix_type : str, optional
-            type of item (if provided, cache clearing is faster)
-        """
-        # if no name is given, clean the entire cache
-        if name is None:
-            self._pycache = {}
-            return  # exit early
-
-        # remove this element from the cache if it exists
-        key = None
-        keys = self._pycache.keys()
-        if ix_type is not None:
-            key = (ix_type, name) if (ix_type, name) in keys else None
-        else:  # look for it
-            hits = [k for k in keys if k[1] == name]  # 0 is ix_type, 1 is name
-            if len(hits) > 1:
-                raise ValueError('Multiple values named {}'.format(name))
-            if len(hits) == 1:
-                key = hits[0]
-        if key is not None:
-            self._pycache.pop(key)
-
-    def years_active(self, node, tec, yr_vtg):
-        """return a list of years in which a technology of certain vintage
-        at a specific node can be active
-
-        Parameters
-        ----------
-        node : str
-            node name
-        tec : str
-            name of the technology
-        yr_vtg : str
-            vintage year
-        """
-        return to_pylist(self._jobj.getTecActYrs(node, tec, str(yr_vtg)))
 
     def get_meta(self, name=None):
         """get scenario metadata
@@ -1642,14 +1365,8 @@ class Scenario(TimeSeries):
         name : str, optional
             metadata attribute name
         """
-        def unwrap(value):
-            """Unwrap metadata numeric value (BigDecimal -> Double)"""
-            if type(value).__name__ == 'java.math.BigDecimal':
-                return value.doubleValue()
-            return value
-        meta = np.array(self._jobj.getMeta().entrySet().toArray()[:])
-        meta = {x.getKey(): unwrap(x.getValue()) for x in meta}
-        return meta if name is None else meta[name]
+        all_meta = self._backend('get_meta')
+        return all_meta[name] if name else all_meta
 
     def set_meta(self, name, value):
         """set scenario metadata
@@ -1661,62 +1378,36 @@ class Scenario(TimeSeries):
         value : str or number or bool
             metadata attribute value
         """
-        self._jobj.setMeta(name, value)
+        self._backend('set_meta', name, value)
 
 
 # %% auxiliary functions for class Scenario
 
-
-def filtered(df, filters):
-    """Returns a filtered dataframe based on a filters dictionary"""
-    if filters is None:
-        return df
-
-    mask = pd.Series(True, index=df.index)
-    for k, v in filters.items():
-        isin = df[k].isin(v)
-        mask = mask & isin
-    return df[mask]
-
-
-def _jdouble(val):
-    """Returns a Java.Double"""
-    return java.Double(float(val))
-
-
-def to_pylist(jlist):
-    """Transforms a Java.Array or Java.List to a python list"""
-    # handling string array
-    try:
-        return np.array(jlist[:])
-    # handling Java LinkedLists
-    except Exception:
-        return np.array(jlist.toArray()[:])
-
-
-def to_jlist(pylist, idx_names=None):
-    """Transforms a python list to a Java.LinkedList"""
-    if pylist is None:
-        return None
-
-    jList = java.LinkedList()
-    if idx_names is None:
-        if islistable(pylist):
-            for key in pylist:
-                jList.add(str(key))
-        else:
-            jList.add(str(pylist))
-    else:
-        for idx in idx_names:
-            jList.add(str(pylist[idx]))
-    return jList
-
-
 def to_iamc_template(df):
-    """Formats a pd.DataFrame to an IAMC-compatible table"""
-    if "time" in df.columns:
-        msg = "sub-annual time slices not supported by the Python interface!"
-        raise ValueError(msg)
+    """Format pd.DataFrame *df* in IAMC style.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        May have a 'node' column, which will be renamed to 'region'.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The returned object has:
+
+        - Any (Multi)Index levels reset as columns.
+        - Lower-case column names 'region', 'variable', and 'unit'.
+
+    Raises
+    ------
+    ValueError
+        If 'time' is among the column names; or 'region', 'variable', or 'unit'
+        is not.
+    """
+    if 'time' in df.columns:
+        raise ValueError('sub-annual time slices not supported by '
+                         'ixmp.TimeSeries')
 
     # reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:
@@ -1732,109 +1423,3 @@ def to_iamc_template(df):
         raise ValueError("missing required columns `{}`!".format(missing))
 
     return df
-
-
-def make_dims(sets, names):
-    """Wrapper of `to_jlist()` to generate an index-name and index-set list"""
-    if isinstance(sets, set) or isinstance(names, set):
-        raise ValueError('index dimension must be string or ordered lists!')
-    return to_jlist(sets), to_jlist(names if names is not None else sets)
-
-
-def _get_ele_list(item, filters=None, has_value=False, has_level=False):
-
-    # get list of elements, with filter HashMap if provided
-    if filters is not None:
-        jFilter = java.HashMap()
-        for idx_name in filters.keys():
-            jFilter.put(idx_name, to_jlist(filters[idx_name]))
-        jList = item.getElements(jFilter)
-    else:
-        jList = item.getElements()
-
-    # return a dataframe if this is a mapping or multi-dimensional parameter
-    dim = item.getDim()
-    if dim > 0:
-        idx_names = np.array(item.getIdxNames().toArray()[:])
-        idx_sets = np.array(item.getIdxSets().toArray()[:])
-
-        data = {}
-        for d in range(dim):
-            ary = np.array(item.getCol(d, jList)[:])
-            if idx_sets[d] == "year":
-                # numpy tricks to avoid extra copy
-                # _ary = ary.view('int')
-                # _ary[:] = ary
-                ary = ary.astype('int')
-            data[idx_names[d]] = ary
-
-        if has_value:
-            data['value'] = np.array(item.getValues(jList)[:])
-            data['unit'] = np.array(item.getUnits(jList)[:])
-
-        if has_level:
-            data['lvl'] = np.array(item.getLevels(jList)[:])
-            data['mrg'] = np.array(item.getMarginals(jList)[:])
-
-        df = pd.DataFrame.from_dict(data, orient='columns', dtype=None)
-        return df
-
-    else:
-        #  for index sets
-        if not (has_value or has_level):
-            return pd.Series(item.getCol(0, jList)[:])
-
-        data = {}
-
-        # for parameters as scalars
-        if has_value:
-            data['value'] = item.getScalarValue().floatValue()
-            data['unit'] = str(item.getScalarUnit())
-
-        # for variables as scalars
-        elif has_level:
-            data['lvl'] = item.getScalarLevel().floatValue()
-            data['mrg'] = item.getScalarMarginal().floatValue()
-
-        return data
-
-
-def _remove_ele(item, key):
-    """auxiliary """
-    if item.getDim() > 0:
-        if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(to_jlist(key))
-        elif isinstance(key, pd.DataFrame) or isinstance(key, dict):
-            if isinstance(key, dict):
-                key = pd.DataFrame.from_dict(key, orient='columns', dtype=None)
-            idx_names = to_pylist(item.getIdxNames())
-            for i in key.index:
-                item.removeElement(to_jlist(key.loc[i], idx_names))
-        else:
-            item.removeElement(str(key))
-
-    else:
-        if isinstance(key, list) or isinstance(key, pd.Series):
-            item.removeElement(to_jlist(key))
-        else:
-            item.removeElement(str(key))
-
-
-def run_gams(model_file, args, gams_args=['LogOption=4']):
-    """Parameters
-    ----------
-    model : str
-        the path to the gams file
-    args : list
-        arguments related to the GAMS code (input/output gdx paths, etc.)
-    gams_args : list of str
-        additional arguments for the CLI call to gams
-        - `LogOption=4` prints output to stdout (not console) and the log file
-    """
-    cmd = ['gams', model_file] + args + gams_args
-    cmd = cmd if os.name != 'nt' else ' '.join(cmd)
-
-    file_path = os.path.dirname(model_file).strip('"')
-    file_path = None if file_path == '' else file_path
-
-    check_call(cmd, shell=os.name == 'nt', cwd=file_path)

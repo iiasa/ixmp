@@ -1,6 +1,4 @@
 """Tests for ixmp.utils."""
-import os
-
 import pandas as pd
 import pandas.util.testing as pdt
 import pytest
@@ -14,6 +12,7 @@ def make_obs(fname, exp, **kwargs):
     obs = utils.pd_read(fname, **kwargs)
     return obs
 
+
 def test_pd_io_csv(tmp_path):
 
     fname = tmp_path / "test.csv"
@@ -21,12 +20,14 @@ def test_pd_io_csv(tmp_path):
     obs = make_obs(fname, exp)
     pdt.assert_frame_equal(obs, exp)
 
+
 def test_pd_io_xlsx(tmp_path):
 
     fname = tmp_path / "test.xlsx"
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
     obs = make_obs(fname, exp)
     pdt.assert_frame_equal(obs, exp)
+
 
 def test_pd_io_xlsx_multi(tmp_path):
 

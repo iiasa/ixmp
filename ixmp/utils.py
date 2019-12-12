@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 import six
+from pathlib import Path
 
 
 # globally accessible logger

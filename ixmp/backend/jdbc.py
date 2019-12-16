@@ -836,4 +836,4 @@ def to_jlist2(arg, convert=None):
 @lru_cache(1)
 def timespans():
     # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
-    return {t.ordinal(): t.name() for t in java.TimeSpan.values()}
+    return {t.getDbValue(): t.name() for t in java.TimeSpan.values()}

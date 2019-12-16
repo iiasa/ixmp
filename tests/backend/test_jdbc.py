@@ -36,6 +36,11 @@ def test_close(test_mp, caplog):
         'Database connection could not be closed or was already closed'
 
 
+def test_pass_properties():
+    ixmp.Platform(driver='hsqldb', url='jdbc:hsqldb:mem://ixmptest',
+                  user='ixmp', password='ixmp')
+
+
 def test_connect_message(caplog, test_data_path):
     sample_props = test_data_path / 'testdb' / 'test.properties.sample'
     ixmp.Platform(dbprops=sample_props)

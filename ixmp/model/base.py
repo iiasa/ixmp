@@ -1,4 +1,9 @@
+import logging
+
 from abc import ABC, abstractmethod
+
+
+log = logging.getLogger(__name__)
 
 
 class Model(ABC):  # pragma: no cover
@@ -31,7 +36,8 @@ class Model(ABC):  # pragma: no cover
         --------
         initialize_items
         """
-        pass
+        log.debug('No initialization for {!r}-scheme Scenario'
+                  .format(scenario.scheme))
 
     @classmethod
     def initialize_items(cls, scenario, items):
@@ -57,6 +63,15 @@ class Model(ABC):  # pragma: no cover
         .init_set
         .init_var
         """
+        try:
+            # If *scenario* is already committed to the Backend, it must be
+            # checked out.
+            scenario.check_out()
+        except RuntimeError:
+            # If *scenario* is new (has not been committed), the checkout
+            # attempt raises an exception
+            pass
+
         for item_info in items:
             # Copy so that pop() below does not modify *items*
             item_info = item_info.copy()

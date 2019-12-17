@@ -601,6 +601,7 @@ class Scenario(TimeSeries):
 
         # Set attributes
         self.platform = mp
+        self.scheme = scheme
         self.model = model
         self.scenario = scenario
 
@@ -620,13 +621,10 @@ class Scenario(TimeSeries):
         return hasattr(self.platform._backend, '_cache')
 
         # Retrieve the Model class correlating to the *scheme*
-        try:
-            model_class = get_model(scheme).__class__
-        except KeyError:
-            pass
-        else:
-            # Use the model class to initialize the Scenario
-            model_class.initialize(self, **model_init_args)
+        model_class = get_model(scheme).__class__
+
+        # Use the model class to initialize the Scenario
+        model_class.initialize(self, **model_init_args)
 
     @classmethod
     def from_url(cls, url, errors='warn'):

@@ -290,3 +290,16 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         ])
 
     return lines
+
+
+def update_par(scenario, name, data):
+    """Update parameter *name* in *scenario* using *data*, without overwriting.
+
+    Only values which do not already appear in the parameter data are added.
+    """
+    tmp = pd.concat([scenario.par(name), data])
+    columns = list(filter(lambda c: c != 'value', tmp.columns))
+    tmp = tmp.drop_duplicates(subset=columns, keep=False)
+
+    if len(tmp):
+        scenario.add_par(name, tmp)

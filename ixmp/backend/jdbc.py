@@ -114,10 +114,9 @@ def _create_properties(driver=None, path=None, url=None, user=None,
 
 
 def _read_properties(file):
-    config_lines = file.read_text().split('\n')
     properties = java.Properties()
-    for line in config_lines:
-        match = re.search('([^\\s]+)\\s*=\\s*(.+)\\s*', line)
+    for line in file.read_text().split('\n'):
+        match = re.search(r'([^\s]+)\s*=\s*(.+)\s*', line)
         if match is not None:
             properties.setProperty(match.group(1), match.group(2))
     return properties

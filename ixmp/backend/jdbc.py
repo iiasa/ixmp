@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from warnings import warn
 
 import jpype
-from jpype import JClass, imports
+from jpype import JClass
 import numpy as np
 import pandas as pd
 
@@ -50,6 +50,7 @@ JAVA_CLASSES = [
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
+    'java.util.Properties',
 ]
 
 
@@ -74,8 +75,7 @@ def _db_driver_class(driver):
 
 def _create_properties(driver=None, path=None, url=None, user=None,
                        password=None):
-    from java.util import Properties
-    properties = Properties()
+    properties = java.Properties()
     # Handle arguments
     if driver == 'oracle':
         driver = _db_driver_class(driver)
@@ -115,8 +115,7 @@ def _create_properties(driver=None, path=None, url=None, user=None,
 
 def _read_properties(file):
     config_lines = file.read_text().split('\n')
-    from java.util import Properties
-    properties = Properties()
+    properties = java.Properties()
     for line in config_lines:
         match = re.search('([^\\s]+)\\s*=\\s*(.+)\\s*', line)
         if match is not None:

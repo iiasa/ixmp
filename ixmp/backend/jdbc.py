@@ -90,14 +90,14 @@ def _create_properties(driver=None, path=None, url=None, user=None,
         if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
-        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
-        # spec
         if url is not None:
             if url.startswith('jdbc:hsqldb:'):
                 full_url = url
             else:
                 raise ValueError(url)
         else:
+            # Convert Windows paths to use forward slashes per HyperSQL JDBC
+            # URL spec
             url_path = (str(PurePosixPath(Path(path).resolve()))
                         .replace('\\', ''))
             full_url = 'jdbc:hsqldb:file:{}'.format(url_path)

@@ -616,15 +616,15 @@ class Scenario(TimeSeries):
             raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
                                'scenario; use message_ix.Scenario().')
 
-    @property
-    def _cache(self):
-        return hasattr(self.platform._backend, '_cache')
-
         # Retrieve the Model class correlating to the *scheme*
         model_class = get_model(scheme).__class__
 
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)
+
+    @property
+    def _cache(self):
+        return hasattr(self.platform._backend, '_cache')
 
     @classmethod
     def from_url(cls, url, errors='warn'):

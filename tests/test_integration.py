@@ -1,6 +1,8 @@
+import logging
+
+import numpy as np
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
-import numpy as np
 import pytest
 
 import ixmp
@@ -11,6 +13,8 @@ TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
 def test_run_clone(test_mp, caplog):
+    caplog.set_level(logging.WARNING)
+
     # this test is designed to cover the full functionality of the GAMS API
     # - initialize a new platform instance
     # - creates a new scenario and exports a gdx file

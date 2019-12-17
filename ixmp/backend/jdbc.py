@@ -54,29 +54,29 @@ JAVA_CLASSES = [
 ]
 
 
-def _db_driver_class(driver):
-    if driver == 'oracle':
-        return 'oracle.jdbc.driver.OracleDriver'
-    elif driver == 'hsqldb':
-        return 'org.hsqldb.jdbcDriver'
-    else:
-        raise ValueError(driver)
+DRIVER_CLASS = {
+    'oracle': 'oracle.jdbc.driver.OracleDriver',
+    'hsqldb': 'org.hsqldb.jdbcDriver',
+}
 
 
 def _create_properties(driver=None, path=None, url=None, user=None,
                        password=None):
+    """Create a database Properties from arguments."""
     properties = java.Properties()
-    # Handle arguments
-    if driver == 'oracle':
-        driver = _db_driver_class(driver)
 
+    # Handle arguments
+    try:
+        properties.setProperty('jdbc.driver', DRIVER_CLASS[driver])
+    except KeyError:
+        raise ValueError(f'unrecognized/unsupported JDBC driver {driver!r}')
+
+    if driver == 'oracle':
         if url is None or path is not None:
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
 
         full_url = 'jdbc:oracle:thin:@{}'.format(url)
     elif driver == 'hsqldb':
-        driver = _db_driver_class(driver)
-
         if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
@@ -93,13 +93,11 @@ def _create_properties(driver=None, path=None, url=None, user=None,
             full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         user = user or 'ixmp'
         password = password or 'ixmp'
-    else:
-        raise ValueError(driver)
 
-    properties.setProperty('jdbc.driver', driver)
     properties.setProperty('jdbc.url', full_url)
     properties.setProperty('jdbc.user', user)
     properties.setProperty('jdbc.pwd', password)
+
     return properties
 
 

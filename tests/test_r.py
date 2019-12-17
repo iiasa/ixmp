@@ -45,8 +45,7 @@ def test_r_build_and_check(r_args):
         # - Do not cross-build/-check e.g. i386 on x64 Appveyor workers
         # - Do not build manual (avoids overhead of LaTeX install)
         cmd.extend(['--no-multiarch', '--no-manual'])
-    # Path() here is required because of str() in r_args for Python 2.7 compat
-    cmd.extend(map(str, Path(r_args['cwd']).glob('*.tar.gz')))
+    cmd.extend(map(str, r_args['cwd'].glob('*.tar.gz')))
     info = run(cmd, **r_args)
 
     try:
@@ -55,11 +54,6 @@ def test_r_build_and_check(r_args):
         # Copy the log to stdout
         sys.stdout.write(info.stdout)
         raise
-    except AttributeError:
-        # Python 2.7
-        if info.returncode != 0:
-            sys.stdout.write(info.stdout)
-            raise
 
 
 @pytest.mark.rixmp

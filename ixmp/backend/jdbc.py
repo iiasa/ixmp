@@ -6,7 +6,6 @@ import logging
 import os
 from pathlib import Path, PurePosixPath
 import re
-from tempfile import mkstemp
 from types import SimpleNamespace
 from warnings import warn
 
@@ -51,59 +50,65 @@ JAVA_CLASSES = [
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
+    'java.util.Properties',
 ]
 
 
-def _read_dbprops(path):
-    config_lines = path.read_text().split('\n')
-    db_url_line = next(filter(lambda line: line.startswith('jdbc.url'),
-                              config_lines), None)
-    if db_url_line is None:
-        raise ValueError('Config file contains no database URL')
-    db_url = re.search('jdbc.url\\s*=\\s*(.+)\\s*', db_url_line).group(1)
-    return str(Path(path).resolve()), db_url
+DRIVER_CLASS = {
+    'oracle': 'oracle.jdbc.driver.OracleDriver',
+    'hsqldb': 'org.hsqldb.jdbcDriver',
+}
 
 
-def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
-    """Create a temporary dbprops file."""
-    # Lines to appear in the file
-    lines = [
-        'jdbc.driver = {driver}',
-        'jdbc.url = {full_url}',
-        'jdbc.user = {user}',
-        'jdbc.pwd = {password}',
-    ]
+def _create_properties(driver=None, path=None, url=None, user=None,
+                       password=None):
+    """Create a database Properties from arguments."""
+    properties = java.Properties()
 
     # Handle arguments
-    if driver == 'oracle':
-        driver = 'oracle.jdbc.driver.OracleDriver'
+    try:
+        properties.setProperty('jdbc.driver', DRIVER_CLASS[driver])
+    except KeyError:
+        raise ValueError(f'unrecognized/unsupported JDBC driver {driver!r}')
 
+    if driver == 'oracle':
         if url is None or path is not None:
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
 
         full_url = 'jdbc:oracle:thin:@{}'.format(url)
     elif driver == 'hsqldb':
-        driver = 'org.hsqldb.jdbcDriver'
-
-        if path is None or url is not None:
+        if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
-        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
-        # spec
-        url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
-        full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+        if url is not None:
+            if url.startswith('jdbc:hsqldb:'):
+                full_url = url
+            else:
+                raise ValueError(url)
+        else:
+            # Convert Windows paths to use forward slashes per HyperSQL JDBC
+            # URL spec
+            url_path = (str(PurePosixPath(Path(path).resolve()))
+                        .replace('\\', ''))
+            full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         user = user or 'ixmp'
         password = password or 'ixmp'
-    else:
-        raise ValueError(driver)
 
-    fmt = locals()
-    contents = '\n'.join(line.format(**fmt) for line in lines)
+    properties.setProperty('jdbc.url', full_url)
+    properties.setProperty('jdbc.user', user)
+    properties.setProperty('jdbc.pwd', password)
 
-    file = Path(mkstemp(suffix='.properties', text=True)[1])
-    file.write_text(contents)
+    return properties
 
-    return str(file), full_url
+
+def _read_properties(file):
+    """Read database properties from *file*, returning :class:`dict`."""
+    properties = dict()
+    for line in file.read_text().split('\n'):
+        match = re.search(r'([^\s]+)\s*=\s*(.+)\s*', line)
+        if match is not None:
+            properties[match.group(1)] = match.group(2)
+    return properties
 
 
 class JDBCBackend(CachingBackend):
@@ -151,7 +156,7 @@ class JDBCBackend(CachingBackend):
     jindex = {}
 
     def __init__(self, jvmargs=None, **kwargs):
-        properties_file = None
+        properties = None
 
         # Handle arguments
         if 'dbtype' in kwargs:
@@ -174,7 +179,9 @@ class JDBCBackend(CachingBackend):
             dbprops = Path(kwargs.pop('dbprops'))
             if dbprops.exists() and dbprops.is_file():
                 # Existing properties file
-                properties_file, info = _read_dbprops(dbprops)
+                properties = _read_properties(dbprops)
+                if 'jdbc.url' not in properties:
+                    raise ValueError('Config file contains no database URL')
             elif (not dbprops.exists()
                   and dbprops.with_suffix('.lobs').exists()):
                 # Actually the basename for a HSQLDB
@@ -183,17 +190,23 @@ class JDBCBackend(CachingBackend):
             else:
                 raise FileNotFoundError(dbprops)
 
-        if not properties_file:
-            # Create dbprops in a temporary file
-            properties_file, info = _temp_dbprops(**kwargs)
-            self._properties_file = properties_file
-
-        log.info('launching ixmp.Platform connected to {}'.format(info))
-
         start_jvm(jvmargs)
 
+        # Create a database properties object
+        if properties:
+            # ...using file contents
+            new_props = java.Properties()
+            [new_props.setProperty(k, v) for k, v in properties.items()]
+            properties = new_props
+        else:
+            # ...from arguments
+            properties = _create_properties(**kwargs)
+
+        log.info('launching ixmp.Platform connected to {}'
+                 .format(properties.getProperty('jdbc.url')))
+
         try:
-            self.jobj = java.Platform('Python', properties_file)
+            self.jobj = java.Platform('Python', properties)
         except java.NoClassDefFoundError as e:  # pragma: no cover
             raise NameError(
                 '{}\nCheck that dependencies of ixmp.jar are included in {}'
@@ -214,12 +227,6 @@ class JDBCBackend(CachingBackend):
 
         # Invoke the parent constructor to initialize the cache
         super().__init__()
-
-    def __del__(self):
-        try:
-            Path(self._properties_file).unlink()
-        except AttributeError:
-            return
 
     # Platform methods
 

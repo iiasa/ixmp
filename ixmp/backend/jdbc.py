@@ -72,7 +72,8 @@ def _db_driver_class(driver):
         raise ValueError(driver)
 
 
-def _create_properties(driver=None, path=None, url=None, user=None, password=None):
+def _create_properties(driver=None, path=None, url=None, user=None,
+                       password=None):
     from java.util import Properties
     properties = Properties()
     # Handle arguments
@@ -233,7 +234,6 @@ class JDBCBackend(CachingBackend):
 
         # Invoke the parent constructor to initialize the cache
         super().__init__()
-
 
     # Platform methods
 

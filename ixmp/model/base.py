@@ -27,6 +27,13 @@ class Model(ABC):  # pragma: no cover
     def initialize(cls, scenario):
         """Set up *scenario* with required items.
 
+        Implementations of :meth:`initialize`:
+
+        - **may** add sets, set elements, and/or parameter values.
+        - **may** accept any number of keyword arguments to control behaviour.
+        - **must not** modify existing parameter data in *scenario*, either by
+          deleting or overwriting values.
+
         Parameters
         ----------
         scenario : .Scenario

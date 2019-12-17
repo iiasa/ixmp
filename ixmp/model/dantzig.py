@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ixmp.utils import update_par
 from .gams import GAMSModel
 
 
@@ -26,6 +27,29 @@ ITEMS = (
     dict(ix_type='equ', name='demand', idx_sets=['j']),
     dict(ix_type='equ', name='supply', idx_sets=['i']),
 )
+
+DATA = {
+    'i': ['seattle', 'san-diego'],
+    'j': ['new-york', 'chicago', 'topeka'],
+    'a': pd.DataFrame([
+        ['seattle', 350, 'cases'],
+        ['san-diego', 600, 'cases'],
+    ], columns='i value unit'.split()),
+    'b': pd.DataFrame([
+        ['new-york', 325, 'cases'],
+        ['chicago', 300, 'cases'],
+        ['topeka', 275, 'cases'],
+    ], columns='j value unit'.split()),
+    'd': pd.DataFrame([
+        ['seattle', 'new-york', 2.5, 'km'],
+        ['seattle', 'chicago', 1.7, 'km'],
+        ['seattle', 'topeka', 1.8, 'km'],
+        ['san-diego', 'new-york', 2.5, 'km'],
+        ['san-diego', 'chicago', 1.8, 'km'],
+        ['san-diego', 'topeka', 1.4, 'km'],
+    ], columns='i j value unit'.split()),
+    'f': (90.0, 'USD_per_km'),
+}
 
 
 class DantzigModel(GAMSModel):
@@ -55,26 +79,13 @@ class DantzigModel(GAMSModel):
             return
 
         # Add set elements
-        scenario.add_set('i', ['seattle', 'san-diego'])
-        scenario.add_set('j', ['new-york', 'chicago', 'topeka'])
+        scenario.add_set('i', DATA['i'])
+        scenario.add_set('j', DATA['j'])
 
         # Add parameter values
-        scenario.add_par('a', 'seattle', 350, 'cases')
-        scenario.add_par('a', 'san-diego', 600, 'cases')
+        update_par(scenario, 'a', DATA['a'])
+        update_par(scenario, 'b', DATA['b'])
+        update_par(scenario, 'd', DATA['d'])
 
-        scenario.add_par('b', pd.DataFrame([
-            ['new-york', 325, 'cases'],
-            ['chicago', 300, 'cases'],
-            ['topeka', 275, 'cases'],
-        ], columns='j value unit'.split()))
-
-        scenario.add_par('d', pd.DataFrame([
-            ['seattle', 'new-york', 2.5, 'km'],
-            ['seattle', 'chicago', 1.7, 'km'],
-            ['seattle', 'topeka', 1.8, 'km'],
-            ['san-diego', 'new-york', 2.5, 'km'],
-            ['san-diego', 'chicago', 1.8, 'km'],
-            ['san-diego', 'topeka', 1.4, 'km'],
-        ], columns='i j value unit'.split()))
-
-        scenario.change_scalar('f', 90.0, 'USD_per_km')
+        # TODO avoid overwriting the existing value
+        scenario.change_scalar('f', *DATA['f'])

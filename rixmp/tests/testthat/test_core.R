@@ -60,11 +60,7 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
 test_that('the canning problem can be solved', {
   # Create the Scenario
   mp <- test_mp()
-  scen <- ixmp$testing$make_dantzig(mp)
-
-  # Solve
-  model_path = file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'transport_ixmp')
-  scen$solve(model = model_path)
+  scen <- ixmp$testing$make_dantzig(mp, solve = TRUE)
 
   # Check value
   expect_equal(scen$var('z')$lvl, 153.675, tolerance = 1e-5)

@@ -1,19 +1,7 @@
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
+from pathlib import Path
 import re
 import subprocess
-try:
-    from subprocess import run
-except ImportError:
-    # Python 2.7 compatibility
-    def run(*args, **kwargs):
-        popen = subprocess.Popen(*args, **kwargs)
-        stdout, _ = popen.communicate()
-        # Convert stream to sequence
-        popen.stdout = str(stdout)
-        return popen
+from subprocess import run
 import sys
 
 import pytest
@@ -37,8 +25,7 @@ def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     # Show all lines on tests failure
     tmp_env['_R_CHECK_TESTS_NLINES_'] = '0'
 
-    # str() here is for Python 2.7 compatibility on Windows
-    args = dict(cwd=str(rixmp_path), env=tmp_env, stdout=subprocess.PIPE,
+    args = dict(cwd=rixmp_path, env=tmp_env, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
 
     arg = 'text' if sys.version_info[:2] >= (3, 7) else 'universal_newlines'

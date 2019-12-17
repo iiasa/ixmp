@@ -38,8 +38,7 @@ def create_local_testdb(db_path, data_path, db='ixmptest',
     """
     # Copy test database
     dst = Path(db_path) / 'testdb'
-    # str() here is for py2 compatibility
-    shutil.copytree(str(data_path), str(dst))
+    shutil.copytree(data_path, dst)
 
     # Create properties file
     props = (Path(data_path) / 'test_auth.properties_template').read_text()

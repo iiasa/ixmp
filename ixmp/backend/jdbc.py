@@ -417,7 +417,10 @@ class JDBCBackend(CachingBackend):
             ts.scheme = jobj.getScheme()
 
     def check_out(self, ts, timeseries_only):
-        self.jindex[ts].checkOut(timeseries_only)
+        try:
+            self.jindex[ts].checkOut(timeseries_only)
+        except java.IxException as e:
+            raise RuntimeError(e)
 
     def commit(self, ts, comment):
         self.jindex[ts].commit(comment)

@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
 import glob
 
 from setuptools import find_packages, setup

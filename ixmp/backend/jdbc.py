@@ -102,12 +102,12 @@ def _create_properties(driver=None, path=None, url=None, user=None,
 
 
 def _read_properties(file):
-    """Read database Properties from *file*."""
-    properties = java.Properties()
+    """Read database properties from *file*, returning :class:`dict`."""
+    properties = dict()
     for line in file.read_text().split('\n'):
         match = re.search(r'([^\s]+)\s*=\s*(.+)\s*', line)
         if match is not None:
-            properties.setProperty(match.group(1), match.group(2))
+            properties[match.group(1)] = match.group(2)
     return properties
 
 
@@ -192,8 +192,15 @@ class JDBCBackend(CachingBackend):
 
         start_jvm(jvmargs)
 
-        # Create a database properties object from arguments
-        properties = properties or _create_properties(**kwargs)
+        # Create a database properties object
+        if properties:
+            # ...using file contents
+            new_props = java.Properties()
+            [new_props.setProperty(k, v) for k, v in properties.items()]
+            properties = new_props
+        else:
+            # ...from arguments
+            properties = _create_properties(**kwargs)
 
         log.info('launching ixmp.Platform connected to {}'
                  .format(properties.getProperty('jdbc.url')))

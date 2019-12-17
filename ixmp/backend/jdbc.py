@@ -727,7 +727,7 @@ class JDBCBackend(CachingBackend):
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
             else:  # pragma: no cover
-                raise RuntimeError('unhandled Java exception') from e
+                raise RuntimeError(str(e))
 
         self.cache_invalidate(s, type, name)
 

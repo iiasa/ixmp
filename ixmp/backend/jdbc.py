@@ -54,16 +54,6 @@ JAVA_CLASSES = [
 ]
 
 
-def _validate_dbprops(path):
-    config_lines = path.read_text().split('\n')
-    db_url_line = next(filter(lambda line: line.startswith('jdbc.url'),
-                              config_lines), None)
-    if db_url_line is None:
-        raise ValueError('Config file contains no database URL')
-    db_url = re.search('jdbc.url\\s*=\\s*(.+)\\s*', db_url_line).group(1)
-    return Path(path).resolve(), db_url
-
-
 def _db_driver_class(driver):
     if driver == 'oracle':
         return 'oracle.jdbc.driver.OracleDriver'
@@ -114,6 +104,7 @@ def _create_properties(driver=None, path=None, url=None, user=None,
 
 
 def _read_properties(file):
+    """Read database Properties from *file*."""
     properties = java.Properties()
     for line in file.read_text().split('\n'):
         match = re.search(r'([^\s]+)\s*=\s*(.+)\s*', line)
@@ -167,7 +158,7 @@ class JDBCBackend(CachingBackend):
     jindex = {}
 
     def __init__(self, jvmargs=None, **kwargs):
-        properties_file = None
+        properties = None
 
         # Handle arguments
         if 'dbtype' in kwargs:
@@ -190,7 +181,9 @@ class JDBCBackend(CachingBackend):
             dbprops = Path(kwargs.pop('dbprops'))
             if dbprops.exists() and dbprops.is_file():
                 # Existing properties file
-                properties_file, info = _validate_dbprops(dbprops)
+                properties = _read_properties(dbprops)
+                if 'jdbc.url' not in properties:
+                    raise ValueError('Config file contains no database URL')
             elif (not dbprops.exists()
                   and dbprops.with_suffix('.lobs').exists()):
                 # Actually the basename for a HSQLDB
@@ -201,14 +194,11 @@ class JDBCBackend(CachingBackend):
 
         start_jvm(jvmargs)
 
-        if not properties_file:
-            properties = _create_properties(**kwargs)
-        else:
-            properties = _read_properties(properties_file)
-        print("properties = {}".format(properties))
-        info = properties.getProperty('jdbc.url')
+        # Create a database properties object from arguments
+        properties = properties or _create_properties(**kwargs)
 
-        log.info('launching ixmp.Platform connected to {}'.format(info))
+        log.info('launching ixmp.Platform connected to {}'
+                 .format(properties.getProperty('jdbc.url')))
 
         try:
             self.jobj = java.Platform('Python', properties)

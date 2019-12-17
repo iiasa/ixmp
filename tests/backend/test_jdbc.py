@@ -41,6 +41,15 @@ def test_pass_properties():
                   user='ixmp', password='ixmp')
 
 
+def test_invalid_properties_file(test_data_path):
+    # HyperSQL creates a file with a .properties suffix for every file-based
+    # database, but these files do not contain the information needed to
+    # instantiate a database connection
+    with pytest.raises(ValueError,
+                       match='Config file contains no database URL'):
+        ixmp.Platform(dbprops=test_data_path / 'hsqldb.properties')
+
+
 def test_connect_message(caplog, test_data_path):
     sample_props = test_data_path / 'testdb' / 'test.properties.sample'
     ixmp.Platform(dbprops=sample_props)

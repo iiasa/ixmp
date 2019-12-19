@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 import six
+from pathlib import Path
 
 
 # globally accessible logger
@@ -127,7 +128,8 @@ def parse_url(url):
 
 def pd_read(f, *args, **kwargs):
     """Try to read a file with pandas, no fancy stuff"""
-    if f.endswith('csv'):
+    f = Path(f)
+    if f.suffix == '.csv':
         return pd.read_csv(f, *args, **kwargs)
     else:
         return pd.read_excel(f, *args, **kwargs)
@@ -135,8 +137,9 @@ def pd_read(f, *args, **kwargs):
 
 def pd_write(df, f, *args, **kwargs):
     """Try to write one or more dfs with pandas, no fancy stuff"""
+    f = Path(f)
     is_pd = isinstance(df, (pd.DataFrame, pd.Series))
-    if f.endswith('csv'):
+    if f.suffix == '.csv':
         if not is_pd:
             raise ValueError('Must pass a Dataframe if using csv files')
         df.to_csv(f, *args, **kwargs)

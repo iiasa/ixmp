@@ -100,7 +100,7 @@ Install *ixmp* from source
 6. (Optional) Run the built-in test suite to check that *ixmp* functions
    correctly on your system::
 
-    $ pip install .[tests]
+    $ pip install --editable .[tests]
     $ py.test
 
 

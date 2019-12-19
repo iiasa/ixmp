@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import ixmp
-from ixmp.testing import make_dantzig
 import pandas as pd
 import pandas.testing as pdt
 

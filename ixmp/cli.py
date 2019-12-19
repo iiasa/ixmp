@@ -142,5 +142,4 @@ def list_command(context, **kwargs):
             model=context.get('model name', None),
             scenario=context.get('scenario name', None),
             **kwargs)
-        )
-    )
+    ))

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import ixmp
+from ixmp.testing import make_dantzig
 import pandas as pd
 import pandas.testing as pdt
 
@@ -57,6 +58,17 @@ def test_config(ixmp_cli):
     # get() with a value is an invalid call
     result = ixmp_cli.invoke(['config', 'get', 'test key', 'BADVALUE'])
     assert result.exit_code != 0
+
+
+def test_list(ixmp_cli, test_mp):
+    # CLI works; nothing returned with a --match option that matches nothing
+    r = ixmp_cli.invoke(['--platform', test_mp.name, 'list', '--match', 'foo'])
+    assert r.output == """
+0 model name(s)
+0 scenario name(s)
+0 (model, scenario) combination(s)
+0 total scenarios
+"""
 
 
 def test_platform(ixmp_cli, tmp_path):

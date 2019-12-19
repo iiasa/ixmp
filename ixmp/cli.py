@@ -35,10 +35,20 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     except NameError:
         return
 
-    # With a Platform, load the indicated Scenario
-    if model and scenario:
-        scen = ixmp.Scenario(mp, model, scenario, version=version)
-        ctx.obj['scen'] = scen
+    # Store the model and scenario name from arguments
+    if model:
+        ctx.obj['model name'] = model
+
+    if scenario:
+        ctx.obj['scenario name'] = scenario
+
+    try:
+        # Load the indicated Scenario
+        ctx.obj['scen'] = ixmp.Scenario(mp, ctx.obj['model name'],
+                                        ctx.obj['scenario name'],
+                                        version=version)
+    except KeyError:
+        pass
 
 
 @main.command()
@@ -115,46 +125,22 @@ def platform(action, name, values):
 
 
 @main.command('list')
+@click.option('--match', metavar='EXPR', default=None,
+              help='Regular expression for model/scenario name.')
 @click.option('--default-only', is_flag=True,
-              help='Only display scenarios with a default version.')
+              help='Only scenarios with a default version.')
+@click.option('--as-url', is_flag=True,
+              help='Display outputs as ixmp URLs.')
 @click.pass_obj
-def list_command(context, default_only):
+def list_command(context, **kwargs):
     """List scenarios on the --platform."""
-    scenarios = context['mp'].scenario_list(default=default_only)
+    from ixmp.utils import format_scenario_list
 
-    N_model = 0
-
-    for model, group_m in scenarios.groupby('model'):
-        N_model += 1
-        print('\n', model, sep='')
-
-        for scenario_name, group_s in group_m.groupby('scenario'):
-            max = group_s.version.max()
-
-            try:
-                mask = group_s.is_default.astype(bool)
-                default = group_s.loc[mask, 'version'].iat[0]
-            except IndexError:
-                default = max
-
-            line = '  {}#{}'.format(scenario_name, default)
-
-            count = len(group_s)
-            if count > 1:
-                line += '\t'
-                min = group_s.version.min()
-
-                if default != max:
-                    line += '{}–{}'.format(min, max)
-
-                line += '({} versions)'.format(count)
-
-            print(line)
-
-    print(
-        '',
-        '{} model name(s)'.format(N_model),
-        '{} scenario name(s)'.format(len(scenarios['scenario'].unique())),
-        '{} (model, scenario) combination(s)'
-        .format(len(scenarios.groupby(['model', 'scenario']))),
-        sep='\n')
+    print('\n'.join(
+        format_scenario_list(
+            platform=context['mp'],
+            model=context.get('model name', None),
+            scenario=context.get('scenario name', None),
+            **kwargs)
+        )
+    )

@@ -164,6 +164,15 @@ class Platform:
         return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
                             columns=FIELDS['get_scenarios'])
 
+    def export_timeseries_data(self, file, default=True, model=None,
+                               scenario=None, variables=None):
+        variables = as_str_list(variables) or []
+        self._backend.export_timeseries_data(file,
+                                             default,
+                                             model,
+                                             scenario,
+                                             variables)
+
     def add_unit(self, unit, comment='None'):
         """Define a unit.
 

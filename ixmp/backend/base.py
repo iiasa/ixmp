@@ -773,6 +773,29 @@ class Backend(ABC):
         None
         """
 
+    @abstractmethod
+    def export_timeseries_data(self, file, default, model, scenario,
+                               variables):
+        """Export timeseries data to file
+
+        Parameters
+        ----------
+        file : str
+            File name to export data to
+        default : bool
+           :obj:`True` to include only TimeSeries versions marked as default.
+        model : str or None
+           Model name to filter results.
+        scenario : str or None
+           Scenario name to filter results.
+        variables : list
+            List of timeseries variables to export
+
+        Returns
+        -------
+        None
+        """
+
 
 class CachingBackend(Backend):
     """Backend with additional features for caching data."""

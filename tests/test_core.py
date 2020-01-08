@@ -90,7 +90,7 @@ def test_gh_210(test_mp):
 
     # foo_data is not modified by add_par()
     scen.add_par('foo', foo_data)
-    assert foo_data.columns == columns
+    assert all(foo_data.columns == columns)
 
 
 def test_get_scalar(test_mp):

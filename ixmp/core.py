@@ -967,7 +967,7 @@ class Scenario(TimeSeries):
             # dict containing data
             data = pd.DataFrame.from_dict(key_or_data, orient='columns')
         elif isinstance(key_or_data, pd.DataFrame):
-            data = key_or_data
+            data = key_or_data.copy()
             if 'value' in data.columns and value is not None:
                 raise ValueError('both key_or_data.value and value supplied')
         else:

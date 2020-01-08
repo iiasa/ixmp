@@ -77,6 +77,22 @@ def test_range(test_mp):
     scen.add_par('new_par', ii, [1.2] * len(ii))
 
 
+def test_gh_210(test_mp):
+    scen = ixmp.Scenario(test_mp, *can_args, version='new')
+    i = ['i0', 'i1', 'i2']
+
+    scen.init_set('i')
+    scen.add_set('i', i)
+    scen.init_par('foo', idx_sets='i')
+
+    columns = ['i', 'value']
+    foo_data = pd.DataFrame(zip(i, [10, 20, 30]), columns=columns)
+
+    # foo_data is not modified by add_par()
+    scen.add_par('foo', foo_data)
+    assert all(foo_data.columns == columns)
+
+
 def test_get_scalar(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
     obs = scen.scalar('f')

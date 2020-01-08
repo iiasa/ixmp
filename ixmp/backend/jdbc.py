@@ -317,11 +317,14 @@ class JDBCBackend(CachingBackend):
         # Add to index
         self.jindex[ts] = jobj
 
+        # Retrieve or check the version
         if version is None:
-            # Update the version attribute
-            ts.version = jobj.getVersion()
+            version = jobj.getVersion()
         else:
             assert version == jobj.getVersion()
+
+        # Update the version attribute
+        ts.version = version
 
         if isinstance(ts, Scenario):
             # Also retrieve the scheme

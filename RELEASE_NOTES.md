@@ -28,7 +28,8 @@ Configuration for ixmp and its storage backends has been streamlined.
 - [#182](https://github.com/iiasa/ixmp/pull/182),
   [#200](https://github.com/iiasa/ixmp/pull/200),
   [#213](https://github.com/iiasa/ixmp/pull/213),
-  [#217](https://github.com/iiasa/ixmp/pull/217): Add new Backend, Model APIs and CachingBackend, JDBCBackend, GAMSModel classes.
+  [#217](https://github.com/iiasa/ixmp/pull/217)
+  [#230](https://github.com/iiasa/ixmp/pull/230): Add new Backend, Model APIs and CachingBackend, JDBCBackend, GAMSModel classes.
 - [#188](https://github.com/iiasa/ixmp/pull/188),
   [#195](https://github.com/iiasa/ixmp/pull/195): Enhance reporting.
 - [#177](https://github.com/iiasa/ixmp/pull/177): add ability to pass `gams_args` through `Scenario.solve()`

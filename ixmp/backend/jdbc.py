@@ -759,7 +759,6 @@ def start_jvm(jvmargs=None):
     if os.name == 'nt':
         print('jpype.getDefaultJVMPath():', args)
         print('JAVA_HOME:', os.environ.get('JAVA_HOME', '(not set)'))
-        assert False
 
     # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
     # the classpath

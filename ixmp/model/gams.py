@@ -111,12 +111,12 @@ class GAMSModel(Model):
         # Process args in order
         command = ['gams']
 
-        model_file = Path(format('model_file')).resolve()
+        model_file = Path(format('model_file'))
         command.append('"{}"'.format(model_file))
 
         self.case = format('case').replace(' ', '_')
-        self.in_file = Path(format('in_file')).resolve()
-        self.out_file = Path(format('out_file')).resolve()
+        self.in_file = Path(format('in_file'))
+        self.out_file = Path(format('out_file'))
 
         for arg in self.solve_args:
             command.append(arg.format(**self.__dict__))

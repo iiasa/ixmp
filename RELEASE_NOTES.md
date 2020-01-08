@@ -29,6 +29,7 @@ Configuration for ixmp and its storage backends has been streamlined.
   [#200](https://github.com/iiasa/ixmp/pull/200),
   [#213](https://github.com/iiasa/ixmp/pull/213),
   [#217](https://github.com/iiasa/ixmp/pull/217),
+  [#230](https://github.com/iiasa/ixmp/pull/230),
   [#245](https://github.com/iiasa/ixmp/pull/245): Add new Backend, Model APIs and CachingBackend, JDBCBackend, GAMSModel classes.
 - [#188](https://github.com/iiasa/ixmp/pull/188),
   [#195](https://github.com/iiasa/ixmp/pull/195): Enhance reporting.

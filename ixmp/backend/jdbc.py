@@ -654,15 +654,14 @@ class JDBCBackend(CachingBackend):
                 for entry in self.jindex[s].getMeta().entrySet()}
 
     def set_meta(self, s, name, value):
-        if type(value) == str:
-            self.jindex[s].setMetaStr(name, value)
-        elif type(value) in [int, float]:
-            self.jindex[s].setMetaNum(name, value)
-        elif type(value) == bool:
-            self.jindex[s].setMetaBool(name, value)
-        else:
-            raise ValueError('Cannot set value {} for metadata category {}'
-                             .format(value, name))
+        _type = type(value)
+        try:
+            _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
+            method_name = 'setMeta' + _type
+        except KeyError:
+            raise TypeError('Cannot store metadata of type {}'.format(_type))
+
+        getattr(self.jindex[s], method_name)(name, value)
 
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario

@@ -695,12 +695,17 @@ class Backend(ABC):
         ----------
         name : str
             Metadata key name.
-        value : any
+        value : int or float or bool or str
             Value for *name*.
 
         Returns
         -------
         None
+
+        Raises
+        ------
+        TypeError
+            If *value* is not a valid type.
         """
 
     @abstractmethod

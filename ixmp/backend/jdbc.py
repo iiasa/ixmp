@@ -630,7 +630,7 @@ class JDBCBackend(CachingBackend):
                 jobj.addElement(*args)
         except java.IxException as e:
             msg = e.message()
-            if 'does not have an element' in msg:
+            if ('does not have an element' in msg) or ('The unit' in msg):
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
             else:  # pragma: no cover

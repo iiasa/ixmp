@@ -413,9 +413,12 @@ def test_reporting_platform_units(test_mp, caplog):
     bad_units = [
         ('-', '-', '-'),
         ('???', r'\?\?\?', r'\?'),
-        ('G$', r'G\$', r'\$')
+        ('E$', r'E\$', r'\$')
     ]
     for unit, expr, chars in bad_units:
+        # Add the unit
+        test_mp.add_unit(unit)
+
         # Overwrite the parameter
         x['unit'] = unit
         scen.add_par('x', x)

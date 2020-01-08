@@ -38,11 +38,7 @@ Exec { gams }
 Progress 'Set conda version/path'
 # These correspond to folder naming of miniconda installs on appveyor
 # See https://www.appveyor.com/docs/windows-images-software/#miniconda
-if ( $env:PYTHON_VERSION -eq '2.7' ) {
-  $MC_PYTHON_VERSION = ''
-} else {
-  $MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
-}
+$MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
 if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
 
 

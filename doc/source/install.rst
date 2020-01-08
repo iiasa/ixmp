@@ -165,7 +165,6 @@ Users developing models using existing *ixmp* functionality **should not** need 
 - (Windows) **C++ compiler.**
 
    - For Python 3: http://landinghub.visualstudio.com/visual-cpp-build-tools
-   - For Python 2: https://www.microsoft.com/en-us/download/details.aspx?id=44266
 
 - **Git.** Use one of:
 

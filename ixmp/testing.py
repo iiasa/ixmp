@@ -282,8 +282,7 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
     """
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
-    # str() here is for python2 compatibility
-    os.chdir(str(nb_path.parent))
+    os.chdir(nb_path.parent)
     fname = tmp_path / 'test.ipynb'
     args = [
         "jupyter", "nbconvert", "--to", "notebook", "--execute",
@@ -292,8 +291,7 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
         "--output", str(fname), str(nb_path)]
     subprocess.check_call(args, env=env)
 
-    # str() here is for python2 compatibility
-    nb = nbformat.read(io.open(str(fname), encoding='utf-8'),
+    nb = nbformat.read(io.open(fname, encoding='utf-8'),
                        nbformat.current_nbformat)
 
     errors = [

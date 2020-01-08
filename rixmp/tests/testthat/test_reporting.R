@@ -1,8 +1,4 @@
 test_that('the canning problem can be reported', {
-  sys <- import('sys')
-  skip_if(sys$version_info$major == 2,
-          'Experimental reporting does not support Python 2.7.')
-
   # Create the Scenario
   mp <- test_mp()
   scen <- ixmp$testing$make_dantzig(mp)

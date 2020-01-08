@@ -758,6 +758,7 @@ def start_jvm(jvmargs=None):
     args = [jpype.getDefaultJVMPath()]
     if os.name == 'nt':
         print('jpype.getDefaultJVMPath():', args)
+        print('jpype.getClassPath():', jpype.getClassPath())
         print('JAVA_HOME:', os.environ.get('JAVA_HOME', '(not set)'))
         assert False
 

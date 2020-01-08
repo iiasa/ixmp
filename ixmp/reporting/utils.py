@@ -30,7 +30,7 @@ REPLACE_UNITS = {
 RENAME_DIMS = {}
 
 #: :doc:`pint <pint:index>` unit registry for processing quantity units.
-#: All units handled by :mod:`imxp.reporting` must be either standard SI units,
+#: All units handled by :mod:`ixmp.reporting` must be either standard SI units,
 #: or added to this registry.
 UNITS = pint.UnitRegistry()
 
@@ -208,9 +208,10 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     log.debug('Retrieving data for {}'.format(name))
 
     # Only use the relevant filters
+    idx_names = scenario.idx_names(name)
     if filters:
         # Dimensions of the object
-        dims = dims_for_qty(scenario.idx_names(name))
+        dims = dims_for_qty(idx_names)
 
         # Mapping from renamed dimensions to Scenario dimension names
         MAP = get_reversed_rename_dims()
@@ -224,7 +225,7 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
         filters = filters_to_use
 
     # Retrieve quantity data
-    data = scenario._element(ix_type, name, filters)
+    data = getattr(scenario, ix_type)(name, filters)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
     if isinstance(data, dict):
@@ -236,6 +237,9 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     if len(data) == 0:
         log.warning(f'0 values for {ix_type} {name!r} using filters:'
                     f'\n  {filters!r}\n  Subsequent computations may fail.')
+
+    # Convert categorical dtype to str
+    data = data.astype({col: str for col in idx_names})
 
     # List of the dimensions
     dims = dims_for_qty(data)
@@ -258,8 +262,8 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # Set index if 1 or more dimensions
     if len(dims):
         # First rename, then set index
-        data.rename(columns=RENAME_DIMS, inplace=True)
-        data.set_index(dims, inplace=True)
+        data = data.rename(columns=RENAME_DIMS) \
+                   .set_index(dims)
 
     # Check sparseness
     # try:
@@ -272,20 +276,18 @@ def data_for_quantity(ix_type, name, column, scenario, filters=None):
     # info = (name, shape, filled, size, need_to_chunk)
     # log.debug(' '.join(map(str, info)))
 
-    # Convert to a Dataset, assign attrbutes and name
-    # ds = xr.Dataset.from_dataframe(data)[column]
-    # or to a new "Attribute Series"
-    ds = as_quantity(data[column]) \
+    # Convert to a Quantity, assign attrbutes and name
+    qty = as_quantity(data[column]) \
         .assign_attrs(attrs) \
         .rename(name + ('-margin' if column == 'mrg' else ''))
 
     try:
         # Remove length-1 dimensions for scalars
-        ds = ds.squeeze('index', drop=True)
+        qty = qty.squeeze('index', drop=True)
     except KeyError:
         pass
 
-    return ds
+    return qty
 
 
 def as_attrseries(obj):
@@ -294,7 +296,8 @@ def as_attrseries(obj):
 
 
 def as_sparse_xarray(obj):  # pragma: no cover
-    """Convert *obj* to an xr.DataArray with sparse.COO storage."""
+    """Convert *obj* to an :class:`xarray.DataArray` with sparse.COO
+    storage."""
     import sparse
     from xarray.core.dtypes import maybe_promote
 

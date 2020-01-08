@@ -1,6 +1,4 @@
 """Tests for ixmp.utils."""
-import os
-
 import pandas as pd
 import pandas.util.testing as pdt
 import pytest
@@ -12,26 +10,28 @@ from ixmp import utils
 def make_obs(fname, exp, **kwargs):
     utils.pd_write(exp, fname, index=False)
     obs = utils.pd_read(fname, **kwargs)
-    os.remove(fname)
     return obs
 
 
-def test_pd_io_csv():
-    fname = 'test.csv'
+def test_pd_io_csv(tmp_path):
+
+    fname = tmp_path / "test.csv"
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
     obs = make_obs(fname, exp)
     pdt.assert_frame_equal(obs, exp)
 
 
-def test_pd_io_xlsx():
-    fname = 'test.xlsx'
+def test_pd_io_xlsx(tmp_path):
+
+    fname = tmp_path / "test.xlsx"
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
     obs = make_obs(fname, exp)
     pdt.assert_frame_equal(obs, exp)
 
 
-def test_pd_io_xlsx_multi():
-    fname = 'test.xlsx'
+def test_pd_io_xlsx_multi(tmp_path):
+
+    fname = tmp_path / "test.xlsx"
     exp = {
         'sheet1': pd.DataFrame({'a': [0, 1], 'b': [2, 3]}),
         'sheet2': pd.DataFrame({'c': [4, 5], 'd': [6, 7]}),
@@ -40,6 +40,42 @@ def test_pd_io_xlsx_multi():
     for k, _exp in exp.items():
         _obs = obs[k]
         pdt.assert_frame_equal(_obs, _exp)
+
+
+def test_pd_write(tmp_path):
+
+    fname = 'test.csv'
+    d = tmp_path / "sub"
+    d.mkdir()
+
+    data_frame = [1, 2, 3, 4]
+
+    with pytest.raises(ValueError):
+        assert utils.pd_write(data_frame, fname)
+
+
+def test_check_year():
+
+    # If y is a string value, raise a Value Error.
+
+    y1 = "a"
+    s1 = "a"
+    with pytest.raises(ValueError):
+        assert utils.check_year(y1, s1)
+
+    # If y = None.
+
+    y2 = None
+    s2 = None
+
+    assert utils.check_year(y2, s2) is None
+
+    # If y is integer.
+
+    y3 = 4
+    s3 = 4
+
+    assert utils.check_year(y3, s3) is True
 
 
 m_s = dict(model='m', scenario='s')

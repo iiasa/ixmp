@@ -2,11 +2,11 @@ import re
 
 import numpy.testing as npt
 import pandas as pd
+import pandas.testing as pdt
 import pytest
 
 import ixmp
 from ixmp.testing import make_dantzig
-
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
@@ -280,6 +280,37 @@ def test_par_filters_unit(test_mp):
     assert obs == exp
 
 
+def test_filter_str(test_mp):
+    scen = ixmp.Scenario(test_mp, 'model', 'scenario', version='new')
+
+    elements = ['foo', 42, object()]
+    expected = list(map(str, elements))
+
+    scen.init_set('s')
+
+    # Set elements can be added which are not str
+    scen.add_set('s', elements)
+
+    # Elements are stored and returned as str
+    assert expected == scen.set('s').tolist()
+
+    # Parameter defined over 's'
+    p = pd.DataFrame.from_records(zip(elements, [1., 2., 3.]),
+                                  columns=['s', 'value'])
+
+    # Expected return dtypes of index and value columns
+    dtypes = {'s': str, 'value': float}
+    p_exp = p.astype(dtypes)
+
+    scen.init_par('p', ['s'])
+    scen.add_par('p', p)
+
+    # Values can be retrieved using non-string filters
+    exp = p_exp.loc[1:, :].reset_index(drop=True)
+    obs = scen.par('p', filters={'s': elements[1:]})
+    pdt.assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
+
+
 def test_meta(test_mp):
     test_dict = {
         "test_string": 'test12345',
@@ -307,25 +338,32 @@ def test_meta(test_mp):
 
 
 def test_load_scenario_data(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=True)
+    """load_scenario_data() caches all data."""
+    scen = ixmp.Scenario(test_mp, *can_args)
     scen.load_scenario_data()
-    assert ('par', 'd') in scen._pycache  # key exists
-    df = scen.par('d', filters={'i': ['seattle']})
-    obs = df.loc[0, 'unit']
-    exp = 'km'
-    assert obs == exp
+
+    cache_key = scen.platform._backend._cache_key(scen, 'par', 'd')
+
+    # Item exists in cache
+    assert cache_key in scen.platform._backend._cache
+
+    # Cache has not been used
+    hits_before = scen.platform._backend._cache_hit.get(cache_key, 0)
+    assert hits_before == 0
+
+    # Retrieving the expected value
+    assert 'km' == scen.par('d', filters={'i': ['seattle']}).loc[0, 'unit']
+
+    # Cache was used to return the value
+    hits_after = scen.platform._backend._cache_hit[cache_key]
+    assert hits_after == hits_before + 1
 
 
 def test_load_scenario_data_clear_cache(test_mp):
     # this fails on commit: 4376f54
     scen = ixmp.Scenario(test_mp, *can_args, cache=True)
     scen.load_scenario_data()
-    scen.clear_cache(name='d')
-
-
-def test_load_scenario_data_raises(test_mp):
-    scen = ixmp.Scenario(test_mp, *can_args, cache=False)
-    pytest.raises(ValueError, scen.load_scenario_data)
+    scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
 
 def test_log_level(test_mp):

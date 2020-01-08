@@ -1,7 +1,8 @@
-import ixmp
 import jpype
 import pytest
 from pytest import raises, warns
+import ixmp
+from ixmp.testing import make_dantzig
 
 
 def test_jvm_warn(recwarn):
@@ -33,6 +34,27 @@ def test_close(test_mp, caplog):
     test_mp.close_db()
     assert caplog.records[0].message == \
         'Database connection could not be closed or was already closed'
+
+
+def test_pass_properties():
+    ixmp.Platform(driver='hsqldb', url='jdbc:hsqldb:mem://ixmptest',
+                  user='ixmp', password='ixmp')
+
+
+def test_invalid_properties_file(test_data_path):
+    # HyperSQL creates a file with a .properties suffix for every file-based
+    # database, but these files do not contain the information needed to
+    # instantiate a database connection
+    with pytest.raises(ValueError,
+                       match='Config file contains no database URL'):
+        ixmp.Platform(dbprops=test_data_path / 'hsqldb.properties')
+
+
+def test_connect_message(caplog, test_data_path):
+    sample_props = test_data_path / 'testdb' / 'test.properties.sample'
+    ixmp.Platform(dbprops=sample_props)
+    assert caplog.records[-1].message == \
+        'launching ixmp.Platform connected to jdbc:hsqldb:mem://ixmptest'
 
 
 DEPRECATED = (
@@ -74,3 +96,14 @@ def test_deprecated_warns(tmp_env):
         with pytest.warns(DeprecationWarning, match="positional arguments to "
                           "Platform(…) for JDBCBackend"):
             ixmp.Platform('nonexistent.properties', name='default')
+
+
+def test_gh_216(test_mp):
+    scen = make_dantzig(test_mp)
+
+    filters = dict(i=['seattle', 'beijing'])
+
+    # Java code in ixmp_source would raise an exception because 'beijing' is
+    # not in set i; but JDBCBackend removes 'beijing' from the filters before
+    # calling the underlying method (https://github.com/iiasa/ixmp/issues/216)
+    scen.par('a', filters=filters)

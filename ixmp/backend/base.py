@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from copy import copy
+import json
 
 from ixmp.core import TimeSeries, Scenario
 
@@ -585,9 +587,15 @@ class Backend(ABC):
         type : 'equ' or 'par' or 'set' or 'var'
         name : str
             Name of the item.
-        filters : dict (str -> list of str), optional
+        filters : dict (str -> list), optional
             If provided, a mapping from dimension names to allowed values
             along that dimension.
+
+            item_get_elements **must** silently accept values that are *not*
+            members of the set indexing a dimension. Elements which are not
+            :type:`str` **must** be handled as equivalent to their string
+            representation; i.e. item_get_elements must return the same data
+            for `filters={'foo': [42]}` and `filters={'foo': ['42']}`.
 
         Returns
         -------
@@ -759,3 +767,108 @@ class Backend(ABC):
         -------
         None
         """
+
+
+class CachingBackend(Backend):
+    """Backend with additional features for caching data."""
+
+    #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on
+    #: the subclass' usage of the cache.
+    _cache = {}
+
+    #: Count of number of times a value was retrieved from cache successfully
+    #: using :meth:`cache_get`.
+    _cache_hit = {}
+
+    def __init__(self):
+        super().__init__()
+
+        # Empty the cache
+        self._cache = {}
+        self._cache_hit = {}
+
+    @classmethod
+    def _cache_key(self, ts, ix_type, name, filters=None):
+        """Return a hashable cache key.
+
+        ixmp *filters* (a :class:`dict` of :class:`list`) are converted to a
+        unique id that is hashable.
+
+        Parameters
+        ----------
+        ts : .TimeSeries
+        ix_type : str
+        name : str
+        filters : dict (str -> list of hashable)
+
+        Returns
+        -------
+        tuple
+            A hashable key with 4 elements for *ts*, *ix_type*, *name*, and
+            *filters*.
+        """
+        ts = id(ts)
+        if filters is None or len(filters) == 0:
+            return (ts, ix_type, name)
+        else:
+            # Convert filters into a hashable object
+            filters = hash(json.dumps(sorted(filters.items())))
+            return (ts, ix_type, name, filters)
+
+    def cache_get(self, ts, ix_type, name, filters):
+        """Retrieve value from cache.
+
+        The value in :attr:`_cache` is copied to avoid cached values being
+        modified by user code. :attr:`_cache_hit` is incremented.
+
+        Raises
+        ------
+        KeyError
+            If the key for *ts*, *ix_type*, *name* and *filters* is not in the
+            cache.
+        """
+        key = self._cache_key(ts, ix_type, name, filters)
+
+        if key in self._cache:
+            self._cache_hit[key] = self._cache_hit.setdefault(key, 0) + 1
+            return copy(self._cache[key])
+        else:
+            raise KeyError(ts, ix_type, name, filters)
+
+    def cache(self, ts, ix_type, name, filters, value):
+        """Store *value* in cache.
+
+        Returns
+        -------
+        bool
+            :obj:`True` if the key was already in the cache and its value was
+            overwritten.
+        """
+        key = self._cache_key(ts, ix_type, name, filters)
+
+        refreshed = key in self._cache
+        self._cache[key] = value
+
+        return refreshed
+
+    def cache_invalidate(self, ts, ix_type=None, name=None, filters=None):
+        """Invalidate cached values.
+
+        With all arguments given, single key/value is removed from the cache.
+        Otherwise, multiple keys/values are removed:
+
+        - *ts* only: all cached values associated with the :class:`.TimeSeries`
+          or :class:`.Scenario` object.
+        - *ts*, *ix_type*, and *name*: all cached values associated with the
+          ixmp item, whether filtered or unfiltered.
+        """
+        key = self._cache_key(ts, ix_type, name, filters)
+
+        if filters is None:
+            i = slice(1) if (ix_type is name is None) else slice(3)
+            to_remove = filter(lambda k: k[i] == key[i], self._cache.keys())
+        else:
+            to_remove = [key]
+
+        for key in list(to_remove):
+            self._cache.pop(key)

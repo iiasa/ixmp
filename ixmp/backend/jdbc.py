@@ -6,7 +6,6 @@ import logging
 import os
 from pathlib import Path, PurePosixPath
 import re
-from tempfile import mkstemp
 from types import SimpleNamespace
 from warnings import warn
 
@@ -17,9 +16,9 @@ import pandas as pd
 
 from ixmp import config
 from ixmp.core import Scenario
-from ixmp.utils import islistable
+from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS
-from .base import Backend
+from .base import CachingBackend
 
 
 log = logging.getLogger(__name__)
@@ -51,56 +50,68 @@ JAVA_CLASSES = [
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
+    'java.util.Properties',
 ]
 
 
-def _read_dbprops(path):
-    return str(path), path.read_text()
+DRIVER_CLASS = {
+    'oracle': 'oracle.jdbc.driver.OracleDriver',
+    'hsqldb': 'org.hsqldb.jdbcDriver',
+}
 
 
-def _temp_dbprops(driver=None, path=None, url=None, user=None, password=None):
-    """Create a temporary dbprops file."""
-    # Lines to appear in the file
-    lines = [
-        'jdbc.driver = {driver}',
-        'jdbc.url = {full_url}',
-        'jdbc.user = {user}',
-        'jdbc.pwd = {password}',
-    ]
+def _create_properties(driver=None, path=None, url=None, user=None,
+                       password=None):
+    """Create a database Properties from arguments."""
+    properties = java.Properties()
 
     # Handle arguments
-    if driver == 'oracle':
-        driver = 'oracle.jdbc.driver.OracleDriver'
+    try:
+        properties.setProperty('jdbc.driver', DRIVER_CLASS[driver])
+    except KeyError:
+        raise ValueError(f'unrecognized/unsupported JDBC driver {driver!r}')
 
+    if driver == 'oracle':
         if url is None or path is not None:
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
 
         full_url = 'jdbc:oracle:thin:@{}'.format(url)
     elif driver == 'hsqldb':
-        driver = 'org.hsqldb.jdbcDriver'
-
-        if path is None or url is not None:
+        if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
 
-        # Convert Windows paths to use forward slashes per HyperSQL JDBC URL
-        # spec
-        url_path = str(PurePosixPath(Path(path).resolve())).replace('\\', '')
-        full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+        if url is not None:
+            if url.startswith('jdbc:hsqldb:'):
+                full_url = url
+            else:
+                raise ValueError(url)
+        else:
+            # Convert Windows paths to use forward slashes per HyperSQL JDBC
+            # URL spec
+            url_path = (str(PurePosixPath(Path(path).resolve()))
+                        .replace('\\', ''))
+            full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
         user = user or 'ixmp'
         password = password or 'ixmp'
-    else:
-        raise ValueError(driver)
 
-    fmt = locals()
-    contents = '\n'.join(line.format(**fmt) for line in lines)
+    properties.setProperty('jdbc.url', full_url)
+    properties.setProperty('jdbc.user', user)
+    properties.setProperty('jdbc.pwd', password)
 
-    file = Path(mkstemp(suffix='.properties', text=True)[1])
-    file.write_text(contents)
-
-    return str(file), full_url
+    return properties
 
 
-class JDBCBackend(Backend):
+def _read_properties(file):
+    """Read database properties from *file*, returning :class:`dict`."""
+    properties = dict()
+    for line in file.read_text().split('\n'):
+        match = re.search(r'([^\s]+)\s*=\s*(.+)\s*', line)
+        if match is not None:
+            properties[match.group(1)] = match.group(2)
+    return properties
+
+
+class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQLDB instances.
 
     Parameters
@@ -145,7 +156,7 @@ class JDBCBackend(Backend):
     jindex = {}
 
     def __init__(self, jvmargs=None, **kwargs):
-        properties_file = None
+        properties = None
 
         # Handle arguments
         if 'dbtype' in kwargs:
@@ -166,27 +177,36 @@ class JDBCBackend(Backend):
         if 'dbprops' in kwargs:
             # Use an existing file
             dbprops = Path(kwargs.pop('dbprops'))
-            if dbprops.exists():
+            if dbprops.exists() and dbprops.is_file():
                 # Existing properties file
-                properties_file, info = _read_dbprops(dbprops)
-            elif dbprops.with_suffix('.lobs').exists():
+                properties = _read_properties(dbprops)
+                if 'jdbc.url' not in properties:
+                    raise ValueError('Config file contains no database URL')
+            elif (not dbprops.exists()
+                  and dbprops.with_suffix('.lobs').exists()):
                 # Actually the basename for a HSQLDB
                 kwargs.setdefault('driver', 'hsqldb')
                 kwargs.setdefault('path', dbprops)
             else:
                 raise FileNotFoundError(dbprops)
 
-        if not properties_file:
-            # Create dbprops in a temporary file
-            properties_file, info = _temp_dbprops(**kwargs)
-            self._properties_file = properties_file
-
-        log.info('launching ixmp.Platform connected to {}'.format(info))
-
         start_jvm(jvmargs)
 
+        # Create a database properties object
+        if properties:
+            # ...using file contents
+            new_props = java.Properties()
+            [new_props.setProperty(k, v) for k, v in properties.items()]
+            properties = new_props
+        else:
+            # ...from arguments
+            properties = _create_properties(**kwargs)
+
+        log.info('launching ixmp.Platform connected to {}'
+                 .format(properties.getProperty('jdbc.url')))
+
         try:
-            self.jobj = java.Platform('Python', properties_file)
+            self.jobj = java.Platform('Python', properties)
         except java.NoClassDefFoundError as e:  # pragma: no cover
             raise NameError(
                 '{}\nCheck that dependencies of ixmp.jar are included in {}'
@@ -205,11 +225,8 @@ class JDBCBackend(Backend):
             else:
                 raise RuntimeError('unhandled Java exception:' + info) from e
 
-    def __del__(self):
-        try:
-            Path(self._properties_file).unlink()
-        except AttributeError:
-            return
+        # Invoke the parent constructor to initialize the cache
+        super().__init__()
 
     # Platform methods
 
@@ -451,7 +468,7 @@ class JDBCBackend(Backend):
 
         # Instantiate same class as the original object
         return s.__class__(platform_dest, model, scenario,
-                           version=jclone.getVersion(), cache=s._cache)
+                           version=jclone.getVersion())
 
     def has_solution(self, s):
         return self.jindex[s].hasSolution()
@@ -484,61 +501,113 @@ class JDBCBackend(Backend):
 
     def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')()
+        self.cache_invalidate(s, type, name)
 
     def item_index(self, s, name, sets_or_names):
         jitem = self._get_item(s, 'item', name, load=False)
         return list(getattr(jitem, f'getIdx{sets_or_names.title()}')())
 
     def item_get_elements(self, s, type, name, filters=None):
+        if filters:
+            # Convert filter elements to strings
+            filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
+
+        try:
+            # Retrieve the cached value with this exact set of filters
+            return self.cache_get(s, type, name, filters)
+        except KeyError:
+            pass  # Cache miss
+
+        try:
+            # Retrieve a cached, unfiltered value of the same item
+            unfiltered = self.cache_get(s, type, name, None)
+        except KeyError:
+            pass  # Cache miss
+        else:
+            # Success; filter and return
+            return filtered(unfiltered, filters)
+
+        # Failed to load item from cache
+
         # Retrieve the item
         item = self._get_item(s, type, name, load=True)
+        idx_names = list(item.getIdxNames())
+        idx_sets = list(item.getIdxSets())
 
         # Get list of elements, using filters if provided
         if filters is not None:
             jFilter = java.HashMap()
-            for dim, values in filters.items():
-                jFilter.put(dim, to_jlist(values))
+
+            for idx_name, values in filters.items():
+                # Retrieve the elements of the index set as a list
+                idx_set = idx_sets[idx_names.index(idx_name)]
+                elements = self.item_get_elements(s, 'set', idx_set).tolist()
+
+                # Filter for only included values and store
+                filtered_elements = filter(lambda e: e in values, elements)
+                jFilter.put(idx_name, to_jlist2(filtered_elements))
+
             jList = item.getElements(jFilter)
         else:
             jList = item.getElements()
 
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
-            idx_names = list(item.getIdxNames())
-            idx_sets = list(item.getIdxSets())
+            columns = copy(idx_names)
 
-            data = {}
-            types = {}
+            # Prepare dtypes for index columns
+            dtypes = {}
+            for idx_name, idx_set in zip(columns, idx_sets):
+                # NB using categoricals could be more memory-efficient, but
+                #    requires adjustment of tests/documentation. See
+                #    https://github.com/iiasa/ixmp/issues/228
+                # dtypes[idx_name] = CategoricalDtype(
+                #     self.item_get_elements(s, 'set', idx_set))
+                dtypes[idx_name] = str
 
-            # Retrieve index columns
-            for d, (d_name, d_set) in enumerate(zip(idx_names, idx_sets)):
-                data[d_name] = item.getCol(d, jList)
-                if d_set == 'year':
-                    # Record column for later type conversion
-                    types[d_name] = int
-
-            # Retrieve value columns
+            # Prepare dtypes for additional columns
             if type == 'par':
-                data['value'] = item.getValues(jList)
-                data['unit'] = item.getUnits(jList)
+                columns.extend(['value', 'unit'])
+                dtypes['value'] = float
+                # Same as above
+                # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
+                dtypes['unit'] = str
+            elif type in ('equ', 'var'):
+                columns.extend(['lvl', 'mrg'])
+                dtypes.update({'lvl': float, 'mrg': float})
+            # Prepare empty DataFrame
+            result = pd.DataFrame(index=pd.RangeIndex(len(jList)),
+                                  columns=columns)
 
-            if type in ('equ', 'var'):
-                data['lvl'] = item.getLevels(jList)
-                data['mrg'] = item.getMarginals(jList)
+            # Copy vectors from Java into DataFrame columns
+            # NB [:] causes JPype to use a faster code path
+            for i in range(len(idx_sets)):
+                result.iloc[:, i] = item.getCol(i, jList)[:]
+            if type == 'par':
+                result.loc[:, 'value'] = item.getValues(jList)[:]
+                result.loc[:, 'unit'] = item.getUnits(jList)[:]
+            elif type in ('equ', 'var'):
+                result.loc[:, 'lvl'] = item.getLevels(jList)[:]
+                result.loc[:, 'mrg'] = item.getMarginals(jList)[:]
 
-            return pd.DataFrame.from_dict(data, orient='columns') \
-                               .astype(types)
+            # .loc assignment above modifies dtypes; set afterwards
+            result = result.astype(dtypes)
         elif type == 'set':
             # Index sets
-            return pd.Series(item.getCol(0, jList))
+            result = pd.Series(item.getCol(0, jList))
         elif type == 'par':
             # Scalar parameters
-            return dict(value=item.getScalarValue().floatValue(),
-                        unit=str(item.getScalarUnit()))
+            result = dict(value=item.getScalarValue().floatValue(),
+                          unit=str(item.getScalarUnit()))
         elif type in ('equ', 'var'):
             # Scalar equations and variables
-            return dict(lvl=item.getScalarLevel().floatValue(),
-                        mrg=item.getScalarMarginal().floatValue())
+            result = dict(lvl=item.getScalarLevel().floatValue(),
+                          mrg=item.getScalarMarginal().floatValue())
+
+        # Store cache
+        self.cache(s, type, name, filters, result)
+
+        return result
 
     def item_set_elements(self, s, type, name, elements):
         jobj = self._get_item(s, type, name)
@@ -567,10 +636,14 @@ class JDBCBackend(Backend):
             else:  # pragma: no cover
                 raise RuntimeError('unhandled Java exception') from e
 
+        self.cache_invalidate(s, type, name)
+
     def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
         for key in keys:
             jitem.removeElement(to_jlist2(key))
+
+        self.cache_invalidate(s, type, name)
 
     def get_meta(self, s):
         def unwrap(v):
@@ -593,6 +666,8 @@ class JDBCBackend(Backend):
             self.jindex[s].removeSolution(from_year)
         else:
             self.jindex[s].removeSolution()
+
+        self.cache_invalidate(s)
 
     # MsgScenario methods
 
@@ -630,6 +705,8 @@ class JDBCBackend(Backend):
         self.jindex[s].readSolutionFromGDX(
             str(path.parent), path.name, comment, to_jlist2(var_list),
             to_jlist2(equ_list), check_solution)
+
+        self.cache_invalidate(s)
 
     def _get_item(self, s, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.
@@ -752,6 +829,7 @@ def to_jlist2(arg, convert=None):
         [jlist.add(value) for value in arg]
     else:
         raise ValueError(arg)
+
     return jlist
 
 

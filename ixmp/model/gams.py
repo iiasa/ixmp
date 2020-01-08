@@ -132,9 +132,6 @@ class GAMSModel(Model):
         # Invoke GAMS
         check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
 
-        # Reset Python data cache
-        scenario.clear_cache()
-
         # Read model solution
         scenario._backend('read_gdx', self.out_file,
                           self.check_solution,

@@ -2,6 +2,7 @@ from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
 from functools import lru_cache
+from itertools import chain
 import logging
 import os
 from pathlib import Path, PurePosixPath
@@ -754,9 +755,13 @@ def start_jvm(jvmargs=[]):
     # Arguments
     args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
 
+    # Base for Java classpath entries
+    cp = Path(__file__).parents[1]
+
+    # Keyword arguments
     kwargs = dict(
-        # Include ixmp.jar and bundled .jar files to the classpath
-        classpath=str(Path(__file__).parents[1] / '*'),
+        # Given 'lib/*' JPype will only glob '*.jar', so glob here explicitly
+        classpath=map(str, chain([cp / 'ixmp.jar'], cp.glob('lib/*'))),
 
         # For JPype 0.7 (raises a warning) and 0.8 (default is False).
         # 'True' causes Java string objects to be converted automatically to

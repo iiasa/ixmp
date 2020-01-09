@@ -503,7 +503,7 @@ class JDBCBackend(CachingBackend):
                 raise
 
     def delete_item(self, s, type, name):
-        getattr(self.jindex[s], f'remove{type.title()}')()
+        getattr(self.jindex[s], f'remove{type.title()}')(name)
         self.cache_invalidate(s, type, name)
 
     def item_index(self, s, name, sets_or_names):

@@ -219,6 +219,16 @@ def test_set(test_mp):
     foo = {'i1', 'i2', 'i3', 'i6', 'i7', 'i8'} - {'i2'} - {'i7', 'i8'}
     assert foo == set(scen.set('foo')['dim_i'])
 
+    # Remove a set completely.
+    scen2 = ixmp.Scenario(test_mp, *can_args, version=2)
+    scen2.check_out()
+    scen2.init_set('h')
+    scen2.add_set('h', 'test')
+    scen2.remove_set('h')
+    obs = {}
+    exp = set(scen2.set('h'))
+    assert obs == exp
+
 
 # make sure that changes to a scenario are copied over during clone
 def test_add_clone(test_mp):
@@ -226,7 +236,7 @@ def test_add_clone(test_mp):
     scen.check_out()
     scen.init_set('h')
     scen.add_set('h', 'test')
-    scen.commit("adding an index set 'h', wiht element 'test'")
+    scen.commit("adding an index set 'h', with element 'test'")
 
     scen2 = scen.clone(keep_solution=False)
     obs = scen2.set('h')

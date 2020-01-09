@@ -732,7 +732,7 @@ class JDBCBackend(CachingBackend):
                 raise RuntimeError('unhandled Java exception') from e
 
 
-def start_jvm(jvmargs=None):
+def start_jvm(jvmargs=[]):
     """Start the Java Virtual Machine via :mod:`JPype`.
 
     Parameters
@@ -748,37 +748,27 @@ def start_jvm(jvmargs=None):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
-    # TODO change the jvmargs default to [] instead of None
     if jpype.isJVMStarted():
         return
 
-    jvmargs = jvmargs or []
-
     # Arguments
-    args = [jpype.getDefaultJVMPath()]
+    args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
+
+    kwargs = dict(
+        # Include ixmp.jar and bundled .jar files to the classpath
+        classpath=str(Path(__file__).parents[1] / '*'),
+
+        # For JPype 0.7 (raises a warning) and 0.8 (default is False).
+        # 'True' causes Java string objects to be converted automatically to
+        # Python str(), as expected by ixmp Python code.
+        convertStrings=True,
+    )
+
     if os.name == 'nt':
-        print('jpype.getDefaultJVMPath():', args)
-        print('jpype.getClassPath():', jpype.getClassPath())
         print('JAVA_HOME:', os.environ.get('JAVA_HOME', '(not set)'))
-        assert False
-
-    # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
-    # the classpath
-    module_root = Path(__file__).parents[1]
-    jarfile = module_root / 'ixmp.jar'
-    module_jars = list(module_root.glob('lib/*'))
-    classpath = map(str, [module_root, jarfile] + list(module_jars))
-
-    sep = ';' if os.name == 'nt' else ':'
-    args.append('-Djava.class.path={}'.format(sep.join(classpath)))
-
-    # Add user args
-    args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
-
-    # For JPype 0.7 (raises a warning) and 0.8 (default is False).
-    # 'True' causes Java string objects to be converted automatically to Python
-    # str(), as expected by ixmp Python code.
-    kwargs = dict(convertStrings=True)
+        print('jpype.getDefaultJVMPath():', jpype.getDefaultJVMPath())
+        print('jpype.getClassPath():', jpype.getClassPath())
+        print('args to startJVM:', args, kwargs)
 
     jpype.startJVM(*args, **kwargs)
 

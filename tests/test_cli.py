@@ -59,6 +59,17 @@ def test_config(ixmp_cli):
     assert result.exit_code != 0
 
 
+def test_list(ixmp_cli, test_mp):
+    # CLI works; nothing returned with a --match option that matches nothing
+    r = ixmp_cli.invoke(['--platform', test_mp.name, 'list', '--match', 'foo'])
+    assert r.output == """
+0 model name(s)
+0 scenario name(s)
+0 (model, scenario) combination(s)
+0 total scenarios
+"""
+
+
 def test_platform(ixmp_cli, tmp_path):
     """Test 'platform' command."""
     def call(*args, exit_0=True):

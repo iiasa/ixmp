@@ -23,6 +23,7 @@ Configuration for ixmp and its storage backends has been streamlined.
 
 ## All changes
 
+- [#240](https://github.com/iiasa/ixmp/pull/240): Add ``ixmp list`` command-line tool.
 - [#225](https://github.com/iiasa/ixmp/pull/225): Ensure filters are always converted to string.
 - [#189](https://github.com/iiasa/ixmp/pull/189): Identify and load Scenarios using URLs.
 - [#182](https://github.com/iiasa/ixmp/pull/182),

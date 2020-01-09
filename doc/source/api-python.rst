@@ -203,6 +203,8 @@ Utilities
 
 .. automethod:: ixmp.utils.parse_url
 
+.. automethod:: ixmp.utils.format_scenario_list
+
 
 Testing utilities
 -----------------

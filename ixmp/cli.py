@@ -35,10 +35,20 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     except NameError:
         return
 
-    # With a Platform, load the indicated Scenario
-    if model and scenario:
-        scen = ixmp.Scenario(mp, model, scenario, version=version)
-        ctx.obj['scen'] = scen
+    # Store the model and scenario name from arguments
+    if model:
+        ctx.obj['model name'] = model
+
+    if scenario:
+        ctx.obj['scenario name'] = scenario
+
+    try:
+        # Load the indicated Scenario
+        ctx.obj['scen'] = ixmp.Scenario(mp, ctx.obj['model name'],
+                                        ctx.obj['scenario name'],
+                                        version=version)
+    except KeyError:
+        pass
 
 
 @main.command()
@@ -112,3 +122,24 @@ def platform(action, name, values):
     elif action == 'list':
         for key, info in ixmp.config.values['platform'].items():
             print(key, info)
+
+
+@main.command('list')
+@click.option('--match', metavar='EXPR', default=None,
+              help='Regular expression for model/scenario name.')
+@click.option('--default-only', is_flag=True,
+              help='Only scenarios with a default version.')
+@click.option('--as-url', is_flag=True,
+              help='Display outputs as ixmp URLs.')
+@click.pass_obj
+def list_command(context, **kwargs):
+    """List scenarios on the --platform."""
+    from ixmp.utils import format_scenario_list
+
+    print('\n'.join(
+        format_scenario_list(
+            platform=context['mp'],
+            model=context.get('model name', None),
+            scenario=context.get('scenario name', None),
+            **kwargs)
+    ))

@@ -336,6 +336,10 @@ def test_meta(test_mp):
     exp = test_dict['test_string']
     assert obs == exp
 
+    # Setting with a type other than int, float, bool, str raises TypeError
+    with pytest.raises(TypeError, match='Cannot store metadata of type'):
+        scen.set_meta('test_string', complex(1, 1))
+
 
 def test_load_scenario_data(test_mp):
     """load_scenario_data() caches all data."""

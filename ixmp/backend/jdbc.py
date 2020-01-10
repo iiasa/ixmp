@@ -657,7 +657,14 @@ class JDBCBackend(CachingBackend):
                 for entry in self.jindex[s].getMeta().entrySet()}
 
     def set_meta(self, s, name, value):
-        self.jindex[s].setMeta(name, value)
+        _type = type(value)
+        try:
+            _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
+            method_name = 'setMeta' + _type
+        except KeyError:
+            raise TypeError('Cannot store metadata of type {}'.format(_type))
+
+        getattr(self.jindex[s], method_name)(name, value)
 
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario
@@ -839,4 +846,4 @@ def to_jlist2(arg, convert=None):
 @lru_cache(1)
 def timespans():
     # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
-    return {t.ordinal(): t.name() for t in java.TimeSpan.values()}
+    return {t.getDbValue(): t.name() for t in java.TimeSpan.values()}

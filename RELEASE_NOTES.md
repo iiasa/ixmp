@@ -1,6 +1,5 @@
 
-# Next Release
-
+# v2.0
 
 ## Migration notes
 

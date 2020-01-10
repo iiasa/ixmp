@@ -5,6 +5,12 @@ import ixmp
 from ixmp.testing import make_dantzig
 
 
+def test_0_jvm():
+    # Start the JVM without calling jdbc.start_jvm
+    jpype.startJVM(convertStrings=False)
+    assert False
+
+
 def test_jvm_warn(recwarn):
     """Test that no warnings are issued on JVM start-up.
 

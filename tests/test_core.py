@@ -219,6 +219,15 @@ def test_set(test_mp):
     foo = {'i1', 'i2', 'i3', 'i6', 'i7', 'i8'} - {'i2'} - {'i7', 'i8'}
     assert foo == set(scen.set('foo')['dim_i'])
 
+    # Remove a set completely
+    assert 'h' not in scen.set_list()
+
+    scen.init_set('h')
+    assert 'h' in scen.set_list()
+
+    scen.remove_set('h')
+    assert 'h' not in scen.set_list()
+
 
 # make sure that changes to a scenario are copied over during clone
 def test_add_clone(test_mp):
@@ -226,7 +235,7 @@ def test_add_clone(test_mp):
     scen.check_out()
     scen.init_set('h')
     scen.add_set('h', 'test')
-    scen.commit("adding an index set 'h', wiht element 'test'")
+    scen.commit("adding an index set 'h', with element 'test'")
 
     scen2 = scen.clone(keep_solution=False)
     obs = scen2.set('h')

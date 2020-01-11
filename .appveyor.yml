@@ -38,4 +38,4 @@ build: false
 
 test_script:
   # Run tests. These include the equivalent of Travis R tests via test_r.py.
-  - pytest --test-r --verbose -k test_0_jvm
+  - pytest --test-r --verbose -k test_gh_229

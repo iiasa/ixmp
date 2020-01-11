@@ -82,6 +82,9 @@ $env:JAVA_HOME = $CR + '\Library'
 Progress 'Conda information'
 conda info --all
 
+Progress 'Install ant (for JPype1)'
+choco install --no-progress ant
+
 Progress 'Install graphviz (for dask.visualize)'
 choco install --no-progress graphviz
 

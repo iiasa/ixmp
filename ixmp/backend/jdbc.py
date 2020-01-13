@@ -769,11 +769,9 @@ def start_jvm(jvmargs=[]):
         convertStrings=True,
     )
 
-    if os.name == 'nt':
-        print('JAVA_HOME:', os.environ.get('JAVA_HOME', '(not set)'))
-        print('jpype.getDefaultJVMPath():', jpype.getDefaultJVMPath())
-        print('jpype.getClassPath():', jpype.getClassPath())
-        print('args to startJVM:', args, kwargs)
+    log.debug('JAVA_HOME: {}'.format(os.environ.get('JAVA_HOME', '(not set)')))
+    log.debug('jpype.getDefaultJVMPath: {}'.format(jpype.getDefaultJVMPath()))
+    log.debug('args to startJVM: {} {}'.format(args, kwargs))
 
     jpype.startJVM(*args, **kwargs)
 

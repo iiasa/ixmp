@@ -39,6 +39,7 @@ Platform documentation
    install
    tutorials
    Scientific programming API reference <api>
+   whatsnew
    bibliography
 
 

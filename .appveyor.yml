@@ -8,6 +8,13 @@ environment:
   - PYTHON_VERSION: "3.7"
     PYTHON_ARCH: "64"
 
+cache:
+  - C:\Miniconda36-x64\pkgs
+  - C:\Miniconda37-x64\pkgs
+  - C:\Users\appveyor\.conda\pkgs
+  - C:\Users\appveyor\AppData\Local\conda\conda\pkgs
+  - C:\RLibrary
+
 init:
   # Download and install the R Appveyor tool from
   # https://github.com/krlmlr/r-appveyor

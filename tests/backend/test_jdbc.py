@@ -1,6 +1,7 @@
 import jpype
 import pytest
 from pytest import raises, warns
+
 import ixmp
 from ixmp.testing import make_dantzig
 

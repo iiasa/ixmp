@@ -75,6 +75,10 @@ Exec { conda install --channel conda-forge --quiet --yes `
       pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
+# This environment variable change would be performed by 'activate testing'; see
+# https://github.com/conda-forge/openjdk-feedstock/tree/master/recipe/scripts
+$env:JAVA_HOME = $CR + '\Library'
+
 Progress 'Conda information'
 conda info --all
 

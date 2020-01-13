@@ -2,6 +2,7 @@ from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
 from functools import lru_cache
+from itertools import chain
 import logging
 import os
 from pathlib import Path, PurePosixPath
@@ -742,7 +743,7 @@ class JDBCBackend(CachingBackend):
                 raise RuntimeError('unhandled Java exception') from e
 
 
-def start_jvm(jvmargs=None):
+def start_jvm(jvmargs=[]):
     """Start the Java Virtual Machine via :mod:`JPype`.
 
     Parameters
@@ -758,32 +759,29 @@ def start_jvm(jvmargs=None):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
-    # TODO change the jvmargs default to [] instead of None
     if jpype.isJVMStarted():
         return
 
-    jvmargs = jvmargs or []
-
     # Arguments
-    args = [jpype.getDefaultJVMPath()]
+    args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
 
-    # Add the ixmp root directory, ixmp.jar and bundled .jar and .dll files to
-    # the classpath
-    module_root = Path(__file__).parents[1]
-    jarfile = module_root / 'ixmp.jar'
-    module_jars = list(module_root.glob('lib/*'))
-    classpath = map(str, [module_root, jarfile] + list(module_jars))
+    # Base for Java classpath entries
+    cp = Path(__file__).parents[1]
 
-    sep = ';' if os.name == 'nt' else ':'
-    args.append('-Djava.class.path={}'.format(sep.join(classpath)))
+    # Keyword arguments
+    kwargs = dict(
+        # Given 'lib/*' JPype will only glob '*.jar', so glob here explicitly
+        classpath=map(str, chain([cp / 'ixmp.jar'], cp.glob('lib/*'))),
 
-    # Add user args
-    args.extend(jvmargs if isinstance(jvmargs, list) else [jvmargs])
+        # For JPype 0.7 (raises a warning) and 0.8 (default is False).
+        # 'True' causes Java string objects to be converted automatically to
+        # Python str(), as expected by ixmp Python code.
+        convertStrings=True,
+    )
 
-    # For JPype 0.7 (raises a warning) and 0.8 (default is False).
-    # 'True' causes Java string objects to be converted automatically to Python
-    # str(), as expected by ixmp Python code.
-    kwargs = dict(convertStrings=True)
+    log.debug('JAVA_HOME: {}'.format(os.environ.get('JAVA_HOME', '(not set)')))
+    log.debug('jpype.getDefaultJVMPath: {}'.format(jpype.getDefaultJVMPath()))
+    log.debug('args to startJVM: {} {}'.format(args, kwargs))
 
     jpype.startJVM(*args, **kwargs)
 

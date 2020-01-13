@@ -27,8 +27,6 @@ init:
 install:
   # Install GAMS, update conda, and install Python and R dependencies
   - ps: . .\ci\appveyor-install.ps1
-  - pip install git+https://github.com/jpype-project/jpype.git
-  - python .\ci\appveyor-gh_229.py
   # Install the Python package
   - pip install --editable .[docs,tests,tutorial]
   # Install the R package

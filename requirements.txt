@@ -1,7 +1,7 @@
 codecov
 dask[array]
 graphviz
-JPype1>=0.7.1
+JPype1>=0.7
 jupyter
 numpydoc
 pandas==0.24.2

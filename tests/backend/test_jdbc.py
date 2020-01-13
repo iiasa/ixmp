@@ -1,23 +1,9 @@
-import os
-
 import jpype
 import pytest
 from pytest import raises, warns
+
 import ixmp
 from ixmp.testing import make_dantzig
-
-
-def test_gh_229():
-    # Start the JVM without calling jdbc.start_jvm
-    print('mark 1')
-
-    print('JAVA_HOME:', os.environ.get('JAVA_HOME', '(not set)'))
-    print('jpype.getDefaultJVMPath():', jpype.getDefaultJVMPath())
-    print('jpype.getClassPath():', jpype.getClassPath())
-
-    jpype.startJVM()
-
-    print('mark 2')
 
 
 def test_jvm_warn(recwarn):

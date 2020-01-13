@@ -40,18 +40,18 @@ LOG_LEVELS = {
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
-    # 'at.ac.iiasa.ixmp.exceptions.IxException',
-    # 'at.ac.iiasa.ixmp.objects.Scenario',
-    # 'at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan',
-    # 'at.ac.iiasa.ixmp.Platform',
-    # 'java.lang.Double',
-    # 'java.lang.Integer',
-    # 'java.lang.NoClassDefFoundError',
-    # 'java.math.BigDecimal',
-    # 'java.util.HashMap',
-    # 'java.util.LinkedHashMap',
-    # 'java.util.LinkedList',
-    # 'java.util.Properties',
+    'at.ac.iiasa.ixmp.exceptions.IxException',
+    'at.ac.iiasa.ixmp.objects.Scenario',
+    'at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan',
+    'at.ac.iiasa.ixmp.Platform',
+    'java.lang.Double',
+    'java.lang.Integer',
+    'java.lang.NoClassDefFoundError',
+    'java.math.BigDecimal',
+    'java.util.HashMap',
+    'java.util.LinkedHashMap',
+    'java.util.LinkedList',
+    'java.util.Properties',
 ]
 
 

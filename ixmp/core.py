@@ -36,34 +36,20 @@ class Platform:
     :class:`Scenario` objects tied to a single Platform; to move data between
     platforms, see :meth:`Scenario.clone`.
 
+    .. deprecated:: 2.0
+       Creating a Platform using positional arguments. Use the keyword
+       arguments `name` or `backend`, and optional `backend_args`.
+
     Parameters
     ----------
+    name : str
+        Name of a specific :ref:`configured <configuration>` backend.
     backend : 'jdbc'
         Storage backend type. 'jdbc' corresponds to the built-in
         :class:`.JDBCBackend`; see :obj:`.BACKENDS`.
     backend_args
-        Keyword arguments to specific to the `backend`. The “Other Parameters”
-        shown below are specific to :class:`.JDBCBackend`.
-
-    Other parameters
-    ----------------
-    dbtype : 'HSQLDB', optional
-        Database type to use. If :obj:`None`, a remote database is accessed. If
-        'HSQLDB', a local database is created and used at the path given by
-        `dbprops`.
-
-    dbprops : path-like, optional
-        If `dbtype` is :obj:`None`, the name of a *database properties file*
-        (default: ``default.properties``) in the properties file directory
-        (see :class:`.Config`) or a path to a properties file.
-
-        If `dbtype` is 'HSQLDB'`, the path of a local database,
-        (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
-        database file in the local database directory (default:
-        ``$HOME/.local/ixmp/localdb/``).
-
-    jvmargs : str, optional
-        Java Virtual Machine arguments. See :func:`.start_jvm`.
+        Keyword arguments to specific to the `backend`. See
+        :class:`.JDBCBackend`.
     """
 
     # List of method names which are handled directly by the backend
@@ -177,23 +163,6 @@ class Platform:
         """
         return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
                             columns=FIELDS['get_scenarios'])
-
-    def Scenario(self, model, scen, version=None,
-                 scheme=None, annotation=None, cache=False):
-        """Initialize a new :class:`Scenario`.
-
-        .. deprecated:: 1.1.0
-
-           Instead, use:
-
-           >>> mp = ixmp.Platform(…)
-           >>> ixmp.Scenario(mp, …)
-        """
-
-        warn('The constructor `mp.Scenario()` is deprecated, please use '
-             '`ixmp.Scenario(mp, ...)`')
-
-        return Scenario(self, model, scen, version, scheme, annotation, cache)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.
@@ -716,15 +685,6 @@ class Scenario(TimeSeries):
         else:
             return [str(key_or_keys)]
 
-    def cat_list(self, name):
-        raise DeprecationWarning('function was migrated to `message_ix` class')
-
-    def add_cat(self, name, cat, keys, is_unique=False):
-        raise DeprecationWarning('function was migrated to `message_ix` class')
-
-    def cat(self, name, cat):
-        raise DeprecationWarning('function was migrated to `message_ix` class')
-
     def set_list(self):
         """List all defined sets."""
         return self._backend('list_items', 'set')
@@ -932,7 +892,7 @@ class Scenario(TimeSeries):
         return self._backend('item_get_elements', 'par', name, filters)
 
     def add_par(self, name, key_or_data=None, value=None, unit=None,
-                comment=None, key=None, val=None):
+                comment=None):
         """Set the values of a parameter.
 
         Parameters
@@ -952,15 +912,6 @@ class Scenario(TimeSeries):
         # Number of dimensions in the index of *name*
         idx_names = self.idx_names(name)
         N_dim = len(idx_names)
-
-        if key:
-            warn("Scenario.add_par(key=...) deprecated and will be removed in "
-                 "ixmp 2.0; use key_or_data", DeprecationWarning)
-            key_or_data = key
-        if val:
-            warn("Scenario.add_par(val=...) deprecated and will be removed in "
-                 "ixmp 2.0; use value", DeprecationWarning)
-            value = val
 
         # Convert valid forms of arguments to pd.DataFrame
         if isinstance(key_or_data, dict):
@@ -1195,13 +1146,22 @@ class Scenario(TimeSeries):
             (vars and equs) from the source scenario in the clone.
             If :py:const:`False`, only include timeseries data marked
             `meta=True` (see :meth:`TimeSeries.add_timeseries`).
-        first_model_year: int, optional
+        shift_first_model_year: int, optional
             If given, all timeseries data in the Scenario is omitted from the
             clone for years from `first_model_year` onwards. Timeseries data
             with the `meta` flag (see :meth:`TimeSeries.add_timeseries`) are
             cloned for all years.
         platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
+        scen : str, optional
+            .. deprecated:: 2.0
+               Use `scenario`.
+        keep_sol : bool, optional
+            .. deprecated:: 2.0
+               Use `keep_solution`.
+        first_model_year : int, optional
+            .. deprecated:: 2.0
+               Use `shift_first_model_year`.
         """
         if 'keep_sol' in kwargs:
             warn('`keep_sol` is deprecated and will be removed in the next'

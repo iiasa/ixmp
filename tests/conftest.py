@@ -20,11 +20,6 @@ import pytest
 
 
 pytest_plugins = ['ixmp.testing']
-# Disable the faulthandler plugin on Windows to prevent spurious console noise;
-# see https://github.com/jpype-project/jpype/issues/561
-# https://github.com/iiasa/ixmp/issues/229
-# https://github.com/iiasa/ixmp/issues/247
-pytest_plugins.extend(['no:faulthandler'] if os.name == 'nt' else [])
 
 
 # Hooks

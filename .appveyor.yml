@@ -36,4 +36,4 @@ build: false
 
 test_script:
   # Run tests. These include the equivalent of Travis R tests via test_r.py.
-  - pytest --test-r --verbose -p no:faulthandler -k test_gh_229
+  - pytest --test-r --verbose -p no:faulthandler

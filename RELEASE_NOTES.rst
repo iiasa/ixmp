@@ -15,7 +15,7 @@ See the ref:`Configuration` section of the documentation for complete details on
 To migrate from pre-2.0 settings:
 
 DB_CONFIG_PATH
-   …pointed to a directory containing database properties (.dbprops) files.
+   …pointed to a directory containing database properties (.properties) files.
 
    - All Platform configuration is stored in one ixmp configuration file, config.json, and manipulated using the ``ixmp platform`` command and subcommands.
    - The :class:`.Platform` constructor accepts the name of a stored platform configuration.

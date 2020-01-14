@@ -117,23 +117,30 @@ class JDBCBackend(CachingBackend):
 
     Parameters
     ----------
-    dbtype : 'HSQLDB', optional
-        Database type to use. If :obj:`None`, a remote database is accessed. If
-        'HSQLDB', a local database is created and used at the path given by
-        `dbprops`.
-
-    dbprops : path-like, optional
-        If `dbtype` is :obj:`None`, the name of a *database properties file*
-        (default: ``default.properties``) in the properties file directory
-        (see :class:`.Config`) or a path to a properties file.
-
-        If `dbtype` is 'HSQLDB'`, the path of a local database,
-        (default: ``$HOME/.local/ixmp/localdb/default``) or name of a
-        database file in the local database directory (default:
-        ``$HOME/.local/ixmp/localdb/``).
-
+    driver : 'oracle' or 'hsqldb'
+        JDBC driver to use.
+    path : path-like, optional
+        Path to the HyperSQL database.
+    url : str, optional
+        Partial or complete JDBC URL for the Oracle or HyperSQL database,
+        e.g. ``database-server.example.com:PORT:SCHEMA``. See
+        :ref:`configuration`.
+    user : str, optional
+        Database user name.
+    password : str, optional
+        Database user password.
     jvmargs : str, optional
-        Java Virtual Machine arguments. See :func:`.start_jvm`.
+        Java Virtual Machine arguments. See :meth:`.start_jvm`.
+    dbprops : path-like, optional
+        With ``driver='oracle'``, the path to a database properties file
+        containing `driver`, `url`, `user`, and `password` information
+
+        .. deprecated:: 2.0
+           With ``driver='hsqldb'``, the path to a local database, excluding
+           the '.lobs' suffix.
+    dbtype : str, optional
+        .. deprecated:: 2.0
+           Use `driver`.
     """
     # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
     #    Github repository.
@@ -186,6 +193,8 @@ class JDBCBackend(CachingBackend):
             elif (not dbprops.exists()
                   and dbprops.with_suffix('.lobs').exists()):
                 # Actually the basename for a HSQLDB
+                warn("Specifying driver='hsqldb' location with 'dbprops'; use"
+                     "'path'", DeprecationWarning)
                 kwargs.setdefault('driver', 'hsqldb')
                 kwargs.setdefault('path', dbprops)
             else:
@@ -248,7 +257,7 @@ class JDBCBackend(CachingBackend):
         try:
             self.jobj.closeDB()
         except java.IxException as e:
-            if str(e) == 'Error closing the database connection!':
+            if 'Error closing the database connection!' in str(e):
                 log.warning('Database connection could not be closed or was '
                             'already closed')
             else:
@@ -496,7 +505,7 @@ class JDBCBackend(CachingBackend):
             func(name, idx_sets, idx_names)
         except jpype.JException as e:
             e = str(e)
-            if e.startswith('This Scenario cannot be edited'):
+            if 'This Scenario cannot be edited' in e:
                 raise RuntimeError(e)
             elif 'already exists' in e:
                 raise ValueError('{!r} already exists'.format(name))

@@ -593,7 +593,7 @@ class Backend(ABC):
 
             item_get_elements **must** silently accept values that are *not*
             members of the set indexing a dimension. Elements which are not
-            :type:`str` **must** be handled as equivalent to their string
+            :class:`str` **must** be handled as equivalent to their string
             representation; i.e. item_get_elements must return the same data
             for `filters={'foo': [42]}` and `filters={'foo': ['42']}`.
 

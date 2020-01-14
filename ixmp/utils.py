@@ -200,7 +200,7 @@ def import_timeseries(scenario, data, firstyear=None, lastyear=None):
 
 def format_scenario_list(platform, model=None, scenario=None, match=None,
                          default_only=False, as_url=False):
-    """Return a formatted list of Scenarios on *platform*.
+    """Return a formatted list of TimeSeries on *platform*.
 
     Parameters
     ----------
@@ -213,8 +213,8 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         Regular expression to restrict results. Only results where the model or
         scenario name matches are returned.
     default_only : bool, optional
-        Only return scenarios where a default version has been set with
-        :meth:`.set_as_default`.
+        Only return TimeSeries where a default version has been set with
+        :meth:`TimeSeries.set_as_default`.
     as_url : bool, optional
         Format results as ixmp URLs.
 

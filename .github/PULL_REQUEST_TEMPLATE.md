@@ -36,9 +36,9 @@ In ambiguous cases, strike them out and add a short explanation, e.g.
 - [ ] Tests added.
 - [ ] Documentation added.
 - [ ] Release notes updated.
-  <!-- To update `RELEASE_NOTES.md`, add a single line under the section
-  “# Next release” similar to:
+  <!-- To update `RELEASE_NOTES.rst`, add a single line under the section
+  “Next release” similar to:
 
-  - [#999](https://github.com/iiasa/ixmp/pull/999) Title or single-sentence
+  - `#999 <https://github.com/iiasa/ixmp/pull/999>`_: Title or single-sentence
     description from above.
   -->

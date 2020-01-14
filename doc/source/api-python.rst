@@ -154,6 +154,9 @@ Scenario
       var
       var_list
 
+
+.. _configuration:
+
 Configuration
 -------------
 

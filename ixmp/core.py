@@ -930,18 +930,19 @@ class Scenario(TimeSeries):
             # Check the type of value
             if isinstance(value, (float, int)):
                 # Single value
-                values = [float(value)]
 
                 if N_dim > 1 and len(keys) == N_dim:
                     # Ambiguous case: ._key() above returns ['dim_0', 'dim_1'],
                     # when we really want [['dim_0', 'dim_1']]
                     keys = [keys]
+
+                # Use the same value for all keys
+                values = [float(value)] * len(keys)
             else:
                 # Multiple values
                 values = value
 
-            data = pd.DataFrame(zip_longest(keys, values),
-                                columns=['key', 'value'])
+            data = pd.DataFrame(zip(keys, values), columns=['key', 'value'])
             if data.isna().any(axis=None):
                 raise ValueError('Length mismatch between keys and values')
 

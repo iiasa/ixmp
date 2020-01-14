@@ -106,6 +106,14 @@ def test_has_par(test_mp):
     assert not scen.has_par('m')
 
 
+def test_add_par(test_mp):
+    # add_par() broadcasts scalar values/units across multiple keys
+    scen = ixmp.Scenario(test_mp, *can_args)
+    scen.remove_solution()
+    scen.check_out()
+    scen.add_par('b', ['new-york', 'chicago'], value=100, unit='cases')
+
+
 def test_init_scalar(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args)
     scen2 = scen.clone(keep_solution=False)

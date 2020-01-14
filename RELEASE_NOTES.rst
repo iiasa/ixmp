@@ -11,7 +11,7 @@ See `PEP-0373 <https://www.python.org/dev/peps/pep-0373/>`_ and https://python3s
 ``ixmp`` users must upgrade to Python 3.
 
 **Configuration** for ixmp and its storage backends has been streamlined.
-See the ref:`Configuration` section of the documentation for complete details on how to configure ixmp.
+See the ref:`Configuration` section of the documentation for complete details on how to use ``ixmp platform add`` register local and remote databases.
 To migrate from pre-2.0 settings:
 
 DB_CONFIG_PATH

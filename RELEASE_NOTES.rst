@@ -6,7 +6,7 @@ All changes
 
 - `#261 <https://github.com/iiasa/ixmp/pull/261>`_: Increase minimum pandas
   version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
-
+- `#243 <https://github.com/iiasa/ixmp/pull/243>`_: Add bulk timeseries data export
 
 v2.0.0 (2020-01-14)
 ===================

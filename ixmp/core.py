@@ -166,6 +166,36 @@ class Platform:
 
     def export_timeseries_data(self, file, default=True, model=None,
                                scenario=None, variables=None):
+        """Bulk timeseries export to CSV file.
+
+        Parameters
+        ----------
+        file : str
+            File name to export data to.
+            Result file will contain following columns:
+            - model
+            - scenario
+            - version
+            - variable
+            - unit
+            - region
+            - meta
+            - time
+            - year
+            - value
+        default : bool
+            :obj:`True` to include only TimeSeries versions marked as default.
+        model : str or None
+            Model name to filter results.
+        scenario : str or None
+            Scenario name to filter results.
+        variables : list
+            List of timeseries variables (names) to export
+
+        Returns
+        -------
+        None
+        """
         variables = as_str_list(variables) or []
         self._backend.export_timeseries_data(file,
                                              default,

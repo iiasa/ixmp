@@ -18,7 +18,7 @@ import pandas as pd
 from ixmp import config
 from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered, islistable
-from . import FIELDS
+from . import FIELDS, ItemType
 from .base import CachingBackend
 
 
@@ -293,6 +293,12 @@ class JDBCBackend(CachingBackend):
 
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
+
+    def read_file(self, path, item_type: ItemType, filters):
+        raise NotImplementedError
+
+    def write_file(self, path, item_type: ItemType, filters):
+        raise NotImplementedError
 
     # Timeseries methods
 

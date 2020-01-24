@@ -3,6 +3,7 @@ from copy import copy
 import json
 
 from ixmp.core import TimeSeries, Scenario
+from . import ItemType
 
 
 class Backend(ABC):
@@ -191,6 +192,71 @@ class Backend(ABC):
         --------
         get_units
         """
+
+    def read_file(self, path, item_type: ItemType, filters):
+        """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
+
+        A backend **may** implement read_file for one or more combinations of
+        the `path` and `item_type` methods. For all other combinations, it
+        **must** raise :class:`NotImplementedError`.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File for input. The filename suffix determines the input format:
+
+            ====== ===
+            Suffix Format
+            ====== ===
+            .csv   Comma-separated values
+            .gdx   GAMS data exchange
+            .xlsx  Microsoft Office Open XML spreadsheet
+            ====== ===
+
+        item_type : ItemType
+            Type(s) of items to read.
+        filters : dict of dict of str
+            Restrict items read.
+
+        Raises
+        ------
+        NotImplementedError
+            If input of the specified items from the file format is not
+            supported.
+
+        See also
+        --------
+        write_file
+        """
+        raise NotImplementedError
+
+    def write_file(self, path, item_type: ItemType, filters):
+        """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
+
+        A backend **may** implement write_file for one or more combinations of
+        the `path` and `item_type` methods. For all other combinations, it
+        **must** raise :class:`NotImplementedError`.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File for output. The filename suffix determines the output format.
+        item_type : ItemType
+            Type(s) of items to write.
+        filters : dict of dict of str
+            Restrict items written.
+
+        Raises
+        ------
+        NotImplementedError
+            If output of the specified items to the file format is not
+            supported.
+
+        See also
+        --------
+        read_file
+        """
+        raise NotImplementedError
 
     # Methods for ixmp.TimeSeries
 

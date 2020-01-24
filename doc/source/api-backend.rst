@@ -13,7 +13,7 @@ Provided backends
 -----------------
 
 .. automodule:: ixmp.backend
-   :members: BACKENDS
+   :members: BACKENDS, ItemType
 
 .. currentmodule:: ixmp.backend.jdbc
 

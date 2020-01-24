@@ -294,8 +294,7 @@ class JDBCBackend(CachingBackend):
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
 
-    def read_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
-                  **kwargs):
+    def read_file(self, path, item_type: ItemType, filters, **kwargs):
         """Read Platform, TimeSeries, or Scenario data from file.
 
         JDBCBackend supports reading from:
@@ -320,6 +319,7 @@ class JDBCBackend(CachingBackend):
         --------
         .Backend.read_file
         """
+        ts, filters = self._handle_rw_filters(filters)
         if path.suffix == '.gdx' and item_type is ItemType.MODEL:
             kw = {'check_solution', 'comment', 'equ_list', 'var_list'}
 
@@ -347,8 +347,7 @@ class JDBCBackend(CachingBackend):
         else:
             raise NotImplementedError(path, item_type)
 
-    def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
-                   **kwargs):
+    def write_file(self, path, item_type: ItemType, filters, **kwargs):
         """Write Platform, TimeSeries, or Scenario data to file.
 
         JDBCBackend supports writing to:
@@ -367,6 +366,7 @@ class JDBCBackend(CachingBackend):
         --------
         .Backend.write_file
         """
+        ts, filters = self._handle_rw_filters(filters)
         if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):
                 raise NotImplementedError('write to GDX with filters')

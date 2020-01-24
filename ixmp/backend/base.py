@@ -193,8 +193,7 @@ class Backend(ABC):
         get_units
         """
 
-    def read_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
-                  **kwargs):
+    def read_file(self, path, item_type: ItemType, filters, **kwargs):
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
         A backend **may** implement read_file for one or more combinations of
@@ -203,8 +202,6 @@ class Backend(ABC):
 
         Parameters
         ----------
-        ts : TimeSeries or None
-            Single TimeSeries object to read.
         path : os.PathLike
             File for input. The filename suffix determines the input format:
 
@@ -236,8 +233,7 @@ class Backend(ABC):
         # TODO move message_ix.core.read_excel here
         raise NotImplementedError
 
-    def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
-                   **kwargs):
+    def write_file(self, path, item_type: ItemType, filters, **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
         A backend **may** implement write_file for one or more combinations of
@@ -246,8 +242,6 @@ class Backend(ABC):
 
         Parameters
         ----------
-        ts : TimeSeries or None
-            Single TimeSeries object to read.
         path : os.PathLike
             File for output. The filename suffix determines the output format.
         item_type : ItemType
@@ -269,6 +263,24 @@ class Backend(ABC):
         """
         # TODO move message_ix.core.to_excel here
         raise NotImplementedError
+
+    @staticmethod
+    def _handle_rw_filters(filters: dict):
+        """Helper for :meth:`read_file` and :meth:`write_file`.
+
+        The `filters` argument is unpacked if the 'scenarios' key is a single
+        :class:`TimeSeries` object. A 2-tuple is returned of the object (or
+        :obj:`None`) and the remaining filters.
+        """
+        ts = None
+        filters = copy(filters)
+        try:
+            if isinstance(filters['scenario'], TimeSeries):
+                ts = filters.pop('scenario')
+        except KeyError:
+            pass  # Don't modify filters at all
+
+        return ts, filters
 
     # Methods for ixmp.TimeSeries
 

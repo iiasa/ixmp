@@ -204,8 +204,7 @@ class Platform:
             'variable': as_str_list(variables) or [],
         }
 
-        self._backend.write_file(None, path, ItemType.TS, filters,
-                                 default=default)
+        self._backend.write_file(path, ItemType.TS, filters, default=default)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.

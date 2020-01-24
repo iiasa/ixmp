@@ -95,9 +95,7 @@ class GAMSModel(Model):
 
     def run(self, scenario):
         """Execute the model."""
-        if not isinstance(scenario.platform._backend, JDBCBackend):
-            raise ValueError('GAMSModel can only solve Scenarios with '
-                             'JDBCBackend')
+        backend = scenario.platform._backend
 
         self.scenario = scenario
 
@@ -127,17 +125,20 @@ class GAMSModel(Model):
         if os.name == 'nt':
             command = ' '.join(command)
 
-        # Write model data to file
-
-        scenario._backend('write_file', self.in_file,
-                          ItemType.SET | ItemType.PAR, filters={})
+        s_arg = dict(filters=dict(scenario=scenario))
+        try:
+            # Write model data to file
+            backend.write_file(self.in_file, ItemType.SET | ItemType.PAR,
+                               **s_arg)
+        except NotImplementedError:
+            raise NotImplementedError('GAMSModel requires a Backend that can '
+                                      'write to GDX files, e.g. JDBCBackend')
 
         # Invoke GAMS
         check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
 
         # Read model solution
-        scenario._backend('read_file', self.out_file, ItemType.MODEL,
-                          filters={},
+        backend.read_file(self.out_file, ItemType.MODEL, **s_arg,
                           check_solution=self.check_solution,
                           comment=self.comment or '',
                           equ_list=as_str_list(self.equ_list) or [],

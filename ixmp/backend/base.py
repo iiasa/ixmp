@@ -233,6 +233,7 @@ class Backend(ABC):
         --------
         write_file
         """
+        # TODO move message_ix.core.read_excel here
         raise NotImplementedError
 
     def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
@@ -266,6 +267,7 @@ class Backend(ABC):
         --------
         read_file
         """
+        # TODO move message_ix.core.to_excel here
         raise NotImplementedError
 
     # Methods for ixmp.TimeSeries

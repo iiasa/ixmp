@@ -18,19 +18,12 @@ Provided backends
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
-   :members: read_gdx
+   :members: read_file, write_file
 
    JDBCBackend supports:
 
    - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
    - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
-
-   It has the following method that is not part of the overall :class:`Backend` API:
-
-   .. autosummary::
-      :nosignatures:
-
-      read_gdx
 
    JDBCBackend caches values in memory to improve performance when repeatedly reading data from the same items with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
 

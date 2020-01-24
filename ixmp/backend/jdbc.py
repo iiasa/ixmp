@@ -296,10 +296,77 @@ class JDBCBackend(CachingBackend):
 
     def read_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
                   **kwargs):
-        raise NotImplementedError
+        """Read Platform, TimeSeries, or Scenario data from file.
+
+        JDBCBackend supports reading from:
+
+        - ``path='*.gdx', item_type=ItemType.MODEL``. The keyword arguments
+          `check_solution`, `comment`, `equ_list`, and `var_list` are
+          **required**.
+
+        Other parameters
+        ----------------
+        check_solution : bool
+            If True, raise an exception if the GAMS solver did not reach
+            optimality. (Only for MESSAGE-scheme Scenarios.)
+        comment : str
+            Comment added to Scenario when importing the solution.
+        equ_list : list of str
+            Equations to be imported.
+        var_list : list of str
+            Variables to be imported.
+
+        See also
+        --------
+        .Backend.read_file
+        """
+        if path.suffix == '.gdx' and item_type is ItemType.MODEL:
+            kw = {'check_solution', 'comment', 'equ_list', 'var_list'}
+
+            if not isinstance(ts, Scenario):
+                raise ValueError('read from GDX requires a Scenario object')
+            elif set(kwargs.keys()) != kw:
+                raise ValueError(('keyword arguments {} do not match required '
+                                  '{}').format(kwargs.keys(), kw))
+
+            args = (
+                str(path.parent),
+                path.name,
+                kwargs.pop('comment'),
+                to_jlist2(kwargs.pop('var_list')),
+                to_jlist2(kwargs.pop('equ_list')),
+                kwargs.pop('check_solution'),
+            )
+
+            if len(kwargs):
+                raise ValueError('extra keyword arguments {}'.format(kwargs))
+
+            self.jindex[ts].readSolutionFromGDX(*args)
+
+            self.cache_invalidate(ts)
+        else:
+            raise NotImplementedError(path, item_type)
 
     def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
                    **kwargs):
+        """Write Platform, TimeSeries, or Scenario data to file.
+
+        JDBCBackend supports writing to:
+
+        - ``path='*.gdx', item_type=ItemType.SET | ItemType.PAR``.
+        - ``path='*.csv', item_type=TS``. The `default` keyword argument is
+          **required**.
+
+        Other parameters
+        ----------------
+        default : bool
+            If :obj:`True`, only data from TimeSeries versions with
+            :meth:`set_default` are written.
+
+        See also
+        --------
+        .Backend.write_file
+        """
         if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):
                 raise NotImplementedError('write to GDX with filters')
@@ -730,26 +797,6 @@ class JDBCBackend(CachingBackend):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
 
     # Helpers; not part of the Backend interface
-    def read_gdx(self, s, path, check_solution, comment, equ_list, var_list):
-        """Read the Scenario from a GDX file at *path*.
-
-        Parameters
-        ----------
-        check_solution : bool
-            If True, raise an exception if the GAMS solver did not reach
-            optimality. (Only for MESSAGE-scheme Scenarios.)
-        comment : str
-            Comment added to Scenario when importing the solution.
-        equ_list : list of str
-            Equations to be imported.
-        var_list : list of str
-            Variables to be imported.
-        """
-        self.jindex[s].readSolutionFromGDX(
-            str(path.parent), path.name, comment, to_jlist2(var_list),
-            to_jlist2(equ_list), check_solution)
-
-        self.cache_invalidate(s)
 
     def _get_item(self, s, ix_type, name, load=True):
         """Return the Java object for item *name* of *ix_type*.

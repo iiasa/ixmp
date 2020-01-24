@@ -136,9 +136,10 @@ class GAMSModel(Model):
         check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
 
         # Read model solution
-        scenario._backend('read_gdx', self.out_file,
-                          self.check_solution,
-                          self.comment or '',
-                          as_str_list(self.equ_list) or [],
-                          as_str_list(self.var_list) or [],
+        scenario._backend('read_file', self.out_file, ItemType.MODEL,
+                          filters={},
+                          check_solution=self.check_solution,
+                          comment=self.comment or '',
+                          equ_list=as_str_list(self.equ_list) or [],
+                          var_list=as_str_list(self.var_list) or [],
                           )

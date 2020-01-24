@@ -3,6 +3,7 @@ from pathlib import Path
 from subprocess import check_call
 
 
+from ixmp.backend import ItemType
 from ixmp.backend.jdbc import JDBCBackend
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
@@ -127,7 +128,9 @@ class GAMSModel(Model):
             command = ' '.join(command)
 
         # Write model data to file
-        scenario._backend('write_gdx', self.in_file)
+
+        scenario._backend('write_file', self.in_file,
+                          ItemType.SET | ItemType.PAR, filters={})
 
         # Invoke GAMS
         check_call(command, shell=os.name == 'nt', cwd=model_file.parent)

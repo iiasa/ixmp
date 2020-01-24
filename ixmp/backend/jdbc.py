@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from ixmp import config
-from ixmp.core import Scenario
+from ixmp.core import Scenario, TimeSeries
 from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS, ItemType
 from .base import CachingBackend
@@ -294,23 +294,34 @@ class JDBCBackend(CachingBackend):
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
 
-    def read_file(self, path, item_type: ItemType, filters, **kwargs):
+    def read_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
+                  **kwargs):
         raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, filters, **kwargs):
-        if not (path.suffix == '.csv' and item_type is ItemType.TS):
+    def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
+                   **kwargs):
+        if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
+            if len(filters):
+                raise NotImplementedError('write to GDX with filters')
+            elif not isinstance(ts, Scenario):
+                raise ValueError('write to GDX requires a Scenario object')
+
+            # include_var_equ=False -> do not include variables/equations in
+            # GDX
+            self.jindex[ts].toGDX(str(path.parent), path.name, False)
+        elif path.suffix == '.csv' and item_type is ItemType.TS:
+            model = filters.pop('model')
+            scenario = filters.pop('scenario')
+            variables = filters.pop('variable')
+            default = kwargs.pop('default')
+
+            scen_list = self.jobj.getScenarioList(default, model, scenario)
+            run_ids = [s['run_id'] for s in scen_list]
+            self.jobj.exportTimeseriesData(to_jlist2(run_ids),
+                                           to_jlist2(variables),
+                                           str(path))
+        else:
             raise NotImplementedError
-
-        model = filters.pop('model')
-        scenario = filters.pop('scenario')
-        variables = filters.pop('variable')
-        default = kwargs.pop('default')
-
-        scen_list = self.jobj.getScenarioList(default, model, scenario)
-        run_ids = [s['run_id'] for s in scen_list]
-        self.jobj.exportTimeseriesData(to_jlist2(run_ids),
-                                       to_jlist2(variables),
-                                       str(path))
 
     # Timeseries methods
 
@@ -719,12 +730,6 @@ class JDBCBackend(CachingBackend):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
 
     # Helpers; not part of the Backend interface
-
-    def write_gdx(self, s, path):
-        """Write the Scenario to a GDX file at *path*."""
-        # include_var_equ=False -> do not include variables/equations in GDX
-        self.jindex[s].toGDX(str(path.parent), path.name, False)
-
     def read_gdx(self, s, path, check_solution, comment, equ_list, var_list):
         """Read the Scenario from a GDX file at *path*.
 

@@ -193,7 +193,8 @@ class Backend(ABC):
         get_units
         """
 
-    def read_file(self, path, item_type: ItemType, filters, **kwargs):
+    def read_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
+                  **kwargs):
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
         A backend **may** implement read_file for one or more combinations of
@@ -202,6 +203,8 @@ class Backend(ABC):
 
         Parameters
         ----------
+        ts : TimeSeries or None
+            Single TimeSeries object to read.
         path : os.PathLike
             File for input. The filename suffix determines the input format:
 
@@ -220,6 +223,8 @@ class Backend(ABC):
 
         Raises
         ------
+        ValueError
+            If `ts` is not None and 'scenario' is a key in `filters`.
         NotImplementedError
             If input of the specified items from the file format is not
             supported.
@@ -230,7 +235,8 @@ class Backend(ABC):
         """
         raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, filters, **kwargs):
+    def write_file(self, ts: TimeSeries, path, item_type: ItemType, filters,
+                   **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
         A backend **may** implement write_file for one or more combinations of
@@ -239,6 +245,8 @@ class Backend(ABC):
 
         Parameters
         ----------
+        ts : TimeSeries or None
+            Single TimeSeries object to read.
         path : os.PathLike
             File for output. The filename suffix determines the output format.
         item_type : ItemType
@@ -248,6 +256,8 @@ class Backend(ABC):
 
         Raises
         ------
+        ValueError
+            If `ts` is not None and 'scenario' is a key in `filters`.
         NotImplementedError
             If output of the specified items to the file format is not
             supported.

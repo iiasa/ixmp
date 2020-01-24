@@ -294,11 +294,23 @@ class JDBCBackend(CachingBackend):
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
 
-    def read_file(self, path, item_type: ItemType, filters):
+    def read_file(self, path, item_type: ItemType, filters, **kwargs):
         raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, filters):
-        raise NotImplementedError
+    def write_file(self, path, item_type: ItemType, filters, **kwargs):
+        if not (path.suffix == '.csv' and item_type is ItemType.TS):
+            raise NotImplementedError
+
+        model = filters.pop('model')
+        scenario = filters.pop('scenario')
+        variables = filters.pop('variable')
+        default = kwargs.pop('default')
+
+        scen_list = self.jobj.getScenarioList(default, model, scenario)
+        run_ids = [s['run_id'] for s in scen_list]
+        self.jobj.exportTimeseriesData(to_jlist2(run_ids),
+                                       to_jlist2(variables),
+                                       str(path))
 
     # Timeseries methods
 
@@ -705,14 +717,6 @@ class JDBCBackend(CachingBackend):
 
     def cat_set_elements(self, ms, name, cat, keys, is_unique):
         self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
-
-    def export_timeseries_data(self, file, default, model, scenario,
-                               variables):
-        scen_list = self.jobj.getScenarioList(default, model, scenario)
-        run_ids = [s['run_id'] for s in scen_list]
-        self.jobj.exportTimeseriesData(to_jlist2(run_ids),
-                                       to_jlist2(variables),
-                                       file)
 
     # Helpers; not part of the Backend interface
 

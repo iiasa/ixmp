@@ -193,7 +193,7 @@ class Backend(ABC):
         get_units
         """
 
-    def read_file(self, path, item_type: ItemType, filters):
+    def read_file(self, path, item_type: ItemType, filters, **kwargs):
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
         A backend **may** implement read_file for one or more combinations of
@@ -230,7 +230,7 @@ class Backend(ABC):
         """
         raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, filters):
+    def write_file(self, path, item_type: ItemType, filters, **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
         A backend **may** implement write_file for one or more combinations of
@@ -833,40 +833,6 @@ class Backend(ABC):
             - *keys* **must** contain only one key.
             - The Backend **must** remove any existing member of *cat*, so that
               it has only one element.
-
-        Returns
-        -------
-        None
-        """
-
-    @abstractmethod
-    def export_timeseries_data(self, file, default, model, scenario,
-                               variables):
-        """Export timeseries data to CSV file
-
-        Parameters
-        ----------
-        file : str
-            File name to export data to.
-            Result file will contain following columns:
-            - model
-            - scenario
-            - version
-            - variable
-            - unit
-            - region
-            - meta
-            - time
-            - year
-            - value
-        default : bool
-            :obj:`True` to include only TimeSeries versions marked as default.
-        model : str or None
-            Model name to filter results.
-        scenario : str or None
-            Scenario name to filter results.
-        variables : list
-            List of timeseries variables (names) to export
 
         Returns
         -------

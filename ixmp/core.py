@@ -6,7 +6,7 @@ from warnings import warn
 import pandas as pd
 
 from ._config import config
-from .backend import BACKENDS, FIELDS
+from .backend import BACKENDS, FIELDS, ItemType
 from .model import get_model
 from .utils import (
     as_str_list,
@@ -164,15 +164,17 @@ class Platform:
         return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
                             columns=FIELDS['get_scenarios'])
 
-    def export_timeseries_data(self, file, default=True, model=None,
+    def export_timeseries_data(self, path, default=True, model=None,
                                scenario=None, variables=None):
         """Bulk timeseries export to CSV file.
 
         Parameters
         ----------
-        file : str
-            File name to export data to.
-            Result file will contain following columns:
+        file : os.PathLike
+            File name to export data to; must have the suffix '.csv'.
+
+            Result file will contain the following columns:
+
             - model
             - scenario
             - version
@@ -183,25 +185,26 @@ class Platform:
             - time
             - year
             - value
-        default : bool
+        default : bool, optional
             :obj:`True` to include only TimeSeries versions marked as default.
-        model : str or None
+        model : str or None, optional
             Model name to filter results.
-        scenario : str or None
+        scenario : str or None, optional
             Scenario name to filter results.
-        variables : list
-            List of timeseries variables (names) to export
+        variables : list, optional
+            List of timeseries variables (names) to export.
 
         Returns
         -------
         None
         """
-        variables = as_str_list(variables) or []
-        self._backend.export_timeseries_data(file,
-                                             default,
-                                             model,
-                                             scenario,
-                                             variables)
+        filters = {
+            'model': model,
+            'scenario': scenario,
+            'variable': as_str_list(variables) or [],
+        }
+
+        self._backend.write_file(path, ItemType.TS, filters, default=default)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.

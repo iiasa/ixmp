@@ -27,9 +27,10 @@ def test_scen_list(test_mp):
 
 
 def test_ts_data_export(test_mp, tmp_path):
-    file = tmp_path / 'export.csv'
-    test_mp.export_timeseries_data(file=str(file), model='Douglas Adams')
-    with open(file) as f:
+    path = tmp_path / 'export.csv'
+    test_mp.export_timeseries_data(path, model='Douglas Adams')
+
+    with open(path) as f:
         first_line = f.readline()
         assert first_line == csv_header
         assert len(f.readlines()) == 2

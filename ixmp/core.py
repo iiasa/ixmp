@@ -166,11 +166,14 @@ class Platform:
 
     def export_timeseries_data(self, path, default=True, model=None,
                                scenario=None, variables=None):
-        """Bulk timeseries export to CSV file.
+        """Export timeseries data to CSV file across multiple scenarios.
+
+        Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
+        information about adding timeseries data to scenario.
 
         Parameters
         ----------
-        file : os.PathLike
+        path : os.PathLike
             File name to export data to; must have the suffix '.csv'.
 
             Result file will contain the following columns:

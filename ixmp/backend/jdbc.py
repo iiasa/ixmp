@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from ixmp import config
-from ixmp.core import Scenario, TimeSeries
+from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS, ItemType
 from .base import CachingBackend

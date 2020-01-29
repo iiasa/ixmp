@@ -183,6 +183,12 @@ class Platform:
         self._backend.set_unit(unit, comment)
 
     def units(self):
+        """Return all units defined in ``ixmp.Platform``.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+        """
         return self._backend.get_units()
 
     def regions(self):

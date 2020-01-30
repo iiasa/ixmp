@@ -32,7 +32,10 @@ class AttrSeries(pd.Series):
 
             # pre-convert an pd.Series to preserve names and labels
             args = list(args)
-            args[0] = args[0].to_series()
+            try:
+                args[0] = args[0].to_series()
+            except AttributeError:
+                pass
         else:
             # default empty
             attrs = OrderedDict()

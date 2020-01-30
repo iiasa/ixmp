@@ -36,13 +36,9 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 
     # Store the model and scenario name from arguments
     if model:
-        if platform is None:
-            raise click.UsageError('--model was given without --platform')
         ctx.obj['model name'] = model
 
     if scenario:
-        if platform is None:
-            raise click.UsageError('--scenario was given without --platform')
         ctx.obj['scenario name'] = scenario
 
     try:
@@ -63,6 +59,9 @@ def report(context, config, key):
     # Import here to avoid importing reporting dependencies when running
     # other commands
     from ixmp.reporting import Reporter
+    if not context:
+        raise click.UsageError('give either --url, --platform or --dbprops '
+                               'before command report')
 
     # Instantiate the Reporter with the Scenario loaded by main()
     r = Reporter.from_scenario(context['scen'])

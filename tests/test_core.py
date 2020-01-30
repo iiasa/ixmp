@@ -11,6 +11,8 @@ from ixmp.testing import make_dantzig
 test_args = ('Douglas Adams', 'Hitchhiker')
 can_args = ('canning problem', 'standard')
 launch_log_msg = "launching ixmp.Platform using config file at '{}'"
+csv_header = ('MODEL,SCENARIO,VERSION,VARIABLE,'
+              'UNIT,REGION,META,TIME,YEAR,VALUE\n')
 
 
 def test_platform_init():
@@ -22,6 +24,16 @@ def test_platform_init():
 def test_scen_list(test_mp):
     scenario = test_mp.scenario_list(model='Douglas Adams')['scenario']
     assert scenario[0] == 'Hitchhiker'
+
+
+def test_ts_data_export(test_mp, tmp_path):
+    path = tmp_path / 'export.csv'
+    test_mp.export_timeseries_data(path, model='Douglas Adams')
+
+    with open(path) as f:
+        first_line = f.readline()
+        assert first_line == csv_header
+        assert len(f.readlines()) == 2
 
 
 def test_new_scen(test_mp):

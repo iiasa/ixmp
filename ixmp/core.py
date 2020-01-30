@@ -6,7 +6,7 @@ from warnings import warn
 import pandas as pd
 
 from ._config import config
-from .backend import BACKENDS, FIELDS
+from .backend import BACKENDS, FIELDS, ItemType
 from .model import get_model
 from .utils import (
     as_str_list,
@@ -163,6 +163,52 @@ class Platform:
         """
         return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
                             columns=FIELDS['get_scenarios'])
+
+    def export_timeseries_data(self, path, default=True, model=None,
+                               scenario=None, variable=None):
+        """Export timeseries data to CSV file across multiple scenarios.
+
+        Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
+        information about adding timeseries data to scenario.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File name to export data to; must have the suffix '.csv'.
+
+            Result file will contain the following columns:
+
+            - model
+            - scenario
+            - version
+            - variable
+            - unit
+            - region
+            - meta
+            - time
+            - year
+            - value
+        default : bool, optional
+            :obj:`True` to include only TimeSeries versions marked as default.
+        model: str, optional
+            Only return data for this model name.
+        scenario: str, optional
+            Only return data for this scenario name.
+        variable: list of str, optional
+            Only return data for variable name(s) in this list.
+
+        Returns
+        -------
+        None
+        """
+        filters = {
+            'model': model,
+            'scenario': scenario,
+            'variable': as_str_list(variable) or [],
+            'default': default
+        }
+
+        self._backend.write_file(path, ItemType.TS, filters=filters)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.

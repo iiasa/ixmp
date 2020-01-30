@@ -1,5 +1,6 @@
 from pathlib import Path
 from pandas.testing import assert_frame_equal
+from click.exceptions import UsageError
 
 import ixmp
 import pandas as pd
@@ -15,30 +16,31 @@ def test_main(ixmp_cli, test_mp, tmp_path):
         '--dbprops', str(tmp_path),
         'platform', 'list',  # Doesn't get executed; fails in cli.main()
     ]
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 2  # click retcode for bad option usage
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == UsageError.exit_code  # click retcode for bad
+    # option usage
 
     # Create the file
     tmp_path.write_text('')
 
     # Giving both --platform and --dbprops is bad option usage
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 1
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == UsageError.exit_code
 
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
-    r = ixmp_cli.invoke(cmd[2:])
-    assert 'Config file contains no database URL' in r.exception.args[0]
+    result = ixmp_cli.invoke(cmd[2:])
+    assert 'Config file contains no database URL' in result.exception.args[0]
 
     # --url argument can be given
     cmd = ['--url', 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name),
            'platform', 'list']
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 0
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0
 
     # --url and other Platform/Scenario specifiers are bad option usage
-    r = ixmp_cli.invoke(cmd + ['--version', '1'])
-    assert r.exit_code == 2
+    result = ixmp_cli.invoke(cmd + ['--version', '1'])
+    assert result.exit_code == 2
 
 
 def test_config(ixmp_cli):

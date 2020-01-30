@@ -30,12 +30,12 @@ class AttrSeries(pd.Series):
             # Use attrs from an xarray object
             attrs = args[0].attrs.copy()
 
-            # pre-convert an pd.Series to preserve names and labels
+            # pre-convert to a pd.Series to preserve names and labels
             args = list(args)
             try:
                 args[0] = args[0].to_series()
             except AttributeError:
-                pass
+                pass  # args[0] was already pd.Series
         else:
             # default empty
             attrs = OrderedDict()

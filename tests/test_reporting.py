@@ -124,8 +124,6 @@ def test_reporter_add_product(test_mp):
     # Product has the expected value
     exp = as_quantity(x * x)
     exp.attrs['_unit'] = UNITS('kilogram ** 2').units
-
-    pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
     assert_qty_equal(exp, rep.get(key))
 
 
@@ -143,7 +141,6 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     # Reporter.from_scenario can handle the Dantzig problem
     rep = Reporter.from_scenario(scen)
 
-    pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
     # Partial sums are available automatically (d is defined over i and j)
     d_i = rep.get('d:i')
 
@@ -380,8 +377,6 @@ def test_reporting_units():
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
-
-    pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
     assert r.get('energy').attrs['_unit'] == UNITS.parse_units('MJ')
 
     # Units are derived for a ratio of two quantities
@@ -438,8 +433,6 @@ def test_reporting_platform_units(test_mp, caplog):
 
     # Unrecognized units are added automatically, with log messages emitted
     caplog.clear()
-
-    pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
     rep.get(x_key)
     expected = [
         'Add unit definition: USD = [USD]',
@@ -592,7 +585,6 @@ def test_report_size(test_mp):
     keys = [rep.full_key(name) for name in names]
     rep.add('bigmem', tuple([computations.product] + keys))
 
-    pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
     # One quantity fits in memory
     rep.get(keys[0])
 
@@ -685,7 +677,6 @@ def test_reporting_filters(test_mp, tmp_path, caplog):
     x_key = rep.full_key('x')
 
     def assert_t_indices(labels):
-        pytest.skip('Segmentation fault with pandas 1.0 on next line')  # FIXME
         assert set(rep.get(x_key).coords['t'].values) == set(labels)
 
     # 1. Set filters directly

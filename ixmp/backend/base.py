@@ -193,7 +193,7 @@ class Backend(ABC):
         get_units
         """
 
-    def read_file(self, path, item_type: ItemType, filters, **kwargs):
+    def read_file(self, path, item_type: ItemType, **kwargs):
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
         A backend **may** implement read_file for one or more combinations of
@@ -215,8 +215,6 @@ class Backend(ABC):
 
         item_type : ItemType
             Type(s) of items to read.
-        filters : dict of dict of str
-            Restrict items read.
 
         Raises
         ------
@@ -233,7 +231,7 @@ class Backend(ABC):
         # TODO move message_ix.core.read_excel here
         raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, filters, **kwargs):
+    def write_file(self, path, item_type: ItemType, **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
         A backend **may** implement write_file for one or more combinations of
@@ -246,8 +244,6 @@ class Backend(ABC):
             File for output. The filename suffix determines the output format.
         item_type : ItemType
             Type(s) of items to write.
-        filters : dict of dict of str
-            Restrict items written.
 
         Raises
         ------

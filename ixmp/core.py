@@ -208,7 +208,7 @@ class Platform:
             'default': default
         }
 
-        self._backend('write_file', path, ItemType.TS, filters)
+        self._backend.write_file(path, ItemType.TS, filters=filters)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.

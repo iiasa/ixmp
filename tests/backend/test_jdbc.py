@@ -62,14 +62,14 @@ def test_read_file(test_mp, tmp_path):
     be = test_mp._backend
 
     with pytest.raises(NotImplementedError):
-        be.read_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, {})
+        be.read_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, filters={})
 
 
 def test_write_file(test_mp, tmp_path):
     be = test_mp._backend
 
     with pytest.raises(NotImplementedError):
-        be.write_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, {})
+        be.write_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, filters={})
 
 
 DEPRECATED = (

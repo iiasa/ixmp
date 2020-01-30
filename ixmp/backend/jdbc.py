@@ -294,7 +294,7 @@ class JDBCBackend(CachingBackend):
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
 
-    def read_file(self, path, item_type: ItemType, filters, **kwargs):
+    def read_file(self, path, item_type: ItemType, **kwargs):
         """Read Platform, TimeSeries, or Scenario data from file.
 
         JDBCBackend supports reading from:
@@ -314,12 +314,14 @@ class JDBCBackend(CachingBackend):
             Equations to be imported.
         var_list : list of str
             Variables to be imported.
+        filters : dict of dict of str
+            Restrict items read.
 
         See also
         --------
         .Backend.read_file
         """
-        ts, filters = self._handle_rw_filters(filters)
+        ts, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
         if path.suffix == '.gdx' and item_type is ItemType.MODEL:
             kw = {'check_solution', 'comment', 'equ_list', 'var_list'}
 
@@ -347,7 +349,7 @@ class JDBCBackend(CachingBackend):
         else:
             raise NotImplementedError(path, item_type)
 
-    def write_file(self, path, item_type: ItemType, filters, **kwargs):
+    def write_file(self, path, item_type: ItemType, **kwargs):
         """Write Platform, TimeSeries, or Scenario data to file.
 
         JDBCBackend supports writing to:
@@ -358,15 +360,21 @@ class JDBCBackend(CachingBackend):
 
         Other parameters
         ----------------
-        default : bool
-            If :obj:`True`, only data from TimeSeries versions with
-            :meth:`set_default` are written.
+        filters : dict of dict of str
+            Restrict items written.
+            Following filters may be used:
+            - model : str
+            - scenario : str
+            - variable : list of str
+            - default : bool
+              If :obj:`True`, only data from TimeSeries versions with
+              :meth:`set_default` are written.
 
         See also
         --------
         .Backend.write_file
         """
-        ts, filters = self._handle_rw_filters(filters)
+        ts, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
         if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):
                 raise NotImplementedError('write to GDX with filters')

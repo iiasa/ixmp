@@ -3,7 +3,7 @@
 Python (:mod:`ixmp` package)
 ============================
 
-The |ixmp| application progamming interface (API) is organized around three classes:
+The |ixmp| application programming interface (API) is organized around three classes:
 
 .. autosummary::
 
@@ -27,6 +27,7 @@ Platform
       regions
       scenario_list
       set_log_level
+      units
 
 
 TimeSeries
@@ -47,7 +48,7 @@ TimeSeries
         :meth:`Scenario.solve`. See :attr:`ixmp.model.MODELS`.
 
    2. `scenario`: the name of a specific, coherent description of the real-
-      world system being modeled. Any `model` may be used to represent mutiple
+      world system being modeled. Any `model` may be used to represent multiple
       alternate, or 'counter-factual', `scenarios`.
    3. `version`: an integer identifying a specific iteration of a
       (`model`, `scenario`). A new `version` is created by:

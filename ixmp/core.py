@@ -165,7 +165,7 @@ class Platform:
                             columns=FIELDS['get_scenarios'])
 
     def export_timeseries_data(self, path, default=True, model=None,
-                               scenario=None, variables=None):
+                               scenario=None, variable=None):
         """Export timeseries data to CSV file across multiple scenarios.
 
         Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
@@ -190,12 +190,12 @@ class Platform:
             - value
         default : bool, optional
             :obj:`True` to include only TimeSeries versions marked as default.
-        model : str or None, optional
-            Model name to filter results.
-        scenario : str or None, optional
-            Scenario name to filter results.
-        variables : list, optional
-            List of timeseries variables (names) to export.
+        model: str, optional
+            Only return data for this model name.
+        scenario: str, optional
+            Only return data for this scenario name.
+        variable: list of str, optional
+            Only return data for variable name(s) in this list.
 
         Returns
         -------
@@ -204,10 +204,11 @@ class Platform:
         filters = {
             'model': model,
             'scenario': scenario,
-            'variable': as_str_list(variables) or [],
+            'variable': as_str_list(variable) or [],
+            'default': default
         }
 
-        self._backend.write_file(path, ItemType.TS, filters, default=default)
+        self._backend('write_file', path, ItemType.TS, filters)
 
     def add_unit(self, unit, comment='None'):
         """Define a unit.

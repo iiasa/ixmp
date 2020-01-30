@@ -1,8 +1,8 @@
 from pathlib import Path
+from pandas.testing import assert_frame_equal
 
 import ixmp
 import pandas as pd
-import pandas.testing as pdt
 
 
 def test_main(ixmp_cli, test_mp, tmp_path):
@@ -147,4 +147,4 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         'model': ['canning problem'],
         'scenario': ['standard'],
     })
-    pdt.assert_frame_equal(exp, scen.timeseries())
+    assert_frame_equal(exp, scen.timeseries())

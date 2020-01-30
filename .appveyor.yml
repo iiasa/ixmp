@@ -13,7 +13,7 @@ cache:
   - C:\Miniconda37-x64\pkgs
   - C:\Users\appveyor\.conda\pkgs
   - C:\Users\appveyor\AppData\Local\conda\conda\pkgs
-  - C:\RLibrary
+  - C:\RLibrary -> .appveyor.yml
 
 init:
   # Download and install the R Appveyor tool from

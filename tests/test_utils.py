@@ -1,6 +1,6 @@
 """Tests for ixmp.utils."""
 import pandas as pd
-import pandas.util.testing as pdt
+from pandas.testing import assert_frame_equal
 import pytest
 from pytest import mark, param
 
@@ -19,7 +19,7 @@ def test_pd_io_csv(tmp_path):
     fname = tmp_path / "test.csv"
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
     obs = make_obs(fname, exp)
-    pdt.assert_frame_equal(obs, exp)
+    assert_frame_equal(obs, exp)
 
 
 def test_pd_io_xlsx(tmp_path):
@@ -27,7 +27,7 @@ def test_pd_io_xlsx(tmp_path):
     fname = tmp_path / "test.xlsx"
     exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
     obs = make_obs(fname, exp)
-    pdt.assert_frame_equal(obs, exp)
+    assert_frame_equal(obs, exp)
 
 
 def test_pd_io_xlsx_multi(tmp_path):
@@ -40,7 +40,7 @@ def test_pd_io_xlsx_multi(tmp_path):
     obs = make_obs(fname, exp, sheet_name=None)
     for k, _exp in exp.items():
         _obs = obs[k]
-        pdt.assert_frame_equal(_obs, _exp)
+        assert_frame_equal(_obs, _exp)
 
 
 def test_pd_write(tmp_path):

@@ -587,7 +587,6 @@ def test_report_size(test_mp):
 
     # One quantity fits in memory
     rep.get(keys[0])
-    # assert False
 
     # All quantities together trigger MemoryError
     rep.get('bigmem')

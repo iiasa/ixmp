@@ -13,7 +13,7 @@ INSTALL_REQUIRES = [
     'click',
     'dask[array]',
     'graphviz',
-    'pandas',
+    'pandas>=1.0',
     'pint',
     'PyYAML',
     'xarray',

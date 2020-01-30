@@ -36,13 +36,9 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 
     # Store the model and scenario name from arguments
     if model:
-        if platform is None:
-            raise click.UsageError('--model was given without --platform')
         ctx.obj['model name'] = model
 
     if scenario:
-        if platform is None:
-            raise click.UsageError('--scenario was given without --platform')
         ctx.obj['scenario name'] = scenario
 
     try:

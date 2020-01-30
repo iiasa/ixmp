@@ -22,24 +22,33 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
         scen, mp = ixmp.Scenario.from_url(url)
         ctx.obj = dict(scen=scen, mp=mp)
         return
-
-    if dbprops and platform:
+    elif dbprops and platform:
         raise click.BadOptionUsage('give either --platform or --dbprops')
     elif platform:
         mp = ixmp.Platform(name=platform)
     elif dbprops:
         mp = ixmp.Platform(backend='jdbc', dbprops=dbprops)
+    else:
+        raise click.BadOptionUsage('either --url, --platform, or --dbprops '
+                                   'are  needed')
 
+    ctx.obj = dict()
     try:
-        ctx.obj = dict(mp=mp)
+        ctx.obj['mp'] = mp
     except NameError:
-        return
+        pass
 
     # Store the model and scenario name from arguments
     if model:
+        if platform is None:
+            raise click.BadOptionUsage('--model or --scenario without '
+                                       '--platform')
         ctx.obj['model name'] = model
 
     if scenario:
+        if platform is None:
+            raise click.BadOptionUsage('--model or --scenario without '
+                                       '--platform')
         ctx.obj['scenario name'] = scenario
 
     try:
@@ -135,6 +144,9 @@ def platform(action, name, values):
 def list_command(context, **kwargs):
     """List scenarios on the --platform."""
     from ixmp.utils import format_scenario_list
+    platform = context.get('mp', None)
+    if platform is None:
+        raise click.BadOptionUsage('ixmp list requires a --platform to list')
 
     print('\n'.join(
         format_scenario_list(

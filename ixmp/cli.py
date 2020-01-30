@@ -16,39 +16,33 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     # Load the indicated Platform
     if url:
         if dbprops or platform or model or scenario or version:
-            raise click.BadOptionUsage('--platform --model --scenario and/or'
-                                       '--version redundant with --url')
+            raise click.UsageError('--platform --model --scenario and/or '
+                                   '--version redundant with --url')
 
         scen, mp = ixmp.Scenario.from_url(url)
         ctx.obj = dict(scen=scen, mp=mp)
         return
     elif dbprops and platform:
-        raise click.BadOptionUsage('give either --platform or --dbprops')
+        raise click.UsageError('give either --platform or --dbprops')
     elif platform:
         mp = ixmp.Platform(name=platform)
     elif dbprops:
         mp = ixmp.Platform(backend='jdbc', dbprops=dbprops)
-    else:
-        raise click.BadOptionUsage('either --url, --platform, or --dbprops '
-                                   'are  needed')
 
-    ctx.obj = dict()
     try:
-        ctx.obj['mp'] = mp
+        ctx.obj = dict(mp=mp)
     except NameError:
-        pass
+        return
 
     # Store the model and scenario name from arguments
     if model:
         if platform is None:
-            raise click.BadOptionUsage('--model or --scenario without '
-                                       '--platform')
+            raise click.UsageError('--model was given without --platform')
         ctx.obj['model name'] = model
 
     if scenario:
         if platform is None:
-            raise click.BadOptionUsage('--model or --scenario without '
-                                       '--platform')
+            raise click.UsageError('--scenario was given without --platform')
         ctx.obj['scenario name'] = scenario
 
     try:
@@ -144,9 +138,9 @@ def platform(action, name, values):
 def list_command(context, **kwargs):
     """List scenarios on the --platform."""
     from ixmp.utils import format_scenario_list
-    platform = context.get('mp', None)
-    if platform is None:
-        raise click.BadOptionUsage('ixmp list requires a --platform to list')
+    if not context:
+        raise click.UsageError('give either --url, --platform or --dbprops '
+                               'before command list')
 
     print('\n'.join(
         format_scenario_list(

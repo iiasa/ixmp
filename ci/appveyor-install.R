@@ -13,6 +13,8 @@ step <- commandArgs(TRUE)[1]
 # compile the source.
 options(repos=c('https://cloud.r-project.org'), pkgType='win.binary')
 
+print(.libPaths())
+
 if ( step == '1' ) {
   # Step 1: Install packages needed for testing
   install.packages(c('devtools', 'IRkernel'), quiet = TRUE)

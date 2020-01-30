@@ -229,7 +229,7 @@ class Platform:
         self._backend.set_unit(unit, comment)
 
     def units(self):
-        """Return all units defined in ``ixmp.Platform``.
+        """Return all units defined in :class:`ixmp.Platform`.
 
         Returns
         -------

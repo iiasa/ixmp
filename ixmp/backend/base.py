@@ -93,7 +93,6 @@ class Backend(ABC):
             ========= =========== ===
             ID        Type        Description
             ========= =========== ===
-            id        int         Time step id
             name      str         Time step name
             category  str         Time step category
             duration  float       Time step duration (fraction of year)

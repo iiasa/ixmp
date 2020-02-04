@@ -63,3 +63,6 @@ htmlcov/
 # JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 /**/.idea
 *.iml
+
+# temporary folder
+temp/

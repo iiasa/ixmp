@@ -40,7 +40,7 @@ java = SimpleNamespace()
 JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.exceptions.IxException',
     'at.ac.iiasa.ixmp.objects.Scenario',
-    'at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan',
+    'at.ac.iiasa.ixmp.dto.TimestepDTO',
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
@@ -250,6 +250,15 @@ class JDBCBackend(CachingBackend):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
+
+    def get_timesteps(self):
+        for r in self.jobj.getTimesteps():
+            name, category, duration = (r.getName(), r.getCategory(),
+                                        r.getDuration())
+            yield name, category, duration
+
+    def set_timestep(self, name, category, duration):
+        self.jobj.addTimestep(name, category, java.Double(duration))
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
@@ -472,7 +481,6 @@ class JDBCBackend(CachingBackend):
         # Field types
         ftype = {
             'meta': int,
-            'time': lambda ord: timespans()[int(ord)],  # Look up the name
             'year': lambda obj: obj,  # Pass through; handled later
         }
 
@@ -902,9 +910,3 @@ def to_jlist2(arg, convert=None):
         raise ValueError(arg)
 
     return jlist
-
-
-@lru_cache(1)
-def timespans():
-    # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
-    return {t.getDbValue(): t.name() for t in java.TimeSpan.values()}

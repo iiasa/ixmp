@@ -76,6 +76,46 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def get_timeslices(self):
+        """Return all subannual timeslices defined on the Platform instance.
+
+        Yields
+        -------
+        tuple
+            The members of each tuple are:
+
+            ========= =========== ===
+            ID        Type        Description
+            ========= =========== ===
+            name      str         Time slice name
+            category  str         Time slice category
+            duration  float       Time slice duration (fraction of year)
+            ========= =========== ===
+
+        See also
+        --------
+        set_timeslice
+        """
+
+    @abstractmethod
+    def set_timeslice(self, name, category, duration):
+        """Add a subannual time slice to the Platform.
+
+        Parameters
+        ----------
+        name : str
+           Node name.
+        category : str
+           Time slice category.
+        duration : float
+           Time slice duration (a fraction of year.
+
+        See also
+        --------
+        get_timeslices
+        """
+
+    @abstractmethod
     def get_scenarios(self, default, model, scenario):
         """Iterate over TimeSeries stored on the Platform.
 
@@ -400,12 +440,14 @@ class Backend(ABC):
             year     int  Year
             value    str  Value
             unit     str  Unit symbol
+            time     str  Name of time slice
             meta     bool :obj:`True` if the data is marked as metadata
             ======== ==== ===
         """
 
     @abstractmethod
-    def set_data(self, ts: TimeSeries, region, variable, data, unit, meta):
+    def set_data(self, ts: TimeSeries,
+                 region, variable, data, unit, time, meta):
         """Store *data*.
 
         Parameters

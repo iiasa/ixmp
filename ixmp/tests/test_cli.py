@@ -149,6 +149,7 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         'region': ['World'],
         'variable': ['Testing'],
         'unit': ['???'],
+        'subannual': ['Year'],
         'year': [2020],
         'value': [28.3],
         'model': ['canning problem'],

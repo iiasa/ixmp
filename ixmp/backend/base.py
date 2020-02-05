@@ -82,8 +82,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_timesteps(self):
-        """Iterate over all time steps stored on the Platform.
+    def get_timeslices(self):
+        """Iterate over all time slices stored on the Platform.
 
         Yields
         -------
@@ -93,32 +93,32 @@ class Backend(ABC):
             ========= =========== ===
             ID        Type        Description
             ========= =========== ===
-            name      str         Time step name
-            category  str         Time step category
-            duration  float       Time step duration (fraction of year)
+            name      str         Time slice name
+            category  str         Time slice category
+            duration  float       Time slice duration (fraction of year)
             ========= =========== ===
 
         See also
         --------
-        set_timestep
+        set_timeslice
         """
 
     @abstractmethod
-    def set_timestep(self, name, category, duration):
-        """Add a time step name to the Platform.
+    def set_timeslice(self, name, category, duration):
+        """Add a time slice name to the Platform.
 
         Parameters
         ----------
         name : str
            Node name.
         category : str
-           Time step category.
+           Time slice category.
         duration : float
-           Time step duration (a fraction of year.
+           Time slice duration (a fraction of year.
 
         See also
         --------
-        get_timesteps
+        get_timeslices
         """
 
     @abstractmethod

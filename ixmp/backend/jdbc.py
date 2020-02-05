@@ -40,7 +40,7 @@ java = SimpleNamespace()
 JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.exceptions.IxException',
     'at.ac.iiasa.ixmp.objects.Scenario',
-    'at.ac.iiasa.ixmp.dto.TimestepDTO',
+    'at.ac.iiasa.ixmp.dto.TimesliceDTO',
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
@@ -251,14 +251,14 @@ class JDBCBackend(CachingBackend):
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
 
-    def get_timesteps(self):
-        for r in self.jobj.getTimesteps():
+    def get_timeslices(self):
+        for r in self.jobj.getTimeslices():
             name, category, duration = (r.getName(), r.getCategory(),
                                         r.getDuration())
             yield name, category, duration
 
-    def set_timestep(self, name, category, duration):
-        self.jobj.addTimestep(name, category, java.Double(duration))
+    def set_timeslice(self, name, category, duration):
+        self.jobj.addTimeslice(name, category, java.Double(duration))
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>

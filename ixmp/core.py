@@ -270,29 +270,29 @@ class Platform:
 
         self._backend.set_node(region, synonym=mapped_to)
 
-    def timesteps(self):
-        """Return all time steps defined for the IAMC-style timeseries format.
+    def timeslices(self):
+        """Return all time slices defined for the IAMC-style timeseries format.
 
         Returns
         -------
         :class:`pandas.DataFrame`
         """
-        return pd.DataFrame(self._backend.get_timesteps(),
-                            columns=FIELDS['get_timesteps'])
+        return pd.DataFrame(self._backend.get_timeslices(),
+                            columns=FIELDS['get_timeslices'])
 
-    def add_timestep(self, name, category, duration):
-        """Define a time step including a category and duration.
+    def add_timeslice(self, name, category, duration):
+        """Define a time slice including a category and duration.
 
         Parameters
         ----------
         name : str
-            Name of the time step.
+            Unique name of the time slice.
         category : str
-            Time step category (e.g. YEARS, MONTHS etc).
+            Time slice category (e.g. COMMON, MONTHS etc).
         duration : float
-            Duration of time step as fraction of year.
+            Duration of time slice as fraction of year.
         """
-        self._backend.add_timestep(name, category, duration)
+        self._backend.add_timeslice(name, category, duration)
 
     def check_access(self, user, models, access='view'):
         """Check access to specific models.

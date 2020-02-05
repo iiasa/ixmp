@@ -271,7 +271,8 @@ class Platform:
         self._backend.set_node(region, synonym=mapped_to)
 
     def timeslices(self):
-        """Return all subannual time slices defined for the IAMC-style timeseries format.
+        """Return all subannual time slices defined for the IAMC-style
+           timeseries format.
 
         Returns
         -------

@@ -83,7 +83,7 @@ class Backend(ABC):
 
     @abstractmethod
     def get_timeslices(self):
-        """Iterate over all time slices stored on the Platform.
+        """Return all subannual timeslices defined on the Platform instance.
 
         Yields
         -------
@@ -105,7 +105,7 @@ class Backend(ABC):
 
     @abstractmethod
     def set_timeslice(self, name, category, duration):
-        """Add a time slice name to the Platform.
+        """Add a subannual time slice to the Platform.
 
         Parameters
         ----------

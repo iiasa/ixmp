@@ -144,7 +144,8 @@ class GAMSModel(Model):
                                       'write to GDX files, e.g. JDBCBackend')
 
         # Invoke GAMS
-        check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
+        cwd = self.temp_dir if self.use_temp_dir else model_file.parent
+        check_call(command, shell=os.name == 'nt', cwd=cwd)
 
         # Read model solution
         backend.read_file(self.out_file, ItemType.MODEL, **s_arg,

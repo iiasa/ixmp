@@ -1143,8 +1143,7 @@ class Scenario(TimeSeries):
         return self._backend('item_get_elements', 'equ', name, filters)
 
     def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, shift_first_model_year=None, platform=None,
-              **kwargs):
+              keep_solution=True, shift_first_model_year=None, platform=None):
         """Clone the current scenario and return the clone.
 
         If the (`model`, `scenario`) given already exist on the
@@ -1178,34 +1177,7 @@ class Scenario(TimeSeries):
             cloned for all years.
         platform : :class:`Platform`, optional
             Platform to clone to (default: current platform)
-        scen : str, optional
-            .. deprecated:: 2.0
-               Use `scenario`.
-        keep_sol : bool, optional
-            .. deprecated:: 2.0
-               Use `keep_solution`.
-        first_model_year : int, optional
-            .. deprecated:: 2.0
-               Use `shift_first_model_year`.
         """
-        if 'keep_sol' in kwargs:
-            warn('`keep_sol` is deprecated and will be removed in the next'
-                 ' release, please use `keep_solution`')
-            keep_solution = kwargs.pop('keep_sol')
-
-        if 'scen' in kwargs:
-            warn('`scen` is deprecated and will be removed in the next'
-                 ' release, please use `scenario`')
-            scenario = kwargs.pop('scen')
-
-        if 'first_model_year' in kwargs:
-            warn('`first_model_year` is deprecated and will be removed in the'
-                 ' next release. Use `shift_first_model_year`.')
-            shift_first_model_year = kwargs.pop('first_model_year')
-
-        if len(kwargs):
-            raise ValueError('Invalid arguments {!r}'.format(kwargs))
-
         if shift_first_model_year is not None:
             if keep_solution:
                 logger().warning('Overriding keep_solution=True for '

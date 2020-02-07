@@ -181,7 +181,11 @@ class JDBCBackend(CachingBackend):
             properties = new_props
         else:
             # ...from arguments
-            properties = _create_properties(**kwargs)
+            try:
+                properties = _create_properties(**kwargs)
+            except TypeError as e:
+                msg = e.args[0].replace('_create_properties', 'JDBCBackend')
+                raise TypeError(msg)
 
         log.info('launching ixmp.Platform connected to {}'
                  .format(properties.getProperty('jdbc.url')))

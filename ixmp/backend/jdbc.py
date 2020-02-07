@@ -133,10 +133,7 @@ class JDBCBackend(CachingBackend):
         Java Virtual Machine arguments. See :meth:`.start_jvm`.
     dbprops : path-like, optional
         With ``driver='oracle'``, the path to a database properties file
-        containing `driver`, `url`, `user`, and `password` information
-    dbtype : str, optional
-        .. deprecated:: 2.0
-           Use `driver`.
+        containing `driver`, `url`, `user`, and `password` information.
     """
     # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
     #    Github repository.
@@ -163,21 +160,6 @@ class JDBCBackend(CachingBackend):
         properties = None
 
         # Handle arguments
-        if 'dbtype' in kwargs:
-            warn("'dbtype' argument to JDBCBackend; use 'driver'",
-                 DeprecationWarning)
-
-            if 'driver' in kwargs:
-                message = ('ambiguous: both driver={driver!r} and '
-                           'dbtype={!r}').format(**kwargs)
-                raise ValueError(message)
-            elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
-                log.info("using platform 'local' for dbtype='hsqldb'")
-                _, kwargs = config.get_platform_info('local')
-                assert kwargs.pop('class') == 'jdbc'
-            else:
-                kwargs['driver'] = kwargs.pop('dbtype').lower()
-
         if 'dbprops' in kwargs:
             # Use an existing file
             dbprops = Path(kwargs.pop('dbprops'))

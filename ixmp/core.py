@@ -605,7 +605,7 @@ class Scenario(TimeSeries):
         else:
             raise ValueError(f'version={version!r}')
 
-        if self.scheme == 'MESSAGE' and isinstance(self, Scenario):
+        if self.scheme == 'MESSAGE' and self.__class__ is Scenario:
             raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
                                'scenario; use message_ix.Scenario().')
 

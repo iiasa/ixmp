@@ -8,14 +8,12 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 from types import SimpleNamespace
-from warnings import warn
 
 import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
 
-from ixmp import config
 from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS, ItemType
@@ -686,7 +684,8 @@ class JDBCBackend(CachingBackend):
             result = result.astype(dtypes)
         elif type == 'set':
             # Index sets
-            result = pd.Series(item.getCol(0, jList))
+            # dtype=object is to silence a warning in pandas 1.0
+            result = pd.Series(item.getCol(0, jList), dtype=object)
         elif type == 'par':
             # Scalar parameters
             result = dict(value=item.getScalarValue().floatValue(),

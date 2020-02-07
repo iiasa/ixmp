@@ -134,10 +134,6 @@ class JDBCBackend(CachingBackend):
     dbprops : path-like, optional
         With ``driver='oracle'``, the path to a database properties file
         containing `driver`, `url`, `user`, and `password` information
-
-        .. deprecated:: 2.0
-           With ``driver='hsqldb'``, the path to a local database, excluding
-           the '.lobs' suffix.
     dbtype : str, optional
         .. deprecated:: 2.0
            Use `driver`.
@@ -190,13 +186,6 @@ class JDBCBackend(CachingBackend):
                 properties = _read_properties(dbprops)
                 if 'jdbc.url' not in properties:
                     raise ValueError('Config file contains no database URL')
-            elif (not dbprops.exists()
-                  and dbprops.with_suffix('.lobs').exists()):
-                # Actually the basename for a HSQLDB
-                warn("Specifying driver='hsqldb' location with 'dbprops'; use"
-                     "'path'", DeprecationWarning)
-                kwargs.setdefault('driver', 'hsqldb')
-                kwargs.setdefault('path', dbprops)
             else:
                 raise FileNotFoundError(dbprops)
 

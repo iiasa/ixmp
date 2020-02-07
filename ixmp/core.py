@@ -36,10 +36,6 @@ class Platform:
     :class:`Scenario` objects tied to a single Platform; to move data between
     platforms, see :meth:`Scenario.clone`.
 
-    .. deprecated:: 2.0
-       Creating a Platform using positional arguments. Use the keyword
-       arguments `name` or `backend`, and optional `backend_args`.
-
     Parameters
     ----------
     name : str
@@ -58,7 +54,7 @@ class Platform:
         'close_db',
     ]
 
-    def __init__(self, *args, name=None, backend=None, **backend_args):
+    def __init__(self, name=None, backend=None, **backend_args):
         if name is None:
             if backend is None and not len(backend_args):
                 # No arguments given: use the default platform config
@@ -74,24 +70,6 @@ class Platform:
         if name:
             # Using a named platform config; retrieve it
             self.name, kwargs = config.get_platform_info(name)
-
-        if len(args):
-            # Handle deprecated positional arguments
-            if backend and backend != 'jdbc':
-                message = ('backend={!r} conflicts with deprecated positional '
-                           'arguments for JDBCBackend (dbprops, dbtype, '
-                           'jvmargs)').format(backend)
-                raise ValueError(message)
-            elif backend is None:
-                # Providing positional args implies JDBCBackend
-                kwargs['class'] = 'jdbc'
-
-            warn('positional arguments to Platform(…) for JDBCBackend. '
-                 'Use keyword arguments driver=, dbprops=, and/or jvmargs=',
-                 DeprecationWarning)
-
-            # Copy positional args to keyword args
-            backend_args.update(zip(['dbprops', 'dbtype', 'jvmargs'], args))
 
         # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)

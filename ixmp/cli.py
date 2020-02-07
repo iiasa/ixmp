@@ -2,6 +2,9 @@ import click
 import ixmp
 
 
+ScenarioClass = ixmp.Scenario
+
+
 @click.group()
 @click.option('--url', metavar='ixmp://PLATFORM/MODEL/SCENARIO[#VERSION]',
               help='Scenario URL.')
@@ -44,7 +47,7 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 
     try:
         # Load the indicated Scenario
-        ctx.obj['scen'] = ixmp.Scenario(mp, ctx.obj['model name'],
+        ctx.obj['scen'] = ScenarioClass(mp, ctx.obj['model name'],
                                         ctx.obj['scenario name'],
                                         version=version)
     except KeyError:

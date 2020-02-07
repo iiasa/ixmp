@@ -76,13 +76,13 @@ def test_write_file(test_mp, tmp_path):
 # test for deprecation warnings.
 INIT_PARAMS = (
     # Handled in JDBCBackend:
-    (['nonexistent.properties'], dict(), raises, ValueError,
-     "platform name 'nonexistent.properties' not among ['default', 'local']"),
+    (['nonexistent.properties'], dict(), raises, ValueError, "platform name "
+     r"'nonexistent.properties' not among \['default'"),
     (['nonexistent.properties'], dict(name='default'), raises, TypeError,
      None),
     # Using the dbtype keyword argument
     ([], dict(dbtype='HSQLDB'), raises, TypeError,
-     "JDBCBackend() got an unexpected keyword argument 'dbtype'"),
+     r"JDBCBackend\(\) got an unexpected keyword argument 'dbtype'"),
     # Initialize with driver='oracle' and path
     ([], dict(backend='jdbc', driver='oracle', path='foo/bar'), raises,
      ValueError, None),

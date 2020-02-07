@@ -889,15 +889,15 @@ class Scenario(TimeSeries):
         self._backend('item_set_elements', 'set', name, elements)
 
     def remove_set(self, name, key=None):
-        """Delete a set from the scenario or remove an element from a set (if
-        key is specified).
+        """Delete set elements or an entire set.
 
         Parameters
         ----------
         name : str
-            name of the set
-        key : dataframe or key list or concatenated string
-            elements to be removed
+            Name of the set to remove (if `key` is :obj:`None`) or from which
+            to remove elements.
+        key : pandas.DataFrame or list of str, optional
+            Elements to be removed from set `name`.
         """
         if key is None:
             self._backend('delete_item', 'set', name)

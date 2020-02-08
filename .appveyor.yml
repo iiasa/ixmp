@@ -14,6 +14,7 @@ cache:
   - C:\Users\appveyor\.conda\pkgs
   - C:\Users\appveyor\AppData\Local\conda\conda\pkgs
   - C:\RLibrary -> .appveyor.yml
+  - C:\R\Library -> .appveyor.yml
 
 init:
   # Download and install the R Appveyor tool from

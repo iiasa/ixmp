@@ -58,6 +58,20 @@ def test_connect_message(caplog, test_data_path):
         'launching ixmp.Platform connected to jdbc:hsqldb:mem://ixmptest'
 
 
+def test_read_file(test_mp, tmp_path):
+    be = test_mp._backend
+
+    with pytest.raises(NotImplementedError):
+        be.read_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, filters={})
+
+
+def test_write_file(test_mp, tmp_path):
+    be = test_mp._backend
+
+    with pytest.raises(NotImplementedError):
+        be.write_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, filters={})
+
+
 DEPRECATED = (
     # Handled in Platform:
     # Positional arguments that clash raise an error

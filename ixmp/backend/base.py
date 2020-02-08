@@ -3,6 +3,7 @@ from copy import copy
 import json
 
 from ixmp.core import TimeSeries, Scenario
+from . import ItemType
 
 
 class Backend(ABC):
@@ -191,6 +192,91 @@ class Backend(ABC):
         --------
         get_units
         """
+
+    def read_file(self, path, item_type: ItemType, **kwargs):
+        """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
+
+        A backend **may** implement read_file for one or more combinations of
+        the `path` and `item_type` methods. For all other combinations, it
+        **must** raise :class:`NotImplementedError`.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File for input. The filename suffix determines the input format:
+
+            ====== ===
+            Suffix Format
+            ====== ===
+            .csv   Comma-separated values
+            .gdx   GAMS data exchange
+            .xlsx  Microsoft Office Open XML spreadsheet
+            ====== ===
+
+        item_type : ItemType
+            Type(s) of items to read.
+
+        Raises
+        ------
+        ValueError
+            If `ts` is not None and 'scenario' is a key in `filters`.
+        NotImplementedError
+            If input of the specified items from the file format is not
+            supported.
+
+        See also
+        --------
+        write_file
+        """
+        # TODO move message_ix.core.read_excel here
+        raise NotImplementedError
+
+    def write_file(self, path, item_type: ItemType, **kwargs):
+        """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
+
+        A backend **may** implement write_file for one or more combinations of
+        the `path` and `item_type` methods. For all other combinations, it
+        **must** raise :class:`NotImplementedError`.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File for output. The filename suffix determines the output format.
+        item_type : ItemType
+            Type(s) of items to write.
+
+        Raises
+        ------
+        ValueError
+            If `ts` is not None and 'scenario' is a key in `filters`.
+        NotImplementedError
+            If output of the specified items to the file format is not
+            supported.
+
+        See also
+        --------
+        read_file
+        """
+        # TODO move message_ix.core.to_excel here
+        raise NotImplementedError
+
+    @staticmethod
+    def _handle_rw_filters(filters: dict):
+        """Helper for :meth:`read_file` and :meth:`write_file`.
+
+        The `filters` argument is unpacked if the 'scenarios' key is a single
+        :class:`TimeSeries` object. A 2-tuple is returned of the object (or
+        :obj:`None`) and the remaining filters.
+        """
+        ts = None
+        filters = copy(filters)
+        try:
+            if isinstance(filters['scenario'], TimeSeries):
+                ts = filters.pop('scenario')
+        except KeyError:
+            pass  # Don't modify filters at all
+
+        return ts, filters
 
     # Methods for ixmp.TimeSeries
 

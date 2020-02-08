@@ -13,25 +13,17 @@ Provided backends
 -----------------
 
 .. automodule:: ixmp.backend
-   :members: BACKENDS
+   :members: BACKENDS, ItemType
 
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
-   :members: read_gdx, write_gdx
+   :members: read_file, write_file
 
    JDBCBackend supports:
 
    - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
    - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
-
-   It has the following methods that are not part of the overall :class:`Backend` API:
-
-   .. autosummary::
-      :nosignatures:
-
-      read_gdx
-      write_gdx
 
    JDBCBackend caches values in memory to improve performance when repeatedly reading data from the same items with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
 
@@ -98,9 +90,11 @@ Backend API
       get_scenarios
       get_units
       open_db
+      read_file
       set_log_level
       set_node
       set_unit
+      write_file
 
    Methods related to :class:`ixmp.TimeSeries`:
 

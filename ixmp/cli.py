@@ -16,15 +16,14 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     # Load the indicated Platform
     if url:
         if dbprops or platform or model or scenario or version:
-            raise click.BadOptionUsage('--platform --model --scenario and/or'
-                                       '--version redundant with --url')
+            raise click.UsageError('--platform --model --scenario and/or '
+                                   '--version redundant with --url')
 
         scen, mp = ixmp.Scenario.from_url(url)
         ctx.obj = dict(scen=scen, mp=mp)
         return
-
-    if dbprops and platform:
-        raise click.BadOptionUsage('give either --platform or --dbprops')
+    elif dbprops and platform:
+        raise click.UsageError('give either --platform or --dbprops')
     elif platform:
         mp = ixmp.Platform(name=platform)
     elif dbprops:
@@ -60,6 +59,9 @@ def report(context, config, key):
     # Import here to avoid importing reporting dependencies when running
     # other commands
     from ixmp.reporting import Reporter
+    if not context:
+        raise click.UsageError('give either --url, --platform or --dbprops '
+                               'before command report')
 
     # Instantiate the Reporter with the Scenario loaded by main()
     r = Reporter.from_scenario(context['scen'])
@@ -135,6 +137,9 @@ def platform(action, name, values):
 def list_command(context, **kwargs):
     """List scenarios on the --platform."""
     from ixmp.utils import format_scenario_list
+    if not context:
+        raise click.UsageError('give either --url, --platform or --dbprops '
+                               'before command list')
 
     print('\n'.join(
         format_scenario_list(

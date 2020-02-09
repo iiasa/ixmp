@@ -1,8 +1,9 @@
 from pathlib import Path
+from pandas.testing import assert_frame_equal
+from click.exceptions import UsageError
 
 import ixmp
 import pandas as pd
-import pandas.testing as pdt
 
 
 def test_main(ixmp_cli, test_mp, tmp_path):
@@ -15,30 +16,31 @@ def test_main(ixmp_cli, test_mp, tmp_path):
         '--dbprops', str(tmp_path),
         'platform', 'list',  # Doesn't get executed; fails in cli.main()
     ]
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 2  # click retcode for bad option usage
+    result = ixmp_cli.invoke(cmd)
+    # Check against click's default exit code for the exception
+    assert result.exit_code == UsageError.exit_code
 
     # Create the file
     tmp_path.write_text('')
 
     # Giving both --platform and --dbprops is bad option usage
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 1
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == UsageError.exit_code
 
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
-    r = ixmp_cli.invoke(cmd[2:])
-    assert 'Config file contains no database URL' in r.exception.args[0]
+    result = ixmp_cli.invoke(cmd[2:])
+    assert 'Config file contains no database URL' in result.exception.args[0]
 
     # --url argument can be given
     cmd = ['--url', 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name),
            'platform', 'list']
-    r = ixmp_cli.invoke(cmd)
-    assert r.exit_code == 0
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0
 
     # --url and other Platform/Scenario specifiers are bad option usage
-    r = ixmp_cli.invoke(cmd + ['--version', '1'])
-    assert r.exit_code == 2
+    result = ixmp_cli.invoke(['--platform', 'foo'] + cmd)
+    assert result.exit_code == UsageError.exit_code
 
 
 def test_config(ixmp_cli):
@@ -60,8 +62,14 @@ def test_config(ixmp_cli):
 
 
 def test_list(ixmp_cli, test_mp):
+    cmd = ['list', '--match', 'foo']
+
+    # 'list' without specifying a platform/scenario is a UsageError
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == UsageError.exit_code
+
     # CLI works; nothing returned with a --match option that matches nothing
-    r = ixmp_cli.invoke(['--platform', test_mp.name, 'list', '--match', 'foo'])
+    r = ixmp_cli.invoke(['--platform', test_mp.name] + cmd)
     assert r.output == """
 0 model name(s)
 0 scenario name(s)
@@ -147,4 +155,10 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         'model': ['canning problem'],
         'scenario': ['standard'],
     })
-    pdt.assert_frame_equal(exp, scen.timeseries())
+    assert_frame_equal(exp, scen.timeseries())
+
+
+def test_report(ixmp_cli):
+    # 'report' without specifying a platform/scenario is a UsageError
+    result = ixmp_cli.invoke(['report', 'key'])
+    assert result.exit_code == UsageError.exit_code

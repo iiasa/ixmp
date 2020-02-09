@@ -229,6 +229,12 @@ class Platform:
         self._backend.set_unit(unit, comment)
 
     def units(self):
+        """Return all units defined on the Platform.
+
+        Returns
+        -------
+        numpy.ndarray of str
+        """
         return self._backend.get_units()
 
     def regions(self):
@@ -410,11 +416,11 @@ class TimeSeries:
         return self._backend('is_default')
 
     def last_update(self):
-        """get the timestamp of the last update/edit of this TimeSeries"""
+        """Get the timestamp of the last update/edit of this TimeSeries."""
         return self._backend('last_update')
 
     def run_id(self):
-        """get the run id of this TimeSeries"""
+        """Get the run id of this TimeSeries."""
         return self._backend('run_id')
 
     # functions for importing and retrieving timeseries data
@@ -699,7 +705,7 @@ class Scenario(TimeSeries):
                 get_func(name)
 
     def idx_sets(self, name):
-        """Return the list of index sets for an item (set, par, var, equ)
+        """Return the list of index sets for an item (set, par, var, equ).
 
         Parameters
         ----------
@@ -709,7 +715,7 @@ class Scenario(TimeSeries):
         return self._backend('item_index', name, 'sets')
 
     def idx_names(self, name):
-        """return the list of index names for an item (set, par, var, equ)
+        """Return the list of index names for an item (set, par, var, equ).
 
         Parameters
         ----------
@@ -883,15 +889,15 @@ class Scenario(TimeSeries):
         self._backend('item_set_elements', 'set', name, elements)
 
     def remove_set(self, name, key=None):
-        """delete a set from the scenario
-        or remove an element from a set (if key is specified)
+        """Delete set elements or an entire set.
 
         Parameters
         ----------
         name : str
-            name of the set
-        key : dataframe or key list or concatenated string
-            elements to be removed
+            Name of the set to remove (if `key` is :obj:`None`) or from which
+            to remove elements.
+        key : pandas.DataFrame or list of str, optional
+            Elements to be removed from set `name`.
         """
         if key is None:
             self._backend('delete_item', 'set', name)
@@ -904,7 +910,7 @@ class Scenario(TimeSeries):
         return self._backend('list_items', 'par')
 
     def has_par(self, name):
-        """check whether the scenario has a parameter with that name"""
+        """Check whether the scenario has a parameter with that name."""
         return name in self.par_list()
 
     def init_par(self, name, idx_sets, idx_names=None):
@@ -1101,11 +1107,11 @@ class Scenario(TimeSeries):
         return self._backend('list_items', 'var')
 
     def has_var(self, name):
-        """check whether the scenario has a variable with that name"""
+        """Check whether the scenario has a variable with that name."""
         return name in self.var_list()
 
     def init_var(self, name, idx_sets=None, idx_names=None):
-        """initialize a new variable in the scenario
+        """Initialize a new variable in the scenario.
 
         Parameters
         ----------
@@ -1119,7 +1125,7 @@ class Scenario(TimeSeries):
         return self._backend('init_item', 'var', name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific variable
+        """Return a dataframe of (filtered) elements for a specific variable.
 
         Parameters
         ----------
@@ -1149,11 +1155,11 @@ class Scenario(TimeSeries):
         return self._backend('init_item', 'equ', name, idx_sets, idx_names)
 
     def has_equ(self, name):
-        """check whether the scenario has an equation with that name"""
+        """Check whether the scenario has an equation with that name."""
         return name in self.equ_list()
 
     def equ(self, name, filters=None, **kwargs):
-        """return a dataframe of (filtered) elements for a specific equation
+        """Return a dataframe of (filtered) elements for a specific equation.
 
         Parameters
         ----------
@@ -1365,7 +1371,7 @@ class Scenario(TimeSeries):
                 break
 
     def get_meta(self, name=None):
-        """get scenario metadata
+        """Get scenario metadata.
 
         Parameters
         ----------
@@ -1376,7 +1382,7 @@ class Scenario(TimeSeries):
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name, value):
-        """set scenario metadata
+        """Set scenario metadata.
 
         Parameters
         ----------

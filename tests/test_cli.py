@@ -17,8 +17,8 @@ def test_main(ixmp_cli, test_mp, tmp_path):
         'platform', 'list',  # Doesn't get executed; fails in cli.main()
     ]
     result = ixmp_cli.invoke(cmd)
-    assert result.exit_code == UsageError.exit_code  # click retcode for bad
-    # option usage
+    # Check against click's default exit code for the exception
+    assert result.exit_code == UsageError.exit_code
 
     # Create the file
     tmp_path.write_text('')
@@ -39,8 +39,8 @@ def test_main(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == 0
 
     # --url and other Platform/Scenario specifiers are bad option usage
-    result = ixmp_cli.invoke(cmd + ['--version', '1'])
-    assert result.exit_code == 2
+    result = ixmp_cli.invoke(['--platform', 'foo'] + cmd)
+    assert result.exit_code == UsageError.exit_code
 
 
 def test_config(ixmp_cli):
@@ -62,8 +62,14 @@ def test_config(ixmp_cli):
 
 
 def test_list(ixmp_cli, test_mp):
+    cmd = ['list', '--match', 'foo']
+
+    # 'list' without specifying a platform/scenario is a UsageError
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == UsageError.exit_code
+
     # CLI works; nothing returned with a --match option that matches nothing
-    r = ixmp_cli.invoke(['--platform', test_mp.name, 'list', '--match', 'foo'])
+    r = ixmp_cli.invoke(['--platform', test_mp.name] + cmd)
     assert r.output == """
 0 model name(s)
 0 scenario name(s)
@@ -150,3 +156,9 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         'scenario': ['standard'],
     })
     assert_frame_equal(exp, scen.timeseries())
+
+
+def test_report(ixmp_cli):
+    # 'report' without specifying a platform/scenario is a UsageError
+    result = ixmp_cli.invoke(['report', 'key'])
+    assert result.exit_code == UsageError.exit_code

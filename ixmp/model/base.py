@@ -57,10 +57,10 @@ class Model(ABC):  # pragma: no cover
         ----------
         scenario : .Scenario
             Scenario object to initialize.
-        items : list of dict
-            Each entry is one ixmp item (set, parameter, equation, or variable)
-            to initialize. Each dict **must** have the key 'ix_type'; one of
-            'set', 'par', 'equ', or 'var'; any other entries are keyword
+        items : dict of (str -> dict)
+            Each key is the name of an ixmp item (set, parameter, equation, or
+            variable) to initialize. Each dict **must** have the key 'ix_type';
+            one of 'set', 'par', 'equ', or 'var'; any other entries are keyword
             arguments to the methods :meth:`.init_set` etc.
 
         See also
@@ -79,7 +79,7 @@ class Model(ABC):  # pragma: no cover
             # attempt raises an exception
             pass
 
-        for item_info in items:
+        for name, item_info in items.items():
             # Copy so that pop() below does not modify *items*
             item_info = item_info.copy()
 
@@ -89,7 +89,7 @@ class Model(ABC):  # pragma: no cover
 
             try:
                 # Add the item
-                init_method(**item_info)
+                init_method(name=name, **item_info)
             except ValueError:
                 # Item already exists
                 pass

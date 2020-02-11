@@ -7,26 +7,26 @@ from ixmp.utils import update_par
 from .gams import GAMSModel
 
 
-ITEMS = (
+ITEMS = {
     # Plants
-    dict(ix_type='set', name='i'),
+    'i': dict(ix_type='set'),
     # Markets
-    dict(ix_type='set', name='j'),
+    'j': dict(ix_type='set'),
     # Capacity of plant i in cases
-    dict(ix_type='par', name='a', idx_sets=['i']),
+    'a': dict(ix_type='par', idx_sets=['i']),
     # Demand at market j in cases
-    dict(ix_type='par', name='b', idx_sets=['j']),
+    'b': dict(ix_type='par', idx_sets=['j']),
     # Distance between plant i and market j
-    dict(ix_type='par', name='d', idx_sets=['i', 'j']),
+    'd': dict(ix_type='par', idx_sets=['i', 'j']),
     # Transport cost per case per 1000 miles
-    dict(ix_type='par', name='f', idx_sets=None),
+    'f': dict(ix_type='par', idx_sets=None),
     # Decision variables and equations
-    dict(ix_type='var', name='x', idx_sets=['i', 'j']),
-    dict(ix_type='var', name='z', idx_sets=None),
-    dict(ix_type='equ', name='cost', idx_sets=None),
-    dict(ix_type='equ', name='demand', idx_sets=['j']),
-    dict(ix_type='equ', name='supply', idx_sets=['i']),
-)
+    'x': dict(ix_type='var', idx_sets=['i', 'j']),
+    'z': dict(ix_type='var', idx_sets=None),
+    'cost': dict(ix_type='equ', idx_sets=None),
+    'demand': dict(ix_type='equ', idx_sets=['j']),
+    'supply': dict(ix_type='equ', idx_sets=['i']),
+}
 
 DATA = {
     'i': ['seattle', 'san-diego'],

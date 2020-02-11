@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 
 
 from ixmp.backend import ItemType
-from ixmp.backend.jdbc import JDBCBackend
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
 

@@ -44,9 +44,7 @@ def test_run_clone(test_mp, test_data_path, caplog):
     # cloning with `keep_solution=False` and `first_model_year`
     # drops the solution and removes all timeseries not marked `meta=True`
     # in the model horizon (i.e, `year >= first_model_year`)
-    with pytest.warns(UserWarning,
-                      match='first_model_year` is deprecated'):
-        scen4 = scen.clone(keep_solution=False, first_model_year=2005)
+    scen4 = scen.clone(keep_solution=False, shift_first_model_year=2005)
     assert np.isnan(scen4.var('z')['lvl'])
     assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
 

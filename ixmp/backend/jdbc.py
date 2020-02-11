@@ -8,14 +8,12 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 from types import SimpleNamespace
-from warnings import warn
 
 import jpype
 from jpype import JClass
 import numpy as np
 import pandas as pd
 
-from ixmp import config
 from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered, islistable
 from . import FIELDS, ItemType
@@ -133,14 +131,7 @@ class JDBCBackend(CachingBackend):
         Java Virtual Machine arguments. See :meth:`.start_jvm`.
     dbprops : path-like, optional
         With ``driver='oracle'``, the path to a database properties file
-        containing `driver`, `url`, `user`, and `password` information
-
-        .. deprecated:: 2.0
-           With ``driver='hsqldb'``, the path to a local database, excluding
-           the '.lobs' suffix.
-    dbtype : str, optional
-        .. deprecated:: 2.0
-           Use `driver`.
+        containing `driver`, `url`, `user`, and `password` information.
     """
     # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
     #    Github repository.
@@ -167,21 +158,6 @@ class JDBCBackend(CachingBackend):
         properties = None
 
         # Handle arguments
-        if 'dbtype' in kwargs:
-            warn("'dbtype' argument to JDBCBackend; use 'driver'",
-                 DeprecationWarning)
-
-            if 'driver' in kwargs:
-                message = ('ambiguous: both driver={driver!r} and '
-                           'dbtype={!r}').format(**kwargs)
-                raise ValueError(message)
-            elif len(kwargs) == 1 and kwargs['dbtype'].lower() == 'hsqldb':
-                log.info("using platform 'local' for dbtype='hsqldb'")
-                _, kwargs = config.get_platform_info('local')
-                assert kwargs.pop('class') == 'jdbc'
-            else:
-                kwargs['driver'] = kwargs.pop('dbtype').lower()
-
         if 'dbprops' in kwargs:
             # Use an existing file
             dbprops = Path(kwargs.pop('dbprops'))
@@ -190,13 +166,6 @@ class JDBCBackend(CachingBackend):
                 properties = _read_properties(dbprops)
                 if 'jdbc.url' not in properties:
                     raise ValueError('Config file contains no database URL')
-            elif (not dbprops.exists()
-                  and dbprops.with_suffix('.lobs').exists()):
-                # Actually the basename for a HSQLDB
-                warn("Specifying driver='hsqldb' location with 'dbprops'; use"
-                     "'path'", DeprecationWarning)
-                kwargs.setdefault('driver', 'hsqldb')
-                kwargs.setdefault('path', dbprops)
             else:
                 raise FileNotFoundError(dbprops)
 
@@ -210,7 +179,11 @@ class JDBCBackend(CachingBackend):
             properties = new_props
         else:
             # ...from arguments
-            properties = _create_properties(**kwargs)
+            try:
+                properties = _create_properties(**kwargs)
+            except TypeError as e:
+                msg = e.args[0].replace('_create_properties', 'JDBCBackend')
+                raise TypeError(msg)
 
         log.info('launching ixmp.Platform connected to {}'
                  .format(properties.getProperty('jdbc.url')))
@@ -711,7 +684,8 @@ class JDBCBackend(CachingBackend):
             result = result.astype(dtypes)
         elif type == 'set':
             # Index sets
-            result = pd.Series(item.getCol(0, jList))
+            # dtype=object is to silence a warning in pandas 1.0
+            result = pd.Series(item.getCol(0, jList), dtype=object)
         elif type == 'par':
             # Scalar parameters
             result = dict(value=item.getScalarValue().floatValue(),

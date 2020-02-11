@@ -166,10 +166,8 @@ When imported, :mod:`ixmp` reads configuration from the first file named
 
 1. The directory given by the environment variable ``IXMP_DATA``, if
    defined,
-2. ``${XDG_DATA_HOME}/ixmp``, if the environment variable is defined,
-3. ``$HOME/.local/share/ixmp``, or
-4. ``$HOME/.local/ixmp`` (deprecated; retained for compatibility with ixmp
-   <= 1.1).
+2. ``${XDG_DATA_HOME}/ixmp``, if the environment variable is defined, or
+3. ``$HOME/.local/share/ixmp``.
 
 .. tip::
    For most users, #2 or #3 is a sensible default; platform information for many local and remote databases can be stored in ``config.json`` and retrieved by name.

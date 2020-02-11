@@ -72,20 +72,18 @@ def test_write_file(test_mp, tmp_path):
         be.write_file(tmp_path / 'test.csv', ixmp.ItemType.ALL, filters={})
 
 
-DEPRECATED = (
-    # Handled in Platform:
-    # Positional arguments that clash raise an error
-    (['nonexistent.properties'], dict(backend='foo'), raises, ValueError,
-     "backend='foo' conflicts with deprecated positional arguments for "
-     "JDBCBackend"),
-
+# This variable formerly had 'warns' as the third element in some tuples, to
+# test for deprecation warnings.
+INIT_PARAMS = (
     # Handled in JDBCBackend:
-    (['nonexistent.properties'], dict(), raises, FileNotFoundError, None),
-    ([], dict(dbtype='HSQLDB'), warns, DeprecationWarning,
-     r"'dbtype' argument to JDBCBackend; use 'driver'"),
-    # Initialize with an invalid dbtype
-    ([], dict(dbtype='foo'), raises, ValueError, None),
-    # …with driver='oracle' and path
+    (['nonexistent.properties'], dict(), raises, ValueError, "platform name "
+     r"'nonexistent.properties' not among \['default'"),
+    (['nonexistent.properties'], dict(name='default'), raises, TypeError,
+     None),
+    # Using the dbtype keyword argument
+    ([], dict(dbtype='HSQLDB'), raises, TypeError,
+     r"JDBCBackend\(\) got an unexpected keyword argument 'dbtype'"),
+    # Initialize with driver='oracle' and path
     ([], dict(backend='jdbc', driver='oracle', path='foo/bar'), raises,
      ValueError, None),
     # …with driver='oracle' and no url
@@ -98,19 +96,11 @@ DEPRECATED = (
 )
 
 
-@pytest.mark.parametrize('args,kwargs,action,kind,match', DEPRECATED)
-def test_deprecated(tmp_env, args, kwargs, action, kind, match):
-    """Deprecated semantics for JDBCBackend."""
+@pytest.mark.parametrize('args,kwargs,action,kind,match', INIT_PARAMS)
+def test_init(tmp_env, args, kwargs, action, kind, match):
+    """Semantics for JDBCBackend.__init__()."""
     with action(kind, match=match):
         ixmp.Platform(*args, **kwargs)
-
-
-def test_deprecated_warns(tmp_env):
-    # Both warns AND raises
-    with pytest.raises(FileNotFoundError):
-        with pytest.warns(DeprecationWarning, match="positional arguments to "
-                          "Platform(…) for JDBCBackend"):
-            ixmp.Platform('nonexistent.properties', name='default')
 
 
 def test_gh_216(test_mp):

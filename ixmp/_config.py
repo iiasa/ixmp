@@ -33,7 +33,6 @@ def _iter_config_paths():
         pass
 
     yield 'default', Path.home() / '.local' / 'share' / 'ixmp'
-    yield 'default (ixmp<=1.1)', Path.home() / '.local' / 'ixmp'
 
 
 # Recognized configuration keys; name -> (type, default value)

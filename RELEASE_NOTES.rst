@@ -6,7 +6,10 @@ All changes
 
 - `#254 <https://github.com/iiasa/ixmp/pull/254>`_: Remove deprecated items:
 
-  - `~/.local/ixmp` as a configuration location.
+  - ~/.local/ixmp as a configuration location.
+  - positional and ``dbtype=`` arguments to :class:`.Platform`/:class:`.JDBCBackend`.
+  - ``first_model_year=``, ``keep_sol=``, and ``scen=`` arguments to :meth:`~.Scenario.clone`.
+  - ``rixmp.legacy``, an earlier version of :ref:`the R interface <rixmp>` that did not use reticulate.
 - `#261 <https://github.com/iiasa/ixmp/pull/261>`_: Increase minimum pandas
   version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
 - `#243 <https://github.com/iiasa/ixmp/pull/243>`_: Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV.

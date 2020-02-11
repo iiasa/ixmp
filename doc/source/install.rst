@@ -107,31 +107,24 @@ Install *ixmp* from source
 Install ``rixmp``
 -----------------
 
-First, read the :ref:`rixmp documentation <rixmp>` to understand the difference between ``rixmp`` and ``rixmp.legacy``.
+See also the :ref:`rixmp documentation <rixmp>`.
 
 1. `Install R <https://www.r-project.org>`_.
 
    .. warning::
-      Ensure the the R version installed is either 32 OR 64 bit (and >= 3.3.0),
-      consistently with GAMS and Java. Having both 32 and 64 bit generates error.
+      Ensure the the R version installed is either 32- *or* 64-bit (and >= 3.3.0), consistently with GAMS and Java.
+      Having both 32- and 64-bit versions of R, or mixed 32- and 64-bit versions of different packages, can cause errors.
 
-2. Depending on your platform:
+2. Enter the directory ``rixmp/`` and use R to build and install the package and its dependencies, including reticulate_::
 
-   - (Windows) Run the script ``install.bat`` included with ixmp.
+   $ cd rixmp
+   $ Rscript -e "install.packages(c('knitr', 'reticulate'))"
+   $ R CMD build .
+   $ R CMD INSTALL rixmp_*
 
-   - (Linux and macOS) Enter the directory ``rixmp/`` and use R to build and
-     install the package and its dependencies, including reticulate_::
+3. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
 
-      $ cd rixmp
-      $ Rscript -e "install.packages(c('knitr', 'reticulate'))"
-      $ R CMD build .
-      $ R CMD INSTALL *.tar.gz
-
-3. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_
-   and add the path to the environment variables.
-
-4. (Optional) For working with Jupyter notebooks using R, install the
-   `IR kernel <https://irkernel.github.io>`_.
+4. (Optional) For working with Jupyter notebooks using R, install the `IR kernel <https://irkernel.github.io>`_.
 
 .. _reticulate: https://rstudio.github.io/reticulate/
 
@@ -161,10 +154,6 @@ Users developing models using existing *ixmp* functionality **should not** need 
 
     .. warning:: Do not overwrite the existing `PATH` environment variable, but
        add to the list of existing paths.
-
-- (Windows) **C++ compiler.**
-
-   - For Python 3: http://landinghub.visualstudio.com/visual-cpp-build-tools
 
 - **Git.** Use one of:
 

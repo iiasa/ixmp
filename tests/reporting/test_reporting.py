@@ -4,12 +4,12 @@ import os
 import ixmp
 import numpy as np
 import pandas as pd
+import pint
 import pytest
 import xarray as xr
 
 import ixmp.reporting
 from ixmp.reporting import (
-    UNITS,
     RENAME_DIMS,
     ComputationError,
     KeyExistsError,
@@ -39,6 +39,11 @@ def scenario(test_mp):
     scen.add_timeseries(TS_DF)
     scen.commit('importing a testing timeseries')
     return scen
+
+
+@pytest.fixture(scope='session')
+def ureg():
+    yield pint.get_application_registry()
 
 
 def test_reporting_configure(test_mp, test_data_path):
@@ -108,7 +113,7 @@ def test_reporter_add():
     assert 'foo:b' in r
 
 
-def test_reporter_add_product(test_mp):
+def test_reporter_add_product(test_mp, ureg):
     scen = ixmp.Scenario(test_mp, 'reporter_add_product',
                          'reporter_add_product', 'new')
     *_, x = add_test_data(scen)
@@ -122,7 +127,7 @@ def test_reporter_add_product(test_mp):
 
     # Product has the expected value
     exp = as_quantity(x * x)
-    exp.attrs['_unit'] = UNITS('kilogram ** 2').units
+    exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
 
 
@@ -134,7 +139,7 @@ def test_reporter_from_scenario(scenario):
     assert 'scenario' in r.graph
 
 
-def test_reporter_from_dantzig(test_mp, test_data_path):
+def test_reporter_from_dantzig(test_mp, test_data_path, ureg):
     scen = make_dantzig(test_mp, solve=test_data_path)
 
     # Reporter.from_scenario can handle the Dantzig problem
@@ -144,7 +149,7 @@ def test_reporter_from_dantzig(test_mp, test_data_path):
     d_i = rep.get('d:i')
 
     # Units pass through summation
-    assert d_i.attrs['_unit'] == UNITS.parse_units('km')
+    assert d_i.attrs['_unit'] == ureg.parse_units('km')
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
@@ -361,7 +366,7 @@ def test_reporter_full_key():
     assert r.full_key('a::foo') == 'a:i-j-k:foo'
 
 
-def test_reporting_units():
+def test_reporting_units(ureg):
     """Test handling of units within Reporter computations."""
     r = Reporter()
 
@@ -376,15 +381,15 @@ def test_reporting_units():
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
-    assert r.get('energy').attrs['_unit'] == UNITS.parse_units('MJ')
+    assert r.get('energy').attrs['_unit'] == ureg.parse_units('MJ')
 
     # Units are derived for a ratio of two quantities
     r.add('power', (computations.ratio, 'energy:x', 'time'))
-    assert r.get('power').attrs['_unit'] == UNITS.parse_units('MJ/hour')
+    assert r.get('power').attrs['_unit'] == ureg.parse_units('MJ/hour')
 
     # Product of dimensioned and dimensionless quantities keeps the former
     r.add('energy2', (computations.product, 'energy:x', 'efficiency'))
-    assert r.get('energy2').attrs['_unit'] == UNITS.parse_units('MJ')
+    assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
 
 
 def test_reporting_platform_units(test_mp, caplog):

@@ -39,7 +39,6 @@ from .key import Key
 from .utils import (
     REPLACE_UNITS,
     RENAME_DIMS,
-    UNITS,
     dims_for_qty,
 )
 
@@ -575,8 +574,7 @@ def configure(path=None, **config):
     """Configure reporting globally.
 
     Modifies global variables that affect the behaviour of *all* Reporters and
-    computations, namely :obj:`.RENAME_DIMS`, :obj:`.REPLACE_UNITS` and
-    :obj:`.UNITS`.
+    computations, namely :obj:`.RENAME_DIMS` and :obj:`.REPLACE_UNITS`.
 
     Valid configuration keys—passed as *config* keyword arguments—include:
 
@@ -587,9 +585,9 @@ def configure(path=None, **config):
 
         - **replace** (mapping of str -> str): replace units before they are
           parsed by :doc:`pint <pint:index>`. Added to :obj:`.REPLACE_UNITS`.
-        - **define** (:class:`str`): block of unit definitions, added to
-          :obj:`.UNITS` so that units are recognized by pint. See the
-          :ref:`pint documentation <pint:defining>`.
+        - **define** (:class:`str`): block of unit definitions, added to the
+          :mod:`pint` application registry so that units are recognized. See
+          the pint :ref:`documentation on defining units <pint:defining>`.
 
     rename_dims : mapping of str -> str
         Update :obj:`.RENAME_DIMS`.
@@ -605,9 +603,10 @@ def configure(path=None, **config):
     units = config.get('units', {})
 
     # Define units
+    ureg = pint.get_application_registry()
     try:
         print(units['define'])
-        UNITS.define(units['define'].strip())
+        ureg.define(units['define'].strip())
     except KeyError:
         pass
     except pint.DefinitionSyntaxError as e:

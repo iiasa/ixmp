@@ -6,11 +6,11 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+import pint
 import xarray as xr
 
 from .quantity import AttrSeries, Quantity, as_quantity
 from .utils import (
-    UNITS,
     RENAME_DIMS,
     dims_for_qty,
     collect_units,
@@ -64,6 +64,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     """
     log.debug('Retrieving data for {}'.format(name))
 
+    ureg = pint.get_application_registry()
+
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
     filters = config.get('filters', None)
@@ -112,7 +114,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         if 'mixed units' in e.args[0]:
             # Discard mixed units
             log.warning(f'{name}: {e.args[0]} discarded')
-            attrs = {'_unit': UNITS.parse_units('')}
+            attrs = {'_unit': ureg.parse_units('')}
         else:
             # Raise all other ValueErrors
             raise
@@ -124,7 +126,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         pass
     else:
         log.info(f"{name}: replace units {attrs['_unit']} with {new_unit}")
-        attrs['_unit'] = UNITS.parse_units(new_unit)
+        attrs['_unit'] = ureg.parse_units(new_unit)
 
     # Set index if 1 or more dimensions
     if len(dims):

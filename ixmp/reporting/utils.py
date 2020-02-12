@@ -20,11 +20,6 @@ REPLACE_UNITS = {
 #: Mapping from Scenario dimension name -> preferred dimension name.
 RENAME_DIMS = {}
 
-#: :doc:`pint <pint:index>` unit registry for processing quantity units.
-#: All units handled by :mod:`ixmp.reporting` must be either standard SI units,
-#: or added to this registry.
-UNITS = pint.UnitRegistry()
-
 
 def clean_units(input_string):
     """Tolerate messy strings for units.
@@ -44,14 +39,16 @@ def clean_units(input_string):
 
 def collect_units(*args):
     """Return an list of '_unit' attributes for *args*."""
+    ureg = pint.get_application_registry()
+
     for arg in args:
         if '_unit' in arg.attrs:
             # Convert units if necessary
             if isinstance(arg.attrs['_unit'], str):
-                arg.attrs['_unit'] = UNITS.parse_units(arg.attrs['_unit'])
+                arg.attrs['_unit'] = ureg.parse_units(arg.attrs['_unit'])
         else:
             log.debug('assuming {} is unitless'.format(arg))
-            arg.attrs['_unit'] = UNITS.parse_units('')
+            arg.attrs['_unit'] = ureg.parse_units('')
 
     return [arg.attrs['_unit'] for arg in args]
 
@@ -100,6 +97,8 @@ def get_reversed_rename_dims():
 
 def parse_units(units_series):
     """Return a :class:`pint.Unit` for a :class:`pd.Series` of strings."""
+    ureg = pint.get_application_registry()
+
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
@@ -115,16 +114,16 @@ def parse_units(units_series):
     # Parse units
     try:
         unit = clean_units(unit[0])
-        unit = UNITS.parse_units(unit)
+        unit = ureg.parse_units(unit)
     except IndexError:
         # Quantity has no unit
-        unit = UNITS.parse_units('')
+        unit = ureg.parse_units('')
     except pint.UndefinedUnitError:
         # Unit(s) do not exist; define them in the UnitRegistry
 
         # Split possible compound units
         for u in unit.split('/'):
-            if u in dir(UNITS):
+            if u in dir(ureg):
                 # Unit already defined
                 continue
 
@@ -133,11 +132,11 @@ def parse_units(units_series):
             log.info('Add unit definition: {}'.format(definition))
 
             # This line will fail silently for units like 'G$'
-            UNITS.define(definition)
+            ureg.define(definition)
 
         # Try to parse again
         try:
-            unit = UNITS.parse_units(unit)
+            unit = ureg.parse_units(unit)
         except pint.UndefinedUnitError:
             # Handle the silent failure of define(), above
             raise invalid(unit) from None

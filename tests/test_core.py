@@ -40,9 +40,13 @@ def test_new_scen(test_mp):
     scen = ixmp.Scenario(test_mp, *can_args, version='new')
     assert scen.version == 0
 
-    # Create a Scenario with scheme='MESSAGE'
-    scen2 = ixmp.Scenario(test_mp, model='foo', scenario='bar',
-                          scheme='MESSAGE', version='new')
+    # A scenario with scheme='MESSAGE' can only be created with a subclass
+    class Scenario(ixmp.Scenario):
+        pass
+
+    scen2 = Scenario(test_mp, model='foo', scenario='bar',
+                     scheme='MESSAGE', version='new')
+
     # JDBCBackend complains unless these items are added
     scen2.add_set('technology', 't')
     scen2.add_set('year', '2000')
@@ -54,9 +58,7 @@ def test_new_scen(test_mp):
     with pytest.raises(RuntimeError):
         ixmp.Scenario(test_mp, model='foo', scenario='bar')
 
-    # …but loading with any subclass of ixmp.Scenario is fine
-    class Scenario(ixmp.Scenario):
-        pass
+    # …but loading with a subclass of ixmp.Scenario is fine
     Scenario(test_mp, model='foo', scenario='bar')
 
 

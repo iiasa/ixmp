@@ -102,8 +102,7 @@ def parse_units(units_series):
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
-        # py3.5 compat: could use an f-string here
-        raise ValueError('mixed units {!r}'.format(list(unit)))
+        raise ValueError(f'mixed units {list(unit)!r}')
 
     # Helper method to return an intelligible exception
     def invalid(unit):
@@ -127,9 +126,8 @@ def parse_units(units_series):
                 # Unit already defined
                 continue
 
-            # py3.5 compat: could use f-strings here
-            definition = '{0} = [{0}]'.format(u)
-            log.info('Add unit definition: {}'.format(definition))
+            definition = f'{u} = [{u}]'
+            log.info(f'Add unit definition: {definition}')
 
             # This line will fail silently for units like 'G$'
             ureg.define(definition)

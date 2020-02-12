@@ -53,16 +53,18 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         and 'level' otherwise.
     scenario : ixmp.Scenario
         Scenario containing data to be retrieved.
-    filters : dict, optional
-        Mapping from dimensions to iterables of allowed values along each
-        dimension.
+    config : dict of (str -> dict)
+        The key 'filters' may contain a mapping from dimensions to iterables
+        of allowed values along each dimension.
+        The key 'units'/'apply' may contain units to apply to the quantity; any
+        such units overwrite existing units, without conversion.
 
     Returns
     -------
     :class:`Quantity`
         Data for *name*.
     """
-    log.debug('Retrieving data for {}'.format(name))
+    log.debug(f'{name}: retrieve data')
 
     ureg = pint.get_application_registry()
 
@@ -239,9 +241,6 @@ def disaggregate_shares(quantity, shares):
 
 def product(*quantities):
     """Return the product of any number of *quantities*."""
-    if len(quantities) == 1:
-        quantities = [quantities]
-
     # Iterator over (quantity, unit) tuples
     items = zip(quantities, collect_units(*quantities))
 
@@ -265,7 +264,7 @@ def product(*quantities):
     for q, u in items:
         if Quantity is AttrSeries:
             result = (result * _align_levels(result, q)).dropna()
-        else:
+        else:  # pragma: no cover
             result = result * q
         u_result *= u
 

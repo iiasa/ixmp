@@ -2,21 +2,27 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
+import logging
 from pathlib import Path
 
 import pandas as pd
 import xarray as xr
 
+from .quantity import AttrSeries, Quantity, as_quantity
 from .utils import (
-    AttrSeries,
-    Quantity,
+    UNITS,
+    RENAME_DIMS,
+    dims_for_qty,
     collect_units,
     filter_concat_args,
+    get_reversed_rename_dims,
+    parse_units,
 )
 
 __all__ = [
     'aggregate',
     'concat',
+    'data_for_quantity',
     'disaggregate_shares',
     'load_file',
     'product',
@@ -26,8 +32,129 @@ __all__ = [
 ]
 
 
+log = logging.getLogger(__name__)
+
+
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
+
+
+def data_for_quantity(ix_type, name, column, scenario, config):
+    """Retrieve data from *scenario*.
+
+    Parameters
+    ----------
+    ix_type : 'equ' or 'par' or 'var'
+        Type of the ixmp object.
+    name : str
+        Name of the ixmp object.
+    column : 'mrg' or 'lvl' or 'value'
+        Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,
+        and 'level' otherwise.
+    scenario : ixmp.Scenario
+        Scenario containing data to be retrieved.
+    filters : dict, optional
+        Mapping from dimensions to iterables of allowed values along each
+        dimension.
+
+    Returns
+    -------
+    :class:`Quantity`
+        Data for *name*.
+    """
+    log.debug('Retrieving data for {}'.format(name))
+
+    # Only use the relevant filters
+    idx_names = scenario.idx_names(name)
+    filters = config.get('filters', None)
+    if filters:
+        # Dimensions of the object
+        dims = dims_for_qty(idx_names)
+
+        # Mapping from renamed dimensions to Scenario dimension names
+        MAP = get_reversed_rename_dims()
+
+        filters_to_use = {}
+        for dim, values in filters.items():
+            if dim in dims:
+                # *dim* is in this ixmp object, so the filter can be used
+                filters_to_use[MAP.get(dim, dim)] = values
+
+        filters = filters_to_use
+
+    # Retrieve quantity data
+    data = getattr(scenario, ix_type)(name, filters)
+
+    # ixmp/GAMS scalar is not returned as pd.DataFrame
+    if isinstance(data, dict):
+        data = pd.DataFrame.from_records([data])
+
+    # Warn if no values are returned.
+    # TODO construct an empty Quantity with the correct dimensions *even if* no
+    #      values are returned.
+    if len(data) == 0:
+        log.warning(f'0 values for {ix_type} {name!r} using filters:'
+                    f'\n  {filters!r}\n  Subsequent computations may fail.')
+
+    # Convert categorical dtype to str
+    data = data.astype({col: str for col in idx_names})
+
+    # List of the dimensions
+    dims = dims_for_qty(data)
+
+    # Remove the unit from the DataFrame
+    try:
+        attrs = {'_unit': parse_units(data.pop('unit'))}
+    except KeyError:
+        # 'equ' are returned without units
+        attrs = {}
+    except ValueError as e:
+        if 'mixed units' in e.args[0]:
+            # Discard mixed units
+            log.warning(f'{name}: {e.args[0]} discarded')
+            attrs = {'_unit': UNITS.parse_units('')}
+        else:
+            # Raise all other ValueErrors
+            raise
+
+    # Apply units
+    try:
+        new_unit = config['units']['apply'][name]
+    except KeyError:
+        pass
+    else:
+        log.info(f"{name}: replace units {attrs['_unit']} with {new_unit}")
+        attrs['_unit'] = UNITS.parse_units(new_unit)
+
+    # Set index if 1 or more dimensions
+    if len(dims):
+        # First rename, then set index
+        data = data.rename(columns=RENAME_DIMS) \
+                   .set_index(dims)
+
+    # Check sparseness
+    # try:
+    #     shape = list(map(len, data.index.levels))
+    # except AttributeError:
+    #     shape = [data.index.size]
+    # size = reduce(mul, shape)
+    # filled = 100 * len(data) / size if size else 'NA'
+    # need_to_chunk = size > 1e7 and filled < 1
+    # info = (name, shape, filled, size, need_to_chunk)
+    # log.debug(' '.join(map(str, info)))
+
+    # Convert to a Quantity, assign attrbutes and name
+    qty = as_quantity(data[column]) \
+        .assign_attrs(attrs) \
+        .rename(name + ('-margin' if column == 'mrg' else ''))
+
+    try:
+        # Remove length-1 dimensions for scalars
+        qty = qty.squeeze('index', drop=True)
+    except KeyError:
+        pass
+
+    return qty
 
 
 # Calculation

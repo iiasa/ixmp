@@ -345,7 +345,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     from xarray import DataArray
     from xarray.testing import assert_equal as assert_xr_equal
 
-    from .reporting.utils import AttrSeries, Quantity, as_quantity
+    from .reporting.quantity import AttrSeries, Quantity, as_quantity
 
     if Quantity is AttrSeries:
         # Convert pd.Series automatically
@@ -370,7 +370,7 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
     from xarray import DataArray
     from xarray.testing import assert_allclose as assert_xr_allclose
 
-    from .reporting.utils import AttrSeries, Quantity, as_quantity
+    from .reporting.quantity import AttrSeries, Quantity, as_quantity
 
     if Quantity is AttrSeries:
         # Convert pd.Series automatically

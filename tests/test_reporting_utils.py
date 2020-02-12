@@ -4,7 +4,7 @@ import pytest
 import xarray as xr
 
 from ixmp.reporting import Key
-from ixmp.reporting.utils import AttrSeries, Quantity, as_quantity
+from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
 from ixmp.testing import assert_qty_allclose, assert_qty_equal
 
 

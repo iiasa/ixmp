@@ -29,17 +29,18 @@ import dask
 # from dask.threaded import get as dask_get
 from dask import get as dask_get
 from dask.optimization import cull
-
+import pint
 import yaml
 
 from . import computations
 from .describe import describe_recursive
+from .exceptions import ComputationError
 from .key import Key
 from .utils import (
     REPLACE_UNITS,
     RENAME_DIMS,
     UNITS,
-    keys_for_quantity,
+    dims_for_qty,
 )
 
 
@@ -63,7 +64,7 @@ class Reporter:
     # A7. Renaming of outputs.
 
     #: A dask-format :doc:`graph <graphs>`.
-    graph = {'filters': None}
+    graph = {'config': {}}
 
     #: The default reporting key.
     default_key = None
@@ -72,7 +73,7 @@ class Reporter:
     _index = {}
 
     def __init__(self, **kwargs):
-        self.graph = {'filters': None}
+        self.graph = {'config': {}}
         self._index = {}
         self.configure(**kwargs)
 
@@ -172,6 +173,9 @@ class Reporter:
         """
         sections = {'default', 'files', 'alias', 'filters'}
         config = _config_args(path, config, sections=sections)
+
+        # Store all configuration in the graph itself
+        self.graph['config'] = config.copy()
 
         config_dir = config.pop('config_dir', '.')
 
@@ -390,16 +394,18 @@ class Reporter:
 
             If no arguments are provided, *all* filters are cleared.
         """
-        if self.graph['filters'] is None or len(filters) == 0:
-            self.graph['filters'] = {}
+        self.graph['config'].setdefault('filters', {})
+
+        if len(filters) == 0:
+            self.graph['config']['filters'] = {}
 
         # Update
-        self.graph['filters'].update(filters)
+        self.graph['config']['filters'].update(filters)
 
         # Clear
         for key, value in filters.items():
             if value is None:
-                self.graph['filters'].pop(key, None)
+                self.graph['config']['filters'].pop(key, None)
 
     # ixmp data model manipulations
     def add_product(self, name, *quantities, sums=True):
@@ -569,10 +575,8 @@ def configure(path=None, **config):
     """Configure reporting globally.
 
     Modifies global variables that affect the behaviour of *all* Reporters and
-    computations, namely
-    :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`,
-    :obj:`REPLACE_UNITS <ixmp.reporting.utils.REPLACE_UNITS>`, and
-    :obj:`UNITS <ixmp.reporting.utils.UNITS>`.
+    computations, namely :obj:`.RENAME_DIMS`, :obj:`.REPLACE_UNITS` and
+    :obj:`.UNITS`.
 
     Valid configuration keys—passed as *config* keyword arguments—include:
 
@@ -582,15 +586,13 @@ def configure(path=None, **config):
         Configuration for handling of units. Valid sub-keys include:
 
         - **replace** (mapping of str -> str): replace units before they are
-          parsed by :doc:`pint <pint:index>`. Added to :obj:`REPLACE_UNITS
-          <ixmp.reporting.utils.REPLACE_UNITS>`.
+          parsed by :doc:`pint <pint:index>`. Added to :obj:`.REPLACE_UNITS`.
         - **define** (:class:`str`): block of unit definitions, added to
-          :obj:`UNITS <ixmp.reporting.utils.UNITS>` so that units are
-          recognized by pint. See the :ref:`pint documentation
-          <pint:defining>`.
+          :obj:`.UNITS` so that units are recognized by pint. See the
+          :ref:`pint documentation <pint:defining>`.
 
     rename_dims : mapping of str -> str
-        Update :obj:`RENAME_DIMS <ixmp.reporting.utils.RENAME_DIMS>`.
+        Update :obj:`.RENAME_DIMS`.
 
     Warns
     -----
@@ -603,8 +605,13 @@ def configure(path=None, **config):
     units = config.get('units', {})
 
     # Define units
-    if 'define' in units:
+    try:
+        print(units['define'])
         UNITS.define(units['define'].strip())
+    except KeyError:
+        pass
+    except pint.DefinitionSyntaxError as e:
+        log.warning(e)
 
     # Add replacements
     for old, new in units.get('replace', {}).items():
@@ -638,63 +645,24 @@ def _config_args(path, keys, sections={}):
     return result
 
 
-class ComputationError(Exception):
-    """Wrapper to print intelligible exception information for Reporter.get().
+def keys_for_quantity(ix_type, name, scenario):
+    """Iterate over keys for *name* in *scenario*."""
+    # Retrieve names of the indices of the ixmp item, without loading the data
+    dims = dims_for_qty(scenario.idx_names(name))
 
-    In order to aid in debugging, this helper:
-    - Omits the parts of the stack trace that are internal to dask, and
-    - Gives the key in the Reporter.graph and the computation task that
-      caused the exception.
-    """
-    def __str__(self):
-        from traceback import (
-            TracebackException,
-            format_exception_only,
-            format_list,
-        )
+    # Column for retrieving data
+    column = 'value' if ix_type == 'par' else 'lvl'
 
-        # Move the cause to a non-private attribute
-        self.cause = self.__cause__
+    # A computation to retrieve the data
+    key = Key(name, dims)
+    yield (key, (partial(computations.data_for_quantity, ix_type, name,
+                         column), 'scenario', 'config'))
 
-        # Suppress automatic printing of the cause
-        self.__cause__ = None
+    # Add the marginal values at full resolution, but no aggregates
+    if ix_type == 'equ':
+        yield (Key('{}-margin'.format(name), dims),
+               (partial(computations.data_for_quantity, ix_type, name, 'mrg'),
+                'scenario', 'config'))
 
-        info = None  # Information about the call that triggered the exception
-        frames = []  # Frames for an abbreviated stacktrace
-        dask_internal = True  # Flag if the frame is internal to dask
-
-        # Iterate over frames from the base of the stack
-        tb = TracebackException.from_exception(self.cause, capture_locals=True)
-        for frame in tb.stack:
-            if frame.name == 'execute_task':
-                # Current frame is the dask internal call to execute a task
-
-                # Retrieve information about the key/task that triggered the
-                # exception. These are not the raw values of variables, but
-                # their string repr().
-                info = {name: frame.locals[name] for name in ('key', 'task')}
-
-                # Remaining frames are related to the exception
-                dask_internal = False
-
-            if not dask_internal:
-                # Don't display the locals when printing the traceback
-                frame.locals = None
-
-                # Store the frame for printing the traceback
-                frames.append(frame)
-
-        # Assemble the exception printout
-
-        # Reporter information for debugging
-        lines = [
-            'when computing {key}, using\n\n{task}\n\n'.format(**info),
-            'Use Reporter.describe(...) to trace the computation.\n\n',
-            'Computation traceback:\n',
-        ]
-        # Traceback; omitting a few dask internal calls below execute_task
-        lines.extend(format_list(frames[3:]))
-        # Type and message of the original exception
-        lines.extend(format_exception_only(self.cause.__class__, self.cause))
-
-        return ''.join(lines)
+    # Partial sums
+    yield from key.iter_sums()

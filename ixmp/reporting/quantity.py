@@ -2,6 +2,7 @@ from collections import OrderedDict
 from collections.abc import Collection
 from copy import deepcopy
 
+import numpy
 import pandas as pd
 from pandas.core.generic import NDFrame
 import xarray as xr
@@ -138,3 +139,41 @@ class AttrSeries(pd.Series):
                 object.__setattr__(self, name,
                                    deepcopy(getattr(other, name, None)))
         return self
+
+
+# See also:
+# - test_report_size() for a test that shows how non-sparse xr.DataArray
+#   triggers MemoryError.
+Quantity = AttrSeries
+# Quantity = xr.DataArray
+
+
+def as_attrseries(obj):
+    """Convert obj to an AttrSeries."""
+    return AttrSeries(obj)
+
+
+def as_sparse_xarray(obj):  # pragma: no cover
+    """Convert *obj* to :class:`xarray.DataArray` with sparse.COO storage."""
+    import sparse
+    from xarray.core.dtypes import maybe_promote
+
+    if isinstance(obj, xr.DataArray) and isinstance(obj.data, numpy.ndarray):
+        return xr.DataArray(
+            data=sparse.COO.from_numpy(
+                obj.data,
+                fill_value=maybe_promote(obj.data.dtype)[1]),
+            coords=obj.coords,
+            dims=obj.dims,
+            name=obj.name,
+            attrs=obj.attrs,
+        )
+    elif isinstance(obj, pd.Series):
+        return xr.DataArray.from_series(obj, sparse=True)
+
+    else:
+        print(type(obj), type(obj.data))
+        return obj
+
+
+as_quantity = as_attrseries if Quantity is AttrSeries else as_sparse_xarray

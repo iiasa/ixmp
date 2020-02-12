@@ -19,8 +19,7 @@ from ixmp.reporting import (
     configure,
     computations,
 )
-from ixmp.reporting.attrseries import AttrSeries
-from ixmp.reporting.utils import Quantity, as_quantity
+from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
 from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
 
 
@@ -469,8 +468,8 @@ def test_reporter_describe(test_mp, test_data_path, capsys):
   - data_for_quantity('par', 'd', 'value', ...)
   - 'scenario':
     - <ixmp.core.Scenario object at {id}>
-  - 'filters':
-    - {{}}""".format(id=id_)
+  - 'config':
+    - {{'filters': {{}}}}""".format(id=id_)
     assert desc1 == r.describe('d:i')
 
     # Description was also written to stdout
@@ -680,14 +679,14 @@ def test_reporting_filters(test_mp, tmp_path, caplog):
         assert set(rep.get(x_key).coords['t'].values) == set(labels)
 
     # 1. Set filters directly
-    rep.graph['filters'] = {'t': t_foo}
+    rep.graph['config']['filters'] = {'t': t_foo}
     assert_t_indices(t_foo)
 
     # Reporter can be re-used by changing filters
-    rep.graph['filters'] = {'t': t_bar}
+    rep.graph['config']['filters'] = {'t': t_bar}
     assert_t_indices(t_bar)
 
-    rep.graph['filters'] = {}
+    rep.graph['config']['filters'] = {}
     assert_t_indices(t)
 
     # 2. Set filters using a convenience method

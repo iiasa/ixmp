@@ -752,7 +752,7 @@ def test_filters(test_mp, tmp_path, caplog):
     rep.set_filters(**removed)
 
     # A warning is logged
-    msg = '\n  '.join("0 values for par 'x' using filters", repr(removed),
-                      'Subsequent computations may fail.')
+    msg = '\n  '.join(["0 values for par 'x' using filters:", repr(removed),
+                       'Subsequent computations may fail.'])
     with assert_logs(caplog, msg):
         rep.get(x_key)

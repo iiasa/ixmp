@@ -459,15 +459,19 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
+        if 'time' not in df.columns:
+            df['time'] = 'YEAR'
+
+        index_cols = ['region', 'variable', 'unit', 'time']
         if 'value' in df.columns:
             # Long format; pivot to wide
             df = pd.pivot_table(df,
                                 values='value',
-                                index=['region', 'variable', 'unit'],
+                                index=index_cols,
                                 columns=['year'])
         else:
             # Wide format: set index columns
-            df.set_index(['region', 'variable', 'unit'], inplace=True)
+            df.set_index(index_cols, inplace=True)
 
         # Discard non-numeric columns, e.g. 'model', 'scenario'
         num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
@@ -477,9 +481,9 @@ class TimeSeries:
         df.columns = df.columns.astype(int)
 
         # Add one time series per row
-        for (r, v, u), data in df.iterrows():
+        for (r, v, u, t), data in df.iterrows():
             # Values as float; exclude NA
-            self._backend('set_data', r, v, data.astype(float).dropna(), u,
+            self._backend('set_data', r, v, data.astype(float).dropna(), u, t,
                           meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
@@ -1399,10 +1403,6 @@ def to_iamc_template(df):
         If 'time' is among the column names; or 'region', 'variable', or 'unit'
         is not.
     """
-    if 'time' in df.columns:
-        raise ValueError('sub-annual time slices not supported by '
-                         'ixmp.TimeSeries')
-
     # reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:
         df.reset_index(inplace=True)

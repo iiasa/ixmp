@@ -448,12 +448,14 @@ class Backend(ABC):
             year     int  Year
             value    str  Value
             unit     str  Unit symbol
+            time     str  Name of time slice
             meta     bool :obj:`True` if the data is marked as metadata
             ======== ==== ===
         """
 
     @abstractmethod
-    def set_data(self, ts: TimeSeries, region, variable, data, unit, meta):
+    def set_data(self, ts: TimeSeries,
+                 region, variable, data, unit, time, meta):
         """Store *data*.
 
         Parameters

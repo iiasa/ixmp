@@ -515,14 +515,14 @@ class JDBCBackend(CachingBackend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
-    def set_data(self, ts, region, variable, data, unit, meta):
+    def set_data(self, ts, region, variable, data, unit, time, meta):
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
             # Explicit cast is necessary; otherwise java.lang.Long
             jdata.put(java.Integer(k), v)
 
-        self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
+        self.jindex[ts].addTimeseries(region, variable, time, jdata, unit,
                                       meta)
 
     def set_geo(self, ts, region, variable, time, year, value, unit, meta):

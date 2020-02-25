@@ -53,6 +53,8 @@ def assert_timeseries(scen, exp=TS_DF):
     obs = scen.timeseries(region='World')
     npt.assert_array_equal(exp[cols_str], obs[cols_str])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
+    if 'time' in exp.columns:
+        npt.assert_array_equal(exp[['time']], obs[['time']])
 
 
 def test_new_timeseries_error(test_mp):
@@ -236,3 +238,12 @@ def test_timeseries_remove_all_data(test_mp):
 
     assert scen.timeseries(region='World', variable='Testing').empty
     assert_timeseries(scen, exp)
+
+
+def test_new_subannual_timeseries_as_iamc(test_mp):
+    scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
+    timeseries = TS_DF.pivot_table(values='value', index=cols_str)
+    timeseries['time'] = 'SUMMER'
+    scen.add_timeseries(timeseries)
+    scen.commit('importing a testing timeseries')
+    assert_timeseries(scen, exp=timeseries)

@@ -1,4 +1,4 @@
-"""Tests for ixmp.reporting.utils."""
+"""Tests for ixmp.reporting.quantity."""
 import pandas as pd
 import pytest
 import xarray as xr

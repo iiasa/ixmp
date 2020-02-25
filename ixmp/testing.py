@@ -2,13 +2,37 @@
 
 These include:
 
-- pytest hooks, and 3 fixtures: tmp_env, test_mp, and test_mp_props.
+- pytest hooks, fixtures:
+
+  .. autosummary::
+     :nosignatures:
+
+     ixmp_cli
+     tmp_env
+     test_mp
+     test_mp_props
+
+  …and assertions:
+
+  .. autosummary::
+     assert_logs
+     assert_qty_allclose
+     assert_qty_equal
+
 - Methods for setting up and populating test ixmp databases:
-  create_local_testdb() and dantzig_transport().
+
+  .. autosummary::
+     create_local_testdb
+     make_dantzig
+
 - Methods to run and retrieve values from Jupyter notebooks:
-  run_notebook() and get_cell_output().
+
+  .. autosummary::
+     run_notebook
+     get_cell_output
 
 """
+from contextlib import contextmanager
 import io
 import os
 from pathlib import Path
@@ -255,8 +279,8 @@ def make_dantzig(mp, solve=False):
 nbformat = pytest.importorskip('nbformat')
 
 
-def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
-    """Execute a Jupyter notebook via nbconvert and collect output.
+def run_notebook(nb_path, tmp_path, env=None, kernel=None):
+    """Execute a Jupyter notebook via ``nbconvert`` and collect output.
 
     Modified from
     https://blog.thedataincubator.com/2016/06/testing-jupyter-notebooks/
@@ -267,10 +291,11 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
         The notebook file to execute.
     tmp_path : path-like
         A directory in which to create temporary output.
-    env : dict-like
-        Execution environment for `nbconvert`.
-    kernel : str
-        Jupyter kernel to use. Default: `python2` or `python3`, matching the
+    env : dict-like, optional
+        Execution environment for ``nbconvert``.
+        If not supplied, :obj:`os.environ` is used.
+    kernel : str, optional
+        Jupyter kernel to use. Default: 'python2' or 'python3', matching the
         current Python version.
 
     Returns
@@ -280,8 +305,11 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
     errors : list
         Any execution errors.
     """
+    # Process arguments
+    env = env or os.environ
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
+
     os.chdir(nb_path.parent)
     fname = tmp_path / 'test.ipynb'
     args = [
@@ -334,6 +362,42 @@ def get_cell_output(nb, name_or_index):
 
 
 # Assertions for testing
+
+
+@contextmanager
+def assert_logs(caplog, message_or_messages=None):
+    """Assert that *message_or_messages* appear in logs.
+
+    Use assert_logs as a context manager for a statement that is expected to
+    trigger certain log messages. assert_logs checks that these messages are
+    generated.
+
+    Example
+    -------
+
+    def test_foo(caplog):
+        with assert_logs(caplog, 'a message'):
+            logging.getLogger(__name__).info('this is a message!')
+
+    Parameters
+    ----------
+    caplog : object
+        The pytest caplog fixture.
+    message_or_messages : str or list of str
+        String(s) that must appear in log messages.
+    """
+    # Wrap a string in a list
+    expected = [message_or_messages] if isinstance(message_or_messages, str) \
+        else message_or_messages
+
+    # Record the number of records prior to the managed block
+    first = len(caplog.records)
+
+    try:
+        yield  # Nothing provided to the managed block
+    finally:
+        assert all(any(e in msg for msg in caplog.messages[first:])
+                   for e in expected)
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):

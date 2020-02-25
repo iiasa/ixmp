@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#267 <https://github.com/iiasa/ixmp/pull/267>`_: Apply units to reported quantities.
 - `#254 <https://github.com/iiasa/ixmp/pull/254>`_: Remove deprecated items:
 
   - ~/.local/ixmp as a configuration location.

@@ -20,7 +20,12 @@ from ixmp.reporting import (
     computations,
 )
 from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
-from ixmp.testing import make_dantzig, assert_qty_allclose, assert_qty_equal
+from ixmp.testing import (
+    make_dantzig,
+    assert_logs,
+    assert_qty_allclose,
+    assert_qty_equal,
+)
 
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -46,7 +51,7 @@ def ureg():
     yield pint.get_application_registry()
 
 
-def test_reporting_configure(test_mp, test_data_path):
+def test_configure(test_mp, test_data_path):
     # TODO test: configuration keys 'units', 'replace_units'
 
     # Configure globally; reads 'rename_dims' section
@@ -318,7 +323,7 @@ def test_reporter_file(tmp_path):
     assert p2.read_text() == 'Hello, world!'
 
 
-def test_reporting_file_formats(test_data_path, tmp_path):
+def test_file_formats(test_data_path, tmp_path):
     r = Reporter()
 
     expected = xr.DataArray.from_series(
@@ -366,7 +371,7 @@ def test_reporter_full_key():
     assert r.full_key('a::foo') == 'a:i-j-k:foo'
 
 
-def test_reporting_units(ureg):
+def test_units(ureg):
     """Test handling of units within Reporter computations."""
     r = Reporter()
 
@@ -392,11 +397,11 @@ def test_reporting_units(ureg):
     assert r.get('energy2').attrs['_unit'] == ureg.parse_units('MJ')
 
 
-def test_reporting_platform_units(test_mp, caplog):
+def test_platform_units(test_mp, caplog, ureg):
     """Test handling of units from ixmp.Platform.
 
-    test_mp is loaded with some units includig '-', '???', 'G$', etc. which are
-    not parseable with pint; and others which are not defined in a default
+    test_mp is loaded with some units including '-', '???', 'G$', etc. which
+    are not parseable with pint; and others which are not defined in a default
     pint.UnitRegistry. These tests check the handling of those units.
     """
 
@@ -436,13 +441,9 @@ def test_reporting_platform_units(test_mp, caplog):
     scen.add_par('x', x)
 
     # Unrecognized units are added automatically, with log messages emitted
-    caplog.clear()
-    rep.get(x_key)
-    expected = [
-        'Add unit definition: USD = [USD]',
-        'Add unit definition: kWa = [kWa]',
-    ]
-    assert all(e in [rec.message for rec in caplog.records] for e in expected)
+    with assert_logs(caplog, ['Add unit definition: USD = [USD]',
+                              'Add unit definition: kWa = [kWa]']):
+        rep.get(x_key)
 
     # Mix of recognized/unrecognized units can be added: USD is already in the
     # unit registry, so is not re-added
@@ -451,11 +452,28 @@ def test_reporting_platform_units(test_mp, caplog):
     scen.add_par('x', x)
 
     caplog.clear()
-    rep.get(x_key)
-    assert not any('Add unit definition: USD = [USD]' in
-                   rec.message for rec in caplog.records)
-    assert any('Add unit definition: pkm = [pkm]' in
-               rec.message for rec in caplog.records)
+    with assert_logs(caplog, 'Add unit definition: pkm = [pkm]'):
+        rep.get(x_key)
+    assert not any('Add unit definition: USD = [USD]' in m
+                   for m in caplog.messages)
+
+    # Mixed units are discarded
+    x.loc[0, 'unit'] = 'kg'
+    scen.add_par('x', x)
+
+    with assert_logs(caplog, "x: mixed units ['kg', 'USD/pkm'] discarded"):
+        rep.get(x_key)
+
+    # Configured unit substitutions are applied
+    rep.graph['config']['units'] = dict(apply=dict(x='USD/pkm'))
+
+    with assert_logs(caplog, "x: replace units dimensionless with USD/pkm"):
+        x = rep.get(x_key)
+
+    # Applied units are pint objects with the correct dimensionality
+    unit = x.attrs['_unit']
+    assert isinstance(unit, pint.Unit)
+    assert unit.dimensionality == {'[USD]': 1, '[pkm]': -1}
 
 
 def test_reporter_describe(test_mp, test_data_path, capsys):
@@ -500,7 +518,7 @@ def test_reporter_visualize(test_mp, tmp_path):
     # TODO compare to a specimen
 
 
-def test_reporting_cli(ixmp_cli, test_mp, test_data_path):
+def test_cli(ixmp_cli, test_mp, test_data_path):
     # Put something in the database
     make_dantzig(test_mp)
     test_mp.close_db()
@@ -621,7 +639,7 @@ def add_test_data(scen):
     return t, t_foo, t_bar, x
 
 
-def test_reporting_aggregate(test_mp):
+def test_aggregate(test_mp):
     scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
     t, t_foo, t_bar, x = add_test_data(scen)
 
@@ -669,7 +687,7 @@ def test_reporting_aggregate(test_mp):
         rep.aggregate('x:t-y', 'agg3', {'t': t_groups, 'y': [2000, 2010]})
 
 
-def test_reporting_filters(test_mp, tmp_path, caplog):
+def test_filters(test_mp, tmp_path, caplog):
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, 'Reporting filters', 'Reporting filters',
                          'new')
@@ -734,9 +752,7 @@ def test_reporting_filters(test_mp, tmp_path, caplog):
     rep.set_filters(**removed)
 
     # A warning is logged
-    caplog.clear()
-    rep.get(x_key)
-
-    msg = (f"0 values for par 'x' using filters:\n  {removed!r}\n  "
-           "Subsequent computations may fail.")
-    assert msg == caplog.records[-1].message
+    msg = '\n  '.join("0 values for par 'x' using filters", repr(removed),
+                      'Subsequent computations may fail.')
+    with assert_logs(caplog, msg):
+        rep.get(x_key)

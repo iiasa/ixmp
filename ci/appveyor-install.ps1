@@ -69,10 +69,7 @@ Exec { conda update --quiet --yes conda }
 
 Progress 'Install dependencies'
 Exec { conda install --channel conda-forge --quiet --yes `
-      ixmp[tests] `
-      codecov `
-      "pytest>=3.9" `
-      pytest-cov }
+       ixmp codecov "pytest>=3.9" pytest-cov }
 Exec { conda remove --force --yes ixmp }
 
 # This environment variable change would be performed by 'activate testing'; see

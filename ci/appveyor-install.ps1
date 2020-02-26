@@ -76,6 +76,7 @@ Exec { conda update --quiet --name base conda }
 
 Progress 'Install dependencies'
 Exec { conda install --quiet --file ci/conda-requirements.txt }
+# Exec { pip install --requirement ci/pip-requirements.txt }
 
 # This environment variable change would be performed by 'activate testing'; see
 # https://github.com/conda-forge/openjdk-feedstock/tree/master/recipe/scripts

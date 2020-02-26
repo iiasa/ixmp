@@ -7,7 +7,6 @@ jupyter
 numpydoc
 pandas
 pint
-pretenders>=1.4.4
 pytest-cov
 pytest>=3.9
 PyYAML

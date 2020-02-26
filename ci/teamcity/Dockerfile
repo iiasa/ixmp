@@ -2,7 +2,7 @@ FROM openjdk:11-slim-buster
 
 # installing python 3
 ARG VIRTUAL_ENV=/opt/python3
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip graphviz python3 python3-pip && \
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip graphviz python3 python3-setuptools python3-pip && \
     pip3 install virtualenv && \
     virtualenv -p python3 $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"

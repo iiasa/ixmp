@@ -55,11 +55,18 @@ $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 # TODO test and possibly remove once reticulate 1.14 is released
 $env:RETICULATE_PYTHON = $CR + '\python.exe'
 
-Progress 'Update conda'
+# Configure:
+# - give --yes for every command
+# - search conda-forge in addition to the default channels, for e.g. JPype
+# Search conda-forge in addition to the default channels, for e.g. JPype
+Exec { conda config --set always_yes true }
+Exec { conda config --append channels conda-forge }
+
 # The installed conda on Appveyor workers is 4.5.x, while the latest is >4.7.
 # --quiet here and below suppresses progress bars, which show up as many lines
 # in the Appveyor build logs.
-Exec { conda update --channel conda-forge --quiet --yes conda }
+Progress 'Update conda'
+Exec { conda update --quiet --name base conda }
 
 # NB at the corresponding location, travis-install.sh creates a new conda
 #    environment, and later activates it. This was attempted for Windows/
@@ -68,9 +75,7 @@ Exec { conda update --channel conda-forge --quiet --yes conda }
 #    dependencies are installed into the base conda environment.
 
 Progress 'Install dependencies'
-Exec { conda install --channel conda-forge --quiet --yes `
-       ixmp codecov "pytest>=3.9" pytest-cov }
-Exec { conda remove --force --yes ixmp }
+Exec { conda install --quiet --file ci/conda-requirements.txt }
 
 # This environment variable change would be performed by 'activate testing'; see
 # https://github.com/conda-forge/openjdk-feedstock/tree/master/recipe/scripts

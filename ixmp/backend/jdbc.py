@@ -417,7 +417,10 @@ class JDBCBackend(CachingBackend):
             ts.scheme = jobj.getScheme()
 
     def check_out(self, ts, timeseries_only):
-        self.jindex[ts].checkOut(timeseries_only)
+        try:
+            self.jindex[ts].checkOut(timeseries_only)
+        except java.IxException as e:
+            raise RuntimeError(e)
 
     def commit(self, ts, comment):
         self.jindex[ts].commit(comment)
@@ -724,7 +727,7 @@ class JDBCBackend(CachingBackend):
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from e
             else:  # pragma: no cover
-                raise RuntimeError('unhandled Java exception') from e
+                raise RuntimeError(str(e))
 
         self.cache_invalidate(s, type, name)
 

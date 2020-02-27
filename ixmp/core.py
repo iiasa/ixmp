@@ -595,12 +595,13 @@ class Scenario(TimeSeries):
     scheme = None
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
-                 annotation=None, cache=False):
+                 annotation=None, cache=False, **model_init_args):
         if not isinstance(mp, Platform):
             raise ValueError('mp is not a valid `ixmp.Platform` instance')
 
         # Set attributes
         self.platform = mp
+        self.scheme = scheme
         self.model = model
         self.scenario = scenario
 
@@ -614,6 +615,12 @@ class Scenario(TimeSeries):
         if self.scheme == 'MESSAGE' and self.__class__ is Scenario:
             raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
                                'scenario; use message_ix.Scenario().')
+
+        # Retrieve the Model class correlating to the *scheme*
+        model_class = get_model(scheme).__class__
+
+        # Use the model class to initialize the Scenario
+        model_class.initialize(self, **model_init_args)
 
     @property
     def _cache(self):

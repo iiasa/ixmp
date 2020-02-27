@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
 from subprocess import check_call
+from tempfile import TemporaryDirectory
 
 
 from ixmp.backend import ItemType
-from ixmp.backend.jdbc import JDBCBackend
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
 
@@ -77,15 +77,17 @@ class GAMSModel(Model):
     defaults = {
         'model_file': '{model_name}.gms',
         'case': "{scenario.model}_{scenario.scenario}",
-        'in_file': '{model_name}_in.gdx',
-        'out_file': '{model_name}_out.gdx',
+        'in_file': str(Path('{temp_dir}', '{model_name}_in.gdx')),
+        'out_file': str(Path('{temp_dir}', '{model_name}_out.gdx')),
         'solve_args': ['--in="{in_file}"', '--out="{out_file}"'],
+
         # Not formatted
         'gams_args': ['LogOption=4'],
         'check_solution': True,
         'comment': None,
         'equ_list': None,
         'var_list': None,
+        'use_temp_dir': True,
     }
 
     def __init__(self, name=None, **model_options):
@@ -98,6 +100,12 @@ class GAMSModel(Model):
         backend = scenario.platform._backend
 
         self.scenario = scenario
+
+        if self.use_temp_dir:
+            # Create a temporary directory; automatically deleted at the end of
+            # the context
+            _temp_dir = TemporaryDirectory()
+            self.temp_dir = _temp_dir.name
 
         def format(key):
             value = getattr(self, key)
@@ -135,7 +143,8 @@ class GAMSModel(Model):
                                       'write to GDX files, e.g. JDBCBackend')
 
         # Invoke GAMS
-        check_call(command, shell=os.name == 'nt', cwd=model_file.parent)
+        cwd = self.temp_dir if self.use_temp_dir else model_file.parent
+        check_call(command, shell=os.name == 'nt', cwd=cwd)
 
         # Read model solution
         backend.read_file(self.out_file, ItemType.MODEL, **s_arg,

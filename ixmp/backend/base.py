@@ -296,6 +296,11 @@ class Backend(ABC):
         Returns
         -------
         None
+
+        Raises
+        ------
+        RuntimeError
+            if *ts* is newly created and :meth:`commit` has not been called.
         """
 
     @abstractmethod

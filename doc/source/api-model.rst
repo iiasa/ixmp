@@ -15,17 +15,26 @@ Provided models
 .. automodule:: ixmp.model
    :members: get_model, MODELS
 
+.. currentmodule:: ixmp.model.gams
+
 .. autoclass:: ixmp.model.gams.GAMSModel
+   :members:
+
+.. currentmodule:: ixmp.model.dantzig
+
+.. autoclass:: ixmp.model.dantzig.DantzigModel
    :members:
 
 
 Model API
 ---------
 
-.. autoclass:: ixmp.model.base.Model
-   :members: name, __init__, run
+.. currentmodule:: ixmp.model.base
 
-   In the following, the words REQUIRED, OPTIONAL, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
+.. autoclass:: ixmp.model.base.Model
+   :members: name, __init__, initialize, initialize_items, run
+
+   In the following, the words **required**, **optional**, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
 
    Model is an **abstract** class; this means it MUST be subclassed.
    It has two REQURIED methods that MUST be overridden by subclasses:
@@ -33,4 +42,6 @@ Model API
    .. autosummary::
       name
       __init__
+      initialize
+      initialize_items
       run

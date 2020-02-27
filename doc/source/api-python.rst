@@ -202,6 +202,7 @@ Utilities
 ---------
 
 .. currentmodule:: ixmp.utils
+   :members: update_par
 
 .. automethod:: ixmp.utils.parse_url
 

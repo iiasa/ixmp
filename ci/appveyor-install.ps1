@@ -36,24 +36,13 @@ Exec { gams }
 
 
 Progress 'Set conda version/path'
-# These correspond to folder naming of miniconda installs on appveyor
-# See https://www.appveyor.com/docs/windows-images-software/#miniconda
-$MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
-if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
-
-
-# Conda root path
-$CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
+# Conda root path. Corresponds to naming of Miniconda installs on AppVeyor;
+# see https://www.appveyor.com/docs/windows-images-software/#miniconda
+$CR = 'C:\Miniconda' + $env:PYTHON_VERSION.Replace('.', '') + '-x64'
 $env:CONDA_ROOT = $CR
 
 # Path for executables, e.g. pip, jupyter
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
-
-# Explicit path to Python executable, for reticulate 1.13. This workaround is
-# suggested at rstudio/reticulate#571 to address errors that occurred during
-# devtools::install() in appveyor-install.R
-# TODO test and possibly remove once reticulate 1.14 is released
-$env:RETICULATE_PYTHON = $CR + '\python.exe'
 
 # Configure:
 # - give --yes for every command
@@ -77,8 +66,6 @@ Exec { conda update --quiet --name base conda }
 Progress 'Install dependencies'
 Exec { conda install --quiet --file ci/conda-requirements.txt }
 # Exec { pip install --requirement ci/pip-requirements.txt }
-
-Exec { dir C:\Program Files\Java\jdk12 }
 
 Progress 'Conda information'
 conda info --all

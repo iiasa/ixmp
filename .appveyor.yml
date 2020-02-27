@@ -6,9 +6,7 @@ environment:
   JAVA_HOME: C:\Program Files\Java\jdk13
   matrix:
   - PYTHON_VERSION: "3.6"
-    PYTHON_ARCH: "64"
   - PYTHON_VERSION: "3.7"
-    PYTHON_ARCH: "64"
 
 cache:
 - C:\Miniconda36-x64\pkgs
@@ -17,24 +15,24 @@ cache:
 - C:\Users\appveyor\AppData\Local\conda\conda\pkgs
 
 init:
-  # Download and install the R Appveyor tool from
-  # https://github.com/krlmlr/r-appveyor
-  - ps: |
-        $ErrorActionPreference = "Stop"
-        $Tool = '..\appveyor-tool.ps1'
-        Start-FileDownload http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -FileName $Tool
-        Import-Module $Tool
+# Download and install the R Appveyor tool from
+# https://github.com/krlmlr/r-appveyor
+- ps: |
+      $ErrorActionPreference = "Stop"
+      $Tool = '..\appveyor-tool.ps1'
+      Start-FileDownload http://raw.githubusercontent.com/krlmlr/r-appveyor/master/scripts/appveyor-tool.ps1 -FileName $Tool
+      Import-Module $Tool
 
 install:
-  # Install GAMS, update conda, and install Python and R dependencies
-  - ps: . .\ci\appveyor-install.ps1
-  # Install the Python package
-  - pip install --editable .[docs,tests,tutorial]
-  # Install the R package
-  - Rscript .\ci\appveyor-install.R 2
+# Install GAMS, update conda, and install Python and R dependencies
+- ps: . .\ci\appveyor-install.ps1
+# Install the Python package
+- pip install --editable .[docs,tests,tutorial]
+# Install the R package
+- Rscript .\ci\appveyor-install.R 2
 
 build: false
 
 test_script:
-  # Run tests. These include the equivalent of Travis R tests via test_r.py.
-  - pytest --test-r --verbose
+# Run tests. These include the equivalent of Travis R tests via test_r.py.
+- pytest --test-r --verbose

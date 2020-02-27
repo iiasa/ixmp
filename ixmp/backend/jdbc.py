@@ -334,14 +334,13 @@ class JDBCBackend(CachingBackend):
         Other parameters
         ----------------
         filters : dict of dict of str
-            Restrict items written.
-            Following filters may be used:
+            Restrict items written. The following filters may be used:
+
             - model : str
             - scenario : str
             - variable : list of str
-            - default : bool
-              If :obj:`True`, only data from TimeSeries versions with
-              :meth:`set_default` are written.
+            - default : bool. If :obj:`True`, only data from TimeSeries
+              versions with :meth:`set_default` are written.
 
         See also
         --------

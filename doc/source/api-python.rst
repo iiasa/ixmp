@@ -213,4 +213,6 @@ Testing utilities
 
 .. currentmodule:: ixmp.testing
 
-.. automethod:: ixmp.testing.make_dantzig
+.. automodule:: ixmp.testing
+   :members:
+   :exclude-members: pytest_report_header, pytest_sessionstart

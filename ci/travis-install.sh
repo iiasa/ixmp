@@ -1,32 +1,34 @@
 # Installation script for Linux/macOS CI on Travis
 
-# Install GAMS
+# GAMS: install
 $CACHE/$GAMSFNAME > install.out
 
 # Show location
 which gams
 
 
-# Install and update conda
+# Miniconda: install
 # -b: run in batch mode with no user input
 # -u: update existing installation
 # -p: install prefix
 $CACHE/$CONDAFNAME -b -u -p $HOME/miniconda
-conda update --yes conda
 
-# Create named environment
-conda create -n testing python=$PYVERSION --yes
+# Configure:
+# - give --yes for every command
+# - search conda-forge in addition to the default channels, for e.g. JPype
+conda config --set always_yes true
+conda config --append channels conda-forge
+
+# Update conda and packages in the base environment
+conda update --quiet --name base conda
+
+# Create and activate a named environment for testing
+conda create --name testing python=$PYVERSION pip
+. activate testing
 
 # Install dependencies
-conda install -n testing -c conda-forge --yes \
-      ixmp \
-      codecov \
-      pytest \
-      pytest-cov
-conda remove -n testing --force --yes ixmp
-
-# Activate the environment. Use '.' (POSIX) instead of 'source' (a bashism).
-. activate testing
+conda install --name testing --file ci/conda-requirements.txt
+# pip install --requirement ci/pip-requirements.txt
 
 # Show information
 conda info --all

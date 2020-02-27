@@ -2,13 +2,36 @@
 
 These include:
 
-- pytest hooks, and 3 fixtures: tmp_env, test_mp, and test_mp_props.
+- pytest hooks, fixtures:
+
+  .. autosummary::
+     :nosignatures:
+
+     ixmp_cli
+     tmp_env
+     test_mp
+
+  …and assertions:
+
+  .. autosummary::
+     assert_logs
+     assert_qty_allclose
+     assert_qty_equal
+
 - Methods for setting up and populating test ixmp databases:
-  create_local_testdb() and dantzig_transport().
+
+  .. autosummary::
+     create_local_testdb
+     make_dantzig
+
 - Methods to run and retrieve values from Jupyter notebooks:
-  run_notebook() and get_cell_output().
+
+  .. autosummary::
+     run_notebook
+     get_cell_output
 
 """
+from contextlib import contextmanager
 import io
 import os
 from pathlib import Path
@@ -112,20 +135,6 @@ def create_test_mp(request, path, name):
 
     # Teardown: remove from config
     ixmp_config.remove_platform(platform_name)
-
-
-@pytest.fixture(scope='session')
-def test_mp_props(tmp_path_factory, test_data_path):
-    """Path to a database properties file referring to a test database."""
-    # casting to Path(str()) is a hotfix due to errors upstream in pytest on
-    # Python 3.5 (at least, perhaps others), there is an implicit cast to
-    # python2's pathlib which is incompatible with python3's pathlib Path
-    # objects.  This can be taken out once it is resolved upstream and CI is
-    # setup on multiple Python3.x distros.
-    db_path = Path(str(tmp_path_factory.mktemp('test_mp_props')))
-    test_props = create_local_testdb(db_path, test_data_path / 'testdb')
-
-    yield test_props
 
 
 # Create and populate ixmp databases
@@ -255,8 +264,8 @@ def make_dantzig(mp, solve=False):
 nbformat = pytest.importorskip('nbformat')
 
 
-def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
-    """Execute a Jupyter notebook via nbconvert and collect output.
+def run_notebook(nb_path, tmp_path, env=None, kernel=None):
+    """Execute a Jupyter notebook via ``nbconvert`` and collect output.
 
     Modified from
     https://blog.thedataincubator.com/2016/06/testing-jupyter-notebooks/
@@ -267,10 +276,11 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
         The notebook file to execute.
     tmp_path : path-like
         A directory in which to create temporary output.
-    env : dict-like
-        Execution environment for `nbconvert`.
-    kernel : str
-        Jupyter kernel to use. Default: `python2` or `python3`, matching the
+    env : dict-like, optional
+        Execution environment for ``nbconvert``.
+        If not supplied, :obj:`os.environ` is used.
+    kernel : str, optional
+        Jupyter kernel to use. Default: 'python2' or 'python3', matching the
         current Python version.
 
     Returns
@@ -280,8 +290,11 @@ def run_notebook(nb_path, tmp_path, env=os.environ, kernel=None):
     errors : list
         Any execution errors.
     """
+    # Process arguments
+    env = env or os.environ
     major_version = sys.version_info[0]
     kernel = kernel or 'python{}'.format(major_version)
+
     os.chdir(nb_path.parent)
     fname = tmp_path / 'test.ipynb'
     args = [
@@ -336,6 +349,42 @@ def get_cell_output(nb, name_or_index):
 # Assertions for testing
 
 
+@contextmanager
+def assert_logs(caplog, message_or_messages=None):
+    """Assert that *message_or_messages* appear in logs.
+
+    Use assert_logs as a context manager for a statement that is expected to
+    trigger certain log messages. assert_logs checks that these messages are
+    generated.
+
+    Example
+    -------
+
+    def test_foo(caplog):
+        with assert_logs(caplog, 'a message'):
+            logging.getLogger(__name__).info('this is a message!')
+
+    Parameters
+    ----------
+    caplog : object
+        The pytest caplog fixture.
+    message_or_messages : str or list of str
+        String(s) that must appear in log messages.
+    """
+    # Wrap a string in a list
+    expected = [message_or_messages] if isinstance(message_or_messages, str) \
+        else message_or_messages
+
+    # Record the number of records prior to the managed block
+    first = len(caplog.records)
+
+    try:
+        yield  # Nothing provided to the managed block
+    finally:
+        assert all(any(e in msg for msg in caplog.messages[first:])
+                   for e in expected)
+
+
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     """Assert that Quantity objects *a* and *b* are equal.
 
@@ -345,7 +394,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
     from xarray import DataArray
     from xarray.testing import assert_equal as assert_xr_equal
 
-    from .reporting.utils import AttrSeries, Quantity, as_quantity
+    from .reporting.quantity import AttrSeries, Quantity, as_quantity
 
     if Quantity is AttrSeries:
         # Convert pd.Series automatically
@@ -370,7 +419,7 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
     from xarray import DataArray
     from xarray.testing import assert_allclose as assert_xr_allclose
 
-    from .reporting.utils import AttrSeries, Quantity, as_quantity
+    from .reporting.quantity import AttrSeries, Quantity, as_quantity
 
     if Quantity is AttrSeries:
         # Convert pd.Series automatically

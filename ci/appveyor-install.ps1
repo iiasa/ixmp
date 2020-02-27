@@ -36,30 +36,26 @@ Exec { gams }
 
 
 Progress 'Set conda version/path'
-# These correspond to folder naming of miniconda installs on appveyor
-# See https://www.appveyor.com/docs/windows-images-software/#miniconda
-$MC_PYTHON_VERSION = $env:PYTHON_VERSION.Replace('.', '')
-if ( $env:PYTHON_ARCH -eq '64' ) { $ARCH_LABEL = '-x64' }
-
-
-# Conda root path
-$CR = 'C:\Miniconda' + $MC_PYTHON_VERSION + $ARCH_LABEL
+# Conda root path. Corresponds to naming of Miniconda installs on AppVeyor;
+# see https://www.appveyor.com/docs/windows-images-software/#miniconda
+$CR = 'C:\Miniconda' + $env:PYTHON_VERSION.Replace('.', '') + '-x64'
 $env:CONDA_ROOT = $CR
 
 # Path for executables, e.g. pip, jupyter
 $env:PATH = $CR + ';' + $CR + '\Scripts;' + $CR + '\Library\bin;' + $env:PATH
 
-# Explicit path to Python executable, for reticulate 1.13. This workaround is
-# suggested at rstudio/reticulate#571 to address errors that occurred during
-# devtools::install() in appveyor-install.R
-# TODO test and possibly remove once reticulate 1.14 is released
-$env:RETICULATE_PYTHON = $CR + '\python.exe'
+# Configure:
+# - give --yes for every command
+# - search conda-forge in addition to the default channels, for e.g. JPype
+# Search conda-forge in addition to the default channels, for e.g. JPype
+Exec { conda config --set always_yes true }
+Exec { conda config --append channels conda-forge }
 
-Progress 'Update conda'
 # The installed conda on Appveyor workers is 4.5.x, while the latest is >4.7.
 # --quiet here and below suppresses progress bars, which show up as many lines
 # in the Appveyor build logs.
-Exec { conda update --quiet --yes conda }
+Progress 'Update conda'
+Exec { conda update --quiet --name base conda }
 
 # NB at the corresponding location, travis-install.sh creates a new conda
 #    environment, and later activates it. This was attempted for Windows/
@@ -68,16 +64,8 @@ Exec { conda update --quiet --yes conda }
 #    dependencies are installed into the base conda environment.
 
 Progress 'Install dependencies'
-Exec { conda install --channel conda-forge --quiet --yes `
-      ixmp[tests] `
-      codecov `
-      "pytest>=3.9" `
-      pytest-cov }
-Exec { conda remove --force --yes ixmp }
-
-# This environment variable change would be performed by 'activate testing'; see
-# https://github.com/conda-forge/openjdk-feedstock/tree/master/recipe/scripts
-$env:JAVA_HOME = $CR + '\Library'
+Exec { conda install --quiet --file ci/conda-requirements.txt }
+# Exec { pip install --requirement ci/pip-requirements.txt }
 
 Progress 'Conda information'
 conda info --all

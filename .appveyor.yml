@@ -2,6 +2,8 @@
 # Based on https://github.com/rmcgibbo/python-appveyor-conda-example
 
 environment:
+  # Use the JDK installed on AppVeyor images
+  JAVA_HOME: C:\Program Files\Java\jdk13
   matrix:
   - PYTHON_VERSION: "3.6"
     PYTHON_ARCH: "64"

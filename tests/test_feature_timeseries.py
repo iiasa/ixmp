@@ -12,9 +12,20 @@ test_args = ('Douglas Adams', 'Hitchhiker')
 # string columns and dataframe for timeseries checks
 cols_str = ['region', 'variable', 'unit', 'year']
 
+
+# Test data.
+# NB the columns are in a specific order; model and scenario come last in the
+#    data returned by ixmp.
+# TODO fix this; model and scenario should come first, matching the IAMC order.
 TS_DF = pd.DataFrame.from_dict(dict(
-    region='World', variable='Testing', unit='???', year=[2010, 2020],
-    value=[23.7, 23.8]))
+    region='World',
+    variable='Testing',
+    unit='???',
+    year=[2010, 2020],
+    value=[23.7, 23.8],
+    model='Douglas Adams',
+    scenario='Hitchhiker',
+))
 
 
 # Fixtures
@@ -29,22 +40,14 @@ def ts(mp):
     yield ixmp.TimeSeries(mp, model='Douglas Adams', scenario='Hitchhiker')
 
 
-# Assertions
-def assert_timeseries(ts, exp=TS_DF):
-    obs = ts.timeseries(region='World')
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
-
-
 def test_get_timeseries(ts):
-    assert_timeseries(ts)
+    assert_frame_equal(TS_DF, ts.timeseries())
 
 
 def test_get_timeseries_iamc(ts):
     obs = ts.timeseries(region='World', variable='Testing', iamc=True)
 
-    exp = TS_DF.assign(model='Douglas Adams', scenario='Hitchhiker') \
-        .pivot_table(index=IAMC_IDX, columns='year')['value'] \
+    exp = TS_DF.pivot_table(index=IAMC_IDX, columns='year')['value'] \
         .reset_index() \
         .rename_axis(columns=None)
 
@@ -55,14 +58,14 @@ def test_new_timeseries_as_year_value(test_mp):
     ts = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
     ts.add_timeseries(TS_DF)
     ts.commit('importing a testing timeseries')
-    assert_timeseries(ts)
+    assert_frame_equal(TS_DF, ts.timeseries())
 
 
 def test_new_timeseries_as_iamc(test_mp):
     ts = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
-    assert_timeseries(ts)
+    assert_frame_equal(TS_DF, ts.timeseries())
 
 
 def test_new_timeseries_error(test_mp):
@@ -212,33 +215,36 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
 def test_timeseries_remove_single_entry(test_mp):
     args_single = ('Douglas Adams', 'test_remove_single')
 
+    exp = TS_DF.replace('Hitchhiker', 'test_remove_single')
+
     ts = ixmp.TimeSeries(test_mp, *args_single, version='new', annotation='fo')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 
     ts = ixmp.TimeSeries(test_mp, *args_single)
-    assert_timeseries(ts, TS_DF)
+    assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out()
     ts.remove_timeseries(TS_DF[TS_DF.year == 2010])
     ts.commit('testing for removing a single timeseries data point')
 
-    exp = TS_DF[TS_DF.year == 2020].reset_index()
-    assert_timeseries(ts, exp)
+    exp = exp[exp.year == 2020].reset_index(drop=True)
+    assert_frame_equal(exp, ts.timeseries())
 
 
 def test_timeseries_remove_all_data(test_mp):
     args_all = ('Douglas Adams', 'test_remove_all')
+
+    exp = TS_DF.replace('Hitchhiker', 'test_remove_all')
 
     ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='fo')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 
     ts = ixmp.TimeSeries(test_mp, *args_all)
-    assert_timeseries(ts, TS_DF)
+    assert_frame_equal(exp, ts.timeseries())
 
-    exp = TS_DF.copy()
-    exp['variable'] = 'Testing2'
+    exp = exp.assign(variable='Testing2')
 
     ts.check_out()
     ts.add_timeseries(exp)
@@ -246,4 +252,4 @@ def test_timeseries_remove_all_data(test_mp):
     ts.commit('testing for removing a full timeseries row')
 
     assert ts.timeseries(region='World', variable='Testing').empty
-    assert_timeseries(ts, exp)
+    assert_frame_equal(exp, ts.timeseries())

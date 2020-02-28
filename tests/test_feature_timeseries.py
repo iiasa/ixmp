@@ -51,8 +51,11 @@ def ts(mp):
 @pytest.fixture(scope='function')
 def ts_empty(request, mp):
     """An empty TimeSeries with a temporary name on the test_mp."""
-    yield ixmp.TimeSeries(mp, model=request.node.nodeid.replace('/', ' '),
-                          scenario='test', version='new')
+    # Use a hash of the pytest node ID to avoid exceeding the maximum length
+    # for a scenario name
+    node = hash(request.node.nodeid.replace('/', ' '))
+    yield ixmp.TimeSeries(mp, model=f'test-{node}', scenario='test',
+                          version='new')
 
 
 def test_get_timeseries(ts):
@@ -187,16 +190,19 @@ def test_timeseries_remove_single_entry(test_mp):
     assert_frame_equal(exp, ts.timeseries())
 
 
-def test_timeseries_remove_all_data(test_mp):
-    args_all = ('Douglas Adams', 'test_remove_all')
+def expected(df, ts):
+    return df.assign(model=ts.model, scenario=ts.scenario)
 
-    exp = TS_DF.replace('Hitchhiker', 'test_remove_all')
 
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
+def test_timeseries_remove_all_data(mp, ts_empty):
+    ts = ts_empty
+    info = dict(model=ts.model, scenario=ts.scenario)
+    exp = expected(TS_DF, ts)
+
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 
-    ts = ixmp.TimeSeries(test_mp, *args_all)
+    ts = ixmp.TimeSeries(mp, **info)
     assert_frame_equal(exp, ts.timeseries())
 
     exp = exp.assign(variable='Testing2')

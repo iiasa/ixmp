@@ -271,7 +271,21 @@ class Platform:
         self._backend.set_node(region, synonym=mapped_to)
 
     def timeslices(self):
-        """Return all sub-annual time slices.
+        """Return all subannual time slices defined in this Platform instance.
+
+        Timeslices are a way to represent subannual temporal resolution in
+        timeseries data. A timeslice consists of a **name** (e.g., 'January',
+        'summer'), a **category** (e.g., 'months', 'seasons'), and a
+        **duration** given relative to a full year.
+
+        The category and duration do not have any functional relevance within
+        the ixmp framework, but they may be useful for pre- or post-processing.
+        For example, they can be used to filter all timeslices of a certain
+        category (e.g., all months) from the pandas.DataFrame returned by this
+        function or to aggregate subannual data to full-year results.
+
+        See :method:`add_timeslice` to initialize additional timeslices in the
+        Platform instance.
 
         Returns
         -------
@@ -281,14 +295,16 @@ class Platform:
                             columns=FIELDS['get_timeslices'])
 
     def add_timeslice(self, name, category, duration):
-        """Define a sub-annual time slice including a category and duration.
+        """Define a subannual time slice including a category and duration.
+
+        See :method:`timeslices` for a detailed description of timeslices.
 
         Parameters
         ----------
         name : str
             Unique name of the time slice.
         category : str
-            Time slice category (e.g. COMMON, MONTHS etc).
+            Time slice category (e.g. 'common', 'month', etc).
         duration : float
             Duration of time slice as fraction of year.
         """
@@ -448,6 +464,13 @@ class TimeSeries:
 
             - `year` and `value`—long, or 'tabular', format.
             - one or more specific years—wide, or 'IAMC' format.
+
+            To support subannual temporal resolution of timeseries data, a
+            column `subannual` is optional in `df`. The entries in this column
+            must have been defined in the Platform instance using
+            :method:`add_timeslice` beforehand. If no column `subannual` is
+            included in `df`, the data is assumed to contain yearly values.
+            See :method:`timeslices` for a detailed description of this feature.
 
         meta : bool, optional
             If :obj:`True`, store `df` as metadata. Metadata is treated

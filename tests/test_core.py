@@ -1,6 +1,6 @@
 import numpy.testing as npt
 import pandas as pd
-import pandas.testing as pdt
+from pandas.testing import assert_frame_equal
 import pytest
 
 import ixmp
@@ -70,11 +70,6 @@ class TestPlatform:
 
     def test_add_unit(self, test_mp):
         test_mp.add_unit('test', 'just testing')
-
-
-class TestTimeSeries:
-    # TODO move tests from test_feature_timeseries.py
-    pass
 
 
 class TestScenario:
@@ -432,7 +427,7 @@ def test_filter_str(scen_empty):
     # Values can be retrieved using non-string filters
     exp = p_exp.loc[1:, :].reset_index(drop=True)
     obs = scen.par('p', filters={'s': elements[1:]})
-    pdt.assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
+    assert_frame_equal(exp[['s', 'value']], obs[['s', 'value']])
 
 
 def test_solve_callback(test_mp):

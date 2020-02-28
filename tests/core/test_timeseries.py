@@ -51,6 +51,7 @@ def mp(test_mp):
     yield test_mp
 
 
+# Utility methods
 def expected(df, ts):
     """Modify *df* with the 'model' and 'scenario' name from *ts."""
     return df.assign(model=ts.model, scenario=ts.scenario)
@@ -61,7 +62,6 @@ def wide(df):
     return df.pivot_table(index=IAMC_IDX, columns='year', values='value') \
              .reset_index() \
              .rename_axis(columns=None)
-
 
 @contextmanager
 def transact(ts, condition=True, commit_message=''):

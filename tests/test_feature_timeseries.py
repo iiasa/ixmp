@@ -60,33 +60,37 @@ class TestTimeSeries:
         yield ixmp.TimeSeries(mp, model=f'test-{node}', scenario='test',
                               version='new')
 
-    def test_get_timeseries(self, ts):
-        ts.add_timeseries(DATA[0])
+    @pytest.mark.parametrize('format', ['long', 'wide'])
+    def test_add_timeseries(self, ts, format):
+        data = DATA[0] if format == 'long' else wide(DATA[0])
+
+        # Data added
+        ts.add_timeseries(data)
         ts.commit('')
-        assert_frame_equal(expected(DATA[0], ts), ts.timeseries())
 
-    def test_get_timeseries_iamc(self, ts):
-        ts.add_timeseries(DATA[0])
-        ts.commit('')
-        exp = wide(expected(DATA[0], ts)).rename_axis(columns=None)
-        assert_frame_equal(exp, ts.timeseries(iamc=True))
-
-    def test_new_timeseries_as_year_value(self, ts):
-        ts.add_timeseries(DATA[0])
-        ts.commit('importing a testing timeseries')
-        assert_frame_equal(expected(DATA[0], ts), ts.timeseries())
-
-    def test_new_timeseries_as_iamc(self, ts):
-        ts.add_timeseries(wide(DATA[0]))
-        ts.commit('importing a testing timeseries')
-        assert_frame_equal(expected(DATA[0], ts), ts.timeseries())
-
-    def test_new_timeseries_error(self, ts):
         # Error: column 'unit' is missing
         with pytest.raises(ValueError):
             ts.add_timeseries(DATA[0].drop('unit', axis=1))
 
-    def test_timeseries_edit(self, mp, ts):
+    @pytest.mark.parametrize('format', ['long', 'wide'])
+    def test_get_timeseries(self, ts, format):
+        data = DATA[0] if format == 'long' else wide(DATA[0])
+
+        ts.add_timeseries(data)
+        ts.commit('')
+
+        exp = expected(data, ts)
+        args = {}
+
+        if format == 'wide':
+            exp = exp.rename_axis(columns=None)
+            args['iamc'] = True
+
+        # Data as expected
+        assert_frame_equal(exp, ts.timeseries(**args))
+
+    @pytest.mark.parametrize('format', ['long', 'wide'])
+    def test_timeseries_edit(self, mp, ts, format):
         ts.add_timeseries(DATA[0])
         ts.commit('initial data')
 
@@ -155,39 +159,35 @@ class TestTimeSeries:
         exp = expected(DATA[2050], ts)
         assert_frame_equal(exp, ts.timeseries())
 
-    def test_timeseries_remove_single_entry(self, mp, ts):
-        info = dict(model=ts.model, scenario=ts.scenario)
-        exp = expected(DATA[0], ts)
+    def test_remove_timeseries(self, mp, ts):
+        df = expected(DATA[2050], ts)
 
-        ts.add_timeseries(wide(DATA[0]))
-        ts.commit('importing a testing timeseries')
+        ts.add_timeseries(DATA[2050])
+        ts.commit('')
+        assert_frame_equal(df, ts.timeseries())
 
-        ts = ixmp.TimeSeries(mp, **info)
-        assert_frame_equal(exp, ts.timeseries())
-
+        # Remove a single data point
         ts.check_out()
-        ts.remove_timeseries(exp[exp.year == 2010])
-        ts.commit('testing for removing a single timeseries data point')
+        ts.remove_timeseries(df[df.year == 2010])
+        ts.commit('')
 
-        exp = exp[exp.year == 2020].reset_index(drop=True)
+        # Expected data remains
+        exp = df[df.year != 2010].reset_index(drop=True)
         assert_frame_equal(exp, ts.timeseries())
 
-    def test_timeseries_remove_all_data(self, mp, ts):
-        info = dict(model=ts.model, scenario=ts.scenario)
-        exp = expected(DATA[0], ts)
-
-        ts.add_timeseries(wide(DATA[0]))
-        ts.commit('importing a testing timeseries')
-
-        ts = ixmp.TimeSeries(mp, **info)
-        assert_frame_equal(exp, ts.timeseries())
-
-        exp = exp.assign(variable='Testing2')
-
+        # Remove two data points
         ts.check_out()
-        ts.add_timeseries(exp)
-        ts.remove_timeseries(DATA[0])
-        ts.commit('testing for removing a full timeseries row')
+        ts.remove_timeseries(df[df.year.isin([2030, 2050])])
+        ts.commit('')
 
-        assert ts.timeseries(region='World', variable='Testing').empty
+        # Expected data remains
+        exp = df[~df.year.isin([2010, 2030, 2050])].reset_index(drop=True)
         assert_frame_equal(exp, ts.timeseries())
+
+        # Remove all remaining data
+        ts.check_out()
+        ts.remove_timeseries(df)
+        ts.commit('')
+
+        # Result is empty
+        assert ts.timeseries().empty

@@ -566,8 +566,11 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
+        # TODO remove astype here; this is the responsibility of Backend
         return pd.DataFrame(self._backend('get_geo'),
-                            columns=FIELDS['ts_get_geo'])
+                            columns=FIELDS['ts_get_geo']) \
+                 .reset_index(drop=True) \
+                 .astype({'meta': int, 'year': int})
 
 
 # %% class Scenario

@@ -40,6 +40,17 @@ DATA = {
         model='model name',
         scenario='scenario name',
     )),
+    # NB the columns for geodata methods are inconsistent with those for time-
+    #    series data
+    'geo': pd.DataFrame.from_dict(dict(
+        region='World',
+        variable='var1',
+        time='YEAR',
+        year=[2000, 2010, 2020],
+        value=['test', 'more-test', '2020-test'],
+        unit='score',
+        meta=0,
+    )),
 }
 
 
@@ -74,12 +85,20 @@ def transact(ts, condition=True, commit_message=''):
 
 
 class TestTimeSeries:
+    """Tests of ixmp.TimeSeries.
+
+    Since Scenario is a subclass of TimeSeries, all TimeSeries functionality
+    should work exactly the same way on Scenario instances. The *ts* fixture is
+    parametrized to yield both TimeSeries and Scenario objects, so every test
+    is run on each type.
+    """
     @pytest.fixture(scope='function', params=[TimeSeries, Scenario])
     def ts(self, request, mp):
         """An empty TimeSeries with a temporary name on the test_mp."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name
         node = hash(request.node.nodeid.replace('/', ' '))
+        # Class of object to yield
         cls = request.param
         yield cls(mp, model=f'test-{node}', scenario='test', version='new')
 
@@ -211,3 +230,29 @@ class TestTimeSeries:
 
         # Result is empty
         assert ts.timeseries().empty
+
+    def test_add_geodata(self, ts):
+        # Empty TimeSeries includes no geodata
+        assert_frame_equal(DATA['geo'].loc[[False, False, False]],
+                           ts.get_geodata())
+
+        # Data can be added
+        ts.add_geodata(DATA['geo'])
+        ts.commit('')
+
+        # Added data can be retrieved
+        obs = ts.get_geodata().sort_values('year').reset_index(drop=True)
+        assert_frame_equal(DATA['geo'], obs)
+
+    @pytest.mark.parametrize('rows', [(1,), (1, 2), (0, 1, 2)],
+                             ids=['single', 'multiple', 'all'])
+    def test_remove_geodata(self, ts, rows):
+        ts.add_geodata(DATA['geo'])
+        ts.remove_geodata(DATA['geo'].take(rows))
+        ts.commit('')
+
+        mask = [i not in rows for i in range(len(DATA['geo']))]
+        # Expected rows have been removed
+        exp = DATA['geo'].iloc[mask].reset_index(drop=True)
+        obs = ts.get_geodata().sort_values('year').reset_index(drop=True)
+        assert_frame_equal(exp, obs)

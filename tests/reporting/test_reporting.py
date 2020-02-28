@@ -441,7 +441,7 @@ def test_platform_units(test_mp, caplog, ureg):
     scen.add_par('x', x)
 
     # Unrecognized units are added automatically, with log messages emitted
-    with assert_logs(caplog, 'Add unit definition: kWa = [kWa]'):
+    with assert_logs(caplog, ['Add unit definition: kWa = [kWa]']):
         rep.get(x_key)
 
     # Mix of recognized/unrecognized units can be added: USD is already in the

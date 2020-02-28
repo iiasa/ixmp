@@ -570,7 +570,7 @@ class TimeSeries:
         return pd.DataFrame(self._backend('get_geo'),
                             columns=FIELDS['ts_get_geo']) \
                  .reset_index(drop=True) \
-                 .astype({'meta': int, 'year': int})
+                 .astype({'meta': 'int64', 'year': 'int64'})
 
 
 # %% class Scenario

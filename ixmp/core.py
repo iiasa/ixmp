@@ -274,7 +274,7 @@ class Platform:
         """Return all subannual timeslices defined in this Platform instance.
 
         Timeslices are a way to represent subannual temporal resolution in
-        timeseries data. A timeslice consists of a **name** (e.g., 'January',
+        timeseries data. A timeslice consists of a **name** (e.g., 'january',
         'summer'), a **category** (e.g., 'months', 'seasons'), and a
         **duration** given relative to a full year.
 

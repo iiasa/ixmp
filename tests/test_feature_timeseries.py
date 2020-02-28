@@ -40,6 +40,13 @@ def ts(mp):
     yield ixmp.TimeSeries(mp, model='Douglas Adams', scenario='Hitchhiker')
 
 
+@pytest.fixture(scope='function')
+def ts_empty(request, mp):
+    """An empty TimeSeries with a temporary name on the test_mp."""
+    yield ixmp.TimeSeries(mp, model=request.node.nodeid.replace('/', ' '),
+                          scenario='test', version='new')
+
+
 def test_get_timeseries(ts):
     assert_frame_equal(TS_DF, ts.timeseries())
 
@@ -68,74 +75,52 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_frame_equal(TS_DF, ts.timeseries())
 
 
-def test_new_timeseries_error(test_mp):
-    ts = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    df = {'year': [2010, 2020], 'value': [23.5, 23.6]}
-    df = pd.DataFrame.from_dict(df)
-    df['region'] = 'World'
-    df['variable'] = 'Testing'
-    # column `unit` is missing
-    pytest.raises(ValueError, ts.add_timeseries, df)
+def test_new_timeseries_error(ts_empty):
+    # Error: column 'unit' is missing
+    with pytest.raises(ValueError):
+        ts_empty.add_timeseries(TS_DF.drop('unit', axis=1))
 
 
 def test_timeseries_edit(mp, ts):
-    df = {'region': ['World'] * 2, 'variable': ['Testing'] * 2,
-          'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
-    exp = pd.DataFrame.from_dict(df)
-    obs = ts.timeseries()
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
-
+    # Overwrite existing data
     ts.check_out(timeseries_only=True)
-    df = {'region': ['World'] * 2,
-          'variable': ['Testing'] * 2,
-          'unit': ['???', '???'], 'year': [2010, 2020],
-          'value': [23.7, 23.8]}
-    df = pd.DataFrame.from_dict(df)
-    ts.add_timeseries(df)
+    ts.add_timeseries(TS_DF)
     ts.commit('testing of editing timeseries (same years)')
 
+    # Overwrite and add new values at once
     ts.check_out(timeseries_only=True)
-    df = {'region': ['World'] * 3,
-          'variable': ['Testing', 'Testing', 'Testing2'],
-          'unit': ['???', '???', '???'], 'year': [2020, 2030, 2030],
-          'value': [24.8, 24.9, 25.1]}
-    df = pd.DataFrame.from_dict(df)
+    df = pd.DataFrame.from_dict(dict(
+        model='Douglas Adams',
+        scenario='Hitchhiker',
+        region='World',
+        variable=['Testing', 'Testing', 'Testing2'],
+        unit='???',
+        year=[2020, 2030, 2030],
+        value=[24.8, 24.9, 25.1]))
     ts.add_timeseries(df)
     ts.commit('testing of editing timeseries (other years)')
-    mp.close_db()
 
+    # Close and re-open database
+    mp.close_db()
     mp.open_db()
-    ts = ixmp.TimeSeries(mp, *test_args)
-    obs = ts.timeseries().sort_values(by=['year'])
-    df = df.append(exp.loc[0]) \
-        .sort_values(by=['year']) \
-        .reset_index()
-    assert_frame_equal(df[cols_str], obs[cols_str])
-    assert_series_equal(df['value'], obs['value'])
+
+    # All four rows are retrieved
+    exp = pd.concat([TS_DF.loc[0:0, :], df]).reset_index(drop=True)
+    print(exp)
+    assert_frame_equal(exp, ts.timeseries())
 
 
 def test_timeseries_edit_iamc(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
     ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 
-    df = pd.DataFrame.from_dict({'region': ['World'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2010': [23.7],
-                                 '2020': [23.8]})
-    ts.add_timeseries(df)
+    ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')
 
     ts = ixmp.TimeSeries(test_mp, *args_all)
-    obs = ts.timeseries()
-    exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
-                                  'variable': ['Testing', 'Testing'],
-                                  'unit': ['???', '???'],
-                                  'year': [2010, 2020],
-                                  'value': [23.7, 23.8]})
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
+    exp = TS_DF.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
+                         'scenario': {'Hitchhiker': 'test_remove_all'}})
+    assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
     df = pd.DataFrame.from_dict({'region': ['World'],
@@ -168,23 +153,13 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
     test_mp.add_region_synonym('Hell', 'World')
     ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 
-    df = pd.DataFrame.from_dict({'region': ['World'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2010': [23.7],
-                                 '2020': [23.8]})
-    ts.add_timeseries(df)
+    ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')
 
     ts = ixmp.TimeSeries(test_mp, *args_all)
-    obs = ts.timeseries()
-    exp = pd.DataFrame.from_dict({'region': ['World'] * 2,
-                                  'variable': ['Testing'] * 2,
-                                  'unit': ['???', '???'],
-                                  'year': [2010, 2020],
-                                  'value': [23.7, 23.8]})
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
+    exp = TS_DF.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
+                         'scenario': {'Hitchhiker': 'test_remove_all'}})
+    assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
     df = pd.DataFrame.from_dict({'region': ['Hell'],

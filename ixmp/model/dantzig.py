@@ -48,7 +48,7 @@ DATA = {
         ['san-diego', 'chicago', 1.8, 'km'],
         ['san-diego', 'topeka', 1.4, 'km'],
     ], columns='i j value unit'.split()),
-    'f': (90.0, 'USD_per_km'),
+    'f': (90.0, 'USD/km'),
 }
 
 

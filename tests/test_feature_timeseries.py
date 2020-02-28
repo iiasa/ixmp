@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
@@ -18,6 +20,15 @@ DATA = {
         unit='???',
         year=[2010, 2020],
         value=[23.7, 23.8],
+        model='model name',
+        scenario='scenario name',
+    )),
+    2030: pd.DataFrame.from_dict(dict(
+        region='World',
+        variable=['Testing', 'Testing', 'Testing2'],
+        unit='???',
+        year=[2020, 2030, 2030],
+        value=[24.8, 24.9, 25.1],
         model='model name',
         scenario='scenario name',
     )),
@@ -46,8 +57,27 @@ def expected(df, ts):
 
 
 def wide(df):
+    """Transform *df* from long to wide format."""
     return df.pivot_table(index=IAMC_IDX, columns='year', values='value') \
-             .reset_index()
+             .reset_index() \
+             .rename_axis(columns=None)
+
+
+@contextmanager
+def transact(ts, condition=True, commit_message=''):
+    """Context manager to wrap in a 'transaction'.
+
+    If *condition* is True, the :class:`.TimeSeries`/:class:`.Scenario` *ts* is
+    checked out *before* the block begins, and afterwards a commit is made with
+    the *commit_message*. If *condition* is False, nothing occurs.
+    """
+    if condition:
+        ts.check_out()
+    try:
+        yield ts
+    finally:
+        if condition:
+            ts.commit(commit_message)
 
 
 class TestTimeSeries:
@@ -73,7 +103,7 @@ class TestTimeSeries:
             ts.add_timeseries(DATA[0].drop('unit', axis=1))
 
     @pytest.mark.parametrize('format', ['long', 'wide'])
-    def test_get_timeseries(self, ts, format):
+    def test_get(self, ts, format):
         data = DATA[0] if format == 'long' else wide(DATA[0])
 
         ts.add_timeseries(data)
@@ -83,61 +113,49 @@ class TestTimeSeries:
         args = {}
 
         if format == 'wide':
-            exp = exp.rename_axis(columns=None)
             args['iamc'] = True
 
-        # Data as expected
+        # Data can be retrieved and has the expected value
         assert_frame_equal(exp, ts.timeseries(**args))
 
     @pytest.mark.parametrize('format', ['long', 'wide'])
-    def test_timeseries_edit(self, mp, ts, format):
-        ts.add_timeseries(DATA[0])
+    def test_edit(self, mp, ts, format):
+        """Tests that data can be overwritten."""
+        data = expected(DATA[0], ts)
+        all_data = [data.loc[0:0, :]]
+        args = {}
+
+        if format == 'wide':
+            data = wide(data)
+            args['iamc'] = True
+
+        ts.add_timeseries(data)
         ts.commit('initial data')
 
         # Overwrite existing data
-        ts.check_out()
-        ts.add_timeseries(DATA[0])
-        ts.commit('overwrite existing data')
+        with transact(ts, commit_message='overwrite existing data'):
+            ts.add_timeseries(data)
+
+        df = expected(DATA[2030], ts)
+        all_data.append(df)
+        if format == 'wide':
+            df = wide(df)
 
         # Overwrite and add new values at once
-        ts.check_out()
-        df = pd.DataFrame.from_dict(dict(
-            region='World',
-            variable=['Testing', 'Testing', 'Testing2'],
-            unit='???',
-            year=[2020, 2030, 2030],
-            value=[24.8, 24.9, 25.1],
-        ))
-        ts.add_timeseries(df)
-        ts.commit('overwrite and add data')
+        with transact(ts, commit_message='overwrite and add data'):
+            ts.add_timeseries(df)
 
         # Close and re-open database
         mp.close_db()
         mp.open_db()
 
         # All four rows are retrieved
-        all_data = pd.concat([DATA[0].loc[0:0, :], df]).reset_index(drop=True)
-        assert_frame_equal(expected(all_data, ts), ts.timeseries())
+        exp = pd.concat(all_data).reset_index(drop=True)
+        if format == 'wide':
+            exp = wide(exp)
+        assert_frame_equal(exp, ts.timeseries(**args))
 
-    def test_timeseries_edit_iamc(self, mp, ts):
-        info = dict(model=ts.model, scenario=ts.scenario)
-        exp = expected(DATA[0], ts)
-
-        ts.add_timeseries(DATA[0])
-        ts.commit('updating timeseries in IAMC format')
-
-        ts = ixmp.TimeSeries(mp, **info)
-        assert_frame_equal(exp, ts.timeseries())
-
-        ts.check_out(timeseries_only=True)
-        df = wide(DATA[2050])
-        ts.add_timeseries(df)
-        ts.commit('updating timeseries in IAMC format')
-
-        exp = expected(DATA[2050], ts)
-        assert_frame_equal(exp, ts.timeseries())
-
-    def test_timeseries_edit_with_region_synonyms(self, mp, ts):
+    def test_edit_with_region_synonyms(self, mp, ts):
         info = dict(model=ts.model, scenario=ts.scenario)
         exp = expected(DATA[0], ts)
 
@@ -159,35 +177,43 @@ class TestTimeSeries:
         exp = expected(DATA[2050], ts)
         assert_frame_equal(exp, ts.timeseries())
 
-    def test_remove_timeseries(self, mp, ts):
+    @pytest.mark.parametrize('commit', [
+        pytest.param(True),
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(reason='TimeSeries must be checked in to '
+                                           'retrieve data.')),
+    ])
+    def test_remove(self, mp, ts, commit):
         df = expected(DATA[2050], ts)
 
         ts.add_timeseries(DATA[2050])
         ts.commit('')
+
+        if not commit:
+            ts.check_out()
+
         assert_frame_equal(df, ts.timeseries())
 
         # Remove a single data point
-        ts.check_out()
-        ts.remove_timeseries(df[df.year == 2010])
-        ts.commit('')
+        with transact(ts, commit):
+            ts.remove_timeseries(df[df.year == 2010])
 
         # Expected data remains
         exp = df[df.year != 2010].reset_index(drop=True)
         assert_frame_equal(exp, ts.timeseries())
 
         # Remove two data points
-        ts.check_out()
-        ts.remove_timeseries(df[df.year.isin([2030, 2050])])
-        ts.commit('')
+        with transact(ts, commit):
+            ts.remove_timeseries(df[df.year.isin([2030, 2050])])
 
         # Expected data remains
         exp = df[~df.year.isin([2010, 2030, 2050])].reset_index(drop=True)
         assert_frame_equal(exp, ts.timeseries())
 
         # Remove all remaining data
-        ts.check_out()
-        ts.remove_timeseries(df)
-        ts.commit('')
+        with transact(ts, commit):
+            ts.remove_timeseries(df)
 
         # Result is empty
         assert ts.timeseries().empty

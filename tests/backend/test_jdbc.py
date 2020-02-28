@@ -52,7 +52,7 @@ def test_invalid_properties_file(test_data_path):
 
 
 def test_connect_message(caplog, test_data_path):
-    sample_props = test_data_path / 'testdb' / 'test.properties.sample'
+    sample_props = test_data_path / 'test.properties.sample'
     ixmp.Platform(dbprops=sample_props)
     assert caplog.records[-1].message == \
         'launching ixmp.Platform connected to jdbc:hsqldb:mem://ixmptest'

@@ -6,7 +6,6 @@ from pretenders.client.http import HTTPMock
 from pretenders.common.constants import FOREVER
 import pytest
 
-from pathlib import Path
 import ixmp
 import shutil
 
@@ -21,7 +20,7 @@ def mock():
     print('Mock server started with pid {}'.format(proc.pid))
 
     # Wait for server to start up
-    sleep(1)
+    sleep(0.5)
 
     yield HTTPMock('localhost', 8000)
 
@@ -37,11 +36,11 @@ def create_local_testdb(db_path, data_path, db='ixmptest',
     are copied from *data_path*.
     """
     # Copy test database
-    dst = Path(db_path) / 'testdb'
+    dst = db_path / 'testdb'
     shutil.copytree(data_path, dst)
 
     # Create properties file
-    props = (Path(data_path) / 'test_auth.properties_template').read_text()
+    props = (data_path / 'test_auth.properties_template').read_text()
     test_props = dst / 'test.properties'
     test_props.write_text(props.format(
         here=str(dst).replace("\\", "/"),
@@ -52,7 +51,7 @@ def create_local_testdb(db_path, data_path, db='ixmptest',
     return test_props
 
 
-def test_check_single_model_access(mock, tmpdir, test_data_path):
+def test_check_single_model_access(mock, tmp_path, test_data_path):
     mock.when(
         'POST /login'
     ).reply(
@@ -74,8 +73,8 @@ def test_check_single_model_access(mock, tmpdir, test_data_path):
         '[false]',
         headers={'Content-Type': 'application/json'},
         times=FOREVER)
-    test_props = create_local_testdb(db_path=tmpdir,
-                                     data_path=test_data_path / 'testdb',
+    test_props = create_local_testdb(db_path=tmp_path,
+                                     data_path=test_data_path,
                                      auth_url=mock.pretend_url)
 
     mp = ixmp.Platform(dbprops=test_props)
@@ -91,7 +90,7 @@ def test_check_single_model_access(mock, tmpdir, test_data_path):
     assert not granted
 
 
-def test_check_multi_model_access(mock, tmpdir, test_data_path):
+def test_check_multi_model_access(mock, tmp_path, test_data_path):
     mock.when(
         'POST /login'
     ).reply(
@@ -113,8 +112,8 @@ def test_check_multi_model_access(mock, tmpdir, test_data_path):
         '[false, false]',
         headers={'Content-Type': 'application/json'},
         times=FOREVER)
-    test_props = create_local_testdb(db_path=tmpdir,
-                                     data_path=test_data_path / 'testdb',
+    test_props = create_local_testdb(db_path=tmp_path,
+                                     data_path=test_data_path,
                                      auth_url=mock.pretend_url)
 
     mp = ixmp.Platform(dbprops=test_props)

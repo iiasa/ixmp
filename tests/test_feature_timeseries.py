@@ -7,7 +7,7 @@ from ixmp.core import IAMC_IDX
 from ixmp.testing import populate_test_platform
 
 
-test_args = ('Douglas Adams', 'Hitchhiker')
+test_args = dict(model='Douglas Adams', scenario='Hitchhiker')
 
 # string columns and dataframe for timeseries checks
 cols_str = ['region', 'variable', 'unit', 'year']
@@ -23,8 +23,7 @@ TS_DF = pd.DataFrame.from_dict(dict(
     unit='???',
     year=[2010, 2020],
     value=[23.7, 23.8],
-    model='Douglas Adams',
-    scenario='Hitchhiker',
+    **test_args
 ))
 
 
@@ -37,7 +36,7 @@ def mp(test_mp):
 
 @pytest.fixture(scope='class')
 def ts(mp):
-    yield ixmp.TimeSeries(mp, model='Douglas Adams', scenario='Hitchhiker')
+    yield ixmp.TimeSeries(mp, **test_args)
 
 
 @pytest.fixture(scope='function')
@@ -62,14 +61,14 @@ def test_get_timeseries_iamc(ts):
 
 
 def test_new_timeseries_as_year_value(test_mp):
-    ts = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
+    ts = ixmp.TimeSeries(test_mp, **test_args, version='new')
     ts.add_timeseries(TS_DF)
     ts.commit('importing a testing timeseries')
     assert_frame_equal(TS_DF, ts.timeseries())
 
 
 def test_new_timeseries_as_iamc(test_mp):
-    ts = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
+    ts = ixmp.TimeSeries(test_mp, **test_args, version='new')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
     assert_frame_equal(TS_DF, ts.timeseries())
@@ -90,8 +89,7 @@ def test_timeseries_edit(mp, ts):
     # Overwrite and add new values at once
     ts.check_out(timeseries_only=True)
     df = pd.DataFrame.from_dict(dict(
-        model='Douglas Adams',
-        scenario='Hitchhiker',
+        **test_args,
         region='World',
         variable=['Testing', 'Testing', 'Testing2'],
         unit='???',
@@ -112,7 +110,7 @@ def test_timeseries_edit(mp, ts):
 
 def test_timeseries_edit_iamc(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
+    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
 
     ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')

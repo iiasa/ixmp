@@ -20,7 +20,7 @@ def mock():
     print('Mock server started with pid {}'.format(proc.pid))
 
     # Wait for server to start up
-    sleep(0.5)
+    sleep(1)
 
     yield HTTPMock('localhost', 8000)
 

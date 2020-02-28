@@ -4,22 +4,10 @@ from pandas.testing import assert_frame_equal
 import pytest
 
 import ixmp
-from ixmp.testing import (
-    assert_logs,
-    make_dantzig,
-    models,
-    populate_test_platform,
-)
+from ixmp.testing import assert_logs, make_dantzig, models
 
 
 # Fixtures
-@pytest.fixture(scope='class')
-def mp(test_mp):
-    """A Platform containing test data."""
-    populate_test_platform(test_mp)
-    yield test_mp
-
-
 @pytest.fixture(scope='class')
 def scen(mp):
     """The default version of the Dantzig on the mp."""
@@ -31,45 +19,6 @@ def scen_empty(request, test_mp):
     """An empty Scenario with a temporary name on the test_mp."""
     yield ixmp.Scenario(test_mp, model=request.node.nodeid.replace('/', ' '),
                         scenario='test', version='new')
-
-
-class TestPlatform:
-    def test_init(self):
-        with pytest.raises(ValueError, match="backend class 'foo' not among "
-                                             r"\['jdbc'\]"):
-            ixmp.Platform(backend='foo')
-
-    def test_set_log_level(self, test_mp):
-        test_mp.set_log_level('CRITICAL')
-        test_mp.set_log_level('ERROR')
-        test_mp.set_log_level('WARNING')
-        test_mp.set_log_level('INFO')
-        test_mp.set_log_level('DEBUG')
-        test_mp.set_log_level('NOTSET')
-
-        with pytest.raises(ValueError):
-            test_mp.set_log_level(level='foo')
-
-    def test_scenario_list(self, mp):
-        scenario = mp.scenario_list(model='Douglas Adams')['scenario']
-        assert scenario[0] == 'Hitchhiker'
-
-    def test_export_timeseries_data(self, mp, tmp_path):
-        path = tmp_path / 'export.csv'
-        mp.export_timeseries_data(path, model='Douglas Adams')
-
-        with open(path) as f:
-            first_line = f.readline()
-            assert first_line == ('MODEL,SCENARIO,VERSION,VARIABLE,UNIT,'
-                                  'REGION,META,TIME,YEAR,VALUE\n')
-            assert len(f.readlines()) == 2
-
-    def test_unit_list(self, test_mp):
-        units = test_mp.units()
-        assert ('cases' in units) is True
-
-    def test_add_unit(self, test_mp):
-        test_mp.add_unit('test', 'just testing')
 
 
 class TestScenario:

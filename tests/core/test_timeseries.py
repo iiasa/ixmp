@@ -4,9 +4,8 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
 
-import ixmp
+from ixmp import TimeSeries, Scenario
 from ixmp.core import IAMC_IDX
-from ixmp.testing import populate_test_platform
 
 
 # Test data.
@@ -44,13 +43,6 @@ DATA = {
 }
 
 
-# Fixtures
-@pytest.fixture(scope='class')
-def mp(test_mp):
-    populate_test_platform(test_mp)
-    yield test_mp
-
-
 # Utility methods
 def expected(df, ts):
     """Modify *df* with the 'model' and 'scenario' name from *ts."""
@@ -62,6 +54,7 @@ def wide(df):
     return df.pivot_table(index=IAMC_IDX, columns='year', values='value') \
              .reset_index() \
              .rename_axis(columns=None)
+
 
 @contextmanager
 def transact(ts, condition=True, commit_message=''):
@@ -81,14 +74,14 @@ def transact(ts, condition=True, commit_message=''):
 
 
 class TestTimeSeries:
-    @pytest.fixture(scope='function')
+    @pytest.fixture(scope='function', params=[TimeSeries, Scenario])
     def ts(self, request, mp):
         """An empty TimeSeries with a temporary name on the test_mp."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name
         node = hash(request.node.nodeid.replace('/', ' '))
-        yield ixmp.TimeSeries(mp, model=f'test-{node}', scenario='test',
-                              version='new')
+        cls = request.param
+        yield cls(mp, model=f'test-{node}', scenario='test', version='new')
 
     @pytest.mark.parametrize('format', ['long', 'wide'])
     def test_add_timeseries(self, ts, format):
@@ -155,7 +148,8 @@ class TestTimeSeries:
             exp = wide(exp)
         assert_frame_equal(exp, ts.timeseries(**args))
 
-    def test_edit_with_region_synonyms(self, mp, ts):
+    @pytest.mark.parametrize('cls', [TimeSeries, Scenario])
+    def test_edit_with_region_synonyms(self, mp, ts, cls):
         info = dict(model=ts.model, scenario=ts.scenario)
         exp = expected(DATA[0], ts)
 
@@ -165,7 +159,7 @@ class TestTimeSeries:
         ts.add_timeseries(DATA[0])
         ts.commit('updating timeseries in IAMC format')
 
-        ts = ixmp.TimeSeries(mp, **info)
+        ts = cls(mp, **info)
         assert_frame_equal(exp, ts.timeseries())
 
         ts.check_out(timeseries_only=True)

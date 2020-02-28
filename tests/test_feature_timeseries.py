@@ -1,5 +1,5 @@
 import pandas as pd
-from pandas.testing import assert_frame_equal, assert_series_equal
+from pandas.testing import assert_frame_equal
 import pytest
 
 import ixmp
@@ -23,6 +23,15 @@ TS_DF = pd.DataFrame.from_dict(dict(
     unit='???',
     year=[2010, 2020],
     value=[23.7, 23.8],
+    **test_args
+))
+
+TS_2050 = pd.DataFrame.from_dict(dict(
+    region='World',
+    variable='Testing',
+    unit='???',
+    year=[2000, 2010, 2020, 2030, 2040, 2050],
+    value=[21.7, 22.7, 23.7, 24.7, 25.7, 25.8],
     **test_args
 ))
 
@@ -53,7 +62,7 @@ def test_get_timeseries(ts):
 def test_get_timeseries_iamc(ts):
     obs = ts.timeseries(region='World', variable='Testing', iamc=True)
 
-    exp = TS_DF.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+    exp = TS_DF.pivot_table(index=IAMC_IDX, columns='year', values='value') \
         .reset_index() \
         .rename_axis(columns=None)
 
@@ -121,35 +130,21 @@ def test_timeseries_edit_iamc(test_mp):
     assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
-    df = pd.DataFrame.from_dict({'region': ['World'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2000': [21.7],
-                                 '2010': [22.7],
-                                 '2020': [23.7],
-                                 '2030': [24.7],
-                                 '2040': [25.7],
-                                 '2050': [25.8]})
+    df = TS_2050.pivot_table(index=IAMC_IDX, columns='year', values='value') \
+                .reset_index()
     ts.add_timeseries(df)
     ts.commit('updating timeseries in IAMC format')
 
-    exp = pd.DataFrame.from_dict(
-        {'region': ['World'] * 6,
-         'variable': ['Testing'] * 6,
-         'unit': ['???'] * 6,
-         'year': [2000, 2010, 2020, 2030, 2040, 2050],
-         'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
-    obs = ts.timeseries()
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
-    test_mp.close_db()
+    exp = TS_2050.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
+                           'scenario': {'Hitchhiker': 'test_remove_all'}})
+    assert_frame_equal(exp, ts.timeseries())
 
 
 def test_timeseries_edit_with_region_synonyms(test_mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
     test_mp.set_log_level('DEBUG')
     test_mp.add_region_synonym('Hell', 'World')
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
+    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
 
     ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')
@@ -160,29 +155,16 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
     assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
-    df = pd.DataFrame.from_dict({'region': ['Hell'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2000': [21.7],
-                                 '2010': [22.7],
-                                 '2020': [23.7],
-                                 '2030': [24.7],
-                                 '2040': [25.7],
-                                 '2050': [25.8]})
+    df = TS_2050.pivot_table(index=IAMC_IDX, columns='year', values='value') \
+                .reset_index() \
+                .replace('World', 'Hell')
     ts.preload_timeseries()
     ts.add_timeseries(df)
     ts.commit('updating timeseries in IAMC format')
 
-    exp = pd.DataFrame.from_dict(
-        {'region': ['World'] * 6,
-         'variable': ['Testing'] * 6,
-         'unit': ['???'] * 6,
-         'year': [2000, 2010, 2020, 2030, 2040, 2050],
-         'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
-    obs = ts.timeseries()
-    assert_frame_equal(exp[cols_str], obs[cols_str])
-    assert_series_equal(exp['value'], obs['value'])
-    test_mp.close_db()
+    exp = TS_2050.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
+                           'scenario': {'Hitchhiker': 'test_remove_all'}})
+    assert_frame_equal(exp, ts.timeseries())
 
 
 def test_timeseries_remove_single_entry(test_mp):
@@ -190,7 +172,7 @@ def test_timeseries_remove_single_entry(test_mp):
 
     exp = TS_DF.replace('Hitchhiker', 'test_remove_single')
 
-    ts = ixmp.TimeSeries(test_mp, *args_single, version='new', annotation='fo')
+    ts = ixmp.TimeSeries(test_mp, *args_single, version='new')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 
@@ -210,7 +192,7 @@ def test_timeseries_remove_all_data(test_mp):
 
     exp = TS_DF.replace('Hitchhiker', 'test_remove_all')
 
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='fo')
+    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 

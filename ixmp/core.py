@@ -356,15 +356,10 @@ class TimeSeries:
         """Convenience for calling *method* on the backend."""
         return self.platform._backend(self, method, *args, **kwargs)
 
-    # functions for platform management
+    # Transactions and versioning
 
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries for modification."""
-        if not timeseries_only and self.has_solution():
-            raise ValueError('This Scenario has a solution, '
-                             'use `Scenario.remove_solution()` or '
-                             '`Scenario.clone(..., keep_solution=False)`'
-                             )
         self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
@@ -671,6 +666,15 @@ class Scenario(TimeSeries):
                 raise
         else:
             return scenario, platform
+
+    def check_out(self, timeseries_only=False):
+        """Check out the Scenario for modification."""
+        if not timeseries_only and self.has_solution():
+            raise ValueError('This Scenario has a solution, '
+                             'use `Scenario.remove_solution()` or '
+                             '`Scenario.clone(..., keep_solution=False)`'
+                             )
+        super().check_out(timeseries_only)
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.

@@ -58,6 +58,11 @@ def ts_empty(request, mp):
                           version='new')
 
 
+def expected(df, ts):
+    """Modify *df* with the 'model' and 'scenario' name from *ts."""
+    return df.assign(model=ts.model, scenario=ts.scenario)
+
+
 def test_get_timeseries(ts):
     assert_frame_equal(TS_DF, ts.timeseries())
 
@@ -116,20 +121,18 @@ def test_timeseries_edit(mp, ts):
 
     # All four rows are retrieved
     exp = pd.concat([TS_DF.loc[0:0, :], df]).reset_index(drop=True)
-    print(exp)
     assert_frame_equal(exp, ts.timeseries())
 
 
-def test_timeseries_edit_iamc(test_mp):
-    args_all = ('Douglas Adams 1', 'test_remove_all')
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
+def test_timeseries_edit_iamc(mp, ts_empty):
+    ts = ts_empty
+    info = dict(model=ts.model, scenario=ts.scenario)
+    exp = expected(TS_DF, ts)
 
     ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')
 
-    ts = ixmp.TimeSeries(test_mp, *args_all)
-    exp = TS_DF.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
-                         'scenario': {'Hitchhiker': 'test_remove_all'}})
+    ts = ixmp.TimeSeries(mp, **info)
     assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
@@ -138,23 +141,22 @@ def test_timeseries_edit_iamc(test_mp):
     ts.add_timeseries(df)
     ts.commit('updating timeseries in IAMC format')
 
-    exp = TS_2050.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
-                           'scenario': {'Hitchhiker': 'test_remove_all'}})
+    exp = expected(TS_2050, ts)
     assert_frame_equal(exp, ts.timeseries())
 
 
-def test_timeseries_edit_with_region_synonyms(test_mp):
-    args_all = ('Douglas Adams 1', 'test_remove_all')
-    test_mp.set_log_level('DEBUG')
-    test_mp.add_region_synonym('Hell', 'World')
-    ts = ixmp.TimeSeries(test_mp, *args_all, version='new')
+def test_timeseries_edit_with_region_synonyms(mp, ts_empty):
+    ts = ts_empty
+    info = dict(model=ts.model, scenario=ts.scenario)
+    exp = expected(TS_DF, ts)
+
+    mp.set_log_level('DEBUG')
+    mp.add_region_synonym('Hell', 'World')
 
     ts.add_timeseries(TS_DF)
     ts.commit('updating timeseries in IAMC format')
 
-    ts = ixmp.TimeSeries(test_mp, *args_all)
-    exp = TS_DF.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
-                         'scenario': {'Hitchhiker': 'test_remove_all'}})
+    ts = ixmp.TimeSeries(mp, **info)
     assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out(timeseries_only=True)
@@ -165,33 +167,27 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
     ts.add_timeseries(df)
     ts.commit('updating timeseries in IAMC format')
 
-    exp = TS_2050.replace({'model': {'Douglas Adams': 'Douglas Adams 1'},
-                           'scenario': {'Hitchhiker': 'test_remove_all'}})
+    exp = expected(TS_2050, ts)
     assert_frame_equal(exp, ts.timeseries())
 
 
-def test_timeseries_remove_single_entry(test_mp):
-    args_single = ('Douglas Adams', 'test_remove_single')
+def test_timeseries_remove_single_entry(mp, ts_empty):
+    ts = ts_empty
+    info = dict(model=ts.model, scenario=ts.scenario)
+    exp = expected(TS_DF, ts)
 
-    exp = TS_DF.replace('Hitchhiker', 'test_remove_single')
-
-    ts = ixmp.TimeSeries(test_mp, *args_single, version='new')
     ts.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
     ts.commit('importing a testing timeseries')
 
-    ts = ixmp.TimeSeries(test_mp, *args_single)
+    ts = ixmp.TimeSeries(mp, **info)
     assert_frame_equal(exp, ts.timeseries())
 
     ts.check_out()
-    ts.remove_timeseries(TS_DF[TS_DF.year == 2010])
+    ts.remove_timeseries(exp[exp.year == 2010])
     ts.commit('testing for removing a single timeseries data point')
 
     exp = exp[exp.year == 2020].reset_index(drop=True)
     assert_frame_equal(exp, ts.timeseries())
-
-
-def expected(df, ts):
-    return df.assign(model=ts.model, scenario=ts.scenario)
 
 
 def test_timeseries_remove_all_data(mp, ts_empty):

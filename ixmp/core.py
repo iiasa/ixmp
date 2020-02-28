@@ -271,7 +271,7 @@ class Platform:
         self._backend.set_node(region, synonym=mapped_to)
 
     def timeslices(self):
-        """Return all subannual time slices defined in this Platform instance.
+        """Return all subannual timeslices defined in this Platform instance.
 
         Timeslices are a way to represent subannual temporal resolution in
         timeseries data. A timeslice consists of a **name** (e.g., 'January',
@@ -295,18 +295,18 @@ class Platform:
                             columns=FIELDS['get_timeslices'])
 
     def add_timeslice(self, name, category, duration):
-        """Define a subannual time slice including a category and duration.
+        """Define a subannual timeslice including a category and duration.
 
         See :method:`timeslices` for a detailed description of timeslices.
 
         Parameters
         ----------
         name : str
-            Unique name of the time slice.
+            Unique name of the timeslice.
         category : str
-            Time slice category (e.g. 'common', 'month', etc).
+            Timeslice category (e.g. 'common', 'month', etc).
         duration : float
-            Duration of time slice as fraction of year.
+            Duration of timeslice as fraction of year.
         """
         self._backend.add_timeslice(name, category, duration)
 
@@ -470,7 +470,7 @@ class TimeSeries:
             must have been defined in the Platform instance using
             :method:`add_timeslice` beforehand. If no column `subannual` is
             included in `df`, the data is assumed to contain yearly values.
-            See :method:`timeslices` for a detailed description of this feature.
+            See :method:`timeslices` for a detailed description of the feature.
 
         meta : bool, optional
             If :obj:`True`, store `df` as metadata. Metadata is treated

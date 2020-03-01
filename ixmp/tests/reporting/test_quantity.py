@@ -2,8 +2,9 @@
 import pandas as pd
 import pytest
 import xarray as xr
+from xarray.testing import assert_equal as assert_xr_equal
 
-from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
+from ixmp.reporting.quantity import AttrSeries, Quantity, as_sparse_xarray
 from ixmp.testing import assert_qty_allclose, assert_qty_equal
 
 
@@ -87,15 +88,14 @@ class TestAttrSeries:
         assert foo.drop('a').dims == ('b',)
 
 
-@pytest.mark.skipif(Quantity is AttrSeries, reason='For xr.DataArray only')
-def test_as_quantity():
-    """Test conversion to sparse.COO-backed xr.DataArray in as_quantity()."""
+def test_as_sparse_xarray():
+    """Test conversion to sparse.COO-backed xr.DataArray."""
     x_series = pd.Series(
-        data=[1, 2, 3, 4],
+        data=[1., 2, 3, 4],
         index=pd.MultiIndex.from_product([['a', 'b'], ['c', 'd']],
                                          names=['foo', 'bar']),
     )
-    y_series = pd.Series(data=[5, 6], index=pd.Index(['e', 'f'], name='baz'))
+    y_series = pd.Series(data=[5., 6], index=pd.Index(['e', 'f'], name='baz'))
 
     x = xr.DataArray.from_series(x_series, sparse=True)
     y = xr.DataArray.from_series(y_series, sparse=True)
@@ -106,16 +106,16 @@ def test_as_quantity():
     with pytest.raises(ValueError, match='make sure that the broadcast shape'):
         x_dense * y
 
-    z1 = as_quantity(x_dense) * y
-    z2 = x * as_quantity(y_dense)
+    z1 = as_sparse_xarray(x_dense) * y
+    z2 = x * as_sparse_xarray(y_dense)
     assert z1.dims == ('foo', 'bar', 'baz')
-    assert_qty_equal(z1, z2)
+    assert_xr_equal(z1, z2)
 
-    z3 = as_quantity(x) * as_quantity(y)
-    assert_qty_equal(z1, z3)
+    z3 = as_sparse_xarray(x) * as_sparse_xarray(y)
+    assert_xr_equal(z1, z3)
 
-    z4 = as_quantity(x) * y
-    assert_qty_equal(z1, z4)
+    z4 = as_sparse_xarray(x) * y
+    assert_xr_equal(z1, z4)
 
-    z5 = as_quantity(x_series) * y
-    assert_qty_equal(z1, z5)
+    z5 = as_sparse_xarray(x_series) * y
+    assert_xr_equal(z1, z5)

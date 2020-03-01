@@ -363,7 +363,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
         b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
 
         assert_series_equal(a, b, check_dtype=False, **kwargs)
-    elif Quantity is DataArray:
+    elif Quantity is DataArray:  # pragma: no cover
         assert_xr_equal(a, b, **kwargs)
 
     # check attributes are equal
@@ -388,7 +388,7 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
         b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
 
         assert_series_equal(a, b, **kwargs)
-    elif Quantity is DataArray:
+    elif Quantity is DataArray:  # pragma: no cover
         kwargs.pop('check_dtype', None)
         assert_xr_allclose(a, b, **kwargs)
 

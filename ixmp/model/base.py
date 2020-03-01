@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 log = logging.getLogger(__name__)
 
 
-class Model(ABC):  # pragma: no cover
+class Model(ABC):
     #: Name of the model.
     name = 'base'
 
@@ -21,7 +21,6 @@ class Model(ABC):  # pragma: no cover
 
             Model subclasses MUST document acceptable option values.
         """
-        pass
 
     @classmethod
     def initialize(cls, scenario):
@@ -103,4 +102,3 @@ class Model(ABC):  # pragma: no cover
         scenario : .Scenario
             Scenario object to solve by running the Model.
         """
-        pass

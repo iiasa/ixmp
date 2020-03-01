@@ -237,7 +237,7 @@ class JDBCBackend(CachingBackend):
                 log.warning(str(e))
 
     def get_auth(self, user, models, kind):
-        return self.jobj.checkModelAccess(user, kind, to_jlist2(models))
+        return self.jobj.checkModelAccess(user, kind, to_jlist(models))
 
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         if parent and hierarchy and not synonym:
@@ -308,8 +308,8 @@ class JDBCBackend(CachingBackend):
                 str(path.parent),
                 path.name,
                 kwargs.pop('comment'),
-                to_jlist2(kwargs.pop('var_list')),
-                to_jlist2(kwargs.pop('equ_list')),
+                to_jlist(kwargs.pop('var_list')),
+                to_jlist(kwargs.pop('equ_list')),
                 kwargs.pop('check_solution'),
             )
 
@@ -364,8 +364,8 @@ class JDBCBackend(CachingBackend):
 
             scen_list = self.jobj.getScenarioList(default, model, scenario)
             run_ids = [s['run_id'] for s in scen_list]
-            self.jobj.exportTimeseriesData(to_jlist2(run_ids),
-                                           to_jlist2(variables),
+            self.jobj.exportTimeseriesData(to_jlist(run_ids),
+                                           to_jlist(variables),
                                            str(path))
         else:
             raise NotImplementedError
@@ -451,10 +451,10 @@ class JDBCBackend(CachingBackend):
 
     def get_data(self, ts, region, variable, unit, year):
         # Convert the selectors to Java lists
-        r = to_jlist2(region)
-        v = to_jlist2(variable)
-        u = to_jlist2(unit)
-        y = to_jlist2(year)
+        r = to_jlist(region)
+        v = to_jlist(variable)
+        u = to_jlist(unit)
+        y = to_jlist(year)
 
         # Field types
         ftype = {
@@ -526,11 +526,11 @@ class JDBCBackend(CachingBackend):
                                    value, unit, meta)
 
     def delete(self, ts, region, variable, years, unit):
-        years = to_jlist2(years, java.Integer)
+        years = to_jlist(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
     def delete_geo(self, ts, region, variable, time, years, unit):
-        years = to_jlist2(years, java.Integer)
+        years = to_jlist(years, java.Integer)
         self.jindex[ts].removeGeoData(region, variable, time, years, unit)
 
     # Scenario methods
@@ -575,9 +575,17 @@ class JDBCBackend(CachingBackend):
     def init_item(self, s, type, name, idx_sets, idx_names):
         # generate index-set and index-name lists
         if isinstance(idx_sets, set) or isinstance(idx_names, set):
-            raise ValueError('index dimension must be string or ordered lists')
-        idx_sets = to_jlist(idx_sets)
-        idx_names = to_jlist(idx_names if idx_names is not None else idx_sets)
+            raise TypeError('index dimension must be string or ordered lists')
+
+        idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
+
+        if idx_names:
+            if len(idx_names) != len(idx_sets):
+                raise ValueError(f'index names {idx_names!r} must have same'
+                                 f'length as index sets {idx_sets!r}')
+            idx_names = to_jlist(idx_names)
+        else:
+            idx_names = idx_sets
 
         # Initialize the Item
         func = getattr(self.jindex[s], f'initialize{type.title()}')
@@ -641,7 +649,7 @@ class JDBCBackend(CachingBackend):
 
                 # Filter for only included values and store
                 filtered_elements = filter(lambda e: e in values, elements)
-                jFilter.put(idx_name, to_jlist2(filtered_elements))
+                jFilter.put(idx_name, to_jlist(filtered_elements))
 
             jList = item.getElements(jFilter)
         else:
@@ -712,7 +720,7 @@ class JDBCBackend(CachingBackend):
         try:
             for key, value, unit, comment in elements:
                 # Prepare arguments
-                args = [to_jlist2(key)] if key else []
+                args = [to_jlist(key)] if key else []
                 if type == 'par':
                     args.extend([java.Double(value), unit])
                 if comment:
@@ -738,7 +746,7 @@ class JDBCBackend(CachingBackend):
     def item_delete_elements(self, s, type, name, keys):
         jitem = self._get_item(s, type, name, load=False)
         for key in keys:
-            jitem.removeElement(to_jlist2(key))
+            jitem.removeElement(to_jlist(key))
 
         self.cache_invalidate(s, type, name)
 
@@ -782,7 +790,7 @@ class JDBCBackend(CachingBackend):
         return to_pylist(self.jindex[ms].getCatEle(name, cat))
 
     def cat_set_elements(self, ms, name, cat, keys, is_unique):
-        self.jindex[ms].addCatEle(name, cat, to_jlist2(keys), is_unique)
+        self.jindex[ms].addCatEle(name, cat, to_jlist(keys), is_unique)
 
     # Helpers; not part of the Backend interface
 
@@ -861,36 +869,28 @@ def start_jvm(jvmargs=[]):
 # Conversion methods
 
 def to_pylist(jlist):
-    """Transforms a Java.Array or Java.List to a :class:`numpy.array`."""
-    # handling string array
+    """Convert Java list types to :class:`list`."""
     try:
-        return np.array(jlist[:])
-    # handling Java LinkedLists
+        return list(jlist[:])
     except Exception:
-        return np.array(jlist.toArray()[:])
+        # java.LinkedList
+        return list(jlist.toArray()[:])
 
 
-def to_jlist(pylist, idx_names=None):
-    """Convert *pylist* to a jLinkedList."""
-    if pylist is None:
-        return None
+def to_jlist(arg, convert=None):
+    """Convert :class:`list` *arg* to java.LinkedList.
 
-    jList = java.LinkedList()
-    if idx_names is None:
-        if islistable(pylist):
-            for key in pylist:
-                jList.add(str(key))
-        else:
-            jList.add(str(pylist))
-    else:
-        # pylist must be a dict
-        for idx in idx_names:
-            jList.add(str(pylist[idx]))
-    return jList
+    Parameters
+    ----------
+    arg : Collection or Iterable
+    convert : callable, optional
+        If supplied, every element of *arg* is passed through `convert` before
+        being added.
 
-
-def to_jlist2(arg, convert=None):
-    """Simple conversion of :class:`list` *arg* to java.LinkedList."""
+    Returns
+    -------
+    java.LinkedList
+    """
     jlist = java.LinkedList()
 
     if convert:

@@ -744,9 +744,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the set.
-        idx_sets : list of str, optional
+        idx_sets : list of str or str, optional
             Names of other sets that index this set.
-        idx_names : list of str, optional
+        idx_names : list of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
 
         Raises
@@ -757,6 +757,8 @@ class Scenario(TimeSeries):
             If the Scenario is not checked out (see
             :meth:`~TimeSeries.check_out`).
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
     def set(self, name, filters=None, **kwargs):
@@ -912,11 +914,13 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        idx_sets : list of str
+        idx_sets : list of str or str, optional
             Names of sets that index this parameter.
-        idx_names : list of str, optional
+        idx_names : list of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
@@ -1044,7 +1048,7 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the scalar.
         """
-        self.init_par(name, None, None)
+        self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
     def scalar(self, name):
@@ -1103,17 +1107,19 @@ class Scenario(TimeSeries):
         return name in self.var_list()
 
     def init_var(self, name, idx_sets=None, idx_names=None):
-        """Initialize a new variable in the scenario.
+        """Initialize a new variable.
 
         Parameters
         ----------
         name : str
-            name of the item
-        idx_sets : list of str
-            index set list
-        idx_names : list of str, optional
-            index name list
+            Name of the variable.
+        idx_sets : list of str or str, optional
+            Name(s) of index sets for a 1+-dimensional variable.
+        idx_names : list of str or str, optional
+            Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'var', name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
@@ -1138,12 +1144,14 @@ class Scenario(TimeSeries):
         Parameters
         ----------
         name : str
-            name of the item
-        idx_sets : list of str
-            index set list
-        idx_names : list of str, optional
-            index name list
+            Name of the equation.
+        idx_sets : list of str or str, optional
+            Name(s) of index sets for a 1+-dimensional variable.
+        idx_names : list of str or str, optional
+            Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'equ', name, idx_sets, idx_names)
 
     def has_equ(self, name):

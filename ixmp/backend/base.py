@@ -618,18 +618,31 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def init_item(self, s: Scenario, type, name):
+    def init_item(self, s: Scenario, type, name, idx_sets, idx_names):
         """Initialize an item *name* of *type*.
 
         Parameters
         ----------
-        type : 'set' or 'par' or 'equ'
+        type : 'set' or 'par' or 'equ' or 'var'
         name : str
             Name for the new item.
+        idx_sets : list of str
+            If empty, a 0-dimensional/scalar item is initialized. Otherwise, a
+            1+-dimensional item is initialized.
+        idx_names : list of str or None
+            Optional names for the dimensions. If not supplied, the names of
+            the *idx_sets* (if any) are used. If supplied, *idx_names* and
+            *idx_sets* must be the same length.
 
         Return
         ------
         None
+
+        Raises
+        ------
+        ValueError
+            if any of the *idx_sets* is not an existing set in the Scenario;
+            if *idx_names* and *idx_sets* are not the same length.
         """
 
     @abstractmethod

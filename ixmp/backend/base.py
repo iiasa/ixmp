@@ -8,14 +8,9 @@ from . import ItemType
 
 class Backend(ABC):
     """Abstract base class for backends."""
-    # NB non-abstract methods like close_db() are marked '# pragma: no cover'.
-    #    In order to cover these with tests, define a MemoryBackend or similar
-    #    that provides implementations of all the abstract methods but does
-    #    NOT override the non-abstract methods; then call those.
 
-    def __init__(self):  # pragma: no cover
+    def __init__(self):
         """OPTIONAL: Initialize the backend."""
-        pass
 
     def __call__(self, obj, method, *args, **kwargs):
         """Call the backend method *method* for *obj*.
@@ -25,14 +20,13 @@ class Backend(ABC):
         """
         return getattr(self, method)(obj, *args, **kwargs)
 
-    def close_db(self):  # pragma: no cover
+    def close_db(self):
         """OPTIONAL: Close database connection(s).
 
         Close any database connection(s), if open.
         """
-        pass
 
-    def get_auth(self, user, models, kind):  # pragma: no cover
+    def get_auth(self, user, models, kind):
         """OPTIONAL: Return user authorization for *models*.
 
         If the Backend implements access control, this method **must** indicate
@@ -133,22 +127,20 @@ class Backend(ABC):
         set_unit
         """
 
-    def open_db(self):  # pragma: no cover
+    def open_db(self):
         """OPTIONAL: (Re-)open database connection(s).
 
         A backend **may** connect to a database server. This method opens the
         database connection if it is closed.
         """
-        pass
 
-    def set_log_level(self, level):  # pragma: no cover
+    def set_log_level(self, level):
         """OPTIONAL: Set logging level for the backend and other code.
 
         Parameters
         ----------
         level : int or Python logging level
         """
-        pass
 
     @abstractmethod
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
@@ -554,9 +546,8 @@ class Backend(ABC):
         int
         """
 
-    def preload(self, ts: TimeSeries):  # pragma: no cover
+    def preload(self, ts: TimeSeries):
         """OPTIONAL: Load *ts* data into memory."""
-        pass
 
     # Methods for ixmp.Scenario
 

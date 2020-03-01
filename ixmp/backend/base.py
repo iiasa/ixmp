@@ -534,7 +534,7 @@ class Backend(ABC):
 
         Returns
         -------
-        str
+        str or None
         """
 
     @abstractmethod

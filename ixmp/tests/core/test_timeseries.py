@@ -102,6 +102,57 @@ class TestTimeSeries:
         cls = request.param
         yield cls(mp, model=f'test-{node}', scenario='test', version='new')
 
+    # Initialize TimeSeries
+    @pytest.mark.parametrize('cls', [TimeSeries, Scenario])
+    def test_init(self, test_mp, cls):
+        # Something other than a Platform as mp argument
+        with pytest.raises(TypeError):
+            cls(None, 'model name', 'scenario name')
+
+        # Invalid version argument
+        with pytest.raises(ValueError):
+            cls(test_mp, 'model name', 'scenario name', version=3.4)
+
+    # TimeSeries properties
+    def test_default(self, mp, ts):
+        # NB this is required before the is_default method can be used
+        # FIXME should return False regardless
+        ts.commit('')
+
+        # Temporary TimeSeries is has not been set_as_default
+        assert not ts.is_default()
+
+        ts.set_as_default()
+        assert ts.is_default()
+
+        # NB TimeSeries cannot be cloned, so create a new one with the same
+        #    name
+        ts2 = TimeSeries(mp, ts.model, ts.scenario, version='new')
+        ts2.commit('')
+        ts2.set_as_default()
+
+        assert ts2.is_default()
+        # Original TimeSeries is no longer default
+        assert not ts.is_default()
+
+    def test_run_id(self, ts):
+        # New, un-committed TimeSeries has run_id of -1
+        assert ts.run_id() == -1
+
+        # The run ID is a positive integer
+        ts.commit('')
+        assert ts.run_id() > 0 and isinstance(ts.run_id(), int)
+
+    def test_last_update(self, ts):
+        # New, un-committed TimeSeries has no last update date
+        assert ts.last_update() is None
+
+        ts.commit('')
+
+        pytest.xfail()  # FIXME
+        # After committing, last_update() returns a string
+        assert ts.last_update() == 'foo'
+
     @pytest.mark.parametrize('format', ['long', 'wide'])
     def test_add_timeseries(self, ts, format):
         data = DATA[0] if format == 'long' else wide(DATA[0])
@@ -190,6 +241,7 @@ class TestTimeSeries:
         exp = expected(DATA[2050], ts)
         assert_frame_equal(exp, ts.timeseries())
 
+    # TODO parametrize format as wide/long
     @pytest.mark.parametrize('commit', [
         pytest.param(True),
         pytest.param(

@@ -145,8 +145,9 @@ class TestScenario:
         scen.add_par('b', ['new-york', 'chicago'], value=100, unit='cases')
 
     # Retrieve data
-    def test_idx_names(self, scen):
-        npt.assert_array_equal(scen.idx_names('d'), ['i', 'j'])
+    def test_idx(self, scen):
+        assert scen.idx_sets('d') == ['i', 'j']
+        assert scen.idx_names('d') == ['i', 'j']
 
     def test_par(self, scen):
         # Parameter data can be retrieved with filters

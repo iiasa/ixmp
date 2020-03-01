@@ -398,7 +398,7 @@ class JDBCBackend(CachingBackend):
         try:
             jobj = method(*args)
         except java.IxException as e:
-            raise RuntimeError(*e.args)
+            raise RuntimeError(*e.args) from None
 
         # Add to index
         self.jindex[ts] = jobj
@@ -420,7 +420,7 @@ class JDBCBackend(CachingBackend):
         try:
             self.jindex[ts].checkOut(timeseries_only)
         except java.IxException as e:
-            raise RuntimeError(e)
+            raise RuntimeError(e) from None
 
     def commit(self, ts, comment):
         self.jindex[ts].commit(comment)
@@ -437,7 +437,11 @@ class JDBCBackend(CachingBackend):
         return bool(self.jindex[ts].isDefault())
 
     def last_update(self, ts):
-        return self.jindex[ts].getLastUpdateTimestamp().toString()
+        timestamp = self.jindex[ts].getLastUpdateTimestamp()
+        if timestamp:
+            timestamp.toString()
+        else:
+            return timestamp  # None
 
     def run_id(self, ts):
         return self.jindex[ts].getRunId()
@@ -725,9 +729,9 @@ class JDBCBackend(CachingBackend):
             msg = e.message()
             if ('does not have an element' in msg) or ('The unit' in msg):
                 # Re-raise as Python ValueError
-                raise ValueError(msg) from e
+                raise ValueError(msg) from None
             else:  # pragma: no cover
-                raise RuntimeError(str(e))
+                raise RuntimeError(str(e)) from None
 
         self.cache_invalidate(s, type, name)
 

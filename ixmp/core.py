@@ -284,12 +284,13 @@ class Platform:
         category (e.g., all months) from the pandas.DataFrame returned by this
         function or to aggregate subannual data to full-year results.
 
-        See :method:`add_timeslice` to initialize additional timeslices in the
+        See :meth:`add_timeslice` to initialize additional timeslices in the
         Platform instance.
 
         Returns
         -------
         pandas.DataFrame
+            DataFrame of timeslices, categories and duration
         """
         return pd.DataFrame(self._backend.get_timeslices(),
                             columns=FIELDS['get_timeslices'])
@@ -297,7 +298,7 @@ class Platform:
     def add_timeslice(self, name, category, duration):
         """Define a subannual timeslice including a category and duration.
 
-        See :method:`timeslices` for a detailed description of timeslices.
+        See :meth:`timeslices` for a detailed description of timeslices.
 
         Parameters
         ----------
@@ -468,9 +469,9 @@ class TimeSeries:
             To support subannual temporal resolution of timeseries data, a
             column `subannual` is optional in `df`. The entries in this column
             must have been defined in the Platform instance using
-            :method:`add_timeslice` beforehand. If no column `subannual` is
+            :meth:`add_timeslice` beforehand. If no column `subannual` is
             included in `df`, the data is assumed to contain yearly values.
-            See :method:`timeslices` for a detailed description of the feature.
+            See :meth:`timeslices` for a detailed description of the feature.
 
         meta : bool, optional
             If :obj:`True`, store `df` as metadata. Metadata is treated

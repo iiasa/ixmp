@@ -284,6 +284,10 @@ class Platform:
         category (e.g., all months) from the pandas.DataFrame returned by this
         function or to aggregate subannual data to full-year results.
 
+        A timeslice is related to the index set 'time' in a message_ix.Scenario
+        to indicate a subannual temporal dimension. Alas, timeslices and set
+        elements of time have to be initialized/defined independently.
+
         See :meth:`add_timeslice` to initialize additional timeslices in the
         Platform instance.
 

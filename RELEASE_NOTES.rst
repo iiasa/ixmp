@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#270 <https://github.com/iiasa/ixmp/pull/270>`_: Include all tests in the ixmp package.
 - `#212 <https://github.com/iiasa/ixmp/pull/212>`_: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.
 - `#267 <https://github.com/iiasa/ixmp/pull/267>`_: Apply units to reported quantities.
 - `#254 <https://github.com/iiasa/ixmp/pull/254>`_: Remove deprecated items:

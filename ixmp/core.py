@@ -235,7 +235,7 @@ class Platform:
             if r.region != name:
                 continue
 
-            log.warn(
+            log.warning(
                 f'region {name!r} is already defined on the Platform'
                 + (f' as a synonym for {r.mapped_to!r}' if r.mapped_to else '')
                 + (f' under parent {r.parent!r}' if r.parent else ''))

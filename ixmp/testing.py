@@ -2,7 +2,7 @@
 
 These include:
 
-- pytest hooks, fixtures:
+- pytest hooks, `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_:
 
   .. autosummary::
      :nosignatures:
@@ -21,8 +21,8 @@ These include:
 - Methods for setting up and populating test ixmp databases:
 
   .. autosummary::
-     create_local_testdb
      make_dantzig
+     populate_test_platform
 
 - Methods to run and retrieve values from Jupyter notebooks:
 
@@ -104,7 +104,7 @@ def tmp_env(tmp_path_factory):
 
 @pytest.fixture(scope='class')
 def test_mp(request, tmp_env, test_data_path):
-    """An ixmp.Platform connected to a temporary, in-memory database."""
+    """An empty ixmp.Platform connected to a temporary, in-memory database."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace('/', ' ')

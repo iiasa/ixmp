@@ -22,6 +22,7 @@ These include:
 
   .. autosummary::
      make_dantzig
+     create_test_platform
      populate_test_platform
 
 - Methods to run and retrieve values from Jupyter notebooks:
@@ -34,6 +35,7 @@ These include:
 from contextlib import contextmanager
 import io
 import os
+import shutil
 import subprocess
 import sys
 
@@ -135,6 +137,53 @@ INP_DF = pd.DataFrame(
 TS_DF = pd.concat([HIST_DF, INP_DF], sort=False)
 TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
+
+
+def create_test_platform(tmp_path, data_path, name, **properties):
+    """Create a Platform for testing using specimen files '*name*.*'.
+
+    Any of the following files from *data_path* are copied to *tmp_path*:
+
+    - *name*.lobs, *name*.script, i.e. the contents of a :class:`.JDBCBackend`
+      HyperSQL database.
+    - *name*.properties.
+
+    The contents of *name*.properties (if it exists) are formatted using the
+    *properties* keyword arguments.
+
+    Returns
+    -------
+    pathlib.Path
+        the path to the .properties file, if any, else the .lobs file without
+        suffix.
+    """
+    # Copy files
+    any_files = False
+    for suffix in '.lobs', '.properties', '.script':
+        src = (data_path / name).with_suffix(suffix)
+        dst = (tmp_path / name).with_suffix(suffix)
+        try:
+            shutil.copyfile(str(src), str(dst))
+        except FileNotFoundError:
+            pass
+        else:
+            any_files = True
+
+    if not any_files:
+        raise ValueError(f'no files for test platform {name!r}')
+
+    # Create properties file
+    props_file = (tmp_path / name).with_suffix('.properties')
+
+    try:
+        props = props_file.read_text()
+    except FileNotFoundError:
+        # No properties file; return the stub
+        return tmp_path / name
+    else:
+        props = props.format(db_path=str(tmp_path / name), **properties)
+        props_file.write_text(props)
+        return props_file
 
 
 def populate_test_platform(platform):

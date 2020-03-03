@@ -11,11 +11,10 @@ from types import SimpleNamespace
 
 import jpype
 from jpype import JClass
-import numpy as np
 import pandas as pd
 
 from ixmp.core import Scenario
-from ixmp.utils import as_str_list, filtered, islistable
+from ixmp.utils import as_str_list, filtered
 from . import FIELDS, ItemType
 from .base import CachingBackend
 

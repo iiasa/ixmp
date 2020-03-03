@@ -38,24 +38,17 @@ def as_str_list(arg, idx_names=None):
         return None
     elif idx_names is None:
         # arg must be iterable
-        return list(map(str, arg)) if islistable(arg) else [str(arg)]
+        if isinstance(arg, Iterable) and not isinstance(arg, str):
+            return list(map(str, arg))
+        else:
+            return [str(arg)]
     else:
         return [str(arg[idx]) for idx in idx_names]
 
 
-def isstr(x):
-    """Returns True if x is a string"""
-    return isinstance(x, six.string_types)
-
-
 def isscalar(x):
     """Returns True if x is a scalar"""
-    return not isinstance(x, Iterable) or isstr(x)
-
-
-def islistable(x):
-    """Returns True if x is a list but not a string"""
-    return isinstance(x, Iterable) and not isstr(x)
+    return not isinstance(x, Iterable) or isinstance(x, str)
 
 
 def check_year(y, s):

@@ -7,7 +7,7 @@ test_args = ('Douglas Adams', 'Hitchhiker')
 GEODATA = {
     'region': 'World',
     'variable': 'var1',
-    'time': 'YEAR',
+    'time': 'Year',
     'year': [2000, 2010, 2020],
     'value': ['test', 'more-test', '2020-test'],
     'unit': 'score',

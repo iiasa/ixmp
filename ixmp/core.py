@@ -491,7 +491,7 @@ class TimeSeries:
         df = to_iamc_template(df)
 
         if 'time' not in df.columns:
-            df['time'] = 'YEAR'
+            df['time'] = 'Year'
 
         index_cols = ['region', 'variable', 'unit', 'time']
         if 'value' in df.columns:

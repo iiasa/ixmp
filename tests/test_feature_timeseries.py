@@ -243,8 +243,25 @@ def test_timeseries_remove_all_data(test_mp):
 def test_new_subannual_timeseries_as_iamc(test_mp):
     test_mp.add_timeslice('Summer', 'Season', 1.0/4)
     scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    timeseries = TS_DF.pivot_table(values='value', index=cols_str)
-    timeseries['time'] = 'Summer'
+    timeseries = TS_DF.pivot_table(values='value', index=IDX_COLS)
     scen.add_timeseries(timeseries)
-    scen.commit('importing a testing timeseries')
-    assert_timeseries(scen, exp=timeseries)
+    scen.commit('adding yearly data')
+
+    # add subannual timeseries data
+    ts_summer = timeseries.copy()
+    ts_summer['subannual'] = 'Summer'
+    scen.check_out()
+    scen.add_timeseries(ts_summer)
+    scen.commit('adding subannual data')
+
+    # generate expected dataframe+
+    ts_year = timeseries.copy()
+    ts_year['subannual'] = 'Year'
+    exp = pd.concat([ts_year, ts_summer]).reset_index()
+    exp['model'] = 'Douglas Adams'
+    exp['scenario'] = 'Hitchhiker'
+
+    # compare
+    cols = ['model', 'scenario', 'region', 'variable', 'subannual', 'unit',
+            'year', 'value']
+    assert_timeseries(scen, exp=exp[cols])

@@ -3,6 +3,7 @@ from itertools import repeat, zip_longest
 import logging
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from ._config import config
@@ -316,7 +317,14 @@ class Platform:
         duration : float
             Duration of timeslice as fraction of year.
         """
-        self._backend.set_timeslice(name, category, duration)
+        slices = self.timeslices().set_index('name')
+        if name in slices.index:
+            msg = 'timeslice `{}` already defined with duration {}'
+            if not np.isclose(duration, slices.loc[name].duration):
+                raise ValueError(msg.format(name, duration))
+            logger().info(msg.format(name, duration))
+        else:
+            self._backend.set_timeslice(name, category, duration)
 
     def check_access(self, user, models, access='view'):
         """Check access to specific models.

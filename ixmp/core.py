@@ -87,7 +87,10 @@ class Platform:
 
     def __getattr__(self, name):
         """Convenience for methods of Backend."""
-        return getattr(self._backend, name)
+        if name in self._backend_direct:
+            return getattr(self._backend, name)
+        else:
+            raise AttributeError(name)
 
     def set_log_level(self, level):
         """Set global logger level.
@@ -313,7 +316,7 @@ class Platform:
         duration : float
             Duration of timeslice as fraction of year.
         """
-        self._backend.add_timeslice(name, category, duration)
+        self._backend.set_timeslice(name, category, duration)
 
     def check_access(self, user, models, access='view'):
         """Check access to specific models.

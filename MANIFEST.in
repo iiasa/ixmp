@@ -1,2 +1,3 @@
 include versioneer.py
 include ixmp/_version.py
+include ixmp/model/dantzig.gms

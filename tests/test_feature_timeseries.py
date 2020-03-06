@@ -7,8 +7,8 @@ import ixmp
 test_args = ('Douglas Adams', 'Hitchhiker')
 
 # string columns and dataframe for timeseries checks
-iamc_idx_cols = ['model', 'scenario', 'region', 'variable', 'unit']
-cols_str = ['region', 'variable', 'unit', 'year']
+IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
+IDX_COLS = ['region', 'variable', 'unit', 'year']
 
 TS_DF = {'year': [2010, 2020], 'value': [23.7, 23.8]}
 TS_DF = pd.DataFrame.from_dict(TS_DF)
@@ -31,7 +31,7 @@ def test_get_timeseries_iamc(test_mp):
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
 
-    npt.assert_array_equal(exp[iamc_idx_cols], obs[iamc_idx_cols])
+    npt.assert_array_equal(exp[IAMC_IDX], obs[IAMC_IDX])
     npt.assert_array_almost_equal(exp[2010], obs[2010])
 
 
@@ -44,14 +44,14 @@ def test_new_timeseries_as_year_value(test_mp):
 
 def test_new_timeseries_as_iamc(test_mp):
     scen = ixmp.TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
     assert_timeseries(scen)
 
 
 def assert_timeseries(scen, exp=TS_DF):
     obs = scen.timeseries(region='World')
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     if 'time' in exp.columns:
         npt.assert_array_equal(exp[['time']], obs[['time']])
@@ -73,7 +73,7 @@ def test_timeseries_edit(test_mp):
           'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
     exp = pd.DataFrame.from_dict(df)
     obs = scen.timeseries()
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
     scen.check_out(timeseries_only=True)
@@ -99,7 +99,7 @@ def test_timeseries_edit(test_mp):
     scen = ixmp.TimeSeries(test_mp, *test_args)
     obs = scen.timeseries().sort_values(by=['year'])
     df = df.append(exp.loc[0]).sort_values(by=['year'])
-    npt.assert_array_equal(df[cols_str], obs[cols_str])
+    npt.assert_array_equal(df[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(df['value'], obs['value'])
 
 
@@ -122,7 +122,7 @@ def test_timeseries_edit_iamc(test_mp):
                                   'unit': ['???', '???'],
                                   'year': [2010, 2020],
                                   'value': [23.7, 23.8]})
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
     scen.check_out(timeseries_only=True)
@@ -145,7 +145,7 @@ def test_timeseries_edit_iamc(test_mp):
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
     obs = scen.timeseries()
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     test_mp.close_db()
 
@@ -171,7 +171,7 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
                                   'unit': ['???', '???'],
                                   'year': [2010, 2020],
                                   'value': [23.7, 23.8]})
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
     scen.check_out(timeseries_only=True)
@@ -195,7 +195,7 @@ def test_timeseries_edit_with_region_synonyms(test_mp):
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
     obs = scen.timeseries()
-    npt.assert_array_equal(exp[cols_str], obs[cols_str])
+    npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     test_mp.close_db()
 
@@ -204,7 +204,7 @@ def test_timeseries_remove_single_entry(test_mp):
     args_single = ('Douglas Adams', 'test_remove_single')
 
     scen = ixmp.Scenario(test_mp, *args_single, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = ixmp.Scenario(test_mp, *args_single)
@@ -222,7 +222,7 @@ def test_timeseries_remove_all_data(test_mp):
     args_all = ('Douglas Adams', 'test_remove_all')
 
     scen = ixmp.Scenario(test_mp, *args_all, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=cols_str))
+    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = ixmp.Scenario(test_mp, *args_all)

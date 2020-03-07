@@ -1,6 +1,7 @@
 # coding=utf-8
 
-import pytest
+from pytest import raises
+
 
 def test_timeslices(test_mp):
     timeslices = test_mp.timeslices()
@@ -26,5 +27,6 @@ def test_add_timeslice(test_mp):
 def test_add_timeslice_duplicate_raise(test_mp):
     test_mp.add_timeslice('foo_slice', 'foo_category', 0.2)
     # adding same name with different duration raises an error
-    pytest.raises(ValueError, test_mp, add_timeslice,
-                  'foo_slice', 'bar_category', 0.3)
+    with raises(ValueError, match='timeslice `foo_slice` already defined with '
+                                  'duration 0.2'):
+        test_mp.add_timeslice('foo_slice', 'bar_category', 0.3)

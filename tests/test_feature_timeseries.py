@@ -49,8 +49,20 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_timeseries(scen)
 
 
-def assert_timeseries(scen, exp=TS_DF):
+def assert_timeseries(scen, exp=TS_DF, cols=None):
+    """ Asserts scenario timeseries are similar to expected
+
+    Compares region, variable, unit, year and time (if available).
+    By default it assumes that datasets are sorted in correct order to compare.
+
+    :param scen:    scenario object
+    :param exp:     expected timeseries data
+    :param cols:    (optional) column list to sort by
+    """
     obs = scen.timeseries(region='World')
+    if cols is not None:
+        obs = obs.sort_values(by=cols)
+        exp = exp.sort_values(by=cols)
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     if 'time' in exp.columns:
@@ -249,19 +261,19 @@ def test_new_subannual_timeseries_as_iamc(test_mp):
 
     # add subannual timeseries data
     ts_summer = timeseries.copy()
-    ts_summer['subannual'] = 'Summer'
+    ts_summer['time'] = 'Summer'
     scen.check_out()
     scen.add_timeseries(ts_summer)
     scen.commit('adding subannual data')
 
     # generate expected dataframe+
     ts_year = timeseries.copy()
-    ts_year['subannual'] = 'Year'
+    ts_year['time'] = 'Year'
     exp = pd.concat([ts_year, ts_summer]).reset_index()
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
 
     # compare
-    cols = ['model', 'scenario', 'region', 'variable', 'subannual', 'unit',
+    cols = ['model', 'scenario', 'region', 'variable', 'time', 'unit',
             'year', 'value']
-    assert_timeseries(scen, exp=exp[cols])
+    assert_timeseries(scen, exp=exp[cols], cols=cols)

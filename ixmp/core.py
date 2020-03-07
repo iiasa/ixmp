@@ -320,8 +320,9 @@ class Platform:
         slices = self.timeslices().set_index('name')
         if name in slices.index:
             msg = 'timeslice `{}` already defined with duration {}'
-            if not np.isclose(duration, slices.loc[name].duration):
-                raise ValueError(msg.format(name, duration))
+            existing_duration = slices.loc[name].duration
+            if not np.isclose(duration, existing_duration):
+                raise ValueError(msg.format(name, existing_duration))
             logger().info(msg.format(name, duration))
         else:
             self._backend.set_timeslice(name, category, duration)
@@ -416,7 +417,7 @@ class TimeSeries:
 
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries for modification."""
-        if not timeseries_only and self.has_solution():
+        if not timeseries_only and (isinstance(self, Scenario) and self.has_solution()):
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '
                              '`Scenario.clone(..., keep_solution=False)`'

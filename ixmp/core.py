@@ -502,10 +502,11 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
-        if 'subannual' not in df.columns:
-            df['subannual'] = 'Year'
+        index_cols = ['region', 'variable', 'unit']
+        has_subannual = 'subannual' in df.columns
+        if has_subannual:
+            index_cols.append('subannual')
 
-        index_cols = ['region', 'variable', 'unit', 'subannual']
         if 'value' in df.columns:
             # Long format; pivot to wide
             df = pd.pivot_table(df,
@@ -524,9 +525,15 @@ class TimeSeries:
         df.columns = df.columns.astype(int)
 
         # Add one time series per row
-        for (r, v, u, t), data in df.iterrows():
+        for index, data in df.iterrows():
+            if has_subannual:
+                (r, v, u, sa) = index
+            else:
+                (r, v, u) = index
+                sa = None
+
             # Values as float; exclude NA
-            self._backend('set_data', r, v, data.astype(float).dropna(), u, t,
+            self._backend('set_data', r, v, data.astype(float).dropna(), u, sa,
                           meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,

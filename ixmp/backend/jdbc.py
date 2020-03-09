@@ -1,7 +1,6 @@
 from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
-from functools import lru_cache
 from itertools import chain
 import logging
 import os
@@ -467,14 +466,11 @@ class JDBCBackend(CachingBackend):
             'value': float,
         }
 
-        fields_map = {'subannual': 'time'}
-
         # Iterate over returned rows
         for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
             # Get the value of each field and maybe convert its type
             yield tuple(ftype.get(f, str)
-                        (getattr(row, 'get' + fields_map.get(f, f)
-                                 .capitalize())())
+                        (getattr(row, 'get' + f.capitalize())())
                         for f in FIELDS['ts_get'])
 
     def get_geo(self, ts):
@@ -491,7 +487,7 @@ class JDBCBackend(CachingBackend):
         jname = {
             'meta': 'meta',
             'region': 'nodeName',
-            'subannual': 'time',
+            'subannual': 'subannual',
             'unit': 'unitName',
             'variable': 'keyString',
             'year': 'yearlyData'
@@ -518,14 +514,14 @@ class JDBCBackend(CachingBackend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
-    def set_data(self, ts, region, variable, data, unit, time, meta):
+    def set_data(self, ts, region, variable, data, unit, subannual, meta):
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
             # Explicit cast is necessary; otherwise java.lang.Long
             jdata.put(java.Integer(k), v)
 
-        self.jindex[ts].addTimeseries(region, variable, time, jdata, unit,
+        self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit,
                                       meta)
 
     def set_geo(self, ts, region, variable, time, year, value, unit, meta):

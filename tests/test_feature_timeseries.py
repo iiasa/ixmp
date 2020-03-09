@@ -65,8 +65,8 @@ def assert_timeseries(scen, exp=TS_DF, cols=None):
         exp = exp.sort_values(by=cols)
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
-    if 'time' in exp.columns:
-        npt.assert_array_equal(exp[['time']], obs[['time']])
+    if 'subannual' in exp.columns:
+        npt.assert_array_equal(exp[['subannual']], obs[['subannual']])
 
 
 def test_new_timeseries_error(test_mp):
@@ -261,19 +261,19 @@ def test_new_subannual_timeseries_as_iamc(test_mp):
 
     # add subannual timeseries data
     ts_summer = timeseries.copy()
-    ts_summer['time'] = 'Summer'
+    ts_summer['subannual'] = 'Summer'
     scen.check_out()
     scen.add_timeseries(ts_summer)
     scen.commit('adding subannual data')
 
     # generate expected dataframe+
     ts_year = timeseries.copy()
-    ts_year['time'] = 'Year'
+    ts_year['subannual'] = 'Year'
     exp = pd.concat([ts_year, ts_summer]).reset_index()
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
 
     # compare
-    cols = ['model', 'scenario', 'region', 'variable', 'time', 'unit',
+    cols = ['model', 'scenario', 'region', 'variable', 'subannual', 'unit',
             'year', 'value']
     assert_timeseries(scen, exp=exp[cols], cols=cols)

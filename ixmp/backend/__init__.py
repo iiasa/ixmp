@@ -9,8 +9,8 @@ FIELDS = {
                       'is_locked', 'cre_user', 'cre_date', 'upd_user',
                       'upd_date', 'lock_user', 'lock_date', 'annotation',
                       'version'),
-    'ts_get': ('region', 'variable', 'unit', 'time', 'year', 'value'),
-    'ts_get_geo': ('region', 'variable', 'time', 'year', 'value', 'unit',
+    'ts_get': ('region', 'variable', 'unit', 'subannual', 'year', 'value'),
+    'ts_get_geo': ('region', 'variable', 'subannual', 'year', 'value', 'unit',
                    'meta'),
 }
 

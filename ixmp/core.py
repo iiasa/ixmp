@@ -499,10 +499,10 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
-        if 'time' not in df.columns:
-            df['time'] = 'Year'
+        if 'subannual' not in df.columns:
+            df['subannual'] = 'Year'
 
-        index_cols = ['region', 'variable', 'unit', 'time']
+        index_cols = ['region', 'variable', 'unit', 'subannual']
         if 'value' in df.columns:
             # Long format; pivot to wide
             df = pd.pivot_table(df,
@@ -602,14 +602,14 @@ class TimeSeries:
 
             - `region`
             - `variable`
-            - `time`
+            - `subannual`
             - `unit`
             - `year`
             - `value`
             - `meta`
         """
         for _, row in df.astype({'year': int, 'meta': int}).iterrows():
-            self._backend('set_geo', row.region, row.variable, row.time,
+            self._backend('set_geo', row.region, row.variable, row.subannual,
                           row.year, row.value, row.unit, row.meta)
 
     def remove_geodata(self, df):
@@ -623,12 +623,12 @@ class TimeSeries:
             - `region`
             - `variable`
             - `unit`
-            - `time`
+            - `subannual`
             - `year`
         """
         # Remove all years for a given (r, v, t, u) combination at once
-        for (r, v, t, u), data in df.groupby(['region', 'variable', 'time',
-                                              'unit']):
+        for (r, v, t, u), data in df.groupby(['region', 'variable',
+                                              'subannual', 'unit']):
             self._backend('delete_geo', r, v, t, data['year'].tolist(), u)
 
     def get_geodata(self):
@@ -1440,8 +1440,7 @@ def to_iamc_template(df):
     Raises
     ------
     ValueError
-        If 'time' is among the column names; or 'region', 'variable', or 'unit'
-        is not.
+        If 'region', 'variable', or 'unit' is not among the column names.
     """
     # reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:

@@ -467,11 +467,14 @@ class JDBCBackend(CachingBackend):
             'value': float,
         }
 
+        fields_map = {'subannual': 'time'}
+
         # Iterate over returned rows
         for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
             # Get the value of each field and maybe convert its type
             yield tuple(ftype.get(f, str)
-                        (getattr(row, 'get' + f.capitalize())())
+                        (getattr(row, 'get' + fields_map.get(f, f)
+                                 .capitalize())())
                         for f in FIELDS['ts_get'])
 
     def get_geo(self, ts):
@@ -488,7 +491,7 @@ class JDBCBackend(CachingBackend):
         jname = {
             'meta': 'meta',
             'region': 'nodeName',
-            'time': 'time',
+            'subannual': 'time',
             'unit': 'unitName',
             'variable': 'keyString',
             'year': 'yearlyData'

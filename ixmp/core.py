@@ -414,10 +414,13 @@ class TimeSeries:
         return self.platform._backend(self, method, *args, **kwargs)
 
     # functions for platform management
+    def has_solution(self):
+        # only Scenario class can have a solution
+        return False
 
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries for modification."""
-        if not timeseries_only and (isinstance(self, Scenario) and self.has_solution()):
+        if not timeseries_only and self.has_solution():
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '
                              '`Scenario.clone(..., keep_solution=False)`'

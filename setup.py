@@ -9,7 +9,8 @@ with open('README.md', 'r') as f:
     LONG_DESCRIPTION = f.read()
 
 INSTALL_REQUIRES = [
-    'JPype1>=0.7',
+    # Temporary, to address segfaults with 0.7.2 on some systems
+    'JPype1>=0.7, !=0.7.2',
     'click',
     'dask[array]',
     'graphviz',

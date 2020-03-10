@@ -51,7 +51,7 @@ install:
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
   # Run tests. These include the equivalent of Travis R tests via test_r.py.
-  - pytest --test-r --verbose
+  - pytest --test-r --verbose ixmp
   # Test that documentation can be built
   - cd doc
   - pip install -r requirements.txt

@@ -605,7 +605,6 @@ def configure(path=None, **config):
     # Define units
     ureg = pint.get_application_registry()
     try:
-        print(units['define'])
         ureg.define(units['define'].strip())
     except KeyError:
         pass

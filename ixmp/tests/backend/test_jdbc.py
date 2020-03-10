@@ -1,9 +1,9 @@
 import jpype
 import pytest
-from pytest import raises, warns
+from pytest import raises
 
 import ixmp
-from ixmp.testing import make_dantzig
+from ixmp.testing import assert_logs, make_dantzig
 
 
 def test_jvm_warn(recwarn):
@@ -51,11 +51,18 @@ def test_invalid_properties_file(test_data_path):
         ixmp.Platform(dbprops=test_data_path / 'hsqldb.properties')
 
 
-def test_connect_message(caplog, test_data_path):
-    sample_props = test_data_path / 'testdb' / 'test.properties.sample'
-    ixmp.Platform(dbprops=sample_props)
-    assert caplog.records[-1].message == \
-        'launching ixmp.Platform connected to jdbc:hsqldb:mem://ixmptest'
+def test_connect_message(capfd, caplog):
+    msg = "connected to database 'jdbc:hsqldb:mem://ixmptest' (user: ixmp)..."
+
+    ixmp.Platform(backend='jdbc', driver='hsqldb',
+                  url='jdbc:hsqldb:mem://ixmptest')
+
+    # Java code via JPype does not log to the standard Python logger
+    assert not any(msg in m for m in caplog.messages)
+
+    # Instead, log messages are printed to stdout
+    captured = capfd.readouterr()
+    assert msg in captured.out
 
 
 def test_read_file(test_mp, tmp_path):

@@ -7,18 +7,12 @@ test_mp <- function () {
   # ixmp.testing.
   # FIXME use pytest internals to call the fixture functions directly
 
-  # Path for the test database
-  db_path <- file.path(Sys.getenv('IXMP_TEST_TMP_PATH'), .test_mp_count)
+  # Name for the temporary platform
+  url <- paste0('jdbc:hsqldb:mem:rixmp ', .test_mp_count)
   .test_mp_count <<- .test_mp_count + 1
 
-  # Path containing the files to populate the database
-  db_data_path <- file.path(Sys.getenv('IXMP_TEST_DATA_PATH'), 'testdb')
-
-  # Create the database
-  ixmp$testing$create_local_testdb(db_path, db_data_path)
-
   # launch Platform and connect to testdb (reconnect if closed)
-  mp <- ixmp$Platform(backend='jdbc', driver='hsqldb', path=db_path)
+  mp <- ixmp$Platform(backend='jdbc', driver='hsqldb', url=url)
   mp$open_db()
 
   return(mp)

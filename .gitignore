@@ -35,12 +35,6 @@ doc/source/_static/*.svg
 build
 dist
 
-# testdb
-.cache/**
-tests/testdb/test.properties
-tests/testdb/ixmptest.properties
-tests/testdb/ixmptest.lck
-
 # rixmp build folder and rhistory
 r*ixmp_*.tar.gz
 r*ixmp_*.zip

@@ -3,6 +3,7 @@ from pandas.testing import assert_frame_equal
 from click.exceptions import UsageError
 
 import ixmp
+from ixmp.testing import models, populate_test_platform
 import pandas as pd
 
 
@@ -69,8 +70,9 @@ def test_list(ixmp_cli, test_mp):
     assert result.exit_code == UsageError.exit_code
 
     # CLI works; nothing returned with a --match option that matches nothing
-    r = ixmp_cli.invoke(['--platform', test_mp.name] + cmd)
-    assert r.output == """
+    result = ixmp_cli.invoke(['--platform', test_mp.name] + cmd)
+    assert result.exit_code == 0, (result.exception, result.output)
+    assert result.output == """
 0 model name(s)
 0 scenario name(s)
 0 (model, scenario) combination(s)
@@ -127,25 +129,22 @@ def test_platform(ixmp_cli, tmp_path):
 
 
 def test_import(ixmp_cli, test_mp, test_data_path):
-    fname = test_data_path / 'timeseries_canning.csv'
+    # Ensure the 'canning problem'/'standard' TimeSeries exists
+    populate_test_platform(test_mp)
 
-    platform_name = test_mp.name
-    del test_mp
-
+    # Invoke the CLI to import data to version 1 of the TimeSeries
     result = ixmp_cli.invoke([
-        '--platform', platform_name,
-        '--model', 'canning problem',
-        '--scenario', 'standard',
+        '--platform', test_mp.name,
+        '--model', models['dantzig']['model'],
+        '--scenario', models['dantzig']['scenario'],
         '--version', '1',
         'import',
         '--firstyear', '2020',
-        str(fname),
+        str(test_data_path / 'timeseries_canning.csv'),
     ])
     assert result.exit_code == 0
 
-    # Check that the TimeSeries now contains the expected content
-    mp = ixmp.Platform(name=platform_name)
-    scen = ixmp.Scenario(mp, 'canning problem', 'standard', 1)
+    # Expected data
     exp = pd.DataFrame.from_dict({
         'region': ['World'],
         'variable': ['Testing'],
@@ -155,7 +154,14 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         'model': ['canning problem'],
         'scenario': ['standard'],
     })
-    assert_frame_equal(exp, scen.timeseries())
+
+    # The specified TimeSeries version contains the expected data
+    scen = ixmp.Scenario(test_mp, **models['dantzig'], version=1)
+    assert_frame_equal(scen.timeseries(variable=['Testing']), exp)
+
+    # The data is not present in other versions
+    scen = ixmp.Scenario(test_mp, **models['dantzig'], version=2)
+    assert len(scen.timeseries(variable=['Testing'])) == 0
 
 
 def test_report(ixmp_cli):

@@ -202,11 +202,9 @@ Utilities
 ---------
 
 .. currentmodule:: ixmp.utils
-   :members: update_par
 
-.. automethod:: ixmp.utils.parse_url
-
-.. automethod:: ixmp.utils.format_scenario_list
+.. automodule:: ixmp.utils
+   :members: format_scenario_list, parse_url, update_par
 
 
 Testing utilities

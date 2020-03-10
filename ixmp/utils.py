@@ -38,24 +38,17 @@ def as_str_list(arg, idx_names=None):
         return None
     elif idx_names is None:
         # arg must be iterable
-        return list(map(str, arg)) if islistable(arg) else [str(arg)]
+        if isinstance(arg, Iterable) and not isinstance(arg, str):
+            return list(map(str, arg))
+        else:
+            return [str(arg)]
     else:
         return [str(arg[idx]) for idx in idx_names]
 
 
-def isstr(x):
-    """Returns True if x is a string"""
-    return isinstance(x, six.string_types)
-
-
 def isscalar(x):
     """Returns True if x is a scalar"""
-    return not isinstance(x, Iterable) or isstr(x)
-
-
-def islistable(x):
-    """Returns True if x is a list but not a string"""
-    return isinstance(x, Iterable) and not isstr(x)
+    return not isinstance(x, Iterable) or isinstance(x, str)
 
 
 def check_year(y, s):
@@ -254,6 +247,10 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         .apply(describe) \
         .reset_index()
 
+    if not len(info):
+        # No results; re-create a minimal empty data frame
+        info = pd.DataFrame([], columns=['model', 'scenario', 'default', 'N'])
+
     info['scenario'] = info['scenario'] \
         .str.cat(info['default'].astype(str), sep='#')
 
@@ -261,16 +258,15 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         info = info[info['model'].str.match(match)
                     | info['scenario'].str.match(match)]
 
+    lines = []
+
     if as_url:
         info['url'] = 'ixmp://{}'.format(platform.name)
         urls = info['url'].str.cat([info['model'], info['scenario']], sep='/')
         lines = urls.tolist()
     else:
-        lines = []
-
-        if len(info):
-            info['scenario'] = info['scenario'] \
-                .str.ljust(info['scenario'].str.len().max())
+        width = 0 if not len(info) else info['scenario'].str.len().max()
+        info['scenario'] = info['scenario'].str.ljust(width)
 
         for model, m_info in info.groupby(['model']):
             lines.extend([
@@ -279,10 +275,11 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
                 '  ' + '\n  '.join(m_info['scenario'].str.cat(m_info['range']))
             ])
 
+        lines.append('')
+
     # Summary information
     if not as_url:
         lines.extend([
-            '',
             str(len(info['model'].unique())) + ' model name(s)',
             str(len(info['scenario'].unique())) + ' scenario name(s)',
             str(len(info)) + ' (model, scenario) combination(s)',

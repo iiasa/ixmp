@@ -4,7 +4,18 @@ import pytest
 
 from ixmp import Scenario
 from ixmp.testing import make_dantzig
+from ixmp.model.base import Model
 from ixmp.model.dantzig import DantzigModel
+
+
+def test_base_model():
+    # An incomplete Backend subclass can't be instantiated
+    class M1(Model):
+        pass
+
+    with pytest.raises(TypeError, match="Can't instantiate abstract class M1 "
+                                        "with abstract methods"):
+        M1()
 
 
 @pytest.mark.parametrize('kwargs', [

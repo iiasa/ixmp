@@ -8,14 +8,9 @@ from . import ItemType
 
 class Backend(ABC):
     """Abstract base class for backends."""
-    # NB non-abstract methods like close_db() are marked '# pragma: no cover'.
-    #    In order to cover these with tests, define a MemoryBackend or similar
-    #    that provides implementations of all the abstract methods but does
-    #    NOT override the non-abstract methods; then call those.
 
-    def __init__(self):  # pragma: no cover
+    def __init__(self):
         """OPTIONAL: Initialize the backend."""
-        pass
 
     def __call__(self, obj, method, *args, **kwargs):
         """Call the backend method *method* for *obj*.
@@ -25,14 +20,13 @@ class Backend(ABC):
         """
         return getattr(self, method)(obj, *args, **kwargs)
 
-    def close_db(self):  # pragma: no cover
+    def close_db(self):
         """OPTIONAL: Close database connection(s).
 
         Close any database connection(s), if open.
         """
-        pass
 
-    def get_auth(self, user, models, kind):  # pragma: no cover
+    def get_auth(self, user, models, kind):
         """OPTIONAL: Return user authorization for *models*.
 
         If the Backend implements access control, this method **must** indicate
@@ -133,22 +127,20 @@ class Backend(ABC):
         set_unit
         """
 
-    def open_db(self):  # pragma: no cover
+    def open_db(self):
         """OPTIONAL: (Re-)open database connection(s).
 
         A backend **may** connect to a database server. This method opens the
         database connection if it is closed.
         """
-        pass
 
-    def set_log_level(self, level):  # pragma: no cover
+    def set_log_level(self, level):
         """OPTIONAL: Set logging level for the backend and other code.
 
         Parameters
         ----------
         level : int or Python logging level
         """
-        pass
 
     @abstractmethod
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
@@ -542,7 +534,7 @@ class Backend(ABC):
 
         Returns
         -------
-        str
+        str or None
         """
 
     @abstractmethod
@@ -554,9 +546,8 @@ class Backend(ABC):
         int
         """
 
-    def preload(self, ts: TimeSeries):  # pragma: no cover
+    def preload(self, ts: TimeSeries):
         """OPTIONAL: Load *ts* data into memory."""
-        pass
 
     # Methods for ixmp.Scenario
 
@@ -627,18 +618,31 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def init_item(self, s: Scenario, type, name):
+    def init_item(self, s: Scenario, type, name, idx_sets, idx_names):
         """Initialize an item *name* of *type*.
 
         Parameters
         ----------
-        type : 'set' or 'par' or 'equ'
+        type : 'set' or 'par' or 'equ' or 'var'
         name : str
             Name for the new item.
+        idx_sets : list of str
+            If empty, a 0-dimensional/scalar item is initialized. Otherwise, a
+            1+-dimensional item is initialized.
+        idx_names : list of str or None
+            Optional names for the dimensions. If not supplied, the names of
+            the *idx_sets* (if any) are used. If supplied, *idx_names* and
+            *idx_sets* must be the same length.
 
         Return
         ------
         None
+
+        Raises
+        ------
+        ValueError
+            if any of the *idx_sets* is not an existing set in the Scenario;
+            if *idx_names* and *idx_sets* are not the same length.
         """
 
     @abstractmethod

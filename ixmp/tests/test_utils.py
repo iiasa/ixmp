@@ -5,7 +5,7 @@ import pytest
 from pytest import mark, param
 
 from ixmp import utils
-from ixmp.testing import make_dantzig
+from ixmp.testing import populate_test_platform
 
 
 def make_obs(fname, exp, **kwargs):
@@ -117,7 +117,7 @@ def test_parse_url(url, p, s):
 
 
 def test_format_scenario_list(test_mp):
-    make_dantzig(test_mp)
+    populate_test_platform(test_mp)
 
     exp = [
         '',
@@ -125,7 +125,7 @@ def test_format_scenario_list(test_mp):
         '  Hitchhiker#1',
         '',
         'canning problem/',
-        '  standard#3  1–3',
+        '  standard#2  1–3',
         '',
         '2 model name(s)',
         '2 scenario name(s)',
@@ -139,6 +139,6 @@ def test_format_scenario_list(test_mp):
     # With as_url=True
     exp = list(map(lambda s: s.format(test_mp.name), [
         'ixmp://{}/Douglas Adams/Hitchhiker#1',
-        'ixmp://{}/canning problem/standard#3',
+        'ixmp://{}/canning problem/standard#2',
     ]))
     assert exp == utils.format_scenario_list(test_mp, as_url=True)

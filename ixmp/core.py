@@ -226,6 +226,23 @@ class Platform:
         return pd.DataFrame(self._backend.get_nodes(),
                             columns=FIELDS['get_nodes'])
 
+    def _existing_node(self, name):
+        """Check whether the node *name* has been defined.
+
+        If :obj:`True`, log a warning and return True. Otherwise, return False.
+        """
+        for _, r in self.regions().iterrows():
+            if r.region != name:
+                continue
+
+            log.warning(
+                f'region {name!r} is already defined on the Platform'
+                + (f' as a synonym for {r.mapped_to!r}' if r.mapped_to else '')
+                + (f' under parent {r.parent!r}' if r.parent else ''))
+            return True
+
+        return False
+
     def add_region(self, region, hierarchy, parent='World'):
         """Define a region including a hierarchy level and a 'parent' region.
 
@@ -243,12 +260,8 @@ class Platform:
         hierarchy : str
             Hierarchy level of the region (e.g., country, R11, basin)
         """
-        for r in self._backend.get_nodes():
-            if r[1] == region:
-                _logger_region_exists(self.regions(), region)
-                return
-
-        self._backend.set_node(region, parent, hierarchy)
+        if not self._existing_node(region):
+            self._backend.set_node(region, parent, hierarchy)
 
     def add_region_synonym(self, region, mapped_to):
         """Define a synonym for a `region`.
@@ -263,12 +276,8 @@ class Platform:
         mapped_to : str
             Name of the region to which the synonym should be mapped.
         """
-        for r in self._backend.get_nodes():
-            if r[1] == region:
-                _logger_region_exists(self.regions(), region)
-                return
-
-        self._backend.set_node(region, synonym=mapped_to)
+        if not self._existing_node(region):
+            self._backend.set_node(region, synonym=mapped_to)
 
     def check_access(self, user, models, access='view'):
         """Check access to specific models.
@@ -293,15 +302,6 @@ class Platform:
         else:
             return {model: result.get(model) == 1 for model in models_list}
 
-
-def _logger_region_exists(_regions, r):
-    region = _regions.set_index('region').loc[r]
-    msg = 'region `{}` is already defined in the platform instance'
-    if region['mapped_to'] is not None:
-        msg += ' as synonym for region `{}`'.format(region.mapped_to)
-    if region['parent'] is not None:
-        msg += ', as subregion of `{}`'.format(region.parent)
-    logger().info(msg.format(r))
 
 # %% class TimeSeries
 
@@ -338,7 +338,7 @@ class TimeSeries:
 
     def __init__(self, mp, model, scenario, version=None, annotation=None):
         if not isinstance(mp, Platform):
-            raise ValueError('mp is not a valid `ixmp.Platform` instance')
+            raise TypeError('mp is not a valid `ixmp.Platform` instance')
 
         # Set attributes
         self.platform = mp
@@ -356,15 +356,10 @@ class TimeSeries:
         """Convenience for calling *method* on the backend."""
         return self.platform._backend(self, method, *args, **kwargs)
 
-    # functions for platform management
+    # Transactions and versioning
 
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries for modification."""
-        if not timeseries_only and self.has_solution():
-            raise ValueError('This Scenario has a solution, '
-                             'use `Scenario.remove_solution()` or '
-                             '`Scenario.clone(..., keep_solution=False)`'
-                             )
         self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
@@ -571,8 +566,11 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
+        # TODO remove astype here; this is the responsibility of Backend
         return pd.DataFrame(self._backend('get_geo'),
-                            columns=FIELDS['ts_get_geo'])
+                            columns=FIELDS['ts_get_geo']) \
+                 .reset_index(drop=True) \
+                 .astype({'meta': 'int64', 'year': 'int64'})
 
 
 # %% class Scenario
@@ -597,7 +595,7 @@ class Scenario(TimeSeries):
     def __init__(self, mp, model, scenario, version=None, scheme=None,
                  annotation=None, cache=False, **model_init_args):
         if not isinstance(mp, Platform):
-            raise ValueError('mp is not a valid `ixmp.Platform` instance')
+            raise TypeError('mp is not a valid `ixmp.Platform` instance')
 
         # Set attributes
         self.platform = mp
@@ -672,6 +670,15 @@ class Scenario(TimeSeries):
         else:
             return scenario, platform
 
+    def check_out(self, timeseries_only=False):
+        """Check out the Scenario for modification."""
+        if not timeseries_only and self.has_solution():
+            raise ValueError('This Scenario has a solution, '
+                             'use `Scenario.remove_solution()` or '
+                             '`Scenario.clone(..., keep_solution=False)`'
+                             )
+        super().check_out(timeseries_only)
+
     def load_scenario_data(self):
         """Load all Scenario data into memory.
 
@@ -737,9 +744,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the set.
-        idx_sets : list of str, optional
+        idx_sets : list of str or str, optional
             Names of other sets that index this set.
-        idx_names : list of str, optional
+        idx_names : list of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
 
         Raises
@@ -750,6 +757,8 @@ class Scenario(TimeSeries):
             If the Scenario is not checked out (see
             :meth:`~TimeSeries.check_out`).
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'set', name, idx_sets, idx_names)
 
     def set(self, name, filters=None, **kwargs):
@@ -905,11 +914,13 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        idx_sets : list of str
+        idx_sets : list of str or str, optional
             Names of sets that index this parameter.
-        idx_names : list of str, optional
+        idx_names : list of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'par', name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
@@ -1037,7 +1048,7 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the scalar.
         """
-        self.init_par(name, None, None)
+        self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
     def scalar(self, name):
@@ -1096,17 +1107,19 @@ class Scenario(TimeSeries):
         return name in self.var_list()
 
     def init_var(self, name, idx_sets=None, idx_names=None):
-        """Initialize a new variable in the scenario.
+        """Initialize a new variable.
 
         Parameters
         ----------
         name : str
-            name of the item
-        idx_sets : list of str
-            index set list
-        idx_names : list of str, optional
-            index name list
+            Name of the variable.
+        idx_sets : list of str or str, optional
+            Name(s) of index sets for a 1+-dimensional variable.
+        idx_names : list of str or str, optional
+            Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'var', name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
@@ -1131,12 +1144,14 @@ class Scenario(TimeSeries):
         Parameters
         ----------
         name : str
-            name of the item
-        idx_sets : list of str
-            index set list
-        idx_names : list of str, optional
-            index name list
+            Name of the equation.
+        idx_sets : list of str or str, optional
+            Name(s) of index sets for a 1+-dimensional variable.
+        idx_names : list of str or str, optional
+            Names of the dimensions indexed by `idx_sets`.
         """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
         return self._backend('init_item', 'equ', name, idx_sets, idx_names)
 
     def has_equ(self, name):
@@ -1350,8 +1365,6 @@ class Scenario(TimeSeries):
         """
         self._backend('set_meta', name, value)
 
-
-# %% auxiliary functions for class Scenario
 
 def to_iamc_template(df):
     """Format pd.DataFrame *df* in IAMC style.

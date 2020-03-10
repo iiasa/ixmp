@@ -2,7 +2,7 @@
 
 These include:
 
-- pytest hooks, fixtures:
+- pytest hooks, `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_:
 
   .. autosummary::
      :nosignatures:
@@ -21,8 +21,9 @@ These include:
 - Methods for setting up and populating test ixmp databases:
 
   .. autosummary::
-     create_local_testdb
      make_dantzig
+     create_test_platform
+     populate_test_platform
 
 - Methods to run and retrieve values from Jupyter notebooks:
 
@@ -34,7 +35,6 @@ These include:
 from contextlib import contextmanager
 import io
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
@@ -45,7 +45,7 @@ from pandas.testing import assert_series_equal
 import pytest
 
 from . import cli, config as ixmp_config
-from .core import Platform, Scenario, IAMC_IDX
+from .core import Platform, TimeSeries, Scenario, IAMC_IDX
 
 
 models = {
@@ -104,34 +104,19 @@ def tmp_env(tmp_path_factory):
     yield os.environ
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='class')
 def test_mp(request, tmp_env, test_data_path):
-    """An ixmp.Platform connected to a temporary, local database."""
-    yield from create_test_mp(request, test_data_path, 'ixmptest')
-
-
-def create_test_mp(request, path, name):
-    # Name of the test function, without the preceding 'test_'
-    dirname = request.node.name.split('test_', 1)[1]
+    """An empty ixmp.Platform connected to a temporary, in-memory database."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace('/', ' ')
 
-    # Path to the database
-    db_path = Path(os.environ['IXMP_DATA']) / 'localdb' / dirname
-    db_path.parent.mkdir(exist_ok=True)
-
-    # Create the database
-    create_local_testdb(db_path, path / 'testdb', name)
-
     # Add a platform
-    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb', db_path)
+    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb',
+                             url=f'jdbc:hsqldb:mem:{platform_name}')
 
-    # launch Platform and connect to testdb (reconnect if closed)
-    mp = Platform(name=platform_name)
-    mp.open_db()
-
-    yield mp
+    # Launch Platform
+    yield Platform(name=platform_name)
 
     # Teardown: remove from config
     ixmp_config.remove_platform(platform_name)
@@ -154,18 +139,81 @@ TS_DF.sort_values(by='variable', inplace=True)
 TS_DF.index = range(len(TS_DF.index))
 
 
-def create_local_testdb(db_path, data_path, name='ixmptest'):
-    """Create a local database for testing at *db_path*.
+def create_test_platform(tmp_path, data_path, name, **properties):
+    """Create a Platform for testing using specimen files '*name*.*'.
 
-    The files {name}.lobs and {name}.script are copied and renamed from
-    *data_path*.
+    Any of the following files from *data_path* are copied to *tmp_path*:
+
+    - *name*.lobs, *name*.script, i.e. the contents of a :class:`.JDBCBackend`
+      HyperSQL database.
+    - *name*.properties.
+
+    The contents of *name*.properties (if it exists) are formatted using the
+    *properties* keyword arguments.
+
+    Returns
+    -------
+    pathlib.Path
+        the path to the .properties file, if any, else the .lobs file without
+        suffix.
     """
-    for suffix in '.lobs', '.script':
-        # NB explicit Path(...) here is necessary because this function is
-        #    called directly from rixmp; see conftest.R
-        src = (Path(data_path) / name).with_suffix(suffix)
-        dst = Path(db_path).with_suffix(src.suffix)
-        shutil.copyfile(str(src), str(dst))
+    # Copy files
+    any_files = False
+    for suffix in '.lobs', '.properties', '.script':
+        src = (data_path / name).with_suffix(suffix)
+        dst = (tmp_path / name).with_suffix(suffix)
+        try:
+            shutil.copyfile(str(src), str(dst))
+        except FileNotFoundError:
+            pass
+        else:
+            any_files = True
+
+    if not any_files:
+        raise ValueError(f'no files for test platform {name!r}')
+
+    # Create properties file
+    props_file = (tmp_path / name).with_suffix('.properties')
+
+    try:
+        props = props_file.read_text()
+    except FileNotFoundError:
+        # No properties file; return the stub
+        return tmp_path / name
+    else:
+        props = props.format(db_path=str(tmp_path / name), **properties)
+        props_file.write_text(props)
+        return props_file
+
+
+def populate_test_platform(platform):
+    """Populate *platform* with data for testing.
+
+    Many of the tests in test_core.py depend on this set of data.
+
+    The data consist of:
+
+    - 3 versions of the Dantzig cannery/transport Scenario.
+
+      - Version 2 is the default.
+      - All have :obj:`HIST_DF` and :obj:`TS_DF` as time-series data.
+
+    - 1 version of a TimeSeries with model name 'Douglas Adams' and scenario
+      name 'Hitchhiker', containing 2 values.
+    """
+    s1 = make_dantzig(platform, solve=True)
+
+    s2 = s1.clone()
+    s2.set_as_default()
+
+    s2.clone()
+
+    s4 = TimeSeries(platform, 'Douglas Adams', 'Hitchhiker', version='new')
+    s4.add_timeseries(pd.DataFrame.from_dict(dict(
+        region='World', variable='Testing', unit='???', year=[2010, 2020],
+        value=[23.7, 23.8])))
+    s4.commit('')
+    s4.set_as_default()
 
 
 def make_dantzig(mp, solve=False):
@@ -186,7 +234,7 @@ def make_dantzig(mp, solve=False):
     """
     # add custom units and region for timeseries data
     try:
-        mp.add_unit('USD_per_km')
+        mp.add_unit('USD/km')
     except Exception:
         # Unit already exists. Pending bugfix from zikolach
         pass
@@ -340,8 +388,11 @@ def assert_logs(caplog, message_or_messages=None):
     try:
         yield  # Nothing provided to the managed block
     finally:
-        assert all(any(e in msg for msg in caplog.messages[first:])
-                   for e in expected)
+        found = [any(e in msg for msg in caplog.messages[first:])
+                 for e in expected]
+        if not all(found):
+            missing = [msg for i, msg in enumerate(expected) if not found[i]]
+            raise AssertionError(f'Did not log {missing}')
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
@@ -361,7 +412,7 @@ def assert_qty_equal(a, b, check_attrs=True, **kwargs):
         b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
 
         assert_series_equal(a, b, check_dtype=False, **kwargs)
-    elif Quantity is DataArray:
+    elif Quantity is DataArray:  # pragma: no cover
         assert_xr_equal(a, b, **kwargs)
 
     # check attributes are equal
@@ -386,7 +437,7 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
         b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
 
         assert_series_equal(a, b, **kwargs)
-    elif Quantity is DataArray:
+    elif Quantity is DataArray:  # pragma: no cover
         kwargs.pop('check_dtype', None)
         assert_xr_allclose(a, b, **kwargs)
 

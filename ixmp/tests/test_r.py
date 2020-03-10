@@ -11,16 +11,10 @@ import pytest
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""
     # Path to the rixmp source
-    rixmp_path = Path(request.fspath).parent.parent / 'rixmp'
+    rixmp_path = Path(request.fspath).parents[2] / 'rixmp'
 
     # Ensure reticulate uses the same Python as the pytest session
     tmp_env['RETICULATE_PYTHON'] = sys.executable
-
-    # Path to the files in tests/data
-    tmp_env['IXMP_TEST_DATA_PATH'] = str(test_data_path)
-
-    # Path to a directory for temporary databases
-    tmp_env['IXMP_TEST_TMP_PATH'] = str(tmp_path_factory.mktemp('test_mp'))
 
     # Show all lines on tests failure
     tmp_env['_R_CHECK_TESTS_NLINES_'] = '0'

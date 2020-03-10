@@ -132,7 +132,7 @@ def test_multi_db_run(tmpdir):
 
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par('f')['value'] == 90.0
-    assert scen2.par('f')['unit'] == 'USD_per_km'
+    assert scen2.par('f')['unit'] == 'USD/km'
     assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
 

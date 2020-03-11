@@ -9,7 +9,8 @@ with open('README.md', 'r') as f:
     LONG_DESCRIPTION = f.read()
 
 INSTALL_REQUIRES = [
-    'JPype1>=0.7',
+    # Temporary, to address segfaults with 0.7.2 on some systems
+    'JPype1>=0.7, !=0.7.2',
     'click',
     'dask[array]',
     'graphviz',
@@ -23,7 +24,7 @@ INSTALL_REQUIRES = [
 
 EXTRAS_REQUIRE = {
     'tests': ['codecov', 'jupyter', 'pretenders>=1.4.4', 'pytest-cov',
-              'pytest>=3.9'],
+              'pytest>=3.9', 'sparse'],
     'docs': ['numpydoc', 'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-bibtex'],
     'tutorial': ['jupyter'],
 }

@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 
 import pandas as pd
-from pandas.testing import assert_frame_equal
-from numpy import testing as npt
 import pytest
+from numpy import testing as npt
+from pandas.testing import assert_frame_equal
 
 from ixmp import TimeSeries, Scenario
 from ixmp.core import IAMC_IDX
@@ -576,7 +576,7 @@ def test_timeseries_remove_all_data(mp):
 
 
 def test_new_subannual_timeseries_as_iamc(mp):
-    mp.add_timeslice('Summer', 'Season', 1.0/4)
+    mp.add_timeslice('Summer', 'Season', 1.0 / 4)
     scen = TimeSeries(mp, *test_args, version='new', annotation='fo')
     timeseries = TS_DF.pivot_table(values='value', index=IDX_COLS)
     scen.add_timeseries(timeseries)

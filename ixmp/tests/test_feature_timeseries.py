@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from numpy import testing as npt
-
+from ixmp.testing import populate_test_platform
 import ixmp
 
 test_args = ('Douglas Adams', 'Hitchhiker')
@@ -18,11 +18,13 @@ TS_DF['unit'] = '???'
 
 
 def test_get_timeseries(test_mp):
+    populate_test_platform(test_mp)
     scen = ixmp.TimeSeries(test_mp, *test_args)
     assert_timeseries(scen)
 
 
 def test_get_timeseries_iamc(test_mp):
+    populate_test_platform(test_mp)
     scen = ixmp.TimeSeries(test_mp, *test_args)
     obs = scen.timeseries(region='World', variable='Testing', iamc=True)
 
@@ -80,6 +82,7 @@ def test_new_timeseries_error(test_mp):
 
 
 def test_timeseries_edit(test_mp):
+    populate_test_platform(test_mp)
     scen = ixmp.TimeSeries(test_mp, *test_args)
     df = {'region': ['World'] * 2, 'variable': ['Testing'] * 2,
           'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
@@ -116,6 +119,7 @@ def test_timeseries_edit(test_mp):
 
 
 def test_timeseries_edit_iamc(test_mp):
+    populate_test_platform(test_mp)
     args_all = ('Douglas Adams 1', 'test_remove_all')
     scen = ixmp.TimeSeries(test_mp, *args_all, version='new', annotation='nk')
 

@@ -17,6 +17,7 @@ DATA = {
         region='World',
         variable='Testing',
         unit='???',
+        subannual='Year',
         year=[2010, 2020],
         value=[23.7, 23.8],
         model='model name',
@@ -26,6 +27,7 @@ DATA = {
         region='World',
         variable=['Testing', 'Testing', 'Testing2'],
         unit='???',
+        subannual='Year',
         year=[2020, 2030, 2030],
         value=[24.8, 24.9, 25.1],
         model='model name',
@@ -35,6 +37,7 @@ DATA = {
         region='World',
         variable='Testing',
         unit='???',
+        subannual='Year',
         year=[2000, 2010, 2020, 2030, 2040, 2050],
         value=[21.7, 22.7, 23.7, 24.7, 25.7, 25.8],
         model='model name',
@@ -45,7 +48,7 @@ DATA = {
     'geo': pd.DataFrame.from_dict(dict(
         region='World',
         variable='var1',
-        time='YEAR',
+        subannual='Year',
         year=[2000, 2010, 2020],
         value=['test', 'more-test', '2020-test'],
         unit='score',
@@ -179,7 +182,11 @@ class TestTimeSeries:
             args['iamc'] = True
 
         # Data can be retrieved and has the expected value
-        assert_frame_equal(exp, ts.timeseries(**args))
+        obs = ts.timeseries(**args)
+        print('>>>>>>>>')
+        print(obs.columns)
+        print(exp.columns)
+        assert_frame_equal(exp, obs)
 
     @pytest.mark.parametrize('format', ['long', 'wide'])
     def test_edit(self, mp, ts, format):

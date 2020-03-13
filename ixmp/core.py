@@ -513,9 +513,6 @@ class TimeSeries:
 
         # Discard non-numeric columns, e.g. 'model', 'scenario',
         # write warning about non-expected cols to log
-        # TODO: please use `utils.numcols` here to avoid duplication of code
-        # TODO: and one remark: this should work on the column name,
-        # TODO: not the datatype of the column values
         year_cols = year_list(df.columns)
         other_cols = [i for i in df.columns
                       if i not in ['model', 'scenario'] + year_cols]

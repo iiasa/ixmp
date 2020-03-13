@@ -153,7 +153,7 @@ def year_list(x):
         try:
             int(i)  # this is a year
             lst.append(i)
-        except TypeError:
+        except ValueError:
             pass
     return lst
 

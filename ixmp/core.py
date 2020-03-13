@@ -507,8 +507,8 @@ class TimeSeries:
         if 'value' in df.columns:
             # Long format; pivot to wide
             all_cols = [i for i in df.columns if i not in ['year', 'value']]
-            _df = pd.pivot_table(df, values='value', index=all_cols,
-                                 columns=['year']).reset_index()
+            df = pd.pivot_table(df, values='value', index=all_cols,
+                                columns=['year']).reset_index()
         df.set_index(index_cols, inplace=True)
 
         # Discard non-numeric columns, e.g. 'model', 'scenario',

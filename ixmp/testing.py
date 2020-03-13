@@ -127,11 +127,11 @@ def test_mp(request, tmp_env, test_data_path):
 MODEL = "canning problem"
 SCENARIO = "standard"
 HIST_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, 'DantzigLand', 'GDP', 'USD', 'Year', 850., 900., 950.], ],
+    [[MODEL, SCENARIO, 'DantzigLand', 'GDP', 'USD', 'Year', 850., 900., 950.]],
     columns=IAMC_IDX + ['subannual'] + [2000, 2005, 2010],
 )
 INP_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 'Year', 850., 900.], ],
+    [[MODEL, SCENARIO, 'DantzigLand', 'Demand', 'cases', 'Year', 850., 900.]],
     columns=IAMC_IDX + ['subannual'] + [2000, 2005],
 )
 TS_DF = pd.concat([HIST_DF, INP_DF], sort=False)

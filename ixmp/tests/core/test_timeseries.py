@@ -65,8 +65,10 @@ def expected(df, ts):
 
 def wide(df):
     """Transform *df* from long to wide format."""
-    other_cols = [c for c in df.columns if c not in ['year', 'value'] + IAMC_IDX]
-    return df.pivot_table(index=IAMC_IDX + other_cols, columns='year', values='value') \
+    other_cols = [c for c in df.columns
+                  if c not in ['year', 'value'] + IAMC_IDX]
+    return df.pivot_table(index=IAMC_IDX + other_cols,
+                          columns='year', values='value') \
         .reset_index() \
         .rename_axis(columns=None)
 
@@ -184,8 +186,8 @@ def test_add_timeseries_with_extra_col(caplog, ts, format):
     ts.add_timeseries(data)
     # TODO: add check that warning message is displayed
     ts.commit('')
-    assert (["dropping index columns ['climate_model'] from data"] ==
-            [rec.message for rec in caplog.records])
+    assert (["dropping index columns ['climate_model'] from data"] == [
+        rec.message for rec in caplog.records])
 
 
 @pytest.mark.parametrize('format', ['long', 'wide'])

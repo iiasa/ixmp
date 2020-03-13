@@ -175,7 +175,7 @@ def import_timeseries(scenario, data, firstyear=None, lastyear=None):
     df = pd_read(data)
     df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
-    cols = numcols(df)
+    cols = year_list(df.columns)
     years = [int(i) for i in cols]
     fyear = int(firstyear or min(years))
     lyear = int(lastyear or max(years))

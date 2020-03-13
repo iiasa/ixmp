@@ -519,8 +519,8 @@ class TimeSeries:
         # TODO: and one remark: this should work on the column name,
         # TODO: not the datatype of the column values
         num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
-        other_cols = [i if i not in ['model', 'scenario'] + num_cols \
-                      for i in df.columns]
+        other_cols = [i for i in df.columns
+                      if i not in ['model', 'scenario'] + num_cols]
         if not other_cols.empty:
             logger().warning(f'dropping index columns {other_cols} from data')
 

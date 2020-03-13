@@ -571,7 +571,11 @@ class TimeSeries:
 
         if iamc:
             # Convert to wide format
-            df = df.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+            if 'subannual' not in df.columns:
+                index = IAMC_IDX
+            else:
+                index = IAMC_IDX + ['subannual']
+            df = df.pivot_table(index=index, columns='year')['value'] \
                    .reset_index()
             df.columns.names = [None]
 

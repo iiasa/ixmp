@@ -13,7 +13,8 @@ from .utils import (
     as_str_list,
     check_year,
     logger,
-    parse_url
+    parse_url,
+    year_list
 )
 
 log = logging.getLogger(__name__)
@@ -505,26 +506,23 @@ class TimeSeries:
 
         if 'value' in df.columns:
             # Long format; pivot to wide
-            df = pd.pivot_table(df,
-                                values='value',
-                                index=index_cols,
-                                columns=['year'])
-        else:
-            # Wide format: set index columns
-            df.set_index(index_cols, inplace=True)
+            all_cols = [i for i in df.columns if i not in ['year', 'value']]
+            _df = pd.pivot_table(df, values='value', index=all_cols,
+                                 columns=['year']).reset_index()
+        df.set_index(index_cols, inplace=True)
 
         # Discard non-numeric columns, e.g. 'model', 'scenario',
         # write warning about non-expected cols to log
         # TODO: please use `utils.numcols` here to avoid duplication of code
         # TODO: and one remark: this should work on the column name,
         # TODO: not the datatype of the column values
-        num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
+        year_cols = year_list(df.columns)
         other_cols = [i for i in df.columns
-                      if i not in ['model', 'scenario'] + num_cols]
+                      if i not in ['model', 'scenario'] + year_cols]
         if not other_cols.empty:
             logger().warning(f'dropping index columns {other_cols} from data')
 
-        df = df.iloc[:, num_cols]
+        df = df.iloc[:, year_cols]
 
         # Columns (year) as integer
         df.columns = df.columns.astype(int)

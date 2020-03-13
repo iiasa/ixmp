@@ -4,7 +4,6 @@ import re
 from urllib.parse import urlparse
 
 import pandas as pd
-import six
 from pathlib import Path
 
 
@@ -147,11 +146,16 @@ def pd_write(df, f, *args, **kwargs):
         writer.save()
 
 
-def numcols(df):
-    """Return the indices of the numeric columns of *df*."""
-    dtypes = df.dtypes
-    return [i for i in dtypes.index
-            if dtypes.loc[i].name.startswith(('float', 'int'))]
+def year_list(x):
+    """Return the elements of x that can be cast to year (int)."""
+    lst = []
+    for i in x:
+        try:
+            int(i)  # this is a year
+            lst.append(i)
+        except TypeError:
+            pass
+    return lst
 
 
 def filtered(df, filters):

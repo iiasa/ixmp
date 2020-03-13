@@ -201,9 +201,6 @@ def test_get(ts, format):
 
     # Data can be retrieved and has the expected value
     obs = ts.timeseries(**args)
-    print('>>>>>>>>')
-    print(obs.columns)
-    print(exp.columns)
     assert_frame_equal(exp, obs)
 
 

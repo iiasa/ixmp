@@ -175,6 +175,18 @@ def test_add_timeseries(ts, format):
 
 
 @pytest.mark.parametrize('format', ['long', 'wide'])
+def test_add_timeseries_with_extra_col(ts, format):
+    _data = DATA[0]
+    _data['climate_model'] = [0, 0]
+    data = DATA[0] if format == 'long' else wide(DATA[0])
+
+    # Data added
+    ts.add_timeseries(data)
+    # TODO: add check that warning message is displayed
+    ts.commit('')
+
+
+@pytest.mark.parametrize('format', ['long', 'wide'])
 def test_get(ts, format):
     data = DATA[0] if format == 'long' else wide(DATA[0])
 

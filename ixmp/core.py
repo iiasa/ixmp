@@ -519,7 +519,7 @@ class TimeSeries:
         year_cols = year_list(df.columns)
         other_cols = [i for i in df.columns
                       if i not in ['model', 'scenario'] + year_cols]
-        if not other_cols.empty:
+        if len(other_cols) > 0:
             logger().warning(f'dropping index columns {other_cols} from data')
 
         df = df.iloc[:, year_cols]

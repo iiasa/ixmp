@@ -522,7 +522,7 @@ class TimeSeries:
         if len(other_cols) > 0:
             logger().warning(f'dropping index columns {other_cols} from data')
 
-        df = df.iloc[:, year_cols]
+        df = df.loc[:, year_cols]
 
         # Columns (year) as integer
         df.columns = df.columns.astype(int)

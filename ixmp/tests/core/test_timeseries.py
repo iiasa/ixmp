@@ -65,7 +65,10 @@ def expected(df, ts):
 
 def wide(df):
     """Transform *df* from long to wide format."""
-    return df.pivot_table(index=IAMC_IDX, columns='year', values='value') \
+    other_cols = [c for c in df.columns
+                  if c not in ['year', 'value'] + IAMC_IDX]
+    return df.pivot_table(index=IAMC_IDX + other_cols,
+                          columns='year', values='value') \
         .reset_index() \
         .rename_axis(columns=None)
 
@@ -175,6 +178,23 @@ def test_add_timeseries(ts, format):
 
 
 @pytest.mark.parametrize('format', ['long', 'wide'])
+def test_add_timeseries_with_extra_col(caplog, ts, format):
+    _data = DATA[0].copy()
+    _data['climate_model'] = [0, 1]
+    data = _data if format == 'long' else wide(_data)
+
+    # check that extra column wasn't dropped by `wide(_data)
+    assert 'climate_model' in data.columns
+
+    # Data added
+    ts.add_timeseries(data)
+    # TODO: add check that warning message is displayed
+    ts.commit('')
+    assert (["dropping index columns ['climate_model'] from data"] == [
+        rec.message for rec in caplog.records])
+
+
+@pytest.mark.parametrize('format', ['long', 'wide'])
 def test_get(ts, format):
     data = DATA[0] if format == 'long' else wide(DATA[0])
 
@@ -189,10 +209,7 @@ def test_get(ts, format):
 
     # Data can be retrieved and has the expected value
     obs = ts.timeseries(**args)
-    print('>>>>>>>>')
-    print(obs.columns)
-    print(exp.columns)
-    assert_frame_equal(exp, obs)
+    assert_frame_equal(exp, obs, check_like=True)
 
 
 @pytest.mark.parametrize('format', ['long', 'wide'])

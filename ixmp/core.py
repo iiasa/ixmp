@@ -13,7 +13,8 @@ from .utils import (
     as_str_list,
     check_year,
     logger,
-    parse_url
+    parse_url,
+    year_list
 )
 
 log = logging.getLogger(__name__)
@@ -505,17 +506,20 @@ class TimeSeries:
 
         if 'value' in df.columns:
             # Long format; pivot to wide
-            df = pd.pivot_table(df,
-                                values='value',
-                                index=index_cols,
-                                columns=['year'])
-        else:
-            # Wide format: set index columns
-            df.set_index(index_cols, inplace=True)
+            all_cols = [i for i in df.columns if i not in ['year', 'value']]
+            df = pd.pivot_table(df, values='value', index=all_cols,
+                                columns=['year']).reset_index()
+        df.set_index(index_cols, inplace=True)
 
-        # Discard non-numeric columns, e.g. 'model', 'scenario'
-        num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
-        df = df.iloc[:, num_cols]
+        # Discard non-numeric columns, e.g. 'model', 'scenario',
+        # write warning about non-expected cols to log
+        year_cols = year_list(df.columns)
+        other_cols = [i for i in df.columns
+                      if i not in ['model', 'scenario'] + year_cols]
+        if len(other_cols) > 0:
+            logger().warning(f'dropping index columns {other_cols} from data')
+
+        df = df.loc[:, year_cols]
 
         # Columns (year) as integer
         df.columns = df.columns.astype(int)
@@ -567,7 +571,11 @@ class TimeSeries:
 
         if iamc:
             # Convert to wide format
-            df = df.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+            if 'subannual' not in df.columns:
+                index = IAMC_IDX
+            else:
+                index = IAMC_IDX + ['subannual']
+            df = df.pivot_table(index=index, columns='year')['value'] \
                    .reset_index()
             df.columns.names = [None]
 

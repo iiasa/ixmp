@@ -184,8 +184,7 @@ def test_add_timeseries_with_extra_col(caplog, ts, format):
     data = _data if format == 'long' else wide(_data)
 
     # check that extra column wasn't dropped by `wide(_data)
-    if format == 'wide' and 'climate_model' not in data.columns:
-        raise ValueError('extra column not formatted correctly!')
+    assert 'climate_model' in data.columns
 
     # Data added
     ts.add_timeseries(data)

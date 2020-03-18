@@ -527,17 +527,17 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit,
                                       meta)
 
-    def set_geo(self, ts, region, variable, time, year, value, unit, meta):
-        self.jindex[ts].addGeoData(region, variable, time, java.Integer(year),
-                                   value, unit, meta)
+    def set_geo(self, ts, region, variable, subannual, year, value, unit, meta):
+        self.jindex[ts].addGeoData(region, variable, subannual,
+                                   java.Integer(year), value, unit, meta)
 
     def delete(self, ts, region, variable, years, unit):
         years = to_jlist(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
 
-    def delete_geo(self, ts, region, variable, time, years, unit):
+    def delete_geo(self, ts, region, variable, subannual, years, unit):
         years = to_jlist(years, java.Integer)
-        self.jindex[ts].removeGeoData(region, variable, time, years, unit)
+        self.jindex[ts].removeGeoData(region, variable, subannual, years, unit)
 
     # Scenario methods
 

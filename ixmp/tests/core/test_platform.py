@@ -36,7 +36,7 @@ def test_export_timeseries_data(mp, tmp_path):
     with open(path) as f:
         first_line = f.readline()
         assert first_line == ('MODEL,SCENARIO,VERSION,VARIABLE,UNIT,'
-                              'REGION,META,TIME,YEAR,VALUE\n')
+                              'REGION,META,SUBANNUAL,YEAR,VALUE\n')
         assert len(f.readlines()) == 2
 
 

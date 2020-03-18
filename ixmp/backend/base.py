@@ -489,7 +489,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete(self, ts: TimeSeries, region, variable, years, unit):
+    def delete(self, ts: TimeSeries, region, variable, subannual, years, unit):
         """Remove data values.
 
         Parameters
@@ -502,6 +502,8 @@ class Backend(ABC):
             Years.
         unit : str
             Unit symbol.
+        subannual : str
+            Name of time slice.
 
         Returns
         -------

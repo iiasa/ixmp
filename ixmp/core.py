@@ -499,17 +499,12 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
-        index_cols = ['region', 'variable', 'unit']
-        has_subannual = 'subannual' in df.columns
-        if has_subannual:
-            index_cols.append('subannual')
-
         if 'value' in df.columns:
             # Long format; pivot to wide
             all_cols = [i for i in df.columns if i not in ['year', 'value']]
             df = pd.pivot_table(df, values='value', index=all_cols,
                                 columns=['year']).reset_index()
-        df.set_index(index_cols, inplace=True)
+        df.set_index(['region', 'variable', 'unit', 'subannual'], inplace=True)
 
         # Discard non-numeric columns, e.g. 'model', 'scenario',
         # write warning about non-expected cols to log
@@ -525,13 +520,7 @@ class TimeSeries:
         df.columns = df.columns.astype(int)
 
         # Add one time series per row
-        for index, data in df.iterrows():
-            if has_subannual:
-                (r, v, u, sa) = index
-            else:
-                (r, v, u) = index
-                sa = None
-
+        for (r, v, u, sa), data in df.iterrows():
             # Values as float; exclude NA
             self._backend('set_data', r, v, data.astype(float).dropna(), u, sa,
                           meta)
@@ -594,14 +583,16 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
+        id_cols = ['region', 'variable', 'unit', 'subannual']
         if 'year' not in df.columns:
             # Reshape from wide to long format
-            df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
+            df = pd.melt(df,
+                         id_vars=id_cols,
                          var_name='year', value_name='value')
 
         # Remove all years for a given (r, v, u) combination at once
-        for (r, v, u), data in df.groupby(['region', 'variable', 'unit']):
-            self._backend('delete', r, v, data['year'].tolist(), u)
+        for (r, v, u, t), data in df.groupby(id_cols):
+            self._backend('delete', r, v, t, data['year'].tolist(), u)
 
     def add_geodata(self, df):
         """Add geodata (layers) to the TimeSeries.
@@ -1479,6 +1470,8 @@ def to_iamc_template(df):
     cols = {c: str(c).lower() for c in df.columns}
     cols.update(node='region')
     df = df.rename(columns=cols)
+    if 'subannual' not in df.columns:
+        df['subannual'] = 'Year'
     required_cols = ['region', 'variable', 'unit']
     if not set(required_cols).issubset(set(df.columns)):
         missing = list(set(required_cols) - set(df.columns))

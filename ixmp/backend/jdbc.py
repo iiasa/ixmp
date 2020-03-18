@@ -532,9 +532,10 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].addGeoData(region, variable, subannual,
                                    java.Integer(year), value, unit, meta)
 
-    def delete(self, ts, region, variable, years, unit):
+    def delete(self, ts, region, variable, subannual, years, unit):
         years = to_jlist(years, java.Integer)
-        self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
+        self.jindex[ts].removeTimeseries(region, variable, subannual, years,
+                                         unit)
 
     def delete_geo(self, ts, region, variable, subannual, years, unit):
         years = to_jlist(years, java.Integer)

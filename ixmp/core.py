@@ -127,7 +127,7 @@ class Platform:
 
         Returns
         -------
-        pandas.DataFrame
+        :class:`pandas.DataFrame`
             Scenario information, with the columns:
 
             - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario
@@ -298,16 +298,17 @@ class Platform:
         category (e.g., all months) from the :class:`pandas.DataFrame` returned
         by this function or to aggregate subannual data to full-year results.
 
-        A timeslice is related to the index set 'time' in a message_ix.Scenario
-        to indicate a subannual temporal dimension. Alas, timeslices and set
-        elements of time have to be initialized/defined independently.
+        A timeslice is related to the index set 'time'
+        in a :class:`message_ix.Scenario` to indicate a subannual temporal
+        dimension. Alas, timeslices and set elements of time have to be
+        initialized/defined independently.
 
         See :meth:`add_timeslice` to initialize additional timeslices in the
         Platform instance.
 
         Returns
         -------
-        pandas.DataFrame
+        :class:`pandas.DataFrame`
             DataFrame of timeslices, categories and duration
         """
         return pd.DataFrame(self._backend.get_timeslices(),
@@ -851,7 +852,7 @@ class Scenario(TimeSeries):
 
         Returns
         -------
-        pandas.DataFrame
+        :class:`pandas.DataFrame`
         """
         return self._backend('item_get_elements', 'set', name, filters)
 
@@ -965,7 +966,7 @@ class Scenario(TimeSeries):
         name : str
             Name of the set to remove (if `key` is :obj:`None`) or from which
             to remove elements.
-        key : pandas.DataFrame or list of str, optional
+        key : :class:`pandas.DataFrame` or list of str, optional
             Elements to be removed from set `name`.
         """
         if key is None:
@@ -1022,8 +1023,8 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key_or_data : str or iterable of str or range or dict or \
-                      pandas.DataFrame
+        key_or_data : str or iterable of str or range or dict or
+                      :class:`pandas.DataFrame`
             Element(s) to be added.
         value : numeric or iterable of numeric, optional
             Values.
@@ -1446,12 +1447,12 @@ def to_iamc_template(df):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : :class:`pandas.DataFrame`
         May have a 'node' column, which will be renamed to 'region'.
 
     Returns
     -------
-    pandas.DataFrame
+    :class:`pandas.DataFrame`
         The returned object has:
 
         - Any (Multi)Index levels reset as columns.

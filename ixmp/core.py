@@ -295,8 +295,8 @@ class Platform:
         The category and duration do not have any functional relevance within
         the ixmp framework, but they may be useful for pre- or post-processing.
         For example, they can be used to filter all timeslices of a certain
-        category (e.g., all months) from the pandas.DataFrame returned by this
-        function or to aggregate subannual data to full-year results.
+        category (e.g., all months) from the :class:`pandas.DataFrame` returned
+        by this function or to aggregate subannual data to full-year results.
 
         A timeslice is related to the index set 'time' in a message_ix.Scenario
         to indicate a subannual temporal dimension. Alas, timeslices and set

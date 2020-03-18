@@ -54,7 +54,17 @@ DATA = {
         unit='score',
         meta=0,
     )),
+    'timeseries': pd.DataFrame.from_dict(dict(
+        region='World',
+        variable='Testing',
+        unit='???',
+        year=[2010, 2020],
+        value=[23.7, 23.8],
+    ))
 }
+test_args = ('Douglas Adams', 'Hitchhiker')
+# string columns for timeseries checks
+IDX_COLS = ['region', 'variable', 'unit', 'year']
 
 
 # Utility methods
@@ -345,18 +355,6 @@ def test_remove_geodata(ts, rows):
     assert_frame_equal(exp, obs)
 
 
-test_args = ('Douglas Adams', 'Hitchhiker')
-
-# string columns and dataframe for timeseries checks
-IDX_COLS = ['region', 'variable', 'unit', 'year']
-
-TS_DF = {'year': [2010, 2020], 'value': [23.7, 23.8]}
-TS_DF = pd.DataFrame.from_dict(TS_DF)
-TS_DF['region'] = 'World'
-TS_DF['variable'] = 'Testing'
-TS_DF['unit'] = '???'
-
-
 def test_get_timeseries(mp):
     scen = TimeSeries(mp, *test_args)
     assert_timeseries(scen)
@@ -366,7 +364,7 @@ def test_get_timeseries_iamc(mp):
     scen = TimeSeries(mp, *test_args)
     obs = scen.timeseries(region='World', variable='Testing', iamc=True)
 
-    exp = TS_DF.pivot_table(index=['region', 'variable', 'unit'],
+    exp = DATA['timeseries'].pivot_table(index=['region', 'variable', 'unit'],
                             columns='year')['value'].reset_index()
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
@@ -377,19 +375,19 @@ def test_get_timeseries_iamc(mp):
 
 def test_new_timeseries_as_year_value(test_mp):
     scen = TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF)
+    scen.add_timeseries(DATA['timeseries'])
     scen.commit('importing a testing timeseries')
     assert_timeseries(scen)
 
 
 def test_new_timeseries_as_iamc(test_mp):
     scen = TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
     assert_timeseries(scen)
 
 
-def assert_timeseries(scen, exp=TS_DF, cols=None):
+def assert_timeseries(scen, exp=DATA['timeseries'], cols=None):
     """ Asserts scenario timeseries are similar to expected
 
     Compares region, variable, unit, year and time (if available).
@@ -556,17 +554,17 @@ def test_timeseries_remove_single_entry(mp):
     args_single = ('Douglas Adams', 'test_remove_single')
 
     scen = Scenario(mp, *args_single, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = Scenario(mp, *args_single)
-    assert_timeseries(scen, TS_DF)
+    assert_timeseries(scen, DATA['timeseries'])
 
     scen.check_out()
-    scen.remove_timeseries(TS_DF[TS_DF.year == 2010])
+    scen.remove_timeseries(DATA['timeseries'][DATA['timeseries'].year == 2010])
     scen.commit('testing for removing a single timeseries data point')
 
-    exp = TS_DF[TS_DF.year == 2020]
+    exp = DATA['timeseries'][DATA['timeseries'].year == 2020]
     assert_timeseries(scen, exp)
 
 
@@ -574,18 +572,18 @@ def test_timeseries_remove_all_data(mp):
     args_all = ('Douglas Adams', 'test_remove_all')
 
     scen = Scenario(mp, *args_all, version='new', annotation='fo')
-    scen.add_timeseries(TS_DF.pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = Scenario(mp, *args_all)
-    assert_timeseries(scen, TS_DF)
+    assert_timeseries(scen, DATA['timeseries'])
 
-    exp = TS_DF.copy()
+    exp = DATA['timeseries'].copy()
     exp['variable'] = 'Testing2'
 
     scen.check_out()
     scen.add_timeseries(exp)
-    scen.remove_timeseries(TS_DF)
+    scen.remove_timeseries(DATA['timeseries'])
     scen.commit('testing for removing a full timeseries row')
 
     assert scen.timeseries(region='World', variable='Testing').empty
@@ -595,7 +593,7 @@ def test_timeseries_remove_all_data(mp):
 def test_new_subannual_timeseries_as_iamc(mp):
     mp.add_timeslice('Summer', 'Season', 1.0 / 4)
     scen = TimeSeries(mp, *test_args, version='new', annotation='fo')
-    timeseries = TS_DF.pivot_table(values='value', index=IDX_COLS)
+    timeseries = DATA['timeseries'].pivot_table(values='value', index=IDX_COLS)
     scen.add_timeseries(timeseries)
     scen.commit('adding yearly data')
 
@@ -619,31 +617,19 @@ def test_new_subannual_timeseries_as_iamc(mp):
     assert_timeseries(scen, exp=exp[cols], cols=cols)
 
 
-GEODATA = {
-    'region': 'World',
-    'variable': 'var1',
-    'subannual': 'Year',
-    'year': [2000, 2010, 2020],
-    'value': ['test', 'more-test', '2020-test'],
-    'unit': 'score',
-    'meta': 0
-}
-GEODATA = pd.DataFrame.from_dict(GEODATA)
-
-
 def test_fetch_empty_geodata(mp):
     scen = TimeSeries(mp, *test_args, version='new', annotation='fo')
     empty = scen.get_geodata()
-    assert_geodata(empty, GEODATA.loc[[False, False, False]])
+    assert_geodata(empty, DATA['geo'].loc[[False, False, False]])
 
 
 def test_remove_multiple_geodata(mp):
     scen = TimeSeries(mp, *test_args, version='new', annotation='fo')
-    scen.add_geodata(GEODATA)
-    row = GEODATA.loc[[False, True, True]]
+    scen.add_geodata(DATA['geo'])
+    row = DATA['geo'].loc[[False, True, True]]
     scen.remove_geodata(row)
     scen.commit('adding geodata (references to map layers)')
-    assert_geodata(scen.get_geodata(), GEODATA.loc[[True, False, False]])
+    assert_geodata(scen.get_geodata(), DATA['geo'].loc[[True, False, False]])
 
 
 def assert_geodata(obs, exp):

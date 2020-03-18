@@ -25,7 +25,7 @@ Copyright © 2017–2020 IIASA Energy Program
 The platform package is licensed under the Apache License, Version 2.0 (the
 "License"); you may not use the files in this repository except in compliance
 with the License. You may obtain a copy of the License at
-<http://www.apache.org/licenses/LICENSE-2.0>.
+<https://www.apache.org/licenses/LICENSE-2.0>.
 
 Please refer to the [NOTICE](NOTICE.rst) for details and user guidelines.
 
@@ -38,7 +38,7 @@ Documentation of ixmp and the MESSAGEix framework is available in two forms:
 
 - The [MESSAGEix framework documentation](https://message.iiasa.ac.at/)
   includes documentation of the
-  [ixmp Python API](http://message.iiasa.ac.at/en/stable/api/ixmp.html), which
+  [ixmp Python API](https://message.iiasa.ac.at/en/stable/api.html), which
   is extended by the framework.
 - The [stand-alone ixmp
   documentation](https://message.iiasa.ac.at/projects/ixmp/) contains

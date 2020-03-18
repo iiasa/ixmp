@@ -23,6 +23,13 @@ DATA = {
         model='model name',
         scenario='scenario name',
     )),
+    2010: pd.DataFrame.from_dict({
+        'region': ['World'],
+        'variable': ['Testing'],
+        'unit': ['???'],
+        '2010': [23.7],
+        '2020': [23.8]
+    }),
     2030: pd.DataFrame.from_dict(dict(
         region='World',
         variable=['Testing', 'Testing', 'Testing2'],
@@ -81,6 +88,14 @@ def wide(df):
                           columns='year', values='value') \
         .reset_index() \
         .rename_axis(columns=None)
+
+
+def prepare_scenario(mp, args_all):
+    scen = TimeSeries(mp, *args_all, version='new', annotation='nk')
+    scen.add_timeseries(DATA[2010])
+    scen.commit('updating timeseries in IAMC format')
+    scen = TimeSeries(mp, *args_all)
+    return scen
 
 
 @contextmanager
@@ -174,9 +189,9 @@ def test_last_update(ts):
     assert ts.last_update() == 'foo'
 
 
-@pytest.mark.parametrize('format', ['long', 'wide'])
-def test_add_timeseries(ts, format):
-    data = DATA[0] if format == 'long' else wide(DATA[0])
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_add_timeseries(ts, fmt):
+    data = DATA[0] if fmt == 'long' else wide(DATA[0])
 
     # Data added
     ts.add_timeseries(data)
@@ -187,11 +202,11 @@ def test_add_timeseries(ts, format):
         ts.add_timeseries(DATA[0].drop('unit', axis=1))
 
 
-@pytest.mark.parametrize('format', ['long', 'wide'])
-def test_add_timeseries_with_extra_col(caplog, ts, format):
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_add_timeseries_with_extra_col(caplog, ts, fmt):
     _data = DATA[0].copy()
     _data['climate_model'] = [0, 1]
-    data = _data if format == 'long' else wide(_data)
+    data = _data if fmt == 'long' else wide(_data)
 
     # check that extra column wasn't dropped by `wide(_data)
     assert 'climate_model' in data.columns
@@ -204,9 +219,9 @@ def test_add_timeseries_with_extra_col(caplog, ts, format):
         rec.message for rec in caplog.records])
 
 
-@pytest.mark.parametrize('format', ['long', 'wide'])
-def test_get(ts, format):
-    data = DATA[0] if format == 'long' else wide(DATA[0])
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_get(ts, fmt):
+    data = DATA[0] if fmt == 'long' else wide(DATA[0])
 
     ts.add_timeseries(data)
     ts.commit('')
@@ -214,7 +229,7 @@ def test_get(ts, format):
     exp = expected(data, ts)
     args = {}
 
-    if format == 'wide':
+    if fmt == 'wide':
         args['iamc'] = True
 
     # Data can be retrieved and has the expected value
@@ -222,14 +237,14 @@ def test_get(ts, format):
     assert_frame_equal(exp, obs, check_like=True)
 
 
-@pytest.mark.parametrize('format', ['long', 'wide'])
-def test_edit(mp, ts, format):
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_edit(mp, ts, fmt):
     """Tests that data can be overwritten."""
     data = expected(DATA[0], ts)
     all_data = [data.loc[0:0, :]]
     args = {}
 
-    if format == 'wide':
+    if fmt == 'wide':
         data = wide(data)
         args['iamc'] = True
 
@@ -242,7 +257,7 @@ def test_edit(mp, ts, format):
 
     df = expected(DATA[2030], ts)
     all_data.append(df)
-    if format == 'wide':
+    if fmt == 'wide':
         df = wide(df)
 
     # Overwrite and add new values at once
@@ -255,7 +270,7 @@ def test_edit(mp, ts, format):
 
     # All four rows are retrieved
     exp = pd.concat(all_data).reset_index(drop=True)
-    if format == 'wide':
+    if fmt == 'wide':
         exp = wide(exp)
     assert_frame_equal(exp, ts.timeseries(**args))
 
@@ -285,6 +300,7 @@ def test_edit_with_region_synonyms(mp, ts, cls):
 
 
 # TODO parametrize format as wide/long
+# noinspection PyUnusedLocal
 @pytest.mark.parametrize('commit', [
     pytest.param(True),
     pytest.param(
@@ -365,7 +381,7 @@ def test_get_timeseries_iamc(mp):
     obs = scen.timeseries(region='World', variable='Testing', iamc=True)
 
     exp = DATA['timeseries'].pivot_table(index=['region', 'variable', 'unit'],
-                            columns='year')['value'].reset_index()
+                                         columns='year')['value'].reset_index()
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
 
@@ -382,7 +398,8 @@ def test_new_timeseries_as_year_value(test_mp):
 
 def test_new_timeseries_as_iamc(test_mp):
     scen = TimeSeries(test_mp, *test_args, version='new', annotation='fo')
-    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value',
+                                                       index=IDX_COLS))
     scen.commit('importing a testing timeseries')
     assert_timeseries(scen)
 
@@ -455,17 +472,7 @@ def test_timeseries_edit(mp):
 
 def test_timeseries_edit_iamc(mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    scen = TimeSeries(mp, *args_all, version='new', annotation='nk')
-
-    df = pd.DataFrame.from_dict({'region': ['World'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2010': [23.7],
-                                 '2020': [23.8]})
-    scen.add_timeseries(df)
-    scen.commit('updating timeseries in IAMC format')
-
-    scen = TimeSeries(mp, *args_all)
+    scen = prepare_scenario(mp, args_all)
     obs = scen.timeseries()
     exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
                                   'variable': ['Testing', 'Testing'],
@@ -504,17 +511,7 @@ def test_timeseries_edit_with_region_synonyms(mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
     mp.set_log_level('DEBUG')
     mp.add_region_synonym('Hell', 'World')
-    scen = TimeSeries(mp, *args_all, version='new', annotation='nk')
-
-    df = pd.DataFrame.from_dict({'region': ['World'],
-                                 'variable': ['Testing'],
-                                 'unit': ['???'],
-                                 '2010': [23.7],
-                                 '2020': [23.8]})
-    scen.add_timeseries(df)
-    scen.commit('updating timeseries in IAMC format')
-
-    scen = TimeSeries(mp, *args_all)
+    scen = prepare_scenario(mp, args_all)
     obs = scen.timeseries()
     exp = pd.DataFrame.from_dict({'region': ['World'] * 2,
                                   'variable': ['Testing'] * 2,
@@ -554,7 +551,8 @@ def test_timeseries_remove_single_entry(mp):
     args_single = ('Douglas Adams', 'test_remove_single')
 
     scen = Scenario(mp, *args_single, version='new', annotation='fo')
-    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value',
+                                                       index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = Scenario(mp, *args_single)
@@ -572,7 +570,8 @@ def test_timeseries_remove_all_data(mp):
     args_all = ('Douglas Adams', 'test_remove_all')
 
     scen = Scenario(mp, *args_all, version='new', annotation='fo')
-    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value', index=IDX_COLS))
+    scen.add_timeseries(DATA['timeseries'].pivot_table(values='value',
+                                                       index=IDX_COLS))
     scen.commit('importing a testing timeseries')
 
     scen = Scenario(mp, *args_all)

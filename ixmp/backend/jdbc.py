@@ -527,7 +527,8 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit,
                                       meta)
 
-    def set_geo(self, ts, region, variable, subannual, year, value, unit, meta):
+    def set_geo(self, ts, region, variable, subannual, year, value, unit,
+                meta):
         self.jindex[ts].addGeoData(region, variable, subannual,
                                    java.Integer(year), value, unit, meta)
 
@@ -824,7 +825,7 @@ class JDBCBackend(CachingBackend):
                 raise RuntimeError('unhandled Java exception') from e
 
 
-def start_jvm(jvmargs=[]):
+def start_jvm(jvmargs=None):
     """Start the Java Virtual Machine via :mod:`JPype`.
 
     Parameters
@@ -840,6 +841,8 @@ def start_jvm(jvmargs=[]):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+    if jvmargs is None:
+        jvmargs = []
     if jpype.isJVMStarted():
         return
 

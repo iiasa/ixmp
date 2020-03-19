@@ -1,7 +1,8 @@
 """Test all functionality of ixmp.Platform."""
 import pandas as pd
-from pandas.testing import assert_frame_equal
 import pytest
+from pandas.testing import assert_frame_equal
+from pytest import raises
 
 import ixmp
 
@@ -36,7 +37,7 @@ def test_export_timeseries_data(mp, tmp_path):
     with open(path) as f:
         first_line = f.readline()
         assert first_line == ('MODEL,SCENARIO,VERSION,VARIABLE,UNIT,'
-                              'REGION,META,TIME,YEAR,VALUE\n')
+                              'REGION,META,SUBANNUAL,YEAR,VALUE\n')
         assert len(f.readlines()) == 2
 
 
@@ -85,3 +86,32 @@ def test_add_region_synonym(test_mp):
         columns=['region', 'mapped_to', 'parent', 'hierarchy']
     )
     assert_frame_equal(obs, exp)
+
+
+def test_timeslices(test_mp):
+    timeslices = test_mp.timeslices()
+    obs = timeslices[timeslices.category == 'Common']
+    # result has all attributes of time slice
+    assert all(obs.columns == ['name', 'category', 'duration'])
+    # result contains pre-defined YEAR time slice
+    assert all([list(obs.iloc[0]) == ['Year', 'Common', 1.0]])
+
+
+def test_add_timeslice(test_mp):
+    test_mp.add_timeslice('January, 1st', 'Days',
+                          1.0 / 366)
+    timeslices = test_mp.timeslices()
+    obs = timeslices[timeslices.category == 'Days']
+    # return only added time slice
+    assert len(obs) == 1
+    # returned time slice attributes have expected values
+    assert all([list(obs.iloc[0]) == ['January, 1st', 'Days',
+                                      1.0 / 366]])
+
+
+def test_add_timeslice_duplicate_raise(test_mp):
+    test_mp.add_timeslice('foo_slice', 'foo_category', 0.2)
+    # adding same name with different duration raises an error
+    with raises(ValueError, match='timeslice `foo_slice` already defined with '
+                                  'duration 0.2'):
+        test_mp.add_timeslice('foo_slice', 'bar_category', 0.3)

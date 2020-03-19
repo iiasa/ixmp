@@ -3,6 +3,7 @@ from itertools import repeat, zip_longest
 import logging
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from ._config import config
@@ -12,7 +13,8 @@ from .utils import (
     as_str_list,
     check_year,
     logger,
-    parse_url
+    parse_url,
+    year_list
 )
 
 log = logging.getLogger(__name__)
@@ -87,7 +89,10 @@ class Platform:
 
     def __getattr__(self, name):
         """Convenience for methods of Backend."""
-        return getattr(self._backend, name)
+        if name in self._backend_direct:
+            return getattr(self._backend, name)
+        else:
+            raise AttributeError(name)
 
     def set_log_level(self, level):
         """Set global logger level.
@@ -122,7 +127,7 @@ class Platform:
 
         Returns
         -------
-        pandas.DataFrame
+        :class:`pandas.DataFrame`
             Scenario information, with the columns:
 
             - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario
@@ -279,6 +284,60 @@ class Platform:
         if not self._existing_node(region):
             self._backend.set_node(region, synonym=mapped_to)
 
+    def timeslices(self):
+        """Return all subannual timeslices defined in this Platform instance.
+
+        Timeslices are a way to represent subannual temporal resolution in
+        timeseries data. A timeslice consists of a **name** (e.g., 'january',
+        'summer'), a **category** (e.g., 'months', 'seasons'), and a
+        **duration** given relative to a full year.
+
+        The category and duration do not have any functional relevance within
+        the ixmp framework, but they may be useful for pre- or post-processing.
+        For example, they can be used to filter all timeslices of a certain
+        category (e.g., all months) from the :class:`pandas.DataFrame` returned
+        by this function or to aggregate subannual data to full-year results.
+
+        A timeslice is related to the index set 'time'
+        in a :class:`message_ix.Scenario` to indicate a subannual temporal
+        dimension. Alas, timeslices and set elements of time have to be
+        initialized/defined independently.
+
+        See :meth:`add_timeslice` to initialize additional timeslices in the
+        Platform instance.
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            DataFrame of timeslices, categories and duration
+        """
+        return pd.DataFrame(self._backend.get_timeslices(),
+                            columns=FIELDS['get_timeslices'])
+
+    def add_timeslice(self, name, category, duration):
+        """Define a subannual timeslice including a category and duration.
+
+        See :meth:`timeslices` for a detailed description of timeslices.
+
+        Parameters
+        ----------
+        name : str
+            Unique name of the timeslice.
+        category : str
+            Timeslice category (e.g. 'common', 'month', etc).
+        duration : float
+            Duration of timeslice as fraction of year.
+        """
+        slices = self.timeslices().set_index('name')
+        if name in slices.index:
+            msg = 'timeslice `{}` already defined with duration {}'
+            existing_duration = slices.loc[name].duration
+            if not np.isclose(duration, existing_duration):
+                raise ValueError(msg.format(name, existing_duration))
+            logger().info(msg.format(name, duration))
+        else:
+            self._backend.set_timeslice(name, category, duration)
+
     def check_access(self, user, models, access='view'):
         """Check access to specific models.
 
@@ -357,6 +416,10 @@ class TimeSeries:
         return self.platform._backend(self, method, *args, **kwargs)
 
     # Transactions and versioning
+    # functions for platform management
+    def has_solution(self):
+        # only Scenario class can have a solution
+        return False
 
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries for modification."""
@@ -420,6 +483,13 @@ class TimeSeries:
             - `year` and `value`—long, or 'tabular', format.
             - one or more specific years—wide, or 'IAMC' format.
 
+            To support subannual temporal resolution of timeseries data, a
+            column `subannual` is optional in `df`. The entries in this column
+            must have been defined in the Platform instance using
+            :meth:`add_timeslice` beforehand. If no column `subannual` is
+            included in `df`, the data is assumed to contain yearly values.
+            See :meth:`timeslices` for a detailed description of the feature.
+
         meta : bool, optional
             If :obj:`True`, store `df` as metadata. Metadata is treated
             specially when :meth:`Scenario.clone` is called for Scenarios
@@ -432,25 +502,28 @@ class TimeSeries:
 
         if 'value' in df.columns:
             # Long format; pivot to wide
-            df = pd.pivot_table(df,
-                                values='value',
-                                index=['region', 'variable', 'unit'],
-                                columns=['year'])
-        else:
-            # Wide format: set index columns
-            df.set_index(['region', 'variable', 'unit'], inplace=True)
+            all_cols = [i for i in df.columns if i not in ['year', 'value']]
+            df = pd.pivot_table(df, values='value', index=all_cols,
+                                columns=['year']).reset_index()
+        df.set_index(['region', 'variable', 'unit', 'subannual'], inplace=True)
 
-        # Discard non-numeric columns, e.g. 'model', 'scenario'
-        num_cols = [pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes]
-        df = df.iloc[:, num_cols]
+        # Discard non-numeric columns, e.g. 'model', 'scenario',
+        # write warning about non-expected cols to log
+        year_cols = year_list(df.columns)
+        other_cols = [i for i in df.columns
+                      if i not in ['model', 'scenario'] + year_cols]
+        if len(other_cols) > 0:
+            logger().warning(f'dropping index columns {other_cols} from data')
+
+        df = df.loc[:, year_cols]
 
         # Columns (year) as integer
         df.columns = df.columns.astype(int)
 
         # Add one time series per row
-        for (r, v, u), data in df.iterrows():
+        for (r, v, u, sa), data in df.iterrows():
             # Values as float; exclude NA
-            self._backend('set_data', r, v, data.astype(float).dropna(), u,
+            self._backend('set_data', r, v, data.astype(float).dropna(), u, sa,
                           meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
@@ -488,7 +561,8 @@ class TimeSeries:
 
         if iamc:
             # Convert to wide format
-            df = df.pivot_table(index=IAMC_IDX, columns='year')['value'] \
+            index = IAMC_IDX + ['subannual']
+            df = df.pivot_table(index=index, columns='year')['value'] \
                    .reset_index()
             df.columns.names = [None]
 
@@ -510,14 +584,16 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_template(df)
 
+        id_cols = ['region', 'variable', 'unit', 'subannual']
         if 'year' not in df.columns:
             # Reshape from wide to long format
-            df = pd.melt(df, id_vars=['region', 'variable', 'unit'],
+            df = pd.melt(df,
+                         id_vars=id_cols,
                          var_name='year', value_name='value')
 
         # Remove all years for a given (r, v, u) combination at once
-        for (r, v, u), data in df.groupby(['region', 'variable', 'unit']):
-            self._backend('delete', r, v, data['year'].tolist(), u)
+        for (r, v, u, t), data in df.groupby(id_cols):
+            self._backend('delete', r, v, t, data['year'].tolist(), u)
 
     def add_geodata(self, df):
         """Add geodata (layers) to the TimeSeries.
@@ -529,14 +605,14 @@ class TimeSeries:
 
             - `region`
             - `variable`
-            - `time`
+            - `subannual`
             - `unit`
             - `year`
             - `value`
             - `meta`
         """
         for _, row in df.astype({'year': int, 'meta': int}).iterrows():
-            self._backend('set_geo', row.region, row.variable, row.time,
+            self._backend('set_geo', row.region, row.variable, row.subannual,
                           row.year, row.value, row.unit, row.meta)
 
     def remove_geodata(self, df):
@@ -550,12 +626,12 @@ class TimeSeries:
             - `region`
             - `variable`
             - `unit`
-            - `time`
+            - `subannual`
             - `year`
         """
         # Remove all years for a given (r, v, t, u) combination at once
-        for (r, v, t, u), data in df.groupby(['region', 'variable', 'time',
-                                              'unit']):
+        for (r, v, t, u), data in df.groupby(['region', 'variable',
+                                              'subannual', 'unit']):
             self._backend('delete_geo', r, v, t, data['year'].tolist(), u)
 
     def get_geodata(self):
@@ -776,7 +852,7 @@ class Scenario(TimeSeries):
 
         Returns
         -------
-        pandas.DataFrame
+        :class:`pandas.DataFrame`
         """
         return self._backend('item_get_elements', 'set', name, filters)
 
@@ -890,7 +966,7 @@ class Scenario(TimeSeries):
         name : str
             Name of the set to remove (if `key` is :obj:`None`) or from which
             to remove elements.
-        key : pandas.DataFrame or list of str, optional
+        key : :class:`pandas.DataFrame` or list of str, optional
             Elements to be removed from set `name`.
         """
         if key is None:
@@ -947,8 +1023,8 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key_or_data : str or iterable of str or range or dict or \
-                      pandas.DataFrame
+        key_or_data : str or iterable of str or range or dict or
+                      :class:`pandas.DataFrame`
             Element(s) to be added.
         value : numeric or iterable of numeric, optional
             Values.
@@ -1371,12 +1447,12 @@ def to_iamc_template(df):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : :class:`pandas.DataFrame`
         May have a 'node' column, which will be renamed to 'region'.
 
     Returns
     -------
-    pandas.DataFrame
+    :class:`pandas.DataFrame`
         The returned object has:
 
         - Any (Multi)Index levels reset as columns.
@@ -1385,13 +1461,8 @@ def to_iamc_template(df):
     Raises
     ------
     ValueError
-        If 'time' is among the column names; or 'region', 'variable', or 'unit'
-        is not.
+        If 'region', 'variable', or 'unit' is not among the column names.
     """
-    if 'time' in df.columns:
-        raise ValueError('sub-annual time slices not supported by '
-                         'ixmp.TimeSeries')
-
     # reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:
         df.reset_index(inplace=True)
@@ -1400,6 +1471,8 @@ def to_iamc_template(df):
     cols = {c: str(c).lower() for c in df.columns}
     cols.update(node='region')
     df = df.rename(columns=cols)
+    if 'subannual' not in df.columns:
+        df['subannual'] = 'Year'
     required_cols = ['region', 'variable', 'unit']
     if not set(required_cols).issubset(set(df.columns)):
         missing = list(set(required_cols) - set(df.columns))

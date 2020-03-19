@@ -1,7 +1,6 @@
 from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
-from functools import lru_cache
 from itertools import chain
 import logging
 import os
@@ -39,7 +38,7 @@ java = SimpleNamespace()
 JAVA_CLASSES = [
     'at.ac.iiasa.ixmp.exceptions.IxException',
     'at.ac.iiasa.ixmp.objects.Scenario',
-    'at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan',
+    'at.ac.iiasa.ixmp.dto.TimesliceDTO',
     'at.ac.iiasa.ixmp.Platform',
     'java.lang.Double',
     'java.lang.Integer',
@@ -249,6 +248,15 @@ class JDBCBackend(CachingBackend):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
+
+    def get_timeslices(self):
+        for r in self.jobj.getTimeslices():
+            name, category, duration = (r.getName(), r.getCategory(),
+                                        r.getDuration())
+            yield name, category, duration
+
+    def set_timeslice(self, name, category, duration):
+        self.jobj.addTimeslice(name, category, java.Double(duration))
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
@@ -475,7 +483,6 @@ class JDBCBackend(CachingBackend):
         # Field types
         ftype = {
             'meta': int,
-            'time': lambda ord: timespans()[int(ord)],  # Look up the name
             'year': lambda obj: obj,  # Pass through; handled later
         }
 
@@ -483,7 +490,7 @@ class JDBCBackend(CachingBackend):
         jname = {
             'meta': 'meta',
             'region': 'nodeName',
-            'time': 'time',
+            'subannual': 'subannual',
             'unit': 'unitName',
             'variable': 'keyString',
             'year': 'yearlyData'
@@ -510,27 +517,29 @@ class JDBCBackend(CachingBackend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS['ts_get_geo'])
 
-    def set_data(self, ts, region, variable, data, unit, meta):
+    def set_data(self, ts, region, variable, data, unit, subannual, meta):
         # Convert *data* to a Java data structure
         jdata = java.LinkedHashMap()
         for k, v in data.items():
             # Explicit cast is necessary; otherwise java.lang.Long
             jdata.put(java.Integer(k), v)
 
-        self.jindex[ts].addTimeseries(region, variable, None, jdata, unit,
+        self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit,
                                       meta)
 
-    def set_geo(self, ts, region, variable, time, year, value, unit, meta):
-        self.jindex[ts].addGeoData(region, variable, time, java.Integer(year),
-                                   value, unit, meta)
+    def set_geo(self, ts, region, variable, subannual, year, value, unit,
+                meta):
+        self.jindex[ts].addGeoData(region, variable, subannual,
+                                   java.Integer(year), value, unit, meta)
 
-    def delete(self, ts, region, variable, years, unit):
+    def delete(self, ts, region, variable, subannual, years, unit):
         years = to_jlist(years, java.Integer)
-        self.jindex[ts].removeTimeseries(region, variable, None, years, unit)
+        self.jindex[ts].removeTimeseries(region, variable, subannual, years,
+                                         unit)
 
-    def delete_geo(self, ts, region, variable, time, years, unit):
+    def delete_geo(self, ts, region, variable, subannual, years, unit):
         years = to_jlist(years, java.Integer)
-        self.jindex[ts].removeGeoData(region, variable, time, years, unit)
+        self.jindex[ts].removeGeoData(region, variable, subannual, years, unit)
 
     # Scenario methods
 
@@ -817,7 +826,7 @@ class JDBCBackend(CachingBackend):
                 raise RuntimeError('unhandled Java exception') from e
 
 
-def start_jvm(jvmargs=[]):
+def start_jvm(jvmargs=None):
     """Start the Java Virtual Machine via :mod:`JPype`.
 
     Parameters
@@ -833,6 +842,8 @@ def start_jvm(jvmargs=[]):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+    if jvmargs is None:
+        jvmargs = []
     if jpype.isJVMStarted():
         return
 
@@ -905,9 +916,3 @@ def to_jlist(arg, convert=None):
         raise ValueError(arg)
 
     return jlist
-
-
-@lru_cache(1)
-def timespans():
-    # Mapping for the enums of at.ac.iiasa.ixmp.objects.TimeSeries.TimeSpan
-    return {t.getDbValue(): t.name() for t in java.TimeSpan.values()}

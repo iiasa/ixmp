@@ -76,6 +76,46 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def get_timeslices(self):
+        """Iterate over subannual timeslices defined on the Platform instance.
+
+        Yields
+        -------
+        tuple
+            The members of each tuple are:
+
+            ========= =========== ===
+            ID        Type        Description
+            ========= =========== ===
+            name      str         Time slice name
+            category  str         Time slice category
+            duration  float       Time slice duration (fraction of year)
+            ========= =========== ===
+
+        See also
+        --------
+        set_timeslice
+        """
+
+    @abstractmethod
+    def set_timeslice(self, name, category, duration):
+        """Add a subannual time slice to the Platform.
+
+        Parameters
+        ----------
+        name : str
+           Node name.
+        category : str
+           Time slice category.
+        duration : float
+           Time slice duration (a fraction of a year).
+
+        See also
+        --------
+        get_timeslices
+        """
+
+    @abstractmethod
     def get_scenarios(self, default, model, scenario):
         """Iterate over TimeSeries stored on the Platform.
 
@@ -391,21 +431,22 @@ class Backend(ABC):
         tuple
             The members of each tuple are:
 
-            ======== ==== ===
-            ID       Type Description
-            ======== ==== ===
-            region   str  Region name
-            variable str  Variable name
-            time     str  Time period
-            year     int  Year
-            value    str  Value
-            unit     str  Unit symbol
-            meta     bool :obj:`True` if the data is marked as metadata
-            ======== ==== ===
+            ========= ==== ===
+            ID        Type Description
+            ========= ==== ===
+            region    str  Region name
+            variable  str  Variable name
+            year      int  Year
+            value     str  Value
+            unit      str  Unit symbol
+            subannual str  Name of time slice
+            meta      bool :obj:`True` if the data is marked as metadata
+            ========= ==== ===
         """
 
     @abstractmethod
-    def set_data(self, ts: TimeSeries, region, variable, data, unit, meta):
+    def set_data(self, ts: TimeSeries,
+                 region, variable, data, unit, subannual, meta):
         """Store *data*.
 
         Parameters
@@ -414,8 +455,8 @@ class Backend(ABC):
             Region name.
         variable : str
             Variable name.
-        time : str
-            Time period.
+        subannual : str
+            Name of time slice.
         unit : str
             Unit symbol.
         data : dict (int -> float)
@@ -425,7 +466,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_geo(self, ts: TimeSeries, region, variable, time, year, value,
+    def set_geo(self, ts: TimeSeries, region, variable, subannual, year, value,
                 unit, meta):
         """Store time-series 'geodata'.
 
@@ -435,8 +476,8 @@ class Backend(ABC):
             Region name.
         variable : str
             Variable name.
-        time : str
-            Time period.
+        subannual : str
+            Name of time slice.
         year : int
             Year.
         value : str
@@ -448,7 +489,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete(self, ts: TimeSeries, region, variable, years, unit):
+    def delete(self, ts: TimeSeries, region, variable, subannual, years, unit):
         """Remove data values.
 
         Parameters
@@ -461,6 +502,8 @@ class Backend(ABC):
             Years.
         unit : str
             Unit symbol.
+        subannual : str
+            Name of time slice.
 
         Returns
         -------
@@ -468,7 +511,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete_geo(self, ts: TimeSeries, region, variable, time, years, unit):
+    def delete_geo(self, ts: TimeSeries, region, variable, subannual, years,
+                   unit):
         """Remove 'geodata' values.
 
         Parameters
@@ -477,8 +521,8 @@ class Backend(ABC):
             Region name.
         variable : str
             Variable name.
-        time : str
-            Time period.
+        subannual : str
+            Name of time slice.
         years : Iterable of int
             Years.
         unit : str

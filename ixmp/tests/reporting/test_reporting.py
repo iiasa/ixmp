@@ -491,7 +491,7 @@ def test_reporter_describe(test_mp, test_data_path, capsys):
     - <ixmp.core.Scenario object at {id}>
   - 'config':
     - {{'filters': {{}}}}""".format(id=id_)
-    assert desc1 == r.describe('d:i')
+    assert desc1 == r.describe('d:i', quiet=False)
 
     # Description was also written to stdout
     out1, _ = capsys.readouterr()
@@ -500,7 +500,7 @@ def test_reporter_describe(test_mp, test_data_path, capsys):
     # Description of all keys is as expected
     desc2 = (test_data_path / 'report-describe.txt').read_text() \
                                                     .format(id=id_)
-    assert desc2 == r.describe() + '\n'
+    assert desc2 == r.describe(quiet=False) + '\n'
 
     # Result was also written to stdout
     out2, _ = capsys.readouterr()

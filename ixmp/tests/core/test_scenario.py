@@ -200,13 +200,16 @@ class TestScenario:
         scen.to_excel(tmp_path)
 
         # File can be read
-        scen_empty.read_excel(tmp_path, init_items=True)
+        scen_empty.read_excel(tmp_path, init_items=True, commit_steps=True)
 
         # Contents of the Scenarios are the same
         assert scen_empty.par_list() == scen.par_list()
         assert scen_empty.set_list() == scen.set_list()
+        # TODO make an exact comparison of the Scenarios
 
-        # TODO test more thoroughly
+        # TODO test with:
+        # - add_units = True on an empty Platform
+        # - init_items = False
 
     # Combined tests
     def test_meta(self, mp):

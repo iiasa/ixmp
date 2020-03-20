@@ -4,7 +4,6 @@ import re
 from urllib.parse import urlparse
 
 import pandas as pd
-from pathlib import Path
 
 
 # globally accessible logger
@@ -117,33 +116,6 @@ def parse_url(url):
         scenario_info['version'] = int(components.fragment)
 
     return platform_info, scenario_info
-
-
-def pd_read(f, *args, **kwargs):
-    """Try to read a file with pandas, no fancy stuff"""
-    f = Path(f)
-    if f.suffix == '.csv':
-        return pd.read_csv(f, *args, **kwargs)
-    else:
-        return pd.read_excel(f, *args, **kwargs)
-
-
-def pd_write(df, f, *args, **kwargs):
-    """Try to write one or more dfs with pandas, no fancy stuff"""
-    f = Path(f)
-    is_pd = isinstance(df, (pd.DataFrame, pd.Series))
-    if f.suffix == '.csv':
-        if not is_pd:
-            raise ValueError('Must pass a Dataframe if using csv files')
-        df.to_csv(f, *args, **kwargs)
-    else:
-        writer = pd.ExcelWriter(f, engine='xlsxwriter')
-        if is_pd:
-            sheet_name = kwargs.pop('sheet_name', 'Sheet1')
-            df = {sheet_name: df}
-        for k, v in df.items():
-            v.to_excel(writer, sheet_name=k, *args, **kwargs)
-        writer.save()
 
 
 def year_list(x):

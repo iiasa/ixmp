@@ -353,6 +353,14 @@ class JDBCBackend(CachingBackend):
         --------
         .Backend.write_file
         """
+        try:
+            # Call the default implementation, e.g. for .xlsx
+            super().write_file(path, item_type, **kwargs)
+        except NotImplementedError:
+            pass
+        else:
+            return
+
         ts, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
         if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):

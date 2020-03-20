@@ -192,6 +192,13 @@ class TestScenario:
         scen.load_scenario_data()
         scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
+    # I/O
+    def test_to_excel(self, scen, tmp_path):
+        # Solved Scenario can be written to file
+        scen.to_excel(tmp_path / 'output.xlsx')
+
+        # TODO test contents of the file
+
     # Combined tests
     def test_meta(self, mp):
         test_dict = {

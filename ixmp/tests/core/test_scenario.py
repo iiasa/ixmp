@@ -193,11 +193,20 @@ class TestScenario:
         scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
     # I/O
-    def test_to_excel(self, scen, tmp_path):
-        # Solved Scenario can be written to file
-        scen.to_excel(tmp_path / 'output.xlsx')
+    def test_excel_io(self, scen, scen_empty, tmp_path):
+        tmp_path /= 'output.xlsx'
 
-        # TODO test contents of the file
+        # Solved Scenario can be written to file
+        scen.to_excel(tmp_path)
+
+        # File can be read
+        scen_empty.read_excel(tmp_path, init_items=True)
+
+        # Contents of the Scenarios are the same
+        assert scen_empty.par_list() == scen.par_list()
+        assert scen_empty.set_list() == scen.set_list()
+
+        # TODO test more thoroughly
 
     # Combined tests
     def test_meta(self, mp):

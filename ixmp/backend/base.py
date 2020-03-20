@@ -4,7 +4,7 @@ import json
 
 from ixmp.core import TimeSeries, Scenario
 from . import ItemType
-from .io import s_write_excel
+from .io import s_read_excel, s_write_excel
 
 
 class Backend(ABC):
@@ -233,6 +233,12 @@ class Backend(ABC):
         the `path` and `item_type` methods. For all other combinations, it
         **must** raise :class:`NotImplementedError`.
 
+        The default implementation supports:
+
+        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: read a
+          single Scenario given by kwargs['filters']['scenario'] from file
+          using :meth:`pandas.DataFrame.read_excel`.
+
         Parameters
         ----------
         path : os.PathLike
@@ -261,8 +267,11 @@ class Backend(ABC):
         --------
         write_file
         """
-        # TODO move message_ix.core.read_excel here
-        raise NotImplementedError
+        s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
+        if path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
+            s_read_excel(self, s, path, **kwargs)
+        else:
+            raise NotImplementedError
 
     def write_file(self, path, item_type: ItemType, **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.

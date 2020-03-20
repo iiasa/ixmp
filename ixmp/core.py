@@ -1453,6 +1453,31 @@ class Scenario(TimeSeries):
         self.platform._backend.write_file(path, ItemType.MODEL,
                                           filters=dict(scenario=self))
 
+    def read_excel(self, path, add_units=False, init_items=False,
+                   commit_steps=False):
+        """Read a Microsoft Excel file into the Scenario.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File to read. Must have suffix '.xlsx'.
+        add_units : bool, optional
+            Add missing units, if any, to the Platform instance.
+        init_items : bool, optional
+            Initialize sets and parameters that do not already exist in the
+            Scenario.
+        commit_steps : bool, optional
+            Commit changes after every data addition.
+        """
+        self.platform._backend.read_file(
+            path,
+            ItemType.MODEL,
+            filters=dict(scenario=self),
+            add_units=add_units,
+            init_items=init_items,
+            commit_steps=commit_steps,
+        )
+
 
 def to_iamc_template(df):
     """Format pd.DataFrame *df* in IAMC style.

@@ -301,6 +301,14 @@ class JDBCBackend(CachingBackend):
         --------
         .Backend.read_file
         """
+        try:
+            # Call the default implementation, e.g. for .xlsx
+            super().read_file(path, item_type, **kwargs)
+        except NotImplementedError:
+            pass
+        else:
+            return
+
         ts, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
         if path.suffix == '.gdx' and item_type is ItemType.MODEL:
             kw = {'check_solution', 'comment', 'equ_list', 'var_list'}

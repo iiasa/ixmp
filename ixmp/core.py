@@ -1,6 +1,7 @@
 from functools import partial
 from itertools import repeat, zip_longest
 import logging
+from pathlib import Path
 from warnings import warn
 
 import numpy as np
@@ -1450,7 +1451,7 @@ class Scenario(TimeSeries):
         path : os.PathLike
             File to write. Must have suffix '.xlsx'.
         """
-        self.platform._backend.write_file(path, ItemType.MODEL,
+        self.platform._backend.write_file(Path(path), ItemType.MODEL,
                                           filters=dict(scenario=self))
 
     def read_excel(self, path, add_units=False, init_items=False,
@@ -1470,7 +1471,7 @@ class Scenario(TimeSeries):
             Commit changes after every data addition.
         """
         self.platform._backend.read_file(
-            path,
+            Path(path),
             ItemType.MODEL,
             filters=dict(scenario=self),
             add_units=add_units,

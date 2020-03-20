@@ -1441,6 +1441,18 @@ class Scenario(TimeSeries):
         """
         self._backend('set_meta', name, value)
 
+    # Input and output
+    def to_excel(self, path):
+        """Write Scenario to a Microsoft Excel file.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File to write. Must have suffix '.xlsx'.
+        """
+        self.platform._backend.write_file(path, ItemType.MODEL,
+                                          filters=dict(scenario=self))
+
 
 def to_iamc_template(df):
     """Format pd.DataFrame *df* in IAMC style.

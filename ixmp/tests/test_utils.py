@@ -1,58 +1,9 @@
 """Tests for ixmp.utils."""
-import pandas as pd
-from pandas.testing import assert_frame_equal
 import pytest
 from pytest import mark, param
 
 from ixmp import utils
 from ixmp.testing import populate_test_platform
-
-
-def make_obs(fname, exp, **kwargs):
-    utils.pd_write(exp, fname, index=False)
-    obs = utils.pd_read(fname, **kwargs)
-    return obs
-
-
-def test_pd_io_csv(tmp_path):
-
-    fname = tmp_path / "test.csv"
-    exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
-    obs = make_obs(fname, exp)
-    assert_frame_equal(obs, exp)
-
-
-def test_pd_io_xlsx(tmp_path):
-
-    fname = tmp_path / "test.xlsx"
-    exp = pd.DataFrame({'a': [0, 1], 'b': [2, 3]})
-    obs = make_obs(fname, exp)
-    assert_frame_equal(obs, exp)
-
-
-def test_pd_io_xlsx_multi(tmp_path):
-
-    fname = tmp_path / "test.xlsx"
-    exp = {
-        'sheet1': pd.DataFrame({'a': [0, 1], 'b': [2, 3]}),
-        'sheet2': pd.DataFrame({'c': [4, 5], 'd': [6, 7]}),
-    }
-    obs = make_obs(fname, exp, sheet_name=None)
-    for k, _exp in exp.items():
-        _obs = obs[k]
-        assert_frame_equal(_obs, _exp)
-
-
-def test_pd_write(tmp_path):
-
-    fname = 'test.csv'
-    d = tmp_path / "sub"
-    d.mkdir()
-
-    data_frame = [1, 2, 3, 4]
-
-    with pytest.raises(ValueError):
-        assert utils.pd_write(data_frame, fname)
 
 
 def test_check_year():

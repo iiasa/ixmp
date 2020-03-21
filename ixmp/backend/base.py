@@ -4,7 +4,7 @@ import json
 
 from ixmp.core import TimeSeries, Scenario
 from . import ItemType
-from .io import s_read_excel, s_write_excel
+from .io import ts_read_file, s_read_excel, s_write_excel
 
 
 class Backend(ABC):
@@ -268,7 +268,9 @@ class Backend(ABC):
         write_file
         """
         s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
-        if path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
+        if path.suffix in ('.csv', '.xlsx') and item_type is ItemType.TS and s:
+            ts_read_file(s, path, **kwargs)
+        elif path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
             s_read_excel(self, s, path, **kwargs)
         else:
             raise NotImplementedError

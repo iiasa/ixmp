@@ -1383,7 +1383,7 @@ class Scenario(TimeSeries):
                              'use `remove_solution()` first!')
 
         # Instantiate a model
-        model = get_model(model, **model_options)
+        model = get_model(model or self.scheme, **model_options)
 
         # Validate *callback* argument
         if callback is not None and not callable(callback):

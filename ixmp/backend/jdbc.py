@@ -834,7 +834,9 @@ class JDBCBackend(CachingBackend):
         try:
             return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
         except java.IxException as e:
-            msg = f'No {ix_type.title()} {name!r} exists in this Scenario!'
+            # Regex for similar but not consistent messages from Java code
+            msg = (f"No (item|{ix_type.title()}) '?{name}'? exists in this "
+                   "Scenario!")
             if re.match(msg, e.args[0]):
                 # Re-raise as a Python KeyError
                 raise KeyError(name) from None

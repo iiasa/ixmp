@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 import logging
-from pathlib import Path
 import re
 from urllib.parse import urlparse
 

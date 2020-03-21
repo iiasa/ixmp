@@ -196,31 +196,55 @@ class TestScenario:
     def test_excel_io(self, scen, scen_empty, tmp_path):
         tmp_path /= 'output.xlsx'
 
-        # # Add a 1-D set indexed by another set
-        # # FIXME remove_solution, check_out, commit, solve, commit should not
-        # #       be needed to make this small data addition.
-        # scen.remove_solution()
-        # scen.check_out()
-        # scen.init_set('foo', 'j')
-        # scen.add_set('foo', [['new-york'], ['topeka']])
-        # scen.commit('')
-        # scen.solve()
+        # FIXME remove_solution, check_out, commit, solve, commit should not
+        #       be needed to make this small data addition.
+        scen.remove_solution()
+        scen.check_out()
+        # A 1-D set indexed by another set
+        scen.init_set('foo', 'j')
+        scen.add_set('foo', [['new-york'], ['topeka']])
+        # A scalar parameter with unusual units
+        scen.platform.add_unit('pounds')
+        scen.init_scalar('bar', 100, 'pounds')
+        scen.commit('')
+        scen.solve()
 
         # Solved Scenario can be written to file
         scen.to_excel(tmp_path)
 
-        # File can be read
+        # With init_items=False, can't be read into an empty Scenario
+        with pytest.raises(ValueError, match="no set 'i'; "
+                                             "try init_items=True"):
+            scen_empty.read_excel(tmp_path)
+
+        # File can be read with init_items=False
         scen_empty.read_excel(tmp_path, init_items=True, commit_steps=True)
 
         # Contents of the Scenarios are the same
         assert scen_empty.par_list() == scen.par_list()
         assert scen_empty.set_list() == scen.set_list()
-        # assert scen_empty.set('foo') == scen.set('foo')
+        assert_frame_equal(scen_empty.set('foo'), scen.set('foo'))
         # TODO make an exact comparison of the Scenarios
 
-        # TODO test:
-        # - with add_units = True on an empty Platform
-        # - with init_items = False
+        # Data can be read into an existing Scenario without init_items or
+        # commit_steps
+        scen_empty.read_excel(tmp_path)
+
+        # A new, empty Platform (different from the one under scen -> mp ->
+        # test_mp) that lacks all units
+        mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                           url='jdbc:hsqldb:mem:excel_io')
+        # A Scenario without the 'dantzig' scheme -> no contents at all
+        s = ixmp.Scenario(mp, model='foo', scenario='bar', scheme='empty',
+                          version='new')
+
+        # Fails with add_units=False
+        with pytest.raises(ValueError, match="The unit 'pounds' does not exist"
+                                             " in the database!"):
+            s.read_excel(tmp_path, init_items=True)
+
+        # Succeeds with add_units=True
+        s.read_excel(tmp_path, add_units=True, init_items=True)
 
     # Combined tests
     def test_meta(self, mp):

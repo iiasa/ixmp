@@ -1,8 +1,23 @@
+from pathlib import Path
+
 import click
 import ixmp
 
 
 ScenarioClass = ixmp.Scenario
+
+
+class VersionType(click.ParamType):
+    def convert(self, value, param, ctx):
+        if value == 'new':
+            return value
+        elif isinstance(value, int):
+            return value
+        else:
+            try:
+                return int(value)
+            except ValueError:
+                self.fail(f"{value!r} must be an integer or 'new'")
 
 
 @click.group()
@@ -13,7 +28,7 @@ ScenarioClass = ixmp.Scenario
               help='Database properties file.')
 @click.option('--model', help='Model name.')
 @click.option('--scenario', help='Scenario name.')
-@click.option('--version', type=int, help='Scenario version.')
+@click.option('--version', type=VersionType(), help='Scenario version.')
 @click.pass_context
 def main(ctx, url, platform, dbprops, model, scenario, version):
     # Load the indicated Platform
@@ -51,6 +66,8 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
                                         version=version)
     except KeyError:
         pass
+    except Exception as e:
+        raise click.ClickException(e.args[0])
 
 
 @main.command()
@@ -94,19 +111,81 @@ def config(action, key, value):
         ixmp.config.save()
 
 
-@main.command('import')
+@main.command()
+@click.argument('path', type=click.Path(writable=True))
+@click.pass_obj
+def export(context, path):
+    """Export scenario data to PATH."""
+    # NB want to use type=click.Path(..., path_type=Path), but fails on bytes
+    path = Path(path)
+
+    if not context or 'scen' not in context:
+        raise click.UsageError('give --url, or --platform, --model, and '
+                               '--scenario, before export')
+
+    context['scen'].to_excel(path)
+
+
+@main.group('import')
+@click.pass_obj
+def import_group(context):
+    """Import time series or scenario data.
+
+    DATA is the path to a file containing input data in CSV (time series only)
+    or Excel format.
+    """
+    if not context or 'scen' not in context:
+        raise click.UsageError('give --url, or --platform, --model, and '
+                               '--scenario, before command import')
+
+
+@import_group.command('timeseries')
 @click.option('--firstyear', type=int, help='First year of data to include.')
 @click.option('--lastyear', type=int, help='Final year of data to include.')
-@click.argument('data', type=click.Path(exists=True, dir_okay=False))
+@click.argument('file', type=click.Path(exists=True, dir_okay=False))
 @click.pass_obj
-def import_command(context, firstyear, lastyear, data):
-    """Import time series data.
-
-    DATA is the path to a file containing input data in CSV or Excel format.
-    """
+def import_timeseries(context, file, firstyear, lastyear):
+    """Import time series data."""
     from ixmp.utils import import_timeseries
 
-    import_timeseries(context['scen'], data, firstyear, lastyear)
+    import_timeseries(context['scen'], Path(file), firstyear, lastyear)
+
+
+@import_group.command('scenario')
+@click.option('--discard-solution', is_flag=True,
+              help='Discard solution data if necessary.')
+@click.option('--add-units', is_flag=True,
+              help='Add units to the Platform.')
+@click.option('--init-items', is_flag=True,
+              help='Initialize sets and parameters.')
+@click.option('--commit-steps', is_flag=True,
+              help='Commit after each step.')
+@click.argument('file', type=click.Path(exists=True, dir_okay=False))
+@click.pass_obj
+def import_scenario(context, file, discard_solution, add_units, init_items,
+                    commit_steps):
+    """Import scenario data."""
+    scenario = context['scen']
+
+    if scenario.has_solution() and discard_solution:
+        scenario.remove_solution()
+
+    try:
+        scenario.check_out()
+    except ValueError as e:
+        raise click.ClickException(e.args[0])  # Show exception message to user
+    except RuntimeError as e:
+        if 'not yet saved' in e.args[0]:
+            pass  # --version=new; no need to check out
+        else:
+            raise
+
+    scenario.read_excel(
+        Path(file),
+        add_units=add_units,
+        init_items=init_items,
+        commit_steps=commit_steps,
+    )
 
 
 @main.command()

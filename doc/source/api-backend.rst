@@ -36,6 +36,10 @@ Provided backends
 
    .. tip:: Modifying an item by adding or deleting elements invalidates its cache.
 
+   JDBCBackend has the following limitations:
+
+   - The `comment` argument to :meth:`Platform.add_unit` is limited to 64 characters.
+
 .. automethod:: ixmp.backend.jdbc.start_jvm
 
 Backend API

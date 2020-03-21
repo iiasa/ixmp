@@ -10,7 +10,12 @@ log = logging.getLogger(__name__)
 
 
 def s_write_excel(be, s, path):
-    """Write *s* to a Microsoft Excel file at *path*."""
+    """Write *s* to a Microsoft Excel file at *path*.
+
+    See also
+    --------
+    Scenario.to_excel
+    """
     # item name -> ixmp type
     name_type = {}
     for ix_type in ('set', 'par', 'var', 'equ'):
@@ -85,18 +90,9 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
                  commit_steps=False):
     """Read data from a Microsoft Excel file at *path* into *s*.
 
-    Parameters
-    ----------
-    be : Backend
-    s : Scenario
-    path : os.PathLike
-    add_units : bool, optional
-        Add missing units, if any, to the Platform instance.
-    init_items : bool, optional
-        Initialize sets and parameters that do not already exist in the
-        Scenario.
-    commit_steps : bool, optional
-        Commit changes after every data addition.
+    See also
+    --------
+    Scenario.read_excel
     """
     log.info(f'Reading data from {path}')
 

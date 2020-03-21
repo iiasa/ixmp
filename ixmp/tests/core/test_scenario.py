@@ -52,8 +52,8 @@ class TestScenario:
         scen = ixmp.Scenario(mp, **models['dantzig'])
         assert scen.version == 2
 
-    def test_scenario_from_url(self, mp, caplog):
-        url = 'ixmp://{}/Douglas Adams/Hitchhiker'.format(mp.name)
+    def test_from_url(self, mp, caplog):
+        url = f'ixmp://{mp.name}/Douglas Adams/Hitchhiker'
 
         # Default version is loaded
         scen, mp = ixmp.Scenario.from_url(url)
@@ -65,9 +65,9 @@ class TestScenario:
             scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
 
         # Giving an invalid scenario with errors='warn' raises an exception
-        msg = ("RuntimeError: There was a problem getting 'Hitchhikerfoo' in "
-               "table 'SCENARIO' from the database!\nwhen loading Scenario "
-               f"from url {url}")
+        msg = ("There was a problem getting 'Hitchhikerfoo' in table "
+               "'SCENARIO' from the database!\nwhen loading Scenario from url "
+               ) + url
         with assert_logs(caplog, msg):
             scen, mp = ixmp.Scenario.from_url(url + 'foo')
         assert scen is None and isinstance(mp, ixmp.Platform)

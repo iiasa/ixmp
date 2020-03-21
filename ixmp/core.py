@@ -882,6 +882,10 @@ class Scenario(TimeSeries):
         # TODO expand docstring (here or in doc/source/api.rst) with examples,
         #      per test_core.test_add_set.
 
+        if len(key) == 0:
+            # No elements to add
+            return
+
         # Get index names for set *name*, may raise KeyError
         idx_names = self.idx_names(name)
 

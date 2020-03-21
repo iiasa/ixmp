@@ -313,8 +313,7 @@ def test_set(scen_empty):
     scen = scen_empty
 
     # Add element to a non-existent set
-    with pytest.raises(KeyError,
-                       match="No Item 'foo' exists in this Scenario!"):
+    with pytest.raises(KeyError, match=repr('foo')):
         scen.add_set('foo', 'bar')
 
     # Initialize a 0-D set

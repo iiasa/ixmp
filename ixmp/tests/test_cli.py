@@ -138,11 +138,11 @@ def test_import_ts(ixmp_cli, test_mp, test_data_path):
         '--model', models['dantzig']['model'],
         '--scenario', models['dantzig']['scenario'],
         '--version', '1',
-        'import', 'timeseries'
+        'import', 'timeseries',
         '--firstyear', '2020',
         str(test_data_path / 'timeseries_canning.csv'),
     ])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
     # Expected data
     exp = pd.DataFrame.from_dict({

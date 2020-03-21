@@ -1,6 +1,9 @@
+from contextlib import contextmanager
 import logging
 
 import pandas as pd
+
+from ixmp.utils import as_str_list
 
 
 log = logging.getLogger(__name__)
@@ -43,6 +46,32 @@ def s_write_excel(be, s, path):
         data.to_excel(writer, sheet_name=name, index=False)
 
     writer.save()
+
+
+@contextmanager
+def handle_existing(scenario, ix_type, name, new_idx_sets, path):
+    """Context manager for :meth:`~.init_set`, :meth:`.init_par`, etc.
+
+    If the init_*() call within the context fails, this checks whether the
+    exception is fatal; if so, it is re-raised with a readable message.
+    """
+    try:
+        yield
+    except ValueError as e:
+        if 'exists' not in e.args[0]:
+            raise  # Some other ValueError
+
+        # Check that existing item has the same index sets
+
+        # [] and None are equivalent; convert to be consistent
+        existing = scenario.idx_sets(name) or None
+        if isinstance(new_idx_sets, list) and new_idx_sets == []:
+            new_idx_sets = None
+
+        if existing != new_idx_sets:
+            raise ValueError(f'{ix_type} {name!r} has index sets '
+                             f'{existing} in Scenario; {new_idx_sets}'
+                             f'in {path}')
 
 
 def s_read_excel(be, s, path, add_units=False, init_items=False,
@@ -98,13 +127,21 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
                     else:
                         pass  # 1-D set indexed by another set
 
-                s.init_set(name, idx_sets)
+                with handle_existing(s, 'set', name, idx_sets, path):
+                    s.init_set(name, idx_sets)
 
-            if idx_sets is None or len(idx_sets) == 1:
-                # Convert DataFrame into a 1-D vector
-                data = data[name].values
+            if len(data.columns) == 1:
+                # Convert data frame into 1-D vector
+                data = data.iloc[:, 0].values
 
-            s.add_set(name, data)
+                if idx_sets is not None:
+                    # Indexed set must be input as list of list of str
+                    data = list(map(as_str_list, data))
+
+            try:
+                s.add_set(name, data)
+            except KeyError:
+                raise ValueError(f'no set {name!r}; try init_items=True')
         else:
             # Reappend to the list to process later
             sets_to_add.append((name, data))
@@ -133,7 +170,9 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
             for unit in to_add:
                 log.info(f'Add missing unit: {unit}')
-                be.set_unit(unit, f'Loaded from {path}')
+                # FIXME cannot use the comment f'Loaded from {path}' here; too
+                #       long for JDBCBackend
+                be.set_unit(unit, f'Loaded from file')
 
             # Update the reference set to avoid re-adding these units
             units |= to_add
@@ -145,7 +184,8 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         if init_items:
             # Same as init_scalar if idx_sets == []
-            s.init_par(name, idx_sets)
+            with handle_existing(s, ix_type, name, idx_sets, path):
+                s.init_par(name, idx_sets)
 
         if not len(idx_sets):
             # No index sets -> scalar parameter; must supply empty 'key' column
@@ -158,9 +198,3 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             # Commit after every parameter
             s.commit(f'Loaded {ix_type} {name!r} from {path}')
             s.check_out()
-
-    # if commit_steps:
-    #     # No changes since check_out() above
-    #     s.discard_changes()
-    # else:
-    #     s.commit(f'Loaded data from {path}')

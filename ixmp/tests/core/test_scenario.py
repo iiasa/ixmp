@@ -196,6 +196,16 @@ class TestScenario:
     def test_excel_io(self, scen, scen_empty, tmp_path):
         tmp_path /= 'output.xlsx'
 
+        # # Add a 1-D set indexed by another set
+        # # FIXME remove_solution, check_out, commit, solve, commit should not
+        # #       be needed to make this small data addition.
+        # scen.remove_solution()
+        # scen.check_out()
+        # scen.init_set('foo', 'j')
+        # scen.add_set('foo', [['new-york'], ['topeka']])
+        # scen.commit('')
+        # scen.solve()
+
         # Solved Scenario can be written to file
         scen.to_excel(tmp_path)
 
@@ -205,11 +215,12 @@ class TestScenario:
         # Contents of the Scenarios are the same
         assert scen_empty.par_list() == scen.par_list()
         assert scen_empty.set_list() == scen.set_list()
+        # assert scen_empty.set('foo') == scen.set('foo')
         # TODO make an exact comparison of the Scenarios
 
-        # TODO test with:
-        # - add_units = True on an empty Platform
-        # - init_items = False
+        # TODO test:
+        # - with add_units = True on an empty Platform
+        # - with init_items = False
 
     # Combined tests
     def test_meta(self, mp):

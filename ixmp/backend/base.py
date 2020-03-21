@@ -761,7 +761,7 @@ class Backend(ABC):
             When *type* is 'set' and *name* an index set (not indexed by other
             sets).
         dict
-            When *type* is 'equ', 'par', or 'set' and *name* is scalar (zero-
+            When *type* is 'equ', 'par', or 'var' and *name* is scalar (zero-
             dimensional). The value has the keys 'value' and 'unit' (for 'par')
             or 'lvl' and 'mrg' (for 'equ' or 'var').
         pandas.DataFrame

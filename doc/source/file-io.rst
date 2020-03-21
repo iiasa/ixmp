@@ -9,8 +9,8 @@ Time series data
 
 Time series data can be:
 
-- Read using :func:`.import_timeseries`, or the CLI command ``ixmp import timeseries FILE``.
-- Written using :meth:`.export_timeseries_data`.
+- Read using :meth:`.import_timeseries`, or the CLI command ``ixmp import timeseries FILE`` for a single TimeSeries object.
+- Written using :meth:`.export_timeseries_data` for multiple TimeSeries objects at once.
 
 Both CSV and Excel files in the IAMC time-series format are supported.
 

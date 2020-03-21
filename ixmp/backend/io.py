@@ -9,6 +9,31 @@ from ixmp.utils import as_str_list
 log = logging.getLogger(__name__)
 
 
+def ts_read_file(ts, path, firstyear=None, lastyear=None):
+    """Read data from a CSV or Microsoft Excel file at *path* into *ts*.
+
+    See also
+    --------
+    TimeSeries.add_timeseries
+    TimeSeries.read_file
+    """
+
+    if path.suffix == '.csv':
+        df = pd.read_csv(path)
+    elif path.suffix == '.xlsx':
+        df = pd.read_excel(path)
+
+    ts.check_out(timeseries_only=True)
+    ts.add_timeseries(df, year_lim=(firstyear, lastyear))
+
+    msg = f'adding timeseries data from {path}'
+    if firstyear:
+        msg += f' from {firstyear}'
+    if lastyear:
+        msg += f' until {lastyear}'
+    ts.commit(msg)
+
+
 def s_write_excel(be, s, path):
     """Write *s* to a Microsoft Excel file at *path*.
 

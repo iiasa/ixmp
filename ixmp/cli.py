@@ -146,9 +146,7 @@ def import_group(context):
 @click.pass_obj
 def import_timeseries(context, file, firstyear, lastyear):
     """Import time series data."""
-    from ixmp.utils import import_timeseries
-
-    import_timeseries(context['scen'], Path(file), firstyear, lastyear)
+    context['scen'].read_file(Path(file), firstyear, lastyear)
 
 
 @import_group.command('scenario')

@@ -143,39 +143,6 @@ def filtered(df, filters):
     return df[mask]
 
 
-def import_timeseries(scenario, data, firstyear=None, lastyear=None):
-    """Import from a *data* file into *scenario*."""
-    # TODO move into backend.io
-    data = Path(data)
-    if data.suffix == '.csv':
-        df = pd.read_csv(data)
-    elif data.suffix == '.xlsx':
-        df = pd.read_excel(data)
-    else:
-        raise ValueError(f'cannot read from {data.suffix} file')
-
-    df = df.rename(columns={c: str(c).lower() for c in df.columns})
-
-    cols = year_list(df.columns)
-    years = [int(i) for i in cols]
-    fyear = int(firstyear or min(years))
-    lyear = int(lastyear or max(years))
-    cols = [c for c in cols if int(c) >= fyear and int(c) <= lyear]
-    df = df[['region', 'variable', 'unit'] + cols]
-    df.region = [x if x == 'World' else 'R11_' + x for x in df.region]
-
-    scenario.check_out(timeseries_only=True)
-    scenario.add_timeseries(df)
-
-    annot = 'adding timeseries data from file {}'.format(data)
-    if firstyear is not None:
-        annot = '{} from {}'.format(annot, firstyear)
-    if lastyear is not None:
-        annot = '{} until {}'.format(annot, lastyear)
-
-    scenario.commit(annot)
-
-
 def format_scenario_list(platform, model=None, scenario=None, match=None,
                          default_only=False, as_url=False):
     """Return a formatted list of TimeSeries on *platform*.

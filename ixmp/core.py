@@ -467,7 +467,7 @@ class TimeSeries:
         """
         self._backend('preload')
 
-    def add_timeseries(self, df, meta=False):
+    def add_timeseries(self, df, meta=False, year_lim=(None, None)):
         """Add data to the TimeSeries.
 
         Parameters
@@ -495,11 +495,15 @@ class TimeSeries:
             If :obj:`True`, store `df` as metadata. Metadata is treated
             specially when :meth:`Scenario.clone` is called for Scenarios
             created with ``scheme='MESSAGE'``.
+
+        year_lim : tuple of (int or None, int or None`), optional
+            Respectively, minimum and maximum years to add from *df*; data for
+            other years is ignored.
         """
         meta = bool(meta)
 
         # Ensure consistent column names
-        df = to_iamc_template(df)
+        df = to_iamc_layout(df)
 
         if 'value' in df.columns:
             # Long format; pivot to wide
@@ -520,6 +524,15 @@ class TimeSeries:
 
         # Columns (year) as integer
         df.columns = df.columns.astype(int)
+
+        # Identify columns to drop
+        to_drop = set()
+        if year_lim[0]:
+            to_drop |= set(filter(lambda y: y < year_lim[0], df.columns))
+        if year_lim[1]:
+            to_drop |= set(filter(lambda y: y > year_lim[1], df.columns))
+
+        df.drop(to_drop, axis=1, inplace=True)
 
         # Add one time series per row
         for (r, v, u, sa), data in df.iterrows():
@@ -583,7 +596,7 @@ class TimeSeries:
             - `year`
         """
         # Ensure consistent column names
-        df = to_iamc_template(df)
+        df = to_iamc_layout(df)
 
         id_cols = ['region', 'variable', 'unit', 'subannual']
         if 'year' not in df.columns:
@@ -648,6 +661,26 @@ class TimeSeries:
                             columns=FIELDS['ts_get_geo']) \
                  .reset_index(drop=True) \
                  .astype({'meta': 'int64', 'year': 'int64'})
+
+    def read_file(self, path, firstyear=None, lastyear=None):
+        """Read time series data from a CSV or Microsoft Excel file.
+
+        Parameters
+        ----------
+        path : os.PathLike
+            File to read. Must have suffix '.csv' or '.xlsx'.
+        firstyear : int, optional
+            Only read data from years equal to or later than this year.
+        lastyear : int, optional
+            Only read data from years equal to or earlier than this year.
+        """
+        self.platform._backend.read_file(
+            Path(path),
+            ItemType.TS,
+            filters=dict(scenario=self),
+            firstyear=firstyear,
+            lastyear=lastyear,
+        )
 
 
 # %% class Scenario
@@ -1483,40 +1516,45 @@ class Scenario(TimeSeries):
         )
 
 
-def to_iamc_template(df):
-    """Format pd.DataFrame *df* in IAMC style.
+def to_iamc_layout(df):
+    """Transform *df* to a standard IAMC layout.
+
+    The returned object has:
+
+    - Any (Multi)Index levels reset as columns.
+    - Lower-case column names 'region', 'variable', 'subannual', and 'unit'.
+    - If not present in *df*, the value 'Year' in the 'subannual' column.
 
     Parameters
     ----------
-    df : :class:`pandas.DataFrame`
+    df : pandas.DataFrame
         May have a 'node' column, which will be renamed to 'region'.
 
     Returns
     -------
-    :class:`pandas.DataFrame`
-        The returned object has:
-
-        - Any (Multi)Index levels reset as columns.
-        - Lower-case column names 'region', 'variable', and 'unit'.
+    pandas.DataFrame
 
     Raises
     ------
     ValueError
         If 'region', 'variable', or 'unit' is not among the column names.
     """
-    # reset the index if meaningful entries are included there
+    # Reset the index if meaningful entries are included there
     if not list(df.index.names) == [None]:
         df.reset_index(inplace=True)
 
-    # rename columns to standard notation
+    # Rename columns in lower case, and transform 'node' to 'region'
     cols = {c: str(c).lower() for c in df.columns}
     cols.update(node='region')
     df = df.rename(columns=cols)
+
+    required_cols = ['region', 'variable', 'unit']
+    missing = list(set(required_cols) - set(df.columns))
+    if len(missing):
+        raise ValueError(f'missing required columns {missing!r}')
+
+    # Add a column 'subannual' with the default value
     if 'subannual' not in df.columns:
         df['subannual'] = 'Year'
-    required_cols = ['region', 'variable', 'unit']
-    if not set(required_cols).issubset(set(df.columns)):
-        missing = list(set(required_cols) - set(df.columns))
-        raise ValueError("missing required columns `{}`!".format(missing))
 
     return df

@@ -19,11 +19,7 @@ def s_write_excel(be, s, path):
     # Open file
     writer = pd.ExcelWriter(path, engine='xlsxwriter')
 
-    # Write the name -> type map
-    pd.Series(name_type, name='ix_type') \
-      .rename_axis(index='item') \
-      .reset_index() \
-      .to_excel(writer, sheet_name='ix_type_mapping', index=False)
+    omitted = set()
 
     for name, ix_type in name_type.items():
         # Extract data: dict, pd.Series, or pd.DataFrame
@@ -41,9 +37,20 @@ def s_write_excel(be, s, path):
 
         # Write empty sets, but not equ/par/var
         if ix_type != 'set' and data.empty:
+            omitted.add(name)
             continue
 
         data.to_excel(writer, sheet_name=name, index=False)
+
+    # Discard entries that were not written
+    for name in omitted:
+        name_type.pop(name)
+
+    # Write the name -> type map
+    pd.Series(name_type, name='ix_type') \
+      .rename_axis(index='item') \
+      .reset_index() \
+      .to_excel(writer, sheet_name='ix_type_mapping', index=False)
 
     writer.save()
 

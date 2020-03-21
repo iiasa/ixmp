@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import logging
+from pathlib import Path
 import re
 from urllib.parse import urlparse
 
@@ -144,7 +145,15 @@ def filtered(df, filters):
 
 def import_timeseries(scenario, data, firstyear=None, lastyear=None):
     """Import from a *data* file into *scenario*."""
-    df = pd_read(data)
+    # TODO move into backend.io
+    data = Path(data)
+    if data.suffix == '.csv':
+        df = pd.read_csv(data)
+    elif data.suffix == '.xlsx':
+        df = pd.read_excel(data)
+    else:
+        raise ValueError(f'cannot read from {data.suffix} file')
+
     df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
     cols = year_list(df.columns)

@@ -128,7 +128,7 @@ def test_platform(ixmp_cli, tmp_path):
     assert r.exit_code == 1
 
 
-def test_import(ixmp_cli, test_mp, test_data_path):
+def test_import_ts(ixmp_cli, test_mp, test_data_path):
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
 
@@ -138,7 +138,7 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         '--model', models['dantzig']['model'],
         '--scenario', models['dantzig']['scenario'],
         '--version', '1',
-        'import',
+        'import', 'timeseries'
         '--firstyear', '2020',
         str(test_data_path / 'timeseries_canning.csv'),
     ])
@@ -163,6 +163,54 @@ def test_import(ixmp_cli, test_mp, test_data_path):
     # The data is not present in other versions
     scen = ixmp.Scenario(test_mp, **models['dantzig'], version=2)
     assert len(scen.timeseries(variable=['Testing'])) == 0
+
+
+def test_excel_io(ixmp_cli, test_mp, tmp_path):
+    populate_test_platform(test_mp)
+    tmp_path /= 'dantzig.xlsx'
+
+    # Invoke the CLI to export data to Excel
+    result = ixmp_cli.invoke([
+        '--platform', test_mp.name,
+        '--model', models['dantzig']['model'],
+        '--scenario', models['dantzig']['scenario'],
+        'export', str(tmp_path),
+    ])
+    assert result.exit_code == 0, result.output
+
+    # Invoke the CLI to read data from Excel
+    cmd = [
+        '--platform', test_mp.name,
+        '--model', models['dantzig']['model'],
+        '--scenario', models['dantzig']['scenario'],
+        'import', 'scenario', str(tmp_path),
+    ]
+
+    # Fails without --discard-solution
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 1
+    assert 'This Scenario has a solution' in result.output
+
+    # Succeeds with --discard-solution
+    cmd.insert(-1, '--discard-solution')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Import into a new model name fails without --init-items
+    cmd = [
+        '--platform', test_mp.name,
+        '--model', 'foo model',
+        '--scenario', 'bar scenario',
+        '--version', 'new',
+        'import', 'scenario', str(tmp_path),
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 1
+
+    # Succeeds
+    cmd.insert(-1, '--init-items')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
 
 
 def test_report(ixmp_cli):

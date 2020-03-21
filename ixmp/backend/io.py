@@ -59,8 +59,8 @@ def s_write_excel(be, s, path):
 def handle_existing(scenario, ix_type, name, new_idx_sets, path):
     """Context manager for :meth:`~.init_set`, :meth:`.init_par`, etc.
 
-    If the init_*() call within the context fails, this checks whether the
-    exception is fatal; if so, it is re-raised with a readable message.
+    If the init_*() call within the context fails, this logs an intelligible
+    message.
     """
     try:
         yield
@@ -76,9 +76,9 @@ def handle_existing(scenario, ix_type, name, new_idx_sets, path):
             new_idx_sets = None
 
         if existing != new_idx_sets:
-            raise ValueError(f'{ix_type} {name!r} has index sets '
-                             f'{existing} in Scenario; {new_idx_sets}'
-                             f'in {path}')
+            msg = (f'{ix_type} {name!r} has index sets {existing} in Scenario;'
+                   f' index names {new_idx_sets} in {path.name}')
+            log.warning(msg)
 
 
 def s_read_excel(be, s, path, add_units=False, init_items=False,
@@ -118,7 +118,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         if (first_pass and len(data.columns) == 1) or not first_pass:
             # Index set or second appearance; add immediately
-            idx_sets = data.columns
+            idx_sets = data.columns.to_list()
 
             if init_items:
                 # Determine index set(s) for this set
@@ -141,7 +141,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
                 # Convert data frame into 1-D vector
                 data = data.iloc[:, 0].values
 
-                if idx_sets is not None:
+                if idx_sets is not None and idx_sets != [name]:
                     # Indexed set must be input as list of list of str
                     data = list(map(as_str_list, data))
 
@@ -161,7 +161,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         # List of existing units for reference
         units = set(be.get_units())
 
-    # Read parameter data
+    # Add equ/par/var data
     for name, ix_type in name_type[name_type != 'set'].items():
         if ix_type in ('equ', 'var'):
             log.info(f'Cannot import {ix_type} {name!r}')

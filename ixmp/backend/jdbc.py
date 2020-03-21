@@ -834,12 +834,12 @@ class JDBCBackend(CachingBackend):
         try:
             return getattr(self.jindex[s], f'get{ix_type.title()}')(*args)
         except java.IxException as e:
-            if re.match('No item [^ ]* exists in this Scenario', e.args[0]):
+            msg = f'No {ix_type.title()} {name!r} exists in this Scenario!'
+            if re.match(msg, e.args[0]):
                 # Re-raise as a Python KeyError
-                raise KeyError(f'No {ix_type.title()} {name!r} exists in this '
-                               'Scenario!') from None
+                raise KeyError(name) from None
             else:  # pragma: no cover
-                raise RuntimeError('unhandled Java exception') from e
+                raise RuntimeError(f'unhandled Java exception: {e}') from None
 
 
 def start_jvm(jvmargs=None):

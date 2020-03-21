@@ -72,7 +72,7 @@ def _create_properties(driver=None, path=None, url=None, user=None,
         if url is None or path is not None:
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
 
-        full_url = 'jdbc:oracle:thin:@{}'.format(url)
+        full_url = f'jdbc:oracle:thin:@{url}'
     elif driver == 'hsqldb':
         if path is None and url is None:
             raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
@@ -87,7 +87,7 @@ def _create_properties(driver=None, path=None, url=None, user=None,
             # URL spec
             url_path = (str(PurePosixPath(Path(path).resolve()))
                         .replace('\\', ''))
-            full_url = 'jdbc:hsqldb:file:{}'.format(url_path)
+            full_url = f'jdbc:hsqldb:file:{url_path}'
         user = user or 'ixmp'
         password = password or 'ixmp'
 
@@ -106,6 +106,11 @@ def _read_properties(file):
         if match is not None:
             properties[match.group(1)] = match.group(2)
     return properties
+
+
+def _raise_jexception(exc, msg='unhandled Java exception: '):
+    """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
+    raise RuntimeError(f'{msg}{exc.message()}') from None
 
 
 class JDBCBackend(CachingBackend):
@@ -189,22 +194,18 @@ class JDBCBackend(CachingBackend):
         try:
             self.jobj = java.Platform('Python', properties)
         except java.NoClassDefFoundError as e:  # pragma: no cover
-            raise NameError(
-                '{}\nCheck that dependencies of ixmp.jar are included in {}'
-                .format(e, Path(__file__).parents[2] / 'lib'))
+            raise NameError(f'{e}\nCheck that dependencies of ixmp.jar are '
+                            f"included in {Path(__file__).parents[2] / 'lib'}")
         except jpype.JException as e:  # pragma: no cover
             # Handle Java exceptions
             jclass = e.__class__.__name__
-            info = '\n{}\n(Java: {})'.format(e, jclass)
             if jclass.endswith('HikariPool.PoolInitializationException'):
                 redacted = copy(kwargs)
                 redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
-                raise RuntimeError('unable to connect to database:\n{!r}{}'
-                                   .format(redacted, info)) from None
+                msg = f'unable to connect to database:\n{redacted!r}'
             elif jclass.endswith('FlywayException'):
-                raise RuntimeError('when initializing database:' + info)
-            else:
-                raise RuntimeError('unhandled Java exception:' + info) from e
+                msg = f'when initializing database:'
+            _raise_jexception(e, f'{msg}\n(Java: {jclass})')
 
         # Invoke the parent constructor to initialize the cache
         super().__init__()
@@ -316,8 +317,8 @@ class JDBCBackend(CachingBackend):
             if not isinstance(ts, Scenario):
                 raise ValueError('read from GDX requires a Scenario object')
             elif set(kwargs.keys()) != kw:
-                raise ValueError(('keyword arguments {} do not match required '
-                                  '{}').format(kwargs.keys(), kw))
+                raise ValueError(f'keyword arguments {kwargs.keys()} do not '
+                                 f'match required {kw}')
 
             args = (
                 str(path.parent),
@@ -329,7 +330,7 @@ class JDBCBackend(CachingBackend):
             )
 
             if len(kwargs):
-                raise ValueError('extra keyword arguments {}'.format(kwargs))
+                raise ValueError(f'extra keyword arguments {kwargs}')
 
             self.jindex[ts].readSolutionFromGDX(*args)
 
@@ -421,7 +422,7 @@ class JDBCBackend(CachingBackend):
         try:
             jobj = method(*args)
         except java.IxException as e:
-            raise RuntimeError(*e.args) from None
+            _raise_jexception(e)
 
         # Add to index
         self.jindex[ts] = jobj
@@ -443,7 +444,7 @@ class JDBCBackend(CachingBackend):
         try:
             self.jindex[ts].checkOut(timeseries_only)
         except java.IxException as e:
-            raise RuntimeError(e) from None
+            _raise_jexception(e)
 
     def commit(self, ts, comment):
         self.jindex[ts].commit(comment)
@@ -570,12 +571,12 @@ class JDBCBackend(CachingBackend):
                 f'Clone between {self.__class__} and'
                 f'{platform_dest._backend.__class__}')
         elif platform_dest._backend is not self:
-            msg = 'Cross-platform clone of {}.Scenario with'.format(
-                s.__class__.__module__.split('.')[0])
+            package = s.__class__.__module__.split('.')[0]
+            msg = f'Cross-platform clone of {package}.Scenario with'
             if keep_solution is False:
-                raise NotImplementedError(msg + ' `keep_solution=False`')
+                raise NotImplementedError(f'{msg} `keep_solution=False`')
             elif 'message_ix' in msg and first_model_year is not None:
-                raise NotImplementedError(msg + ' first_model_year != None')
+                raise NotImplementedError(f'{msg} first_model_year != None')
 
         # Prepare arguments
         args = [platform_dest._backend.jobj, model, scenario, annotation,
@@ -619,13 +620,10 @@ class JDBCBackend(CachingBackend):
         try:
             func(name, idx_sets, idx_names)
         except jpype.JException as e:
-            e = str(e)
-            if 'This Scenario cannot be edited' in e:
-                raise RuntimeError(e)
-            elif 'already exists' in e:
-                raise ValueError('{!r} already exists'.format(name))
+            if 'already exists' in e.args[0]:
+                raise ValueError(f'{name!r} already exists')
             else:
-                raise
+                _raise_jexception(e)
 
     def delete_item(self, s, type, name):
         getattr(self.jindex[s], f'remove{type.title()}')(name)
@@ -763,7 +761,7 @@ class JDBCBackend(CachingBackend):
                 # Re-raise as Python ValueError
                 raise ValueError(msg) from None
             else:  # pragma: no cover
-                raise RuntimeError(str(e)) from None
+                _raise_jexception(e)
 
         self.cache_invalidate(s, type, name)
 
@@ -788,7 +786,7 @@ class JDBCBackend(CachingBackend):
             _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
             method_name = 'setMeta' + _type
         except KeyError:
-            raise TypeError('Cannot store metadata of type {}'.format(_type))
+            raise TypeError(f'Cannot store metadata of type {_type}')
 
         getattr(self.jindex[s], method_name)(name, value)
 
@@ -841,7 +839,7 @@ class JDBCBackend(CachingBackend):
                 # Re-raise as a Python KeyError
                 raise KeyError(name) from None
             else:  # pragma: no cover
-                raise RuntimeError(f'unhandled Java exception: {e}') from None
+                _raise_jexception(e)
 
 
 def start_jvm(jvmargs=None):
@@ -882,9 +880,9 @@ def start_jvm(jvmargs=None):
         convertStrings=True,
     )
 
-    log.debug('JAVA_HOME: {}'.format(os.environ.get('JAVA_HOME', '(not set)')))
-    log.debug('jpype.getDefaultJVMPath: {}'.format(jpype.getDefaultJVMPath()))
-    log.debug('args to startJVM: {} {}'.format(args, kwargs))
+    log.debug(f"JAVA_HOME: {os.environ.get('JAVA_HOME', '(not set)')}")
+    log.debug(f'jpype.getDefaultJVMPath: {jpype.getDefaultJVMPath()}')
+    log.debug(f'args to startJVM: {args} {kwargs}')
 
     jpype.startJVM(*args, **kwargs)
 

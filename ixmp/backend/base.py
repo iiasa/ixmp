@@ -769,6 +769,11 @@ class Backend(ABC):
             one column per index name with dimension values; plus the columns
             'value' and 'unit' (for 'par') or 'lvl' and 'mrg' (for 'equ' or
             'var').
+
+        Raises
+        ------
+        KeyError
+            If *name* does not exist in *s*.
         """
 
     @abstractmethod

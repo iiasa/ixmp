@@ -24,7 +24,7 @@ INSTALL_REQUIRES = [
 
 EXTRAS_REQUIRE = {
     'tests': ['codecov', 'jupyter', 'pretenders>=1.4.4', 'pytest-cov',
-              'pytest>=3.9', 'sparse'],
+              'pytest>=5', 'sparse'],
     'docs': ['numpydoc', 'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-bibtex'],
     'tutorial': ['jupyter'],
 }

@@ -60,8 +60,9 @@ class TestScenario:
         assert scen.version == 1
 
         # Giving an invalid version with errors='raise' raises an exception
-        with pytest.raises(Exception, match='There was a problem getting the '
-                                            'run id from the database!'):
+        expected = ("There exists no Scenario 'Douglas Adams|Hitchhiker' "
+                    "(version: 10000)  in the database!")
+        with pytest.raises(Exception, match=expected):
             scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
 
         # Giving an invalid scenario with errors='warn' raises an exception

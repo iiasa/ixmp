@@ -181,6 +181,23 @@ class Backend(ABC):
         Parameters
         ----------
         level : int or Python logging level
+
+        See also
+        --------
+        get_log_level
+        """
+
+    def get_log_level(self):
+        """OPTIONAL: Get logging level for the backend and other code.
+
+        Returns
+        -------
+        str
+            Name of a :ref:`Python logging level <py:levels>`.
+
+        See also
+        --------
+        set_log_level
         """
 
     @abstractmethod

@@ -138,8 +138,7 @@ def exception_verbose_true():
 def test_verbose_exception(test_mp, exception_verbose_true):
     msg = r"""unhandled Java exception:\s+
 at.ac.iiasa.ixmp.exceptions.IxException: There was a problem getting the run.+
-\tat at.ac.iiasa.ixmp.Platform.getScenario\(Platform.java:\d+\)
-"""
+\tat at.ac.iiasa.ixmp.Platform.getScenario\(Platform.java:\d+\)\s*"""
     match = re.compile(msg, re.MULTILINE | re.DOTALL)
 
     # Exception stack trace is logged for debugging

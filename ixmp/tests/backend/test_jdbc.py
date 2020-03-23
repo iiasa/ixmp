@@ -136,11 +136,12 @@ def exception_verbose_true():
 
 
 def test_verbose_exception(test_mp, exception_verbose_true):
-    msg = r"""unhandled Java exception:\s+
-at.ac.iiasa.ixmp.exceptions.IxException: There was a problem getting the run.+
-\tat at.ac.iiasa.ixmp.Platform.getScenario\(Platform.java:\d+\)\s*"""
-    match = re.compile(msg, re.MULTILINE | re.DOTALL)
-
     # Exception stack trace is logged for debugging
-    with pytest.raises(RuntimeError, match=match):
+    with pytest.raises(RuntimeError) as exc_info:
         ixmp.Scenario(test_mp, model='foo', scenario='bar', version=-1)
+
+    exc_msg = exc_info.value.args[0]
+    assert ("There exists no Scenario 'foo|bar' "
+            "(version: -1)  in the database!" in exc_msg)
+    assert "at.ac.iiasa.ixmp.database.DbDAO.getRunId" in exc_msg
+    assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg

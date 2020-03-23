@@ -14,15 +14,19 @@ def test_init():
 
 
 def test_set_log_level(test_mp):
+    initial = test_mp.get_log_level()
+    assert initial == 'INFO'
     test_mp.set_log_level('CRITICAL')
     test_mp.set_log_level('ERROR')
     test_mp.set_log_level('WARNING')
     test_mp.set_log_level('INFO')
     test_mp.set_log_level('DEBUG')
     test_mp.set_log_level('NOTSET')
+    assert test_mp.get_log_level() == 'NOTSET'
 
     with pytest.raises(ValueError):
         test_mp.set_log_level(level='foo')
+    test_mp.set_log_level(initial)
 
 
 def test_scenario_list(mp):

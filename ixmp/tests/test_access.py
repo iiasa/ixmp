@@ -61,7 +61,6 @@ def test_check_single_model_access(mock, tmp_path, test_data_path):
                                       auth_url=mock.pretend_url)
 
     mp = ixmp.Platform(backend='jdbc', dbprops=test_props)
-    mp.set_log_level('DEBUG')
 
     granted = mp.check_access('test_user', 'test_model')
     assert granted
@@ -91,7 +90,6 @@ def test_check_multi_model_access(mock, tmp_path, test_data_path):
                                       auth_url=mock.pretend_url)
 
     mp = ixmp.Platform(backend='jdbc', dbprops=test_props)
-    mp.set_log_level('DEBUG')
 
     access = mp.check_access('test_user', ['test_model', 'non_existing_model'])
     assert access['test_model']

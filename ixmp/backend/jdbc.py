@@ -428,6 +428,14 @@ class JDBCBackend(CachingBackend):
         try:
             jobj = method(*args)
         except java.IxException as e:
+            # Try to re-raise as a ValueError for bad model or scenario name
+            match = re.search(r"table '([^']*)' from the database", e.args[0])
+            if match:
+                param = match.group(1).lower()
+                if param in ('model', 'scenario'):
+                    raise ValueError(f'{param}={getattr(ts, param)!r}')
+
+            # Failed
             _raise_jexception(e)
 
         # Add to index

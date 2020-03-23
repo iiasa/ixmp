@@ -772,7 +772,7 @@ class Scenario(TimeSeries):
             scenario = cls(platform, **scenario_info)
         except Exception as e:
             if errors == 'warn':
-                log.warning('{}: {}\nwhen loading Scenario from url {}'
+                log.warning('{}: {}\nwhen loading Scenario from url: {!r}'
                             .format(e.__class__.__name__, e.args[0], url))
                 return None, platform
             else:

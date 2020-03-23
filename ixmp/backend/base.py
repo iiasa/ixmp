@@ -376,6 +376,12 @@ class Backend(ABC):
         -------
         None
 
+        Raises
+        ------
+        ValueError
+            If :attr:`~.TimeSeries.model` or :attr:`~.TimeSeries.scenario` does
+            not exist on the Platform.
+
         See also
         --------
         ts_set_as_default

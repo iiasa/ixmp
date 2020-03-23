@@ -536,12 +536,12 @@ class Reporter:
         key = key if key else 'file:{}'.format(path.name)
         return self.add(key, (partial(computations.load_file, path),), True)
 
-    def describe(self, key=None, quiet=False):
+    def describe(self, key=None, quiet=True):
         """Return a string describing the computations that produce *key*.
 
         If *key* is not provided, all keys in the Reporter are described.
 
-        The string is also printed. If *quiet*, do not print to the console.
+        The string can be printed to the console, if not *quiet*.
         """
         if key is None:
             # Sort with 'all' at the end

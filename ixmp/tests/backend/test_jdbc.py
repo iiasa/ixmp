@@ -1,9 +1,11 @@
+import re
+
 import jpype
 import pytest
 from pytest import raises
 
 import ixmp
-from ixmp.testing import assert_logs, make_dantzig
+from ixmp.testing import make_dantzig
 
 
 def test_jvm_warn(recwarn):
@@ -119,3 +121,27 @@ def test_gh_216(test_mp):
     # not in set i; but JDBCBackend removes 'beijing' from the filters before
     # calling the underlying method (https://github.com/iiasa/ixmp/issues/216)
     scen.par('a', filters=filters)
+
+
+@pytest.fixture
+def exception_verbose_true():
+    """A fixture which ensures JDBCBackend raises verbose exceptions.
+
+    The set value is not disturbed for other tests/code.
+    """
+    tmp = ixmp.backend.jdbc._EXCEPTION_VERBOSE  # Store current value
+    ixmp.backend.jdbc._EXCEPTION_VERBOSE = True  # Ensure True
+    yield
+    ixmp.backend.jdbc._EXCEPTION_VERBOSE = tmp  # Restore value
+
+
+def test_verbose_exception(test_mp, exception_verbose_true):
+    msg = r"""unhandled Java exception:\s+
+at.ac.iiasa.ixmp.exceptions.IxException: There was a problem getting the run.+
+\tat at.ac.iiasa.ixmp.Platform.getScenario\(Platform.java:\d+\)
+"""
+    match = re.compile(msg, re.MULTILINE | re.DOTALL)
+
+    # Exception stack trace is logged for debugging
+    with pytest.raises(RuntimeError, match=match):
+        ixmp.Scenario(test_mp, model='foo', scenario='bar', version=-1)

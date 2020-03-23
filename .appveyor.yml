@@ -4,6 +4,8 @@
 environment:
   # Use the JDK installed on AppVeyor images
   JAVA_HOME: C:\Program Files\Java\jdk13
+  # Always display verbose exceptions in JDBCBackend
+  IXMP_JDBC_EXCEPTION_VERBOSE: '1'
   matrix:
   - PYTHON_VERSION: "3.6"
   - PYTHON_VERSION: "3.7"

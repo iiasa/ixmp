@@ -6,15 +6,16 @@ language: r
 
 r: release
 
-matrix:
-  include:
-  - os: linux
-    env: PYENV=py37
-  - os: osx
-    env: PYENV=py37
-# turn these on once travis support gets a little better, see pyam for example
-#  - os: windows
-#    env: PYENV=py37
+env:
+- PYENV=py37
+# Always display verbose exceptions in JDBCBackend
+- IXMP_JDBC_EXCEPTION_VERBOSE=1
+
+os:
+- linux
+- osx
+# TODO turn this on once Travis Windows support improves
+# - windows
 
 r_packages:
 - IRkernel

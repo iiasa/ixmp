@@ -21,6 +21,8 @@ from .base import CachingBackend
 log = logging.getLogger(__name__)
 
 
+_EXCEPTION_VERBOSE = os.environ.get('IXMP_JDBC_EXCEPTION_VERBOSE', '0') == '1'
+
 # Map of Python to Java log levels
 LOG_LEVELS = {
     'CRITICAL': 'ALL',
@@ -110,7 +112,11 @@ def _read_properties(file):
 
 def _raise_jexception(exc, msg='unhandled Java exception: '):
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
-    raise RuntimeError(f'{msg}{exc.message()}') from None
+    if _EXCEPTION_VERBOSE:
+        msg += '\n\n' + exc.stacktrace()
+    else:
+        msg += exc.message()
+    raise RuntimeError(msg) from None
 
 
 class JDBCBackend(CachingBackend):
@@ -447,7 +453,10 @@ class JDBCBackend(CachingBackend):
             _raise_jexception(e)
 
     def commit(self, ts, comment):
-        self.jindex[ts].commit(comment)
+        try:
+            self.jindex[ts].commit(comment)
+        except java.IxException as e:
+            _raise_jexception(e)
         if ts.version == 0:
             ts.version = self.jindex[ts].getVersion()
 

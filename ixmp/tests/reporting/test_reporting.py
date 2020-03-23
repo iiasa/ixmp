@@ -491,9 +491,14 @@ def test_reporter_describe(test_mp, test_data_path, capsys):
     - <ixmp.core.Scenario object at {id}>
   - 'config':
     - {{'filters': {{}}}}""".format(id=id_)
-    assert desc1 == r.describe('d:i', quiet=False)
+    assert desc1 == r.describe('d:i')
 
-    # Description was also written to stdout
+    # With quiet=True (default), nothing is printed to stdout
+    out1, _ = capsys.readouterr()
+    assert '' == out1
+
+    # With quiet=False, description is also printed to stdout
+    assert desc1 == r.describe('d:i', quiet=False)
     out1, _ = capsys.readouterr()
     assert desc1 + '\n' == out1
 
@@ -502,7 +507,7 @@ def test_reporter_describe(test_mp, test_data_path, capsys):
                                                     .format(id=id_)
     assert desc2 == r.describe(quiet=False) + '\n'
 
-    # Result was also written to stdout
+    # Since quiet=False, description is also printed to stdout
     out2, _ = capsys.readouterr()
     assert desc2 == out2
 

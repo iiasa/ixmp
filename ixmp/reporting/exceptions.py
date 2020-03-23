@@ -24,8 +24,14 @@ class ComputationError(Exception):
         frames = []  # Frames for an abbreviated stacktrace
         dask_internal = True  # Flag if the frame is internal to dask
 
+        try:
+            # Get a traceback with captured locals
+            tb = TracebackException.from_exception(self.cause,
+                                                   capture_locals=True)
+        except Exception:
+            tb = TracebackException.from_exception(self.cause)
+
         # Iterate over frames from the base of the stack
-        tb = TracebackException.from_exception(self.cause, capture_locals=True)
         for frame in tb.stack:
             if frame.name == 'execute_task':
                 # Current frame is the dask internal call to execute a task
@@ -33,7 +39,11 @@ class ComputationError(Exception):
                 # Retrieve information about the key/task that triggered the
                 # exception. These are not the raw values of variables, but
                 # their string repr().
-                info = {name: frame.locals[name] for name in ('key', 'task')}
+                try:
+                    i = frame.locals
+                    info = f"computing {i['key']!r} using\n\n{i['task']}\n\n"
+                except (TypeError, KeyError):
+                    info = ''
 
                 # Remaining frames are related to the exception
                 dask_internal = False
@@ -49,7 +59,7 @@ class ComputationError(Exception):
 
         # Reporter information for debugging
         lines = [
-            'when computing {key}, using\n\n{task}\n\n'.format(**info),
+            info,
             'Use Reporter.describe(...) to trace the computation.\n\n',
             'Computation traceback:\n',
         ]

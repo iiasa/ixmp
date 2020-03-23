@@ -480,6 +480,8 @@ class Reporter:
             # Print the exception in case ComputationError.__str__ fails;
             # workaround for https://github.com/iiasa/ixmp/issues/206
             print(exc)
+            # To debug unprintable ComputationErrors:
+            # c = ComputationError(); c.__cause__ = exc; str(c)
             raise ComputationError from exc
 
     def keys(self):

@@ -1,8 +1,10 @@
 """Test all functionality of ixmp.Platform."""
+import logging
+
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
-from pytest import raises
+from pytest import param, raises
 
 import ixmp
 
@@ -13,20 +15,39 @@ def test_init():
         ixmp.Platform(backend='foo')
 
 
-def test_set_log_level(test_mp):
-    initial = test_mp.get_log_level()
-    assert initial == 'INFO'
-    test_mp.set_log_level('CRITICAL')
-    test_mp.set_log_level('ERROR')
-    test_mp.set_log_level('WARNING')
-    test_mp.set_log_level('INFO')
-    test_mp.set_log_level('DEBUG')
-    test_mp.set_log_level('NOTSET')
-    assert test_mp.get_log_level() == 'NOTSET'
+@pytest.fixture
+def log_level_mp(test_mp):
+    """A fixture that preserves the log level of *test_mp*."""
+    tmp = test_mp.get_log_level()
+    yield test_mp
+    test_mp.set_log_level(tmp)
 
-    with pytest.raises(ValueError):
-        test_mp.set_log_level(level='foo')
-    test_mp.set_log_level(initial)
+
+@pytest.mark.parametrize('level, exc', [
+    ('CRITICAL', None),
+    ('ERROR', None),
+    ('WARNING', None),
+    ('INFO', None),
+    ('DEBUG', None),
+    ('NOTSET', None),
+    # An unknown string fails
+    ('FOO', ValueError),
+    # TODO also support Python standard library values
+    (logging.CRITICAL, ValueError),
+    (logging.ERROR, ValueError),
+    (logging.WARNING, ValueError),
+    (logging.INFO, ValueError),
+    (logging.DEBUG, ValueError),
+    (logging.NOTSET, ValueError),
+])
+def test_log_level(log_level_mp, level, exc):
+    """Log level can be set and retrieved."""
+    if exc is None:
+        log_level_mp.set_log_level(level)
+        assert log_level_mp.get_log_level() == level
+    else:
+        with pytest.raises(exc):
+            log_level_mp.set_log_level(level)
 
 
 def test_scenario_list(mp):

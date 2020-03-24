@@ -1,5 +1,3 @@
-import re
-
 import jpype
 import pytest
 from pytest import raises

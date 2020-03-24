@@ -8,6 +8,7 @@ ScenarioClass = ixmp.Scenario
 
 
 class VersionType(click.ParamType):
+    """A Click parameter type that accepts :class:`int` or 'all'."""
     def convert(self, value, param, ctx):
         if value == 'new':
             return value

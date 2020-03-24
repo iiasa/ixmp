@@ -90,6 +90,7 @@ Backend API
 
       close_db
       get_auth
+      get_log_level
       get_nodes
       get_scenarios
       get_units

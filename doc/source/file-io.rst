@@ -14,6 +14,8 @@ Time series data can be:
 
 Both CSV and Excel files in the IAMC time-series format are supported.
 
+.. _excel-data-format:
+
 Scenario/model data
 ===================
 

@@ -96,28 +96,28 @@ class Platform:
             raise AttributeError(name)
 
     def set_log_level(self, level):
-        """Set global logger level.
+        """Set log level for the Platform and its storage :class:`.Backend`.
 
         Parameters
         ----------
         level : str
-            set the logger level if specified, see
-            https://docs.python.org/3/library/logging.html#logging-levels
+            Name of a :py:ref:`Python logging level <levels>`.
         """
         if level not in dir(logging):
             msg = '{} not a valid Python logger level, see ' + \
                 'https://docs.python.org/3/library/logging.html#logging-level'
             raise ValueError(msg.format(level))
+        log.setLevel(level)
         logger().setLevel(level)
         self._backend.set_log_level(level)
 
     def get_log_level(self):
-        """Get a log level associated with the storage :class:.Backend, if any
+        """Return log level of the storage :class:`.Backend`, if any.
 
         Returns
         -------
         str
-            Name of a :ref:`Python logging level <py:levels>`.
+            Name of a :py:ref:`Python logging level <levels>`.
         """
         return self._backend.get_log_level()
 
@@ -683,6 +683,10 @@ class TimeSeries:
             Only read data from years equal to or later than this year.
         lastyear : int, optional
             Only read data from years equal to or earlier than this year.
+
+        See also
+        --------
+        .Scenario.read_excel
         """
         self.platform._backend.read_file(
             Path(path),
@@ -1496,6 +1500,11 @@ class Scenario(TimeSeries):
         ----------
         path : os.PathLike
             File to write. Must have suffix '.xlsx'.
+
+        See also
+        --------
+        :ref:`excel-data-format`
+        read_excel
         """
         self.platform._backend.write_file(Path(path), ItemType.MODEL,
                                           filters=dict(scenario=self))
@@ -1515,6 +1524,12 @@ class Scenario(TimeSeries):
             Scenario.
         commit_steps : bool, optional
             Commit changes after every data addition.
+
+        See also
+        --------
+        :ref:`excel-data-format`
+        .TimeSeries.read_file
+        to_excel
         """
         self.platform._backend.read_file(
             Path(path),

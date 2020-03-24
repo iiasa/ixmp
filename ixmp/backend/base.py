@@ -178,6 +178,8 @@ class Backend(ABC):
     def set_log_level(self, level):
         """OPTIONAL: Set logging level for the backend and other code.
 
+        The default implementation has no effect.
+
         Parameters
         ----------
         level : int or Python logging level
@@ -190,10 +192,12 @@ class Backend(ABC):
     def get_log_level(self):
         """OPTIONAL: Get logging level for the backend and other code.
 
+        The default implementation has no effect.
+
         Returns
         -------
         str
-            Name of a :ref:`Python logging level <py:levels>`.
+            Name of a :py:ref:`Python logging level <levels>`.
 
         See also
         --------

@@ -1,4 +1,5 @@
 # Continuous integration configuration for Travis
+# NB use https://config.travis-ci.com/explore to validate changes
 
 dist: xenial
 
@@ -6,10 +7,11 @@ language: r
 
 r: release
 
+# - Build against Python 3.7
+# - Always display verbose exceptions in JDBCBackend
 env:
-- PYENV=py37
-# Always display verbose exceptions in JDBCBackend
-- IXMP_JDBC_EXCEPTION_VERBOSE=1
+  PYENV=py37
+  IXMP_JDBC_EXCEPTION_VERBOSE=1
 
 os:
 - linux

@@ -25,12 +25,12 @@ _EXCEPTION_VERBOSE = os.environ.get('IXMP_JDBC_EXCEPTION_VERBOSE', '0') == '1'
 
 # Map of Python to Java log levels
 LOG_LEVELS = {
-    'CRITICAL': 'ALL',
+    'CRITICAL': 'FATAL',
     'ERROR': 'ERROR',
     'WARNING': 'WARN',
     'INFO': 'INFO',
     'DEBUG': 'DEBUG',
-    'NOTSET': 'OFF',
+    'NOTSET': 'ALL',
 }
 
 # Java classes, loaded by start_jvm(). These become available as e.g.
@@ -220,6 +220,10 @@ class JDBCBackend(CachingBackend):
 
     def set_log_level(self, level):
         self.jobj.setLogLevel(LOG_LEVELS[level])
+
+    def get_log_level(self):
+        levels = {v: k for k, v in LOG_LEVELS.items()}
+        return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
 
     def open_db(self):
         """(Re-)open the database connection."""

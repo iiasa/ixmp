@@ -111,6 +111,12 @@ class Platform:
         logger().setLevel(level)
         self._backend.set_log_level(level)
 
+    def get_log_level(self):
+        """Get global logger level.
+
+        """
+        return self._backend.get_log_level()
+
     def scenario_list(self, default=True, model=None, scen=None):
         """Return information about TimeSeries and Scenarios on the Platform.
 

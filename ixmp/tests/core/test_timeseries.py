@@ -280,7 +280,6 @@ def test_edit_with_region_synonyms(mp, ts, cls):
     info = dict(model=ts.model, scenario=ts.scenario)
     exp = expected(DATA[0], ts)
 
-    mp.set_log_level('DEBUG')
     mp.add_region_synonym('Hell', 'World')
 
     ts.add_timeseries(DATA[0])
@@ -509,7 +508,6 @@ def test_timeseries_edit_iamc(mp):
 
 def test_timeseries_edit_with_region_synonyms(mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    mp.set_log_level('DEBUG')
     mp.add_region_synonym('Hell', 'World')
     scen = prepare_scenario(mp, args_all)
     obs = scen.timeseries()

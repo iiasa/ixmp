@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
-from pytest import param, raises
+from pytest import raises
 
 import ixmp
 

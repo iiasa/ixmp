@@ -112,8 +112,12 @@ class Platform:
         self._backend.set_log_level(level)
 
     def get_log_level(self):
-        """Get global logger level.
+        """Get a log level associated with the storage :class:.Backend, if any
 
+        Returns
+        -------
+        str
+            Name of a :ref:`Python logging level <py:levels>`.
         """
         return self._backend.get_log_level()
 

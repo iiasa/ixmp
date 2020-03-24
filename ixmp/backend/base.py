@@ -190,6 +190,11 @@ class Backend(ABC):
     def get_log_level(self):
         """OPTIONAL: Get logging level for the backend and other code.
 
+        Returns
+        -------
+        str
+            Name of a :ref:`Python logging level <py:levels>`.
+
         See also
         --------
         set_log_level

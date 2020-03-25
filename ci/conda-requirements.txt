@@ -8,7 +8,7 @@ numpydoc
 pandas
 pint
 pytest-cov
-pytest>=3.9
+pytest>=5
 PyYAML
 sparse
 sphinx

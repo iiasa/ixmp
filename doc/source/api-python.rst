@@ -72,6 +72,7 @@ TimeSeries
       is_default
       last_update
       preload_timeseries
+      read_file
       remove_geodata
       remove_timeseries
       run_id
@@ -144,6 +145,7 @@ Scenario
       load_scenario_data
       par
       par_list
+      read_excel
       remove_par
       remove_set
       remove_solution
@@ -152,6 +154,7 @@ Scenario
       set_list
       set_meta
       solve
+      to_excel
       var
       var_list
 

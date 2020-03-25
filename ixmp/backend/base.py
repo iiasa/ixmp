@@ -4,6 +4,7 @@ import json
 
 from ixmp.core import TimeSeries, Scenario
 from . import ItemType
+from .io import ts_read_file, s_read_excel, s_write_excel
 
 
 class Backend(ABC):
@@ -177,9 +178,30 @@ class Backend(ABC):
     def set_log_level(self, level):
         """OPTIONAL: Set logging level for the backend and other code.
 
+        The default implementation has no effect.
+
         Parameters
         ----------
         level : int or Python logging level
+
+        See also
+        --------
+        get_log_level
+        """
+
+    def get_log_level(self):
+        """OPTIONAL: Get logging level for the backend and other code.
+
+        The default implementation has no effect.
+
+        Returns
+        -------
+        str
+            Name of a :py:ref:`Python logging level <levels>`.
+
+        See also
+        --------
+        set_log_level
         """
 
     @abstractmethod
@@ -232,6 +254,12 @@ class Backend(ABC):
         the `path` and `item_type` methods. For all other combinations, it
         **must** raise :class:`NotImplementedError`.
 
+        The default implementation supports:
+
+        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: read a
+          single Scenario given by kwargs['filters']['scenario'] from file
+          using :meth:`pandas.DataFrame.read_excel`.
+
         Parameters
         ----------
         path : os.PathLike
@@ -260,8 +288,13 @@ class Backend(ABC):
         --------
         write_file
         """
-        # TODO move message_ix.core.read_excel here
-        raise NotImplementedError
+        s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
+        if path.suffix in ('.csv', '.xlsx') and item_type is ItemType.TS and s:
+            ts_read_file(s, path, **kwargs)
+        elif path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
+            s_read_excel(self, s, path, **kwargs)
+        else:
+            raise NotImplementedError
 
     def write_file(self, path, item_type: ItemType, **kwargs):
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
@@ -269,6 +302,12 @@ class Backend(ABC):
         A backend **may** implement write_file for one or more combinations of
         the `path` and `item_type` methods. For all other combinations, it
         **must** raise :class:`NotImplementedError`.
+
+        The default implementation supports:
+
+        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: write a
+          single Scenario given by kwargs['filters']['scenario'] to file using
+          :meth:`pandas.DataFrame.to_excel`.
 
         Parameters
         ----------
@@ -289,8 +328,11 @@ class Backend(ABC):
         --------
         read_file
         """
-        # TODO move message_ix.core.to_excel here
-        raise NotImplementedError
+        s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
+        if path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
+            s_write_excel(self, s, path)
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def _handle_rw_filters(filters: dict):
@@ -354,6 +396,12 @@ class Backend(ABC):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            If :attr:`~.TimeSeries.model` or :attr:`~.TimeSeries.scenario` does
+            not exist on the Platform.
 
         See also
         --------
@@ -742,7 +790,7 @@ class Backend(ABC):
             When *type* is 'set' and *name* an index set (not indexed by other
             sets).
         dict
-            When *type* is 'equ', 'par', or 'set' and *name* is scalar (zero-
+            When *type* is 'equ', 'par', or 'var' and *name* is scalar (zero-
             dimensional). The value has the keys 'value' and 'unit' (for 'par')
             or 'lvl' and 'mrg' (for 'equ' or 'var').
         pandas.DataFrame
@@ -750,6 +798,11 @@ class Backend(ABC):
             one column per index name with dimension values; plus the columns
             'value' and 'unit' (for 'par') or 'lvl' and 'mrg' (for 'equ' or
             'var').
+
+        Raises
+        ------
+        KeyError
+            If *name* does not exist in *s*.
         """
 
     @abstractmethod

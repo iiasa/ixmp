@@ -1,4 +1,5 @@
 # Continuous integration configuration for Travis
+# NB use https://config.travis-ci.com/explore to validate changes
 
 dist: xenial
 
@@ -6,15 +7,17 @@ language: r
 
 r: release
 
-matrix:
-  include:
-  - os: linux
-    env: PYENV=py37
-  - os: osx
-    env: PYENV=py37
-# turn these on once travis support gets a little better, see pyam for example
-#  - os: windows
-#    env: PYENV=py37
+# - Build against Python 3.7
+# - Always display verbose exceptions in JDBCBackend
+env:
+  PYENV=py37
+  IXMP_JDBC_EXCEPTION_VERBOSE=1
+
+os:
+- linux
+- osx
+# TODO turn this on once Travis Windows support improves
+# - windows
 
 r_packages:
 - IRkernel

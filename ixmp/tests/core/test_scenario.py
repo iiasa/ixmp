@@ -52,22 +52,22 @@ class TestScenario:
         scen = ixmp.Scenario(mp, **models['dantzig'])
         assert scen.version == 2
 
-    def test_scenario_from_url(self, mp, caplog):
-        url = 'ixmp://{}/Douglas Adams/Hitchhiker'.format(mp.name)
+    def test_from_url(self, mp, caplog):
+        url = f'ixmp://{mp.name}/Douglas Adams/Hitchhiker'
 
         # Default version is loaded
         scen, mp = ixmp.Scenario.from_url(url)
         assert scen.version == 1
 
         # Giving an invalid version with errors='raise' raises an exception
-        with pytest.raises(Exception, match='There was a problem getting the '
-                                            'run id from the database!'):
+        expected = ("There exists no Scenario 'Douglas Adams|Hitchhiker' "
+                    "(version: 10000)  in the database!")
+        with pytest.raises(Exception, match=expected):
             scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
 
         # Giving an invalid scenario with errors='warn' raises an exception
-        msg = ("RuntimeError: There was a problem getting 'Hitchhikerfoo' in "
-               "table 'SCENARIO' from the database!\nwhen loading Scenario "
-               f"from url {url}")
+        msg = ("ValueError: scenario='Hitchhikerfoo'\nwhen loading Scenario "
+               f"from url: {(url + 'foo')!r}")
         with assert_logs(caplog, msg):
             scen, mp = ixmp.Scenario.from_url(url + 'foo')
         assert scen is None and isinstance(mp, ixmp.Platform)
@@ -192,6 +192,83 @@ class TestScenario:
         scen.load_scenario_data()
         scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 
+    # I/O
+    def test_excel_io(self, scen, scen_empty, tmp_path, caplog):
+        tmp_path /= 'output.xlsx'
+
+        # FIXME remove_solution, check_out, commit, solve, commit should not
+        #       be needed to make this small data addition.
+        scen.remove_solution()
+        scen.check_out()
+
+        # A 1-D set indexed by another set
+        scen.init_set('foo', 'j')
+        scen.add_set('foo', [['new-york'], ['topeka']])
+        # A scalar parameter with unusual units
+        scen.platform.add_unit('pounds')
+        scen.init_scalar('bar', 100, 'pounds')
+        # A parameter with no values
+        scen.init_par('baz_1', ['i', 'j'])
+        # A parameter with ambiguous index name
+        scen.init_par('baz_2', ['i'], ['i_dim'])
+        scen.add_par('baz_2', dict(value=[1.1], i_dim=['seattle']))
+        # A 2-D set with ambiguous index names
+        scen.init_set('baz_3', ['i', 'i'], ['i', 'i_also'])
+        scen.add_set('baz_3', [['seattle', 'seattle']])
+
+        scen.commit('')
+        scen.solve()
+
+        # Solved Scenario can be written to file
+        scen.to_excel(tmp_path)
+
+        # With init_items=False, can't be read into an empty Scenario
+        with pytest.raises(ValueError, match="no set 'i'; "
+                                             "try init_items=True"):
+            scen_empty.read_excel(tmp_path)
+
+        # File can be read with init_items=True
+        scen_empty.read_excel(tmp_path, init_items=True, commit_steps=True)
+
+        # Contents of the Scenarios are the same, except for unreadable items
+        assert set(scen_empty.par_list()) | {'baz_1', 'baz_2'} \
+            == set(scen.par_list())
+        assert set(scen_empty.set_list()) | {'baz_3'} == set(scen.set_list())
+        assert_frame_equal(scen_empty.set('foo'), scen.set('foo'))
+        # NB could make a more exact comparison of the Scenarios
+
+        # Pre-initialize skipped items 'baz_2' and 'baz_3'
+        scen_empty.init_par('baz_2', ['i'], ['i_dim'])
+        scen_empty.init_set('baz_3', ['i', 'i'], ['i', 'i_also'])
+
+        # Data can be read into an existing Scenario without init_items or
+        # commit_steps arguments
+        scen_empty.read_excel(tmp_path)
+
+        # Re-initialize an item with different index names
+        scen_empty.remove_par('d')
+        scen_empty.init_par('d', idx_sets=['i', 'j'], idx_names=['I', 'J'])
+
+        # Reading now logs an error about conflicting dims
+        with assert_logs(caplog, "Existing par 'd' has index names(s)"):
+            scen_empty.read_excel(tmp_path, init_items=True)
+
+        # A new, empty Platform (different from the one under scen -> mp ->
+        # test_mp) that lacks all units
+        mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                           url='jdbc:hsqldb:mem:excel_io')
+        # A Scenario without the 'dantzig' scheme -> no contents at all
+        s = ixmp.Scenario(mp, model='foo', scenario='bar', scheme='empty',
+                          version='new')
+
+        # Fails with add_units=False
+        with pytest.raises(ValueError, match="The unit 'pounds' does not exist"
+                                             " in the database!"):
+            s.read_excel(tmp_path, init_items=True)
+
+        # Succeeds with add_units=True
+        s.read_excel(tmp_path, add_units=True, init_items=True)
+
     # Combined tests
     def test_meta(self, mp):
         test_dict = {
@@ -259,8 +336,7 @@ def test_set(scen_empty):
     scen = scen_empty
 
     # Add element to a non-existent set
-    with pytest.raises(KeyError,
-                       match="No Item 'foo' exists in this Scenario!"):
+    with pytest.raises(KeyError, match=repr('foo')):
         scen.add_set('foo', 'bar')
 
     # Initialize a 0-D set

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from ixmp.backend import ItemType
@@ -62,10 +64,10 @@ def test_class():
 
     # Methods with a default implementation can be called
     with pytest.raises(NotImplementedError):
-        be.read_file('path', ItemType.VAR)
+        be.read_file(Path('foo'), ItemType.VAR)
 
     with pytest.raises(NotImplementedError):
-        be.write_file('path', ItemType.VAR)
+        be.write_file(Path('foo'), ItemType.VAR)
 
 
 def test_cache_non_hashable():

@@ -1,10 +1,28 @@
 from pathlib import Path
 from pandas.testing import assert_frame_equal
-from click.exceptions import UsageError
+from click.exceptions import BadParameter, UsageError
 
 import ixmp
+from ixmp.cli import VersionType
 from ixmp.testing import models, populate_test_platform
 import pandas as pd
+import pytest
+
+
+def test_versiontype():
+    vt = VersionType()
+    # str converts to int
+    assert vt.convert('1', None, None) == 1
+    assert vt.convert('-1', None, None) == -1
+
+    # str 'new' is passes through
+    assert vt.convert('new', None, None) == 'new'
+
+    # int passes through
+    assert vt.convert(1, None, None) == 1
+
+    with pytest.raises(BadParameter, match="'xx' must be an integer or 'new'"):
+        vt.convert('xx', None, None)
 
 
 def test_main(ixmp_cli, test_mp, tmp_path):
@@ -128,7 +146,7 @@ def test_platform(ixmp_cli, tmp_path):
     assert r.exit_code == 1
 
 
-def test_import(ixmp_cli, test_mp, test_data_path):
+def test_import_ts(ixmp_cli, test_mp, test_data_path):
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
 
@@ -138,11 +156,12 @@ def test_import(ixmp_cli, test_mp, test_data_path):
         '--model', models['dantzig']['model'],
         '--scenario', models['dantzig']['scenario'],
         '--version', '1',
-        'import',
+        'import', 'timeseries',
         '--firstyear', '2020',
+        '--lastyear', '2200',
         str(test_data_path / 'timeseries_canning.csv'),
     ])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
     # Expected data
     exp = pd.DataFrame.from_dict({
@@ -163,6 +182,61 @@ def test_import(ixmp_cli, test_mp, test_data_path):
     # The data is not present in other versions
     scen = ixmp.Scenario(test_mp, **models['dantzig'], version=2)
     assert len(scen.timeseries(variable=['Testing'])) == 0
+
+
+def test_excel_io(ixmp_cli, test_mp, tmp_path):
+    populate_test_platform(test_mp)
+    tmp_path /= 'dantzig.xlsx'
+
+    # Invoke the CLI to export data to Excel
+    cmd = [
+        '--platform', test_mp.name,
+        '--model', models['dantzig']['model'],
+        '--scenario', models['dantzig']['scenario'],
+        'export', str(tmp_path),
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Fails without platform/scenario info
+    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
+
+    # Invoke the CLI to read data from Excel
+    cmd = [
+        '--platform', test_mp.name,
+        '--model', models['dantzig']['model'],
+        '--scenario', models['dantzig']['scenario'],
+        'import', 'scenario', str(tmp_path),
+    ]
+
+    # Fails without platform/scenario info
+    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
+
+    # Fails without --discard-solution
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 1
+    assert 'This Scenario has a solution' in result.output
+
+    # Succeeds with --discard-solution
+    cmd.insert(-1, '--discard-solution')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Import into a new model name fails without --init-items
+    cmd = [
+        '--platform', test_mp.name,
+        '--model', 'foo model',
+        '--scenario', 'bar scenario',
+        '--version', 'new',
+        'import', 'scenario', str(tmp_path),
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 1
+
+    # Succeeds
+    cmd.insert(-1, '--init-items')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
 
 
 def test_report(ixmp_cli):

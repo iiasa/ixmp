@@ -3,7 +3,7 @@ import pytest
 from pytest import raises
 
 import ixmp
-from ixmp.testing import assert_logs, make_dantzig
+from ixmp.testing import make_dantzig
 
 
 def test_jvm_warn(recwarn):
@@ -119,3 +119,27 @@ def test_gh_216(test_mp):
     # not in set i; but JDBCBackend removes 'beijing' from the filters before
     # calling the underlying method (https://github.com/iiasa/ixmp/issues/216)
     scen.par('a', filters=filters)
+
+
+@pytest.fixture
+def exception_verbose_true():
+    """A fixture which ensures JDBCBackend raises verbose exceptions.
+
+    The set value is not disturbed for other tests/code.
+    """
+    tmp = ixmp.backend.jdbc._EXCEPTION_VERBOSE  # Store current value
+    ixmp.backend.jdbc._EXCEPTION_VERBOSE = True  # Ensure True
+    yield
+    ixmp.backend.jdbc._EXCEPTION_VERBOSE = tmp  # Restore value
+
+
+def test_verbose_exception(test_mp, exception_verbose_true):
+    # Exception stack trace is logged for debugging
+    with pytest.raises(RuntimeError) as exc_info:
+        ixmp.Scenario(test_mp, model='foo', scenario='bar', version=-1)
+
+    exc_msg = exc_info.value.args[0]
+    assert ("There exists no Scenario 'foo|bar' "
+            "(version: -1)  in the database!" in exc_msg)
+    assert "at.ac.iiasa.ixmp.database.DbDAO.getRunId" in exc_msg
+    assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg

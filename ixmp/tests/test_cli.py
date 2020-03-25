@@ -1,10 +1,28 @@
 from pathlib import Path
 from pandas.testing import assert_frame_equal
-from click.exceptions import UsageError
+from click.exceptions import BadParameter, UsageError
 
 import ixmp
+from ixmp.cli import VersionType
 from ixmp.testing import models, populate_test_platform
 import pandas as pd
+import pytest
+
+
+def test_versiontype():
+    vt = VersionType()
+    # str converts to int
+    assert vt.convert('1', None, None) == 1
+    assert vt.convert('-1', None, None) == -1
+
+    # str 'new' is passes through
+    assert vt.convert('new', None, None) == 'new'
+
+    # int passes through
+    assert vt.convert(1, None, None) == 1
+
+    with pytest.raises(BadParameter, match="'xx' must be an integer or 'new'"):
+        vt.convert('xx', None, None)
 
 
 def test_main(ixmp_cli, test_mp, tmp_path):
@@ -170,13 +188,17 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     tmp_path /= 'dantzig.xlsx'
 
     # Invoke the CLI to export data to Excel
-    result = ixmp_cli.invoke([
+    cmd = [
         '--platform', test_mp.name,
         '--model', models['dantzig']['model'],
         '--scenario', models['dantzig']['scenario'],
         'export', str(tmp_path),
-    ])
+    ]
+    result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
+
+    # Fails without platform/scenario info
+    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
 
     # Invoke the CLI to read data from Excel
     cmd = [
@@ -185,6 +207,9 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
         '--scenario', models['dantzig']['scenario'],
         'import', 'scenario', str(tmp_path),
     ]
+
+    # Fails without platform/scenario info
+    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
 
     # Fails without --discard-solution
     result = ixmp_cli.invoke(cmd)

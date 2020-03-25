@@ -67,7 +67,7 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
                                         version=version)
     except KeyError:
         pass
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         raise click.ClickException(e.args[0])
 
 
@@ -176,7 +176,7 @@ def import_scenario(context, file, discard_solution, add_units, init_items,
     except RuntimeError as e:
         if 'not yet saved' in e.args[0]:
             pass  # --version=new; no need to check out
-        else:
+        else:  # pragma: no cover
             raise
 
     scenario.read_excel(

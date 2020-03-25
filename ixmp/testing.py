@@ -392,7 +392,8 @@ def assert_logs(caplog, message_or_messages=None):
                  for e in expected]
         if not all(found):
             missing = [msg for i, msg in enumerate(expected) if not found[i]]
-            raise AssertionError(f'Did not log {missing}')
+            raise AssertionError(f'Did not log {missing}\namong:\n'
+                                 f'{caplog.messages[first:]}')
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):

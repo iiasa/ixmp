@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 import logging
 
 import pandas as pd
@@ -85,30 +84,44 @@ def s_write_excel(be, s, path):
     writer.save()
 
 
-@contextmanager
-def handle_existing(scenario, ix_type, name, new_idx_sets, path):
-    """Context manager for :meth:`~.init_set`, :meth:`.init_par`, etc.
+def maybe_init_item(scenario, ix_type, name, new_idx, path):
+    """Call :meth:`~.init_set`, :meth:`.init_par`, etc. if possible.
 
-    If the init_*() call within the context fails, this logs an intelligible
-    message.
+    Logs an intelligible warning and then raises ValueError:
+
+    - the *new_idx* is ambiguous, containing names that cannot be used to infer
+      sets, or
+    - the init_*() call fails because of an existing item with index names
+      that are different from *new_idx*.
+
     """
+    # Check for ambiguous index names
+    ambiguous_idx = sorted(set(new_idx or []) - set(scenario.set_list()))
+    if len(ambiguous_idx):
+        msg = (f'Cannot read {ix_type} {name!r}: index set(s) cannot be '
+               f'inferred for name(s) {ambiguous_idx}')
+        log.warning(msg)
+        raise ValueError
+
     try:
-        yield
+        # Initialize
+        getattr(scenario, f'init_{ix_type}')(name, new_idx)
     except ValueError as e:
-        if 'exists' not in e.args[0]:
+        if 'exists' not in e.args[0]:  # pragma: no cover
             raise  # Some other ValueError
 
-        # Check that existing item has the same index sets
+        # Existing item; check that is has the same index names
 
         # [] and None are equivalent; convert to be consistent
-        existing = scenario.idx_sets(name) or None
-        if isinstance(new_idx_sets, list) and new_idx_sets == []:
-            new_idx_sets = None
+        existing = scenario.idx_names(name) or None
+        if isinstance(new_idx, list) and new_idx == []:
+            new_idx = None
 
-        if existing != new_idx_sets:
-            msg = (f'{ix_type} {name!r} has index sets {existing} in Scenario;'
-                   f' index names {new_idx_sets} in {path.name}')
+        if existing != new_idx:
+            msg = (f'Existing {ix_type} {name!r} has index names(s) {existing}'
+                   f' != {new_idx} in {path.name}')
             log.warning(msg)
+            raise ValueError
 
 
 def s_read_excel(be, s, path, add_units=False, init_items=False,
@@ -119,7 +132,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     --------
     Scenario.read_excel
     """
-    log.info(f'Reading data from {path}')
+    log.info(f'Read data from {path}')
 
     # Get item name -> ixmp type mapping as a pd.Series
     xf = pd.ExcelFile(path)
@@ -144,7 +157,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             if init_items:
                 # Determine index set(s) for this set
                 if len(idx_sets) == 1:
-                    if idx_sets == [0]:
+                    if idx_sets == [0]:  # pragma: no cover
                         # Old-style export with uninformative '0' as a column
                         # header; assume it's an index set
                         log.warning(f"Add {name} with header '0' as index set")
@@ -155,8 +168,10 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
                     else:
                         pass  # 1-D set indexed by another set
 
-                with handle_existing(s, 'set', name, idx_sets, path):
-                    s.init_set(name, idx_sets)
+                try:
+                    maybe_init_item(s, 'set', name, idx_sets, path)
+                except ValueError:
+                    continue  # Ambiguous or conflicting; skip this set
 
             if len(data.columns) == 1:
                 # Convert data frame into 1-D vector
@@ -185,7 +200,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     # Add equ/par/var data
     for name, ix_type in name_type[name_type != 'set'].items():
         if ix_type in ('equ', 'var'):
-            log.info(f'Cannot import {ix_type} {name!r}')
+            log.info(f'Cannot read {ix_type} {name!r}')
             continue
 
         # Only parameters beyond this point
@@ -211,9 +226,11 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         )
 
         if init_items:
-            # Same as init_scalar if idx_sets == []
-            with handle_existing(s, ix_type, name, idx_sets, path):
-                s.init_par(name, idx_sets)
+            try:
+                # Same as init_scalar if idx_sets == []
+                maybe_init_item(s, ix_type, name, idx_sets, path)
+            except ValueError:
+                continue  # Ambiguous or conflicting; skip this parameter
 
         if not len(idx_sets):
             # No index sets -> scalar parameter; must supply empty 'key' column

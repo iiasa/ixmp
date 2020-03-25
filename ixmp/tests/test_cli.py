@@ -158,6 +158,7 @@ def test_import_ts(ixmp_cli, test_mp, test_data_path):
         '--version', '1',
         'import', 'timeseries',
         '--firstyear', '2020',
+        '--lastyear', '2200',
         str(test_data_path / 'timeseries_canning.csv'),
     ])
     assert result.exit_code == 0, result.output

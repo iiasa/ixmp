@@ -87,41 +87,41 @@ def s_write_excel(be, s, path):
 def maybe_init_item(scenario, ix_type, name, new_idx, path):
     """Call :meth:`~.init_set`, :meth:`.init_par`, etc. if possible.
 
-    Logs an intelligible warning and then raises ValueError:
+    Logs an intelligible warning and then raises ValueError in two cases:
 
-    - the *new_idx* is ambiguous, containing names that cannot be used to infer
-      sets, or
-    - the init_*() call fails because of an existing item with index names
-      that are different from *new_idx*.
+    - the *new_idx* is ambiguous, e.g. containing index names that cannot be
+      used to infer index sets, or
+    - an existing item has index names that are different from *new_idx*.
 
     """
-    # Check for ambiguous index names
-    ambiguous_idx = sorted(set(new_idx or []) - set(scenario.set_list()))
-    if len(ambiguous_idx):
-        msg = (f'Cannot read {ix_type} {name!r}: index set(s) cannot be '
-               f'inferred for name(s) {ambiguous_idx}')
-        log.warning(msg)
-        raise ValueError
-
     try:
+        # [] and None are equivalent; convert to be consistent
+        existing_names = scenario.idx_names(name) or None
+    except KeyError:
+        # Item does not exist
+
+        # Check for ambiguous index names
+        ambiguous_idx = sorted(set(new_idx or []) - set(scenario.set_list()))
+        if len(ambiguous_idx):
+            msg = (f'Cannot read {ix_type} {name!r}: index set(s) cannot be '
+                   f'inferred for name(s) {ambiguous_idx}')
+            log.warning(msg)
+            raise ValueError from None
+
         # Initialize
         getattr(scenario, f'init_{ix_type}')(name, new_idx)
-    except ValueError as e:
-        if 'exists' not in e.args[0]:  # pragma: no cover
-            raise  # Some other ValueError
-
-        # Existing item; check that is has the same index names
+    else:
+        # Item exists; check that is has the same index names
 
         # [] and None are equivalent; convert to be consistent
-        existing = scenario.idx_names(name) or None
         if isinstance(new_idx, list) and new_idx == []:
             new_idx = None
 
-        if existing != new_idx:
-            msg = (f'Existing {ix_type} {name!r} has index names(s) {existing}'
-                   f' != {new_idx} in {path.name}')
+        if existing_names != new_idx:
+            msg = (f'Existing {ix_type} {name!r} has index names(s) '
+                   f' {existing_names} != {new_idx} in {path.name}')
             log.warning(msg)
-            raise ValueError
+            raise ValueError from None
 
 
 def s_read_excel(be, s, path, add_units=False, init_items=False,

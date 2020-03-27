@@ -604,8 +604,9 @@ class TimeSeries:
 
         if iamc:
             # Convert to wide format
-            index = IAMC_IDX + ['subannual'] if 'subannual' in df.columns \
-                else IAMC_IDX
+            index = IAMC_IDX
+            if 'subannual' in df.columns:
+                index = index + ['subannual']
             df = df.pivot_table(index=index, columns='year')['value'] \
                    .reset_index()
             df.columns.names = [None]

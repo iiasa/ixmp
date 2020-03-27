@@ -593,7 +593,7 @@ class TimeSeries:
                 msg = ("timeseries data has subannual values, ",
                        "use `subannual=True or 'auto'`")
                 raise ValueError(msg)
-            if subannual is False or has_subannual:
+            if not has_subannual:
                 df.drop('subannual', axis=1, inplace=True)
 
         if iamc:

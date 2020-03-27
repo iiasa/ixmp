@@ -568,8 +568,14 @@ class TimeSeries:
         year : str, int or list of strings or integers
             Years to include in returned data.
         subannual : bool or str, default 'auto'
-            Include column for sub-annual specification (if bool);
-            if 'auto', include column if sub-annual
+            Whether to include column for sub-annual specification (if bool);
+            if 'auto', include column if sub-annual data (other than 'Year')
+            exists in returned dataframe.
+
+        Raises
+        ------
+        ValueError
+            If `subannual=False` but Scenario has (filtered) sub-annual data.
 
         Returns
         -------

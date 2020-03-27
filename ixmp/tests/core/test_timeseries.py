@@ -403,13 +403,18 @@ def test_new_timeseries_as_iamc(test_mp):
     scen.commit('importing a testing timeseries')
 
     # compare returned dataframe - default behaviour set to 'auto'
-    assert_timeseries(scen, cols=COLS_FOR_YEARLY_DATA)
+    assert_timeseries(scen)
     # test behaviour of 'auto' explicitly
-    assert_timeseries(scen, cols=COLS_FOR_YEARLY_DATA, subannual='auto')
-    # test behaviour of 'True' explicitly
-    assert_timeseries(scen, cols=COLS_WITH_SUBANNUAL, subannual=True)
+    assert_timeseries(scen, subannual='auto')
     # test behaviour of 'False' explicitly
-    assert_timeseries(scen, cols=COLS_FOR_YEARLY_DATA, subannual=False)
+    assert_timeseries(scen, subannual=False)
+
+    # test behaviour of 'True' explicitly
+    exp = DATA['timeseries'].pivot_table(values='value', index=IDX_COLS)
+    exp['model'] = 'Douglas Adams'
+    exp['scenario'] = 'Hitchhiker'
+    exp['subannual'] = 'Year'
+    assert_timeseries(scen, exp=exp, cols=COLS_WITH_SUBANNUAL, subannual=True)
 
 
 def assert_timeseries(scen, exp=DATA['timeseries'], cols=None, subannual=None):
@@ -632,9 +637,7 @@ def test_new_subannual_timeseries_as_iamc(mp):
     assert_timeseries(scen, exp=exp[COLS_WITH_SUBANNUAL],
                       cols=COLS_WITH_SUBANNUAL, subannual=True)
     # setting False raises an error because subannual data exists
-    pytest.raises(ValueError, assert_timeseries, scen,
-                  exp=exp[COLS_WITH_SUBANNUAL], cols=COLS_WITH_SUBANNUAL,
-                  subannual=False)
+    pytest.raises(ValueError, scen.timeseries(), subannual=False)
 
 
 def test_fetch_empty_geodata(mp):

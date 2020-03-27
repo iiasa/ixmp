@@ -588,7 +588,7 @@ class TimeSeries:
 
         # drop `subannual` column if not requested (False) or required ('auto')
         if subannual is not True:
-            has_subannual = all(df['subannual'].unique() == ['Year'])
+            has_subannual = any(df['subannual'].unique() != ['Year'])
             if subannual is False and has_subannual:
                 msg = ("timeseries data has subannual values, ",
                        "use `subannual=True or 'auto'`")

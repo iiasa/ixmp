@@ -408,8 +408,6 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_timeseries(scen, subannual='auto')
     # test behaviour of 'False' explicitly
     df = scen.timeseries(region='World')
-    print(df)
-    print(all(df['subannual'].unique() == ['Year']))
     assert_timeseries(scen, subannual=False)
 
     # test behaviour of 'True' explicitly

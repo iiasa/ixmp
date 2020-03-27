@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by `Scenario.timeseries()`.
 - `#286 <https://github.com/iiasa/ixmp/pull/286>`_: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix`.
 - `#270 <https://github.com/iiasa/ixmp/pull/270>`_: Include all tests in the ixmp package.
 - `#212 <https://github.com/iiasa/ixmp/pull/212>`_: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.

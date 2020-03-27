@@ -551,7 +551,7 @@ class TimeSeries:
                           meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
-                   iamc=False):
+                   iamc=False, subannual='auto'):
         """Retrieve TimeSeries data.
 
         Parameters
@@ -567,6 +567,9 @@ class TimeSeries:
             Units to include in returned data.
         year : str, int or list of strings or integers
             Years to include in returned data.
+        subannual : bool or str, default 'auto'
+            Include column for sub-annual specification (if bool);
+            if 'auto', include column if sub-annual
 
         Returns
         -------
@@ -582,6 +585,16 @@ class TimeSeries:
                           columns=FIELDS['ts_get'])
         df['model'] = self.model
         df['scenario'] = self.scenario
+
+        # drop `subannual` column if not requested (False) or required ('auto')
+        if subannual is not True:
+            has_subannual = all(df['subannual'].unique() == ['Year'])
+            if subannual is False and has_subannual:
+                msg = ("timeseries data has subannual values, ",
+                       "use `subannual=True or 'auto'`")
+                raise ValueError(msg)
+            if subannual is False or has_subannual:
+                df.drop('subannual', axis=1, inplace=True)
 
         if iamc:
             # Convert to wide format

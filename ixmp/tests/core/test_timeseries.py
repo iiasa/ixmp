@@ -411,7 +411,10 @@ def test_new_timeseries_as_iamc(test_mp):
     assert_timeseries(scen, subannual=False)
 
     # test behaviour of 'True' explicitly
-    exp = DATA['timeseries'].pivot_table(values='value', index=IDX_COLS)
+    exp = (
+        DATA['timeseries'].pivot_table(values='value', index=IDX_COLS)
+        .reset_index()
+    )
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
     exp['subannual'] = 'Year'

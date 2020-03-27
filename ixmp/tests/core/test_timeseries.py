@@ -407,6 +407,9 @@ def test_new_timeseries_as_iamc(test_mp):
     # test behaviour of 'auto' explicitly
     assert_timeseries(scen, subannual='auto')
     # test behaviour of 'False' explicitly
+    df = scen.timeseries(region='World')
+    print(df)
+    print(all(df['subannual'].unique() == ['Year']))
     assert_timeseries(scen, subannual=False)
 
     # test behaviour of 'True' explicitly
@@ -637,7 +640,7 @@ def test_new_subannual_timeseries_as_iamc(mp):
     assert_timeseries(scen, exp=exp[COLS_WITH_SUBANNUAL],
                       cols=COLS_WITH_SUBANNUAL, subannual=True)
     # setting False raises an error because subannual data exists
-    pytest.raises(ValueError, scen.timeseries(), subannual=False)
+    pytest.raises(ValueError, scen.timeseries, subannual=False)
 
 
 def test_fetch_empty_geodata(mp):

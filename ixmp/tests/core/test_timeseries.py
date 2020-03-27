@@ -407,7 +407,6 @@ def test_new_timeseries_as_iamc(test_mp):
     # test behaviour of 'auto' explicitly
     assert_timeseries(scen, subannual='auto')
     # test behaviour of 'False' explicitly
-    df = scen.timeseries(region='World')
     assert_timeseries(scen, subannual=False)
 
     # test behaviour of 'True' explicitly

@@ -1,3 +1,5 @@
+from sys import getrefcount
+
 import jpype
 import pytest
 from pytest import raises
@@ -145,6 +147,47 @@ def test_verbose_exception(test_mp, exception_verbose_true):
             "(version: -1)  in the database!" in exc_msg)
     assert "at.ac.iiasa.ixmp.database.DbDAO.getRunId" in exc_msg
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
+
+
+def test_del_ts(test_mp):
+    # Number of Java objects referenced by the JDBCBackend
+    N_obj = len(test_mp._backend.jindex.items)
+
+    # Create a list of some Scenario objects
+    N = 8
+    scenarios = []
+    for i in range(N):
+        scenarios.append(
+            ixmp.Scenario(test_mp, 'foo', f'bar{i}', version='new')
+        )
+
+    # Number of referenced objects has increased by 8
+    assert len(test_mp._backend.jindex.items) == N_obj + N
+
+    # Pop and free the objects
+    for i in range(N):
+        s = scenarios.pop(0)
+
+        # The variable 's' is the only reference to this Scenario object
+        assert getrefcount(s) - 1 == 1
+
+        # ID of the Scenario object
+        s_id = id(s)
+
+        # Underlying Java object
+        s_jobj = test_mp._backend.jindex[s]
+
+        # Now delete the Scenario object
+        del s
+
+        # Number of referenced objects decreases by 1
+        assert len(test_mp._backend.jindex.items) == N_obj + N - (i + 1)
+        # ID is no longer in JDBCBackend.jindex
+        assert s_id not in test_mp._backend.jindex.items
+
+        # s_jobj is the only remaining reference to the Java object
+        assert getrefcount(s_jobj) - 1 == 1
+        del s_jobj
 
 
 def test_docs(test_mp):

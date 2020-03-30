@@ -552,34 +552,35 @@ class TimeSeries:
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
                    iamc=False, subannual='auto'):
-        """Retrieve TimeSeries data.
+        """Retrieve timeseries data.
 
         Parameters
         ----------
-        iamc : bool, default: False
+        iamc : bool, optional
             Return data in wide/'IAMC' format. If :obj:`False`, return data in
             long/'tabular' format; see :meth:`add_timeseries`.
-        region : str or list of strings
+        region : str or list of str, optional
             Regions to include in returned data.
-        variable : str or list of strings
+        variable : str or list of str, optional
             Variables to include in returned data.
-        unit : str or list of strings
+        unit : str or list of str, optional
             Units to include in returned data.
-        year : str, int or list of strings or integers
+        year : str or int or list of (str or int), optional
             Years to include in returned data.
-        subannual : bool or str, default 'auto'
-            Whether to include column for sub-annual specification (if bool);
-            if 'auto', include column if sub-annual data (other than 'Year')
-            exists in returned dataframe.
+        subannual : bool or 'auto', optional
+            Whether to include column for sub-annual specification (if
+            :class:`bool`); if 'auto', include column if sub-annual data (other
+            than 'Year') exists in returned dataframe.
 
         Raises
         ------
         ValueError
-            If `subannual=False` but Scenario has (filtered) sub-annual data.
+            If `subannual` is :obj:`False` but Scenario has (filtered)
+            sub-annual data.
 
         Returns
         -------
-        :class:`pandas.DataFrame`
+        pandas.DataFrame
             Specified data.
         """
         # Retrieve data, convert to pandas.DataFrame

@@ -51,6 +51,9 @@ class Platform:
         :class:`.JDBCBackend`.
     """
 
+    # Storage back end for the platform
+    _backend = None
+
     # List of method names which are handled directly by the backend
     _backend_direct = [
         'open_db',
@@ -442,6 +445,10 @@ class TimeSeries:
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
         return self.platform._backend(self, method, *args, **kwargs)
+
+    def __del__(self):
+        # Instruct the back end to free memory associated with the TimeSeries
+        self._backend('del_ts')
 
     # Transactions and versioning
     # functions for platform management

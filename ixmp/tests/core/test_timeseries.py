@@ -17,7 +17,6 @@ DATA = {
         region='World',
         variable='Testing',
         unit='???',
-        subannual='Year',
         year=[2010, 2020],
         value=[23.7, 23.8],
         model='model name',
@@ -34,7 +33,6 @@ DATA = {
         region='World',
         variable=['Testing', 'Testing', 'Testing2'],
         unit='???',
-        subannual='Year',
         year=[2020, 2030, 2030],
         value=[24.8, 24.9, 25.1],
         model='model name',
@@ -44,7 +42,6 @@ DATA = {
         region='World',
         variable='Testing',
         unit='???',
-        subannual='Year',
         year=[2000, 2010, 2020, 2030, 2040, 2050],
         value=[21.7, 22.7, 23.7, 24.7, 25.7, 25.8],
         model='model name',
@@ -70,9 +67,13 @@ DATA = {
     ))
 }
 test_args = ('Douglas Adams', 'Hitchhiker')
+
 # string columns for timeseries checks
 IDX_COLS = ['region', 'variable', 'unit', 'year']
 
+COLS_FOR_YEARLY_DATA = ['model', 'scenario'] + IDX_COLS + ['value']
+COLS_WITH_SUBANNUAL = COLS_FOR_YEARLY_DATA.copy()
+COLS_WITH_SUBANNUAL.insert(4, 'subannual')
 
 # Utility methods
 def expected(df, ts):
@@ -400,10 +401,26 @@ def test_new_timeseries_as_iamc(test_mp):
     scen.add_timeseries(DATA['timeseries'].pivot_table(values='value',
                                                        index=IDX_COLS))
     scen.commit('importing a testing timeseries')
+
+    # compare returned dataframe - default behaviour set to 'auto'
     assert_timeseries(scen)
+    # test behaviour of 'auto' explicitly
+    assert_timeseries(scen, subannual='auto')
+    # test behaviour of 'False' explicitly
+    assert_timeseries(scen, subannual=False)
+
+    # test behaviour of 'True' explicitly
+    exp = (
+        DATA['timeseries'].pivot_table(values='value', index=IDX_COLS)
+        .reset_index()
+    )
+    exp['model'] = 'Douglas Adams'
+    exp['scenario'] = 'Hitchhiker'
+    exp['subannual'] = 'Year'
+    assert_timeseries(scen, exp=exp, cols=COLS_WITH_SUBANNUAL, subannual=True)
 
 
-def assert_timeseries(scen, exp=DATA['timeseries'], cols=None):
+def assert_timeseries(scen, exp=DATA['timeseries'], cols=None, subannual=None):
     """ Asserts scenario timeseries are similar to expected
 
     Compares region, variable, unit, year and time (if available).
@@ -412,8 +429,13 @@ def assert_timeseries(scen, exp=DATA['timeseries'], cols=None):
     :param scen:    scenario object
     :param exp:     expected timeseries data
     :param cols:    (optional) column list to sort by
+    :param subannual:   passed to 'timeseries()'
     """
-    obs = scen.timeseries(region='World')
+    if subannual is None:
+        obs = scen.timeseries(region='World')
+    else:
+        obs = scen.timeseries(region='World', subannual=subannual)
+
     if cols is not None:
         obs = obs.sort_values(by=cols)
         exp = exp.sort_values(by=cols)
@@ -608,10 +630,17 @@ def test_new_subannual_timeseries_as_iamc(mp):
     exp['model'] = 'Douglas Adams'
     exp['scenario'] = 'Hitchhiker'
 
-    # compare
-    cols = ['model', 'scenario', 'region', 'variable', 'subannual', 'unit',
-            'year', 'value']
-    assert_timeseries(scen, exp=exp[cols], cols=cols)
+    # compare returned dataframe - default behaviour set to 'auto'
+    assert_timeseries(scen, exp=exp[COLS_WITH_SUBANNUAL],
+                      cols=COLS_WITH_SUBANNUAL)
+    # test behaviour of 'auto' explicitly
+    assert_timeseries(scen, exp=exp[COLS_WITH_SUBANNUAL],
+                      cols=COLS_WITH_SUBANNUAL, subannual='auto')
+    # test behaviour of 'True' explicitly
+    assert_timeseries(scen, exp=exp[COLS_WITH_SUBANNUAL],
+                      cols=COLS_WITH_SUBANNUAL, subannual=True)
+    # setting False raises an error because subannual data exists
+    pytest.raises(ValueError, scen.timeseries, subannual=False)
 
 
 def test_fetch_empty_geodata(mp):

@@ -551,26 +551,36 @@ class TimeSeries:
                           meta)
 
     def timeseries(self, region=None, variable=None, unit=None, year=None,
-                   iamc=False):
-        """Retrieve TimeSeries data.
+                   iamc=False, subannual='auto'):
+        """Retrieve timeseries data.
 
         Parameters
         ----------
-        iamc : bool, default: False
+        iamc : bool, optional
             Return data in wide/'IAMC' format. If :obj:`False`, return data in
             long/'tabular' format; see :meth:`add_timeseries`.
-        region : str or list of strings
+        region : str or list of str, optional
             Regions to include in returned data.
-        variable : str or list of strings
+        variable : str or list of str, optional
             Variables to include in returned data.
-        unit : str or list of strings
+        unit : str or list of str, optional
             Units to include in returned data.
-        year : str, int or list of strings or integers
+        year : str or int or list of (str or int), optional
             Years to include in returned data.
+        subannual : bool or 'auto', optional
+            Whether to include column for sub-annual specification (if
+            :class:`bool`); if 'auto', include column if sub-annual data (other
+            than 'Year') exists in returned dataframe.
+
+        Raises
+        ------
+        ValueError
+            If `subannual` is :obj:`False` but Scenario has (filtered)
+            sub-annual data.
 
         Returns
         -------
-        :class:`pandas.DataFrame`
+        pandas.DataFrame
             Specified data.
         """
         # Retrieve data, convert to pandas.DataFrame
@@ -583,9 +593,21 @@ class TimeSeries:
         df['model'] = self.model
         df['scenario'] = self.scenario
 
+        # drop `subannual` column if not requested (False) or required ('auto')
+        if subannual is not True:
+            has_subannual = not all(df['subannual'] == 'Year')
+            if subannual is False and has_subannual:
+                msg = ("timeseries data has subannual values, ",
+                       "use `subannual=True or 'auto'`")
+                raise ValueError(msg)
+            if not has_subannual:
+                df.drop('subannual', axis=1, inplace=True)
+
         if iamc:
             # Convert to wide format
-            index = IAMC_IDX + ['subannual']
+            index = IAMC_IDX
+            if 'subannual' in df.columns:
+                index = index + ['subannual']
             df = df.pivot_table(index=index, columns='year')['value'] \
                    .reset_index()
             df.columns.names = [None]

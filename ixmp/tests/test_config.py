@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from ixmp._config import KEYS, _JSONEncoder, Config, _locate
@@ -45,8 +47,9 @@ def test_set_get(cfg):
     assert cfg.get('test key') == 'bar'
 
     # set() with invalid type raises exception
+    KEYS['test key'] = (int, None)
     with pytest.raises(TypeError):
-        cfg.set('test key', 12)
+        cfg.set('test key', 'foo')
 
 
 def test_register(cfg):
@@ -59,6 +62,13 @@ def test_register(cfg):
     # Can't re-register an existing key
     with pytest.raises(KeyError):
         cfg.register('new key', int, 43)
+
+    # Register a key with type Path
+    cfg.register('new key 2', Path)
+
+    # The key can be with a string value, automatically converted to Path
+    cfg.set('new key 2', '/foo/bar/baz')
+    assert isinstance(cfg.get('new key 2'), Path)
 
 
 def test_config_platform(cfg):

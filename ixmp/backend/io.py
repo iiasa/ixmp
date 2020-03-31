@@ -58,6 +58,7 @@ def s_write_excel(be, s, path, item_type):
     writer = pd.ExcelWriter(path, engine='xlsxwriter')
 
     omitted = set()
+    empty_sets = []
 
     for name, ix_type in name_type.items():
         # Extract data: dict, pd.Series, or pd.DataFrame
@@ -73,12 +74,20 @@ def s_write_excel(be, s, path, item_type):
             # Index set: use own name as the header
             data.name = name
 
-        # Write empty sets, but not equ/par/var
-        if ix_type != 'set' and data.empty:
-            omitted.add(name)
-            continue
+        if data.empty:
+            if ix_type != 'set':
+                # Don't write empty equ/par/var
+                omitted.add(name)
+                continue
+            else:
+                # Write empty sets later
+                empty_sets.append((name, data))
 
         data.to_excel(writer, sheet_name=name, index=False)
+
+    # Write empty sets last
+    for name, data in empty_sets:
+        data.to_excel(writer, sheer_name=name, index=False)
 
     # Discard entries that were not written
     for name in omitted:

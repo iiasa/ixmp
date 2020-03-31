@@ -21,21 +21,38 @@ BACKENDS = {}
 
 
 class ItemType(IntFlag):
-    """Type of data items."""
-    #: Time series data variable.
-    TS = 1
-    #: Set.
-    SET = 2
-    #: Parameter.
-    PAR = 4
-    #: Model variable.
-    VAR = 8
-    #: Equation.
-    EQU = 16
+    """Type of data items in :class:`.TimeSeries` and :class:`.Scenario`."""
+    # NB the docstring comments ('#:') are placed as they are to ensure the
+    #    output is readable.
 
+    TS = 1
+    #: Time series data variable.
+    T = TS
+
+    SET = 2
+    #: Set.
+    S = SET
+
+    PAR = 4
+    #: Parameter.
+    P = PAR
+
+    VAR = 8
+    #: Model variable.
+    V = VAR
+
+    EQU = 16
+    #: Equation.
+    E = EQU
+
+    MODEL = SET + PAR + VAR + EQU
     #: All kinds of model-related data, i.e. :attr:`SET`, :attr:`PAR`,
     #: :attr:`VAR` and :attr:`EQU`.
-    MODEL = SET + PAR + VAR + EQU
+    M = MODEL
 
-    #: All data, i.e. :attr:`MODEL` and :attr:`TS`.
+    #: Model solution data, i.e. :attr:`VAR` and :attr:`EQU`.
+    SOLUTION = VAR + EQU
+
     ALL = TS + MODEL
+    #: All data, i.e. :attr:`MODEL` and :attr:`TS`.
+    A = ALL

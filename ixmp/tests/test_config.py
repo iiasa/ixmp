@@ -47,8 +47,9 @@ def test_set_get(cfg):
     assert cfg.get('test key') == 'bar'
 
     # set() with invalid type raises exception
+    KEYS['test key'] = (int, None)
     with pytest.raises(TypeError):
-        cfg.set('test key', 12)
+        cfg.set('test key', 'foo')
 
 
 def test_register(cfg):

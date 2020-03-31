@@ -191,7 +191,7 @@ def test_del_ts(test_mp):
         del s_jobj
 
 
-@pytest.mark.skip(reason='Cannot run normally as not possible to recreate JVM')
+@pytest.mark.test_gc
 def test_gc():
     from ixmp import config as ixmp_config
     platform_name = 'test_del_ts'

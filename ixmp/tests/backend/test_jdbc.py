@@ -1,6 +1,7 @@
 from sys import getrefcount
 
 import jpype
+import gc
 import pytest
 from pytest import raises
 
@@ -188,6 +189,35 @@ def test_del_ts(test_mp):
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1
         del s_jobj
+
+
+def test_gc():
+    from ixmp import config as ixmp_config
+    platform_name = 'test_del_ts'
+    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb',
+                             url=f'jdbc:hsqldb:mem:{platform_name}')
+    test_mp = ixmp.Platform(name=platform_name, jvmargs='-Xmx7m')
+    jpype.java.lang.System.gc()
+
+    def allocate_scenarios(n):
+        for i in range(n):
+            scenarios.append(
+                ixmp.Scenario(test_mp, 'foo', f'bar{i}', version='new')
+            )
+
+    # create a list of some Scenario objects
+    scenarios = []
+    raises(RuntimeError, allocate_scenarios, 1000)
+    max = len(scenarios)
+
+    # cleanup
+    scenarios = []
+    gc.collect()
+    jpype.java.lang.System.gc()
+
+    # try to allocate
+    allocate_scenarios(max)
+    raises(RuntimeError, allocate_scenarios, max)
 
 
 def test_docs(test_mp):

@@ -215,12 +215,14 @@ class TestScenario:
         # A 2-D set with ambiguous index names
         scen.init_set('baz_3', ['i', 'i'], ['i', 'i_also'])
         scen.add_set('baz_3', [['seattle', 'seattle']])
+        # A set with no elements
+        scen.init_set('foo_2', ['j'])
 
         scen.commit('')
         scen.solve()
 
         # Solved Scenario can be written to file
-        scen.to_excel(tmp_path)
+        scen.to_excel(tmp_path, items=ixmp.ItemType.MODEL)
 
         # With init_items=False, can't be read into an empty Scenario.
         # Exception raised is the first index set, alphabetically

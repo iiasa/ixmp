@@ -79,15 +79,11 @@ def s_write_excel(be, s, path, item_type):
             if ix_type != 'set':
                 # Don't write empty equ/par/var
                 omitted.add(name)
-                continue
             else:
                 # Write empty sets later
                 empty_sets.append((name, data))
+            continue
 
-        data.to_excel(writer, sheet_name=name, index=False)
-
-    # Write empty sets last
-    for name, data in empty_sets:
         data.to_excel(writer, sheet_name=name, index=False)
 
     # Discard entries that were not written
@@ -99,6 +95,10 @@ def s_write_excel(be, s, path, item_type):
       .rename_axis(index='item') \
       .reset_index() \
       .to_excel(writer, sheet_name='ix_type_mapping', index=False)
+
+    # Write empty sets last
+    for name, data in empty_sets:
+        data.to_excel(writer, sheet_name=name, index=False)
 
     writer.save()
 

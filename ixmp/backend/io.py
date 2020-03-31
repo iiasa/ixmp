@@ -51,7 +51,8 @@ def s_write_excel(be, s, path, item_type):
     # item name -> ixmp type
     name_type = {}
     for ix_type in ix_types:
-        name_type.update({n: ix_type for n in be.list_items(s, ix_type)})
+        names = sorted(be.list_items(s, ix_type))
+        name_type.update({n: ix_type for n in names})
 
     # Open file
     writer = pd.ExcelWriter(path, engine='xlsxwriter')

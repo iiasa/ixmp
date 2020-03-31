@@ -305,8 +305,9 @@ class Backend(ABC):
 
         The default implementation supports:
 
-        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: write a
-          single Scenario given by kwargs['filters']['scenario'] to file using
+        - `path` ending in '.xlsx', `item_type` is either :attr:`.MODEL` or
+          :attr:`.SET` | :attr:`.PAR`: write a single Scenario given by
+          kwargs['filters']['scenario'] to file using
           :meth:`pandas.DataFrame.to_excel`.
 
         Parameters
@@ -329,8 +330,9 @@ class Backend(ABC):
         read_file
         """
         s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
-        if path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
-            s_write_excel(self, s, path)
+        xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
+        if path.suffix == '.xlsx' and item_type in xlsx_types and s:
+            s_write_excel(self, s, path, item_type)
         else:
             raise NotImplementedError
 

@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 
 from ixmp.utils import as_str_list
+from . import ItemType
 
 
 log = logging.getLogger(__name__)
@@ -33,16 +34,23 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path):
+def s_write_excel(be, s, path, item_type):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
     --------
     Scenario.to_excel
     """
+    # Types of items to write
+    ix_types = ['set', 'par']
+    if ItemType.VAR in item_type:
+        ix_types.append('var')
+    if ItemType.EQU in item_type:
+        ix_types.append('equ')
+
     # item name -> ixmp type
     name_type = {}
-    for ix_type in ('set', 'par', 'var', 'equ'):
+    for ix_type in ix_types:
         name_type.update({n: ix_type for n in be.list_items(s, ix_type)})
 
     # Open file

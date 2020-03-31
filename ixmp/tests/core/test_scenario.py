@@ -222,7 +222,8 @@ class TestScenario:
         # Solved Scenario can be written to file
         scen.to_excel(tmp_path)
 
-        # With init_items=False, can't be read into an empty Scenario
+        # With init_items=False, can't be read into an empty Scenario.
+        # Exception raised is the first index set, alphabetically
         with pytest.raises(ValueError, match="no set 'i'; "
                                              "try init_items=True"):
             scen_empty.read_excel(tmp_path)

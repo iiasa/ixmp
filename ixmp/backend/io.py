@@ -1,3 +1,4 @@
+from collections import deque
 import logging
 
 import pandas as pd
@@ -87,7 +88,7 @@ def s_write_excel(be, s, path, item_type):
 
     # Write empty sets last
     for name, data in empty_sets:
-        data.to_excel(writer, sheer_name=name, index=False)
+        data.to_excel(writer, sheet_name=name, index=False)
 
     # Discard entries that were not written
     for name in omitted:
@@ -156,56 +157,66 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     xf = pd.ExcelFile(path)
     name_type = xf.parse('ix_type_mapping', index_col='item')['ix_type']
 
-    # List of *set name, data) to add
-    sets_to_add = [(n, None) for n in name_type.index[name_type == 'set']]
+    # Queue of (set name, data) to add
+    sets_to_add = deque((n, None) for n in name_type.index[name_type == 'set'])
 
     # Add sets in two passes:
     # 1. Index sets, required to initialize other sets.
     # 2. Sets indexed by others.
-    for name, data in sets_to_add:
+    while True:
+        try:
+            # Get an item from the queue
+            name, data = sets_to_add.popleft()
+        except IndexError:
+            break  # Finished
+
+        log.info(name)
+
         first_pass = data is None
         if first_pass:
             # Read data
             data = xf.parse(name)
 
-        if (first_pass and len(data.columns) == 1) or not first_pass:
-            # Index set or second appearance; add immediately
-            idx_sets = data.columns.to_list()
+        # Determine index set(s) for this set
+        idx_sets = data.columns.to_list()
+        if len(idx_sets) == 1:
+            if idx_sets == [0]:  # pragma: no cover
+                # Old-style export with uninformative '0' as a column header;
+                # assume it is an index set
+                log.warning(f"Add {name} with header '0' as index set")
+                idx_sets = None
+            elif idx_sets == [name]:
+                # Set's own name as column header -> an index set
+                idx_sets = None
+            else:
+                pass  # 1-D set indexed by another set
 
-            if init_items:
-                # Determine index set(s) for this set
-                if len(idx_sets) == 1:
-                    if idx_sets == [0]:  # pragma: no cover
-                        # Old-style export with uninformative '0' as a column
-                        # header; assume it's an index set
-                        log.warning(f"Add {name} with header '0' as index set")
-                        idx_sets = None
-                    elif idx_sets == [name]:
-                        # Set's own name as column header -> an index set
-                        idx_sets = None
-                    else:
-                        pass  # 1-D set indexed by another set
-
-                try:
-                    maybe_init_item(s, 'set', name, idx_sets, path)
-                except ValueError:
-                    continue  # Ambiguous or conflicting; skip this set
-
-            if len(data.columns) == 1:
-                # Convert data frame into 1-D vector
-                data = data.iloc[:, 0].values
-
-                if idx_sets is not None and idx_sets != [name]:
-                    # Indexed set must be input as list of list of str
-                    data = list(map(as_str_list, data))
-
-            try:
-                s.add_set(name, data)
-            except KeyError:
-                raise ValueError(f'no set {name!r}; try init_items=True')
-        else:
-            # Reappend to the list to process later
+        if first_pass and idx_sets is not None:
+            # Indexed set; append to the queue to process later
             sets_to_add.append((name, data))
+            continue
+
+        # At this point: either an index set, or second pass when all index
+        # sets have been init'd and populated
+        if init_items:
+            try:
+                maybe_init_item(s, 'set', name, idx_sets, path)
+            except ValueError:
+                continue  # Ambiguous or conflicting; skip this set
+
+        # Convert data as expected by add_set
+        if len(data.columns) == 1:
+            # Convert data frame into 1-D vector
+            data = data.iloc[:, 0].values
+
+            if idx_sets is not None:
+                # Indexed set must be input as list of list of str
+                data = list(map(as_str_list, data))
+
+        try:
+            s.add_set(name, data)
+        except KeyError:
+            raise ValueError(f'no set {name!r}; try init_items=True')
 
     if commit_steps:
         s.commit(f'Loaded sets from {path}')

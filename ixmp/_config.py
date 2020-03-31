@@ -152,8 +152,13 @@ class Config:
 
         type_, _ = KEYS[name]
         if not isinstance(value, type_):
-            raise TypeError('expected {} for {!r}; got {} {!r}'
-                            .format(type_, name, type(value), value))
+            # Value is not of the expected type
+            try:
+                # Attempt to cast to the correct type
+                value = type_(value)
+            except Exception:
+                raise TypeError('expected {} for {!r}; got {} {!r}'
+                                .format(type_, name, type(value), value))
 
         self.values[name] = value
 

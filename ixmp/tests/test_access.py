@@ -21,7 +21,7 @@ def server():
     log.info(f'Mock server started with pid {proc.pid}')
 
     # Wait for server to start up
-    sleep(1)
+    sleep(5)
 
     yield
 

@@ -127,7 +127,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     except KeyError:
         pass
     else:
-        log.info(f"{name}: replace units {attrs['_unit']} with {new_unit}")
+        log.info(f"{name}: replace units {attrs.get('_unit', '(none)')} with "
+                 f"{new_unit}")
         attrs['_unit'] = ureg.parse_units(new_unit)
 
     # Set index if 1 or more dimensions

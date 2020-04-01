@@ -1515,20 +1515,24 @@ class Scenario(TimeSeries):
         self._backend('set_meta', name, value)
 
     # Input and output
-    def to_excel(self, path):
+    def to_excel(self, path, items=ItemType.SET | ItemType.PAR):
         """Write Scenario to a Microsoft Excel file.
 
         Parameters
         ----------
         path : os.PathLike
-            File to write. Must have suffix '.xlsx'.
+            File to write. Must have suffix :file:`.xlsx`.
+        items : ItemType, optional
+            Types of items to write. Either :attr:`.SET` | :attr:`.PAR` (i.e.
+            only sets and parameters), or :attr:`.MODEL` (also variables and
+            equations, i.e. model solution data).
 
         See also
         --------
         :ref:`excel-data-format`
         read_excel
         """
-        self.platform._backend.write_file(Path(path), ItemType.MODEL,
+        self.platform._backend.write_file(Path(path), items,
                                           filters=dict(scenario=self))
 
     def read_excel(self, path, add_units=False, init_items=False,

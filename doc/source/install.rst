@@ -112,19 +112,22 @@ See also the :ref:`rixmp documentation <rixmp>`.
 1. `Install R <https://www.r-project.org>`_.
 
    .. warning::
-      Ensure the the R version installed is either 32- *or* 64-bit (and >= 3.3.0), consistently with GAMS and Java.
+      Ensure the the R version installed is either 32- *or* 64-bit (and >= 3.5.0), consistently with GAMS and Java.
       Having both 32- and 64-bit versions of R, or mixed 32- and 64-bit versions of different packages, can cause errors.
 
 2. Enter the directory ``rixmp/`` and use R to build and install the package and its dependencies, including reticulate_::
 
    $ cd rixmp
-   $ Rscript -e "install.packages(c('knitr', 'reticulate'))"
+   $ Rscript -e "install.packages(c('knitr', 'reticulate'), repos='http://cran.rstudio.com/')"
    $ R CMD build .
+
+3. Check that there is only one ``*tar.gz`` in the folder::
+
    $ R CMD INSTALL rixmp_*
 
-3. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
+4. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
 
-4. (Optional) For working with Jupyter notebooks using R, install the `IR kernel <https://irkernel.github.io>`_.
+5. (Optional) For working with Jupyter notebooks using R, install the `IR kernel <https://irkernel.github.io>`_.
 
 .. _reticulate: https://rstudio.github.io/reticulate/
 

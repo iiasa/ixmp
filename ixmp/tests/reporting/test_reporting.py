@@ -551,12 +551,16 @@ def test_cli(ixmp_cli, test_mp, test_data_path):
     # TODO warning should be logged
 
     # Reporting produces the expected command-line output
-    assert result.output.endswith("""<xarray.DataArray 'value' (i: 2, j: 3)>
-array([[1.8, 2.5, 1.4],
-       [1.7, 2.5, 1.8]])
-Coordinates:
-  * i        (i) object 'san-diego' 'seattle'
-  * j        (j) object 'chicago' 'new-york' 'topeka'
+    assert result.output.endswith(
+        "i          j       "  # Trailing whitespace
+        """
+seattle    new-york    2.5
+           chicago     1.7
+           topeka      1.8
+san-diego  new-york    2.5
+           chicago     1.8
+           topeka      1.4
+Name: value, dtype: float64
 """)
 
 

@@ -35,12 +35,13 @@ class VersionType(click.ParamType):
 @click.pass_context
 def main(ctx, url, platform, dbprops, model, scenario, version):
     # Load the indicated Platform
+    mp = None
     if url:
         if dbprops or platform or model or scenario or version:
             raise click.UsageError('--platform --model --scenario and/or '
                                    '--version redundant with --url')
 
-        scen, mp = ixmp.Scenario.from_url(url)
+        scen, mp = ScenarioClass.from_url(url)
         ctx.obj = dict(scen=scen, mp=mp)
         return
     elif dbprops and platform:
@@ -50,10 +51,10 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     elif dbprops:
         mp = ixmp.Platform(backend='jdbc', dbprops=dbprops)
 
-    try:
-        ctx.obj = dict(mp=mp)
-    except NameError:
+    if not mp:
         return
+
+    ctx.obj = dict(mp=mp)
 
     # Store the model and scenario name from arguments
     if model:
@@ -64,11 +65,9 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 
     try:
         # Load the indicated Scenario
-        ctx.obj['scen'] = ScenarioClass(mp, ctx.obj['model name'],
-                                        ctx.obj['scenario name'],
-                                        version=version)
-    except KeyError:
-        pass
+        if model and scenario:
+            ctx.obj['scen'] = ScenarioClass(mp, model, scenario,
+                                            version=version)
     except Exception as e:  # pragma: no cover
         raise click.ClickException(e.args[0])
 
@@ -94,6 +93,28 @@ def report(context, config, key):
 
     # Print the target
     print(r.get(key))
+
+
+# ixmp --url "ixmp://ene_ixmp/MESSAGEix-GLOBIOM SSP1/baseline" solve
+@main.command(help='Run scenario solver')
+@click.option('--remove-solution', is_flag=True, default=False,
+              help='Forces removing solution if exists.')
+@click.pass_obj
+def solve(context, remove_solution):
+    """Solve scenario."""
+    if not context:
+        raise click.UsageError('give --url before command solve')
+
+    print('Run scenario solver')
+    scen = context.get('scen')
+    if not scen:
+        print('Scenario not found')
+        return
+    if remove_solution and scen.has_solution():
+        scen.remove_solution()
+        print('Solution removed')
+    scen.solve()
+    print('Solver finished')
 
 
 @main.command()

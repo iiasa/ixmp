@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#304 <https://github.com/iiasa/ixmp/pull/304>`_: Add CLI command to run model solver.
 - `#303 <https://github.com/iiasa/ixmp/pull/303>`_: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).
 - `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by `Scenario.timeseries()`.
 - `#286 <https://github.com/iiasa/ixmp/pull/286>`_,

@@ -125,9 +125,14 @@ See also the :ref:`rixmp documentation <rixmp>`.
 
    $ R CMD INSTALL rixmp_*
 
-4. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
+4. (Optional) Run the built-in test suite to check that *ixmp* and *rixmp* functions, as in *Install ixmp from source 6.* (installing
+   the R ``devtools`` package might be a pre-requisite). In the ``ixmp`` directory type::
+
+    $ py.test --test-r
 
 5. (Optional) For working with Jupyter notebooks using R, install the `IR kernel <https://irkernel.github.io>`_.
+
+6. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
 
 .. _reticulate: https://rstudio.github.io/reticulate/
 

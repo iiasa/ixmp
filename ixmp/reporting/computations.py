@@ -298,7 +298,8 @@ def load_file(path, dims={}):
 
     :file:`.csv`:
        Converted to :class:`.Quantity`. CSV files must have a 'value' column;
-       all others are treated as indices, except as given by `dims`.
+       all others are treated as indices, except as given by `dims`. Lines
+       beginning with '#' are ignored.
 
     Parameters
     ----------
@@ -312,8 +313,7 @@ def load_file(path, dims={}):
     # TODO optionally cache: if the same Reporter is used repeatedly, then the
     #      file will be read each time; instead cache the contents in memory.
     if path.suffix == '.csv':
-        # TODO handle a wider variety of CSV files
-        data = pd.read_csv(path)
+        data = pd.read_csv(path, comment='#')
 
         # Index columns
         index_columns = data.columns.tolist()

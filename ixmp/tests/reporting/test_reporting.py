@@ -326,26 +326,31 @@ def test_reporter_file(tmp_path):
 def test_file_formats(test_data_path, tmp_path):
     r = Reporter()
 
-    expected = xr.DataArray.from_series(
-        pd.read_csv(test_data_path / 'report-input.csv',
+    expected = as_quantity(
+        pd.read_csv(test_data_path / 'report-input0.csv',
                     index_col=['i', 'j'])['value'])
 
     # CSV file is automatically parsed to xr.DataArray
-    p1 = test_data_path / 'report-input.csv'
+    p1 = test_data_path / 'report-input0.csv'
     k = r.add_file(p1)
     assert_qty_equal(r.get(k), expected)
 
+    # Dimensions can be specified
+    p2 = test_data_path / 'report-input1.csv'
+    k2 = r.add_file(p2, dims=['i', 'j'])
+    assert_qty_equal(r.get(k), r.get(k2))
+
     # Write to CSV
-    p2 = tmp_path / 'report-output.csv'
-    r.write(k, p2)
+    p3 = tmp_path / 'report-output.csv'
+    r.write(k, p3)
 
     # Output is identical to input file, except for order
     assert (sorted(p1.read_text().split('\n'))
-            == sorted(p2.read_text().split('\n')))
+            == sorted(p3.read_text().split('\n')))
 
     # Write to Excel
-    p3 = tmp_path / 'report-output.xlsx'
-    r.write(k, p3)
+    p4 = tmp_path / 'report-output.xlsx'
+    r.write(k, p4)
     # TODO check the contents of the Excel file
 
 

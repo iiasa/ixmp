@@ -2,6 +2,7 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 
@@ -289,24 +290,47 @@ def ratio(numerator, denominator):
 
 
 # Input and output
-def load_file(path):
-    """Read the file at *path* and return its contents.
+def load_file(path, dims={}):
+    """Read the file at *path* and return its contents as a :class:`.Quantity`.
 
     Some file formats are automatically converted into objects for direct use
     in reporting code:
 
-    - *csv*: converted to :class:`xarray.DataArray`. CSV files must have a
-      'value' column; all others are treated as indices.
+    :file:`.csv`:
+       Converted to :class:`.Quantity`. CSV files must have a 'value' column;
+       all others are treated as indices, except as given by `dims`.
 
+    Parameters
+    ----------
+    path : pathlib.Path
+        Path to the file to read.
+    dims : collections.abc.Collection or collections.abc.Mapping, optional
+        If a collection of names, other columns besides these and 'value' are
+        discarded. If a mapping, the keys are the column labels in `path`, and
+        the values are the target dimension names.
     """
     # TODO optionally cache: if the same Reporter is used repeatedly, then the
     #      file will be read each time; instead cache the contents in memory.
     if path.suffix == '.csv':
         # TODO handle a wider variety of CSV files
         data = pd.read_csv(path)
+
+        # Index columns
         index_columns = data.columns.tolist()
         index_columns.remove('value')
-        return xr.DataArray.from_series(data.set_index(index_columns)['value'])
+
+        if len(dims):
+            if not isinstance(dims, Mapping):
+                # Convert a list, set, etc. to a dict
+                dims = {d: d for d in dims}
+
+            # - Drop columns not mentioned in *dims*
+            # - Rename columns according to *dims*
+            data = data.drop(columns=set(index_columns) - set(dims.keys())) \
+                       .rename(columns=dims)
+            index_columns = list(dims.values())
+
+        return as_quantity(data.set_index(index_columns)['value'])
     elif path.suffix in ('.xls', '.xlsx'):
         # TODO define expected Excel data input format
         raise NotImplementedError  # pragma: no cover

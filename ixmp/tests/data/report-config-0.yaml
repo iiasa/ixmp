@@ -10,10 +10,10 @@ files:
 # 'dims' argument can be supplied as list or dict
 - path: ./report-input1.csv
   key: report-input1-0
-  dims: [i, j]  # Omit extra dimension 'foo'
+  dims: [i, j_dim]  # Omit extra dimension 'foo'
 - path: ./report-input1.csv
   key: report-input1-1
-  dims: {i: i, j: j}
+  dims: {i: i, j_dim: j}
 
 # Aliases
 alias:

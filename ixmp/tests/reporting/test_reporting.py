@@ -337,7 +337,7 @@ def test_file_formats(test_data_path, tmp_path):
 
     # Dimensions can be specified
     p2 = test_data_path / 'report-input1.csv'
-    k2 = r.add_file(p2, dims=['i', 'j'])
+    k2 = r.add_file(p2, dims=dict(i='i', j_dim='j'))
     assert_qty_equal(r.get(k), r.get(k2))
 
     # Write to CSV

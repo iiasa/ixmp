@@ -209,18 +209,12 @@ def test_reporter_from_dantzig(test_mp, ureg):
     assert rep.full_key('d') == 'd:i-j' and isinstance(rep.full_key('d'), Key)
 
 
-def test_reporter_read_config(test_mp, test_data_path, caplog):
+def test_reporter_read_config(test_mp, test_data_path):
     scen = make_dantzig(test_mp)
-
     rep = Reporter.from_scenario(scen)
 
-    caplog.clear()
-
-    # Warning is raised when reading configuration with unrecognized section(s)
-    rep.read_config(test_data_path / 'report-config-0.yaml')
-
-    assert ("Unrecognized sections ['notarealsection'] in reporting "
-            "configuration will have no effect") == caplog.records[0].message
+    # Configuration can be read from file
+    rep.configure(test_data_path / 'report-config-0.yaml')
 
     # Data from configured file is available
     assert rep.get('d_check').loc['seattle', 'chicago'] == 1.7

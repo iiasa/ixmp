@@ -90,8 +90,7 @@ def report(context, config, key):
     r = Reporter.from_scenario(context['scen'])
 
     # Read the configuration file, if any
-    if config:
-        r.read_config(config)
+    r.configure(config)
 
     # Print the target
     print(r.get(key))

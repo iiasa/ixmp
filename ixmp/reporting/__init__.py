@@ -152,15 +152,6 @@ class Reporter:
 
         return rep
 
-    def read_config(self, path):
-        """Configure the Reporter with information from a YAML file at *path*.
-
-        See :meth:`configure`.
-        """
-        path = Path(path)
-        with open(path, 'r') as f:
-            self.configure(config_dir=path.parent, **yaml.safe_load(f))
-
     def configure(self, path=None, **config):
         """Configure the Reporter.
 
@@ -180,13 +171,14 @@ class Reporter:
         UserWarning
             If *config* contains unrecognized keys.
         """
-        sections = {'default', 'files', 'alias', 'filters'}
-        config = _config_args(path, config, sections=sections)
+        # Maybe load from a path
+        config = _config_args(path, config)
+
+        # Pass to global configuration
+        configure(None, **config)
 
         # Store all configuration in the graph itself
         self.graph['config'] = config.copy()
-
-        config_dir = config.pop('config_dir', '.')
 
         # Read sections
 
@@ -202,7 +194,7 @@ class Reporter:
             if not path.is_absolute():
                 # Resolve relative paths relative to the directory containing
                 # the configuration file
-                path = config_dir / path
+                path = config.get('config_dir', Path.cwd()) / path
             item['path'] = path
 
             self.add_file(**item)
@@ -212,7 +204,7 @@ class Reporter:
             self.add(alias, original)
 
         # Filters
-        self.set_filters(**config.pop('filters', {}))
+        self.set_filters(**config.get('filters', {}))
 
         return self  # to allow chaining
 
@@ -650,28 +642,28 @@ def configure(path=None, **config):
     RENAME_DIMS.update(config.get('rename_dims', {}))
 
 
-def _config_args(path, keys, sections={}):
+def _config_args(path=None, keys={}, sections=set()):
     """Handle configuration arguments."""
+    result = {}
+
     if path:
+        # Load configuration from file
         path = Path(path)
         with open(path, 'r') as f:
-            result = yaml.safe_load(f)
+            result.update(yaml.safe_load(f))
 
         # Also store the directory where the configuration file was located
         result['config_dir'] = path.parent
-    else:
-        result = {}
 
+    # Update with keys
     result.update(keys)
 
     if sections:
-        extra_sections = set(result.keys()) - sections - {'config_dir'}
-        if len(extra_sections):
-            log.warning(('Unrecognized sections {!r} in reporting '
-                         'configuration will have no effect')
-                        .format(sorted(extra_sections)))
-
-    return result
+        if path:
+            sections.add('config_dir')
+        return {s: result[s] for s in sections}
+    else:
+        return result
 
 
 def keys_for_quantity(ix_type, name, scenario):

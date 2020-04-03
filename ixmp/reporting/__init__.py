@@ -162,7 +162,8 @@ class Reporter:
 
         - *default*: the default reporting key; sets :attr:`default_key`.
         - *filters*: a :class:`dict`, passed to :meth:`set_filters`.
-        - *files*: a :class:`dict` mapping keys to file paths.
+        - *files*: a :class:`list` where every element is a :class:`dict`
+          of keyword arguments to :meth:`add_file`.
         - *alias*: a :class:`dict` mapping aliases to original keys.
 
         Warns
@@ -187,13 +188,15 @@ class Reporter:
             pass
 
         # Files with exogenous data
-        for key, path in config.get('files', {}).items():
-            path = Path(path)
+        for item in config.get('files', []):
+            path = Path(item['path'])
             if not path.is_absolute():
                 # Resolve relative paths relative to the directory containing
                 # the configuration file
                 path = config_dir / path
-            self.add_file(path, key)
+            item['path'] = path
+
+            self.add_file(**item)
 
         # Aliases
         for alias, original in config.get('alias', {}).items():

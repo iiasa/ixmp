@@ -15,6 +15,8 @@ Top-level methods and classes:
    configure
    Reporter
    Key
+   Quantity
+   as_quantity
 
 Others:
 
@@ -155,6 +157,9 @@ Others:
           >>>     return Key('foo', dims.split())
           >>> foo('a b c')
           foo:a-b-c
+
+.. automodule:: ixmp.reporting
+   :members: Quantity, as_quantity
 
 
 Computations

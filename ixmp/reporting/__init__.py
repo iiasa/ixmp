@@ -36,12 +36,21 @@ from . import computations
 from .describe import describe_recursive
 from .exceptions import ComputationError
 from .key import Key
+from .quantity import Quantity, as_quantity
 from .utils import (
     REPLACE_UNITS,
     RENAME_DIMS,
     dims_for_qty,
 )
 
+
+__all__ = [
+    'Key',
+    'Quantity',
+    'Reporter',
+    'as_quantity',
+    'configure',
+]
 
 log = logging.getLogger(__name__)
 

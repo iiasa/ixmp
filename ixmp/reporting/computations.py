@@ -290,7 +290,7 @@ def ratio(numerator, denominator):
 
 
 # Input and output
-def load_file(path, dims={}):
+def load_file(path, dims={}, units=None):
     """Read the file at *path* and return its contents as a :class:`.Quantity`.
 
     Some file formats are automatically converted into objects for direct use
@@ -309,6 +309,8 @@ def load_file(path, dims={}):
         If a collection of names, other columns besides these and 'value' are
         discarded. If a mapping, the keys are the column labels in `path`, and
         the values are the target dimension names.
+    units : str or pint.Unit
+        Units to apply to the loaded Quantity.
     """
     # TODO optionally cache: if the same Reporter is used repeatedly, then the
     #      file will be read each time; instead cache the contents in memory.
@@ -319,7 +321,24 @@ def load_file(path, dims={}):
         index_columns = data.columns.tolist()
         index_columns.remove('value')
 
+        try:
+            # Retrieve the unit column from the file
+            units_col = data.pop('unit').unique()
+            index_columns.remove('unit')
+        except KeyError:
+            pass  # No such column; use None or argument value
+        else:
+            # Use a unique value for units of the quantity
+            if len(units_col) > 1:
+                raise ValueError(f'Cannot load {path} with non-unique units '
+                                 + repr(units_col))
+            elif units and units not in units_col:
+                raise ValueError(f'Explicit units {units} do not match '
+                                 f'{units_col[0]} in {path}')
+            units = units_col[0]
+
         if len(dims):
+            # Use specified dimensions
             if not isinstance(dims, Mapping):
                 # Convert a list, set, etc. to a dict
                 dims = {d: d for d in dims}
@@ -330,7 +349,7 @@ def load_file(path, dims={}):
                        .rename(columns=dims)
             index_columns = list(dims.values())
 
-        return as_quantity(data.set_index(index_columns)['value'])
+        return as_quantity(data.set_index(index_columns)['value'], units=units)
     elif path.suffix in ('.xls', '.xlsx'):
         # TODO define expected Excel data input format
         raise NotImplementedError  # pragma: no cover

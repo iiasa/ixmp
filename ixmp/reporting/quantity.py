@@ -141,16 +141,13 @@ class AttrSeries(pd.Series):
         return self
 
 
+#: The current internal class used to represent reporting quantities.
+#: :meth:`as_quantity` always converts to this type.
+Quantity = AttrSeries
 # See also:
 # - test_report_size() for a test that shows how non-sparse xr.DataArray
 #   triggers MemoryError.
-Quantity = AttrSeries
 # Quantity = xr.DataArray
-
-
-def as_attrseries(obj):
-    """Convert obj to an AttrSeries."""
-    return AttrSeries(obj)
 
 
 def as_sparse_xarray(obj):  # pragma: no cover
@@ -176,4 +173,8 @@ def as_sparse_xarray(obj):  # pragma: no cover
         return obj
 
 
-as_quantity = as_attrseries if Quantity is AttrSeries else as_sparse_xarray
+#: Returns
+#: -------
+#: .Quantity
+#:     `obj` converted to the current Quantity type.
+as_quantity = AttrSeries if Quantity is AttrSeries else as_sparse_xarray

@@ -322,17 +322,26 @@ def test_file_formats(test_data_path, tmp_path):
 
     expected = as_quantity(
         pd.read_csv(test_data_path / 'report-input0.csv',
-                    index_col=['i', 'j'])['value'])
+                    index_col=['i', 'j'])['value'],
+        units='km')
 
     # CSV file is automatically parsed to xr.DataArray
     p1 = test_data_path / 'report-input0.csv'
-    k = r.add_file(p1)
+    k = r.add_file(p1, units=pint.Unit('km'))
     assert_qty_equal(r.get(k), expected)
 
     # Dimensions can be specified
     p2 = test_data_path / 'report-input1.csv'
     k2 = r.add_file(p2, dims=dict(i='i', j_dim='j'))
     assert_qty_equal(r.get(k), r.get(k2))
+
+    # Units are loaded from a column
+    assert r.get(k2).attrs['_unit'] == pint.Unit('km')
+
+    # Specifying units that do not match file contents → ComputationError
+    r.add_file(p2, key='bad', dims=dict(i='i', j_dim='j'), units='kg')
+    with pytest.raises(ComputationError):
+        r.get('bad')
 
     # Write to CSV
     p3 = tmp_path / 'report-output.csv'

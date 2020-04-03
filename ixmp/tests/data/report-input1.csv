@@ -1,7 +1,7 @@
-i,j_dim,foo,value
-seattle,new-york,foo,2.5
-seattle,chicago,foo,1.7
-seattle,topeka,foo,1.8
-san-diego,new-york,foo,2.5
-san-diego,chicago,foo,1.8
-san-diego,topeka,foo,1.4
+i,j_dim,foo,value,unit
+seattle,new-york,foo,2.5,km
+seattle,chicago,foo,1.7,km
+seattle,topeka,foo,1.8,km
+san-diego,new-york,foo,2.5,km
+san-diego,chicago,foo,1.8,km
+san-diego,topeka,foo,1.4,km

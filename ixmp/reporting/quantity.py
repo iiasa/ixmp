@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy
 import pandas as pd
 from pandas.core.generic import NDFrame
+import pint
 import xarray as xr
 
 
@@ -24,6 +25,9 @@ class AttrSeries(pd.Series):
     _metadata = ('attrs', )
 
     def __init__(self, *args, **kwargs):
+        if 'units' in kwargs:
+            kwargs.setdefault('attrs', {})
+            kwargs['attrs']['_unit'] = pint.Unit(kwargs.pop('units'))
         if 'attrs' in kwargs:
             # Use provided attrs
             attrs = kwargs.pop('attrs')
@@ -150,13 +154,13 @@ Quantity = AttrSeries
 # Quantity = xr.DataArray
 
 
-def as_sparse_xarray(obj):  # pragma: no cover
+def as_sparse_xarray(obj, units=None):  # pragma: no cover
     """Convert *obj* to :class:`xarray.DataArray` with sparse.COO storage."""
     import sparse
     from xarray.core.dtypes import maybe_promote
 
     if isinstance(obj, xr.DataArray) and isinstance(obj.data, numpy.ndarray):
-        return xr.DataArray(
+        result = xr.DataArray(
             data=sparse.COO.from_numpy(
                 obj.data,
                 fill_value=maybe_promote(obj.data.dtype)[1]),
@@ -166,11 +170,15 @@ def as_sparse_xarray(obj):  # pragma: no cover
             attrs=obj.attrs,
         )
     elif isinstance(obj, pd.Series):
-        return xr.DataArray.from_series(obj, sparse=True)
-
+        result = xr.DataArray.from_series(obj, sparse=True)
     else:
         print(type(obj), type(obj.data))
-        return obj
+        result = obj
+
+    if units:
+        result.attrs['_unit'] = pint.Unit(units)
+
+    return result
 
 
 #: Returns

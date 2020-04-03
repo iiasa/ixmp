@@ -527,7 +527,7 @@ class Reporter:
         return self.add(key, tuple([method, qty] + args), True)
 
     # Convenience methods
-    def add_file(self, path, key=None, dims=set()):
+    def add_file(self, path, key=None, **kwargs):
         """Add exogenous quantities from *path*.
 
         Reporting the `key` or using it in other computations causes `path` to
@@ -539,9 +539,14 @@ class Reporter:
             Path to the file, e.g. '/path/to/foo.ext'.
         key : str or .Key, optional
             Key for the quantity read from the file.
-        dims : dict or list or set, optional
+
+        Other parameters
+        ----------------
+        dims : dict or list or set
             Either a collection of names for dimensions of the quantity, or a
             mapping from names appearing in the input to dimensions.
+        units : str or pint.Unit
+            Units to apply to the loaded Quantity.
 
         Returns
         -------
@@ -556,7 +561,7 @@ class Reporter:
         path = Path(path)
         key = key if key else 'file:{}'.format(path.name)
         return self.add(key,
-                        (partial(computations.load_file, path, dims=dims),),
+                        (partial(computations.load_file, path, **kwargs),),
                         strict=True)
 
     def describe(self, key=None, quiet=True):

@@ -70,7 +70,6 @@ Others:
       full_key
       get
       keys
-      read_config
       set_filters
       visualize
       write

@@ -30,13 +30,9 @@ Building the docs locally
 
 Install the dependencies, above.
 
-On Linux or Apple macOS, from the command line, run::
+From the command line, run::
 
     make html
-
-On Windows, from the command line, run::
-
-    ./make.bat
 
 The build documentation is in ``doc/build/html/`` and can be viewed by opening
 ``doc/build/html/index.html`` in a web browser.

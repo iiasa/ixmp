@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#303 <https://github.com/iiasa/ixmp/pull/303>`_: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).
 - `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by `Scenario.timeseries()`.
 - `#286 <https://github.com/iiasa/ixmp/pull/286>`_,
   `#297 <https://github.com/iiasa/ixmp/pull/297>`_: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix`.

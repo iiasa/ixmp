@@ -131,7 +131,7 @@ def test_reporter_add_product(test_mp, ureg):
     assert key == 'x squared:t-y'
 
     # Product has the expected value
-    exp = as_quantity(x * x)
+    exp = as_quantity(x * x, name='x')
     exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
 
@@ -386,11 +386,10 @@ def test_units(ureg):
     # Create some dummy data
     dims = dict(coords=['a b c'.split()], dims=['x'])
     r.add('energy:x',
-          Quantity(xr.DataArray([1., 3, 8], attrs={'_unit': 'MJ'}, **dims)))
+          as_quantity(xr.DataArray([1., 3, 8], **dims), units='MJ'))
     r.add('time',
-          Quantity(xr.DataArray([5., 6, 8], attrs={'_unit': 'hour'}, **dims)))
-    r.add('efficiency',
-          Quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
+          as_quantity(xr.DataArray([5., 6, 8], **dims), units='hour'))
+    r.add('efficiency', as_quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))

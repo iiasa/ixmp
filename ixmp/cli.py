@@ -95,8 +95,12 @@ def report(context, config, key):
     print(r.get(key))
 
 
-# ixmp --url "ixmp://ene_ixmp/MESSAGEix-GLOBIOM SSP1/baseline" solve
-@main.command(help='Run scenario solver')
+@main.command(help='Solve a Scenario and store results on the Platform.\n\n'
+                   'The scenario indicated by '
+                   '--url or --platform/--model/--scenario/--version is '
+                   'loaded, solved, and the solution results are saved on the '
+                   'Platform. If the scenario already has a solution, '
+                   '--remove-solution must be given.')
 @click.option('--remove-solution', is_flag=True, default=False,
               help='Forces removing solution if exists.')
 @click.pass_obj

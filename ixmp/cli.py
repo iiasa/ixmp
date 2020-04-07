@@ -95,17 +95,18 @@ def report(context, config, key):
     print(r.get(key))
 
 
-@main.command(help='Solve a Scenario and store results on the Platform.\n\n'
-                   'The scenario indicated by '
-                   '--url or --platform/--model/--scenario/--version is '
-                   'loaded, solved, and the solution results are saved on the '
-                   'Platform. If the scenario already has a solution, '
-                   '--remove-solution must be given.')
+@main.command()
 @click.option('--remove-solution', is_flag=True, default=False,
               help='Forces removing solution if exists.')
 @click.pass_obj
 def solve(context, remove_solution):
-    """Solve scenario."""
+    """Solve a Scenario and store results on the Platform.
+
+    The scenario indicated by --url or --platform/--model/--scenario/--version
+    is loaded, solved, and the solution results are saved on the Platform.
+
+    If the scenario already has a solution, --remove-solution must be given.
+    """
     if not context:
         raise click.UsageError('give --url before command solve')
 

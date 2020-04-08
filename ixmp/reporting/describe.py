@@ -2,6 +2,7 @@ from collections.abc import Hashable
 from functools import partial
 from itertools import chain
 
+import dask.core
 import xarray as xr
 
 from .key import Key
@@ -64,6 +65,9 @@ def describe_recursive(graph, comp, depth=0, seen=None):
             item = "list of:\n{}".format(
                 describe_recursive(graph, tuple(arg), depth + 1, seen))
             seen.update(arg)
+        elif isinstance(arg, dask.core.literal):
+            # Item protected with dask.core.quote()
+            item = str(arg.data)
         else:
             item = str(arg)
 

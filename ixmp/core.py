@@ -179,7 +179,7 @@ class Platform:
             - unit
             - region
             - meta
-            - time
+            - subannual
             - year
             - value
         default : bool, optional

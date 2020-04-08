@@ -423,7 +423,7 @@ def test_new_timeseries_as_iamc(test_mp):
 def assert_timeseries(scen, exp=DATA['timeseries'], cols=None, subannual=None):
     """ Asserts scenario timeseries are similar to expected
 
-    Compares region, variable, unit, year and time (if available).
+    Compares region, variable, unit, year and subannual (if available).
     By default it assumes that datasets are sorted in correct order to compare.
 
     :param scen:    scenario object

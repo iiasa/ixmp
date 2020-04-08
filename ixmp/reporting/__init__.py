@@ -319,8 +319,19 @@ class Reporter:
         log.debug('Cull {} -> {} keys'.format(len(self.graph), len(dsk)))
 
         try:
+            # Protect 'config' dict, so that dask schedulers do not try to
+            # interpret its contents as further tasks. Workaround for
+            # https://github.com/dask/dask/issues/3523
+            dsk['config'] = dask.core.quote(dsk['config'])
+        except KeyError:
+            pass
+
+        try:
             return dask_get(dsk, key)
         except Exception as exc:
+            # Print the exception in case ComputationError.__str__ fails;
+            # workaround for https://github.com/iiasa/ixmp/issues/206
+            print(exc)
             raise ComputationError from exc
 
     def keys(self):

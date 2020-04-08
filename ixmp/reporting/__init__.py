@@ -141,10 +141,13 @@ class Reporter:
         for name in scenario.set_list():
             elements = scenario.set(name)
             try:
-                elements = elements.tolist()
+                # Convert Series to list; protect list so that dask schedulers
+                # do not try to interpret its contents as further tasks
+                elements = dask.core.quote(elements.tolist())
             except AttributeError:
                 # pd.DataFrame for a multidimensional set; store as-is
                 pass
+
             rep.add(RENAME_DIMS.get(name, name), elements)
 
         # Add the scenario itself

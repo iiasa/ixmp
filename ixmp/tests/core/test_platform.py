@@ -169,7 +169,7 @@ def test_weakref():
     del mp
 
     # s.platform is a dead weak reference, so it can't be accessed
-    with pytest.raises(AttributeError):
+    with pytest.raises(ReferenceError):
         s.platform._backend
 
     # There is only one remaining reference to the backend: the *backend* name

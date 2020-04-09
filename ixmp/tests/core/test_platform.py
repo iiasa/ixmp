@@ -147,7 +147,7 @@ def test_add_timeslice_duplicate_raise(test_mp):
 def test_weakref():
     """Weak references allow Platforms to be del'd while Scenarios live."""
     mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
-                       url=f'jdbc:hsqldb:mem:test_del_ts')
+                       url=f'jdbc:hsqldb:mem:test_weakref')
 
     # There is one reference to the Platform, and zero weak references
     assert getrefcount(mp) - 1 == 1

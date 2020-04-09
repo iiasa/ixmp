@@ -155,7 +155,7 @@ def test_del_ts():
                        url=f'jdbc:hsqldb:mem:test_del_ts')
 
     # Number of Java objects referenced by the JDBCBackend
-    N_obj = len(mp._backend.jindex.items)
+    N_obj = len(mp._backend.jindex)
     assert N_obj == 0
 
     # Create a list of some Scenario objects
@@ -167,7 +167,7 @@ def test_del_ts():
         )
 
     # Number of referenced objects has increased by 8
-    assert len(mp._backend.jindex.items) == N_obj + N
+    assert len(mp._backend.jindex) == N_obj + N
 
     # Pop and free the objects
     for i in range(N):
@@ -186,16 +186,16 @@ def test_del_ts():
         del s
 
         # Number of referenced objects decreases by 1
-        assert len(mp._backend.jindex.items) == N_obj + N - (i + 1)
+        assert len(mp._backend.jindex) == N_obj + N - (i + 1)
         # ID is no longer in JDBCBackend.jindex
-        assert s_id not in mp._backend.jindex.items
+        assert s_id not in mp._backend.jindex
 
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1
         del s_jobj
 
     # Backend is again empty
-    assert len(mp._backend.jindex.items) == 0
+    assert len(mp._backend.jindex) == 0
 
     # Create a single Scenario
     s = ixmp.Scenario(mp, 'foo', 'bar', version='new')

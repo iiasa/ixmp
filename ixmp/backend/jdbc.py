@@ -7,6 +7,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 from types import SimpleNamespace
+from weakref import WeakKeyDictionary
 
 import jpype
 from jpype import JClass
@@ -132,30 +133,6 @@ def _domain_enum(domain):
                          f'existing domains: {domains}')
 
 
-class IDdict:
-    """Dictionary that stores objects by id(), rather than by reference."""
-    items = {}
-
-    # Set, get, and delete, used by JDBCBackend
-    def __setitem__(self, name, value):
-        self.items[id(name)] = value
-
-    def __getitem__(self, name):
-        return self.items[id(name)]
-
-    def __delitem__(self, name):
-        del self.items[id(name)]
-
-    # String representation for debugging
-    def __repr__(self):
-        from sys import getrefcount
-
-        result = []
-        for k, v in self.items.items():
-            result.append(f'{k}: {v} ({getrefcount(v)} refs)')
-        return '\n'.join(result)
-
-
 class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQLDB instances.
 
@@ -198,7 +175,7 @@ class JDBCBackend(CachingBackend):
 
     #: Mapping from ixmp.TimeSeries object to the underlying
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
-    jindex = IDdict()
+    jindex = WeakKeyDictionary()
 
     def __init__(self, jvmargs=None, **kwargs):
         properties = None

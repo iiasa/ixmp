@@ -200,17 +200,14 @@ def test_del_ts():
 
 @pytest.mark.test_gc
 def test_gc():
-    from ixmp import config as ixmp_config
-    platform_name = 'test_del_ts'
-    ixmp_config.add_platform(platform_name, 'jdbc', 'hsqldb',
-                             url=f'jdbc:hsqldb:mem:{platform_name}')
-    test_mp = ixmp.Platform(name=platform_name, jvmargs='-Xmx7m')
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                       url=f'jdbc:hsqldb:mem:test_gc', jvmargs='-Xmx7m')
     jpype.java.lang.System.gc()
 
     def allocate_scenarios(n):
         for i in range(n):
             scenarios.append(
-                ixmp.Scenario(test_mp, 'foo', f'bar{i}', version='new')
+                ixmp.Scenario(mp, 'foo', f'bar{i}', version='new')
             )
 
     # create a list of some Scenario objects

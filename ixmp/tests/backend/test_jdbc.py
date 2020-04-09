@@ -150,20 +150,24 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-def test_del_ts(test_mp):
+def test_del_ts():
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                       url=f'jdbc:hsqldb:mem:test_del_ts')
+
     # Number of Java objects referenced by the JDBCBackend
-    N_obj = len(test_mp._backend.jindex.items)
+    N_obj = len(mp._backend.jindex.items)
+    assert N_obj == 0
 
     # Create a list of some Scenario objects
     N = 8
     scenarios = []
     for i in range(N):
         scenarios.append(
-            ixmp.Scenario(test_mp, 'foo', f'bar{i}', version='new')
+            ixmp.Scenario(mp, 'foo', f'bar{i}', version='new')
         )
 
     # Number of referenced objects has increased by 8
-    assert len(test_mp._backend.jindex.items) == N_obj + N
+    assert len(mp._backend.jindex.items) == N_obj + N
 
     # Pop and free the objects
     for i in range(N):
@@ -176,19 +180,42 @@ def test_del_ts(test_mp):
         s_id = id(s)
 
         # Underlying Java object
-        s_jobj = test_mp._backend.jindex[s]
+        s_jobj = mp._backend.jindex[s]
 
         # Now delete the Scenario object
         del s
 
         # Number of referenced objects decreases by 1
-        assert len(test_mp._backend.jindex.items) == N_obj + N - (i + 1)
+        assert len(mp._backend.jindex.items) == N_obj + N - (i + 1)
         # ID is no longer in JDBCBackend.jindex
-        assert s_id not in test_mp._backend.jindex.items
+        assert s_id not in mp._backend.jindex.items
 
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1
         del s_jobj
+
+    # Backend is again empty
+    assert len(mp._backend.jindex.items) == 0
+
+    # Create a single Scenario
+    s = ixmp.Scenario(mp, 'foo', 'bar', version='new')
+
+    backend = mp._backend
+
+    # Delete the Platform. Note that this only has an effect if there are no
+    # existing references to it
+    del mp
+
+    # But s.platform is still a reference
+    assert isinstance(s.platform, ixmp.Platform)
+    # So there are *two* remaining references to the *backend*:
+    # - *backend* in the local scope.
+    # - s.platform._backend
+    assert getrefcount(backend) - 1 == 2
+
+    # Only once *s* is deleted is the backend dereferenced/available for GC:
+    del s
+    assert getrefcount(backend) - 1 == 1
 
 
 @pytest.mark.test_gc

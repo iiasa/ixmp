@@ -1,5 +1,7 @@
 """Test all functionality of ixmp.Platform."""
 import logging
+from sys import getrefcount
+from weakref import getweakrefcount
 
 import pandas as pd
 import pytest
@@ -140,3 +142,43 @@ def test_add_timeslice_duplicate_raise(test_mp):
     with raises(ValueError, match='timeslice `foo_slice` already defined with '
                                   'duration 0.2'):
         test_mp.add_timeslice('foo_slice', 'bar_category', 0.3)
+
+
+def test_weakref():
+    """Weak references allow Platforms to be del'd while Scenarios live."""
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                       url=f'jdbc:hsqldb:mem:test_del_ts')
+
+    # There is one reference to the Platform, and zero weak references
+    assert getrefcount(mp) - 1 == 1
+    assert getweakrefcount(mp) == 0
+
+    # Create a single Scenario
+    s = ixmp.Scenario(mp, 'foo', 'bar', version='new')
+
+    # Still one reference to the Platform
+    assert getrefcount(mp) - 1 == 1
+    # …but additionally one weak reference
+    assert getweakrefcount(mp) == 1
+
+    # Make a local reference to the backend
+    backend = mp._backend
+
+    # Delete the Platform. Note that this only has an effect if there are no
+    # existing references to it
+    del mp
+
+    # s.platform is a dead weak reference, so it can't be accessed
+    with pytest.raises(AttributeError):
+        s.platform._backend
+
+    # There is only one remaining reference to the backend: the *backend* name
+    # in the local scope
+    assert getrefcount(backend) - 1 == 1
+
+    # The backend is garbage-collected at this point
+
+    # The Scenario object still lives, but can't be used for anything
+    assert s.model == 'foo'
+
+    # *s* is garbage-collected at this point

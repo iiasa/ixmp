@@ -3,6 +3,7 @@ from itertools import repeat, zip_longest
 import logging
 from pathlib import Path
 from warnings import warn
+from weakref import ref
 
 import numpy as np
 import pandas as pd
@@ -430,9 +431,13 @@ class TimeSeries:
                 self.scheme = scheme
 
         # Set attributes
-        self.platform = mp
         self.model = model
         self.scenario = scenario
+
+        # Store a weak reference to the Platform object. This reference is not
+        # enough to keep the Platform alive, i.e. 'del mp' will work even while
+        # this TimeSeries object lives.
+        self.platform = ref(mp)
 
         if version == 'new':
             # Initialize a new object
@@ -443,8 +448,12 @@ class TimeSeries:
             self._backend('get')
 
     def _backend(self, method, *args, **kwargs):
-        """Convenience for calling *method* on the backend."""
-        return self.platform._backend(self, method, *args, **kwargs)
+        """Convenience for calling *method* on the backend.
+
+        The weak reference to the Platform object is used, if the Platform is
+        still alive.
+        """
+        return self.platform()._backend(self, method, *args, **kwargs)
 
     def __del__(self):
         # Instruct the back end to free memory associated with the TimeSeries

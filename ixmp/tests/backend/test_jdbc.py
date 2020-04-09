@@ -197,26 +197,6 @@ def test_del_ts():
     # Backend is again empty
     assert len(mp._backend.jindex) == 0
 
-    # Create a single Scenario
-    s = ixmp.Scenario(mp, 'foo', 'bar', version='new')
-
-    backend = mp._backend
-
-    # Delete the Platform. Note that this only has an effect if there are no
-    # existing references to it
-    del mp
-
-    # But s.platform is still a reference
-    assert isinstance(s.platform, ixmp.Platform)
-    # So there are *two* remaining references to the *backend*:
-    # - *backend* in the local scope.
-    # - s.platform._backend
-    assert getrefcount(backend) - 1 == 2
-
-    # Only once *s* is deleted is the backend dereferenced/available for GC:
-    del s
-    assert getrefcount(backend) - 1 == 1
-
 
 @pytest.mark.test_gc
 def test_gc():

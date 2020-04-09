@@ -952,6 +952,10 @@ class JDBCBackend(CachingBackend):
             else:  # pragma: no cover
                 _raise_jexception(e)
 
+    def __del__(self):
+        log.debug('Removing platform and closing DB')
+        self.close_db()
+
 
 def start_jvm(jvmargs=None):
     """Start the Java Virtual Machine via :mod:`JPype`.

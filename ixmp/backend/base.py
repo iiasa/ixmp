@@ -1015,12 +1015,20 @@ class CachingBackend(Backend):
     #: using :meth:`cache_get`.
     _cache_hit = {}
 
+    # Backend API methods
+
     def __init__(self):
         super().__init__()
 
         # Empty the cache
         self._cache = {}
         self._cache_hit = {}
+
+    def del_ts(self, ts: TimeSeries):
+        """Invalidate cache entries associated with *ts*."""
+        self.cache_invalidate(ts)
+
+    # New methods for CachingBackend
 
     @classmethod
     def _cache_key(self, ts, ix_type, name, filters=None):

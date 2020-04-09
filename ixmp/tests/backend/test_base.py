@@ -4,6 +4,7 @@ import pytest
 
 from ixmp.backend import ItemType
 from ixmp.backend.base import Backend, CachingBackend
+from ixmp.testing import make_dantzig
 
 
 def test_class():
@@ -80,3 +81,23 @@ def test_cache_non_hashable():
     with pytest.raises(TypeError, match="Object of type .?object.? is not JSON"
                                         " serializable"):
         CachingBackend._cache_key(object(), 'par', 'p', filters)
+
+
+def test_cache_del_ts(test_mp):
+    """Test CachingBackend.del_ts()."""
+    # Since CachingBackend is an abstract class, test it via JDBCBackend
+    backend = test_mp._backend
+    cache_size_pre = len(backend._cache)
+
+    # Load data, thereby adding to the cache
+    s = make_dantzig(test_mp)
+    s.par('d')
+
+    # Cache size has increased
+    assert len(backend._cache) == cache_size_pre + 1
+
+    # Delete the object; associated cache is freed
+    del s
+
+    # Objects were invalidated/removed from cache
+    assert len(backend._cache) == cache_size_pre

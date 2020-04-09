@@ -156,7 +156,6 @@ def test_del_ts():
 
     # Number of Java objects referenced by the JDBCBackend
     N_obj = len(mp._backend.jindex)
-    assert N_obj == 0
 
     # Create a list of some Scenario objects
     N = 8
@@ -195,7 +194,7 @@ def test_del_ts():
         del s_jobj
 
     # Backend is again empty
-    assert len(mp._backend.jindex) == 0
+    assert len(mp._backend.jindex) == N_obj
 
 
 @pytest.mark.test_gc

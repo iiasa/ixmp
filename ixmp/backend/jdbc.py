@@ -32,7 +32,7 @@ LOG_LEVELS = {
     'WARNING': 'WARN',
     'INFO': 'INFO',
     'DEBUG': 'DEBUG',
-    'NOTSET': 'ALL',
+    'NOTSET': 'OFF',
 }
 
 # Java classes, loaded by start_jvm(). These become available as e.g.
@@ -213,6 +213,7 @@ class JDBCBackend(CachingBackend):
 
         try:
             self.jobj = java.Platform('Python', properties)
+            self.set_log_level('INFO')
         except java.NoClassDefFoundError as e:  # pragma: no cover
             raise NameError(f'{e}\nCheck that dependencies of ixmp.jar are '
                             f"included in {Path(__file__).parents[2] / 'lib'}")
@@ -922,7 +923,6 @@ class JDBCBackend(CachingBackend):
                 _raise_jexception(e)
 
     def __del__(self):
-        log.debug('Removing platform and closing DB')
         self.close_db()
 
 

@@ -130,8 +130,10 @@ def test_mp(request, tmp_env, test_data_path):
                              url=f'jdbc:hsqldb:mem:{platform_name}')
 
     # Launch Platform
-    yield Platform(name=platform_name)
-
+    mp = Platform(name=platform_name)
+    yield mp
+    mp.set_log_level('NOTSET')
+    del mp
     # Teardown: remove from config
     ixmp_config.remove_platform(platform_name)
 

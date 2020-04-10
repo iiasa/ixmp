@@ -425,13 +425,15 @@ class Reporter:
                 self.graph['config']['filters'].pop(key, None)
 
     # ixmp data model manipulations
-    def add_product(self, name, *quantities, sums=True):
+    def add_product(self, key, *quantities, sums=True):
         """Add a computation that takes the product of *quantities*.
 
         Parameters
         ----------
-        name : str
-            Name of the new quantity.
+        key : str or Key
+            Key of the new quantity. If a Key, any dimensions are ignored; the
+            dimensions of the product are the union of the dimensions of
+            *quantities*.
         sums : bool, optional
             If :obj:`True`, all partial sums of the new quantity are also
             added.
@@ -446,11 +448,14 @@ class Reporter:
                              self.check_keys(*quantities)))
 
         # Compute a key for the result
-        key = Key.product(name, *base_keys)
+        # Parse the name and tag of the target
+        key = Key.from_str_or_key(key)
+        # New key with dimensions of the product
+        key = Key.product(key.name, *base_keys, tag=key.tag)
 
         # Add the basic product to the graph and index
         self.add(key, tuple([computations.product] + base_keys))
-        self._index[name] = key
+        self._index[key.drop(True)] = key
 
         if sums:
             # Add partial sums of the product

@@ -1,5 +1,5 @@
 from functools import lru_cache, partial
-from itertools import compress
+from itertools import chain, compress
 
 
 class Key:
@@ -45,7 +45,7 @@ class Key:
                    .add_tag(tag)
 
     @classmethod
-    def product(cls, new_name, *keys):
+    def product(cls, new_name, *keys, tag=None):
         """Return a new Key that has the union of dimensions on *keys*.
 
         Dimensions are ordered by their first appearance:
@@ -60,16 +60,11 @@ class Key:
         new_name : str
             Name for the new Key. The names of *keys* are discarded.
         """
-        # Dimensions of first key appear first
-        base_dims = list(keys[0].dims)
+        # Iterable of dimension names from all keys, in order, with repetitions
+        dims = chain(*[k.dims for k in keys])
 
-        # Accumulate additional dimensions from subsequent keys
-        new_dims = []
-        for key in keys[1:]:
-            new_dims.extend(set(key.dims) - set(base_dims) - set(new_dims))
-
-        # Return new key
-        return cls(new_name, base_dims + new_dims)
+        # Return new key. Use dict to keep only unique *dims*, in same order
+        return cls(new_name, dict.fromkeys(dims).keys()).add_tag(tag)
 
     def __repr__(self):
         """Representation of the Key, e.g. '<name:dim1-dim2-dim3:tag>."""

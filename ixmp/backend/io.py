@@ -85,13 +85,13 @@ def s_write_excel(be, s, path, item_type, max_row=1e6):
                 empty_sets.append((name, data))
             continue
 
-        if len(data) > max_row:
-            for i in range(1, int(np.ceil(len(data) / max_row)) + 1):
-                last_row = min(max_row * i, len(data))
+        if len(data) > int(max_row):
+            for i in range(1, int(np.ceil(len(data) / int(max_row))) + 1):
+                last_row = min(int(max_row) * i, len(data))
                 if isinstance(data, pd.Series):
-                    part = data.loc[(i - 1) * max_row:last_row]
+                    part = data.loc[(i - 1) * int(max_row):last_row]
                 else:
-                    part = data.iloc[(i - 1) * max_row:last_row, :]
+                    part = data.iloc[(i - 1) * int(max_row):last_row, :]
 
                 if i > 1:
                     suffix = '({})'.format(i)
@@ -194,7 +194,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             # Read data
             data = xf.parse(name)
             # appending data from repeated sheets due to max row limit
-            sheets = [s for s in xf.sheet_names() if name + '(' in s]
+            sheets = [s for s in xf.sheet_names if name + '(' in s]
             if sheets:
                 for s in sheets:
                     data.append(xf.parse(s), ignore_index=True)
@@ -258,7 +258,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         df = xf.parse(name)
         # appending data from repeated sheets due to max row limit
-        sheets = [s for s in xf.sheet_names() if name + '(' in s]
+        sheets = [s for s in xf.sheet_names if name + '(' in s]
         if sheets:
             for s in sheets:
                 data.append(xf.parse(s), ignore_index=True)

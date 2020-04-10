@@ -17,7 +17,7 @@ class Key:
         ----------
         value : str or Key
             Value to use to generate a new Key.
-        drop : list of str, optional
+        drop : list of str or :obj:`True`, optional
             Existing dimensions of *value* to drop. See :meth:`drop`.
         append : list of str, optional.
             New dimensions to append to the returned Key. See :meth:`append`.
@@ -40,7 +40,7 @@ class Key:
             base = cls(name, dims, _tag)
 
         # Drop and append dimensions; add tag
-        return base.drop(*(base.dims if drop is True else drop)) \
+        return base.drop(*([drop] if drop is True else drop)) \
                    .append(*append) \
                    .add_tag(tag)
 
@@ -115,8 +115,11 @@ class Key:
 
     def drop(self, *dims):
         """Return a new Key with *dims* dropped."""
-        return Key(self.name, filter(lambda d: d not in dims, self.dims),
-                   self.tag)
+        if dims == (True,):
+            new_dims = []
+        else:
+            new_dims = filter(lambda d: d not in dims, self.dims)
+        return Key(self.name, new_dims, self.tag)
 
     def append(self, *dims):
         """Return a new Key with additional dimensions *dims*."""

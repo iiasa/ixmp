@@ -202,6 +202,8 @@ def aggregate(quantity, groups, keep):
     #   can be removed when Quantity = xr.DataArray.
     dim_order = quantity.dims
 
+    attrs = quantity.attrs.copy()
+
     for dim, dim_groups in groups.items():
         # Optionally keep the original values
         values = [quantity] if keep else []
@@ -215,6 +217,9 @@ def aggregate(quantity, groups, keep):
 
         # Reassemble to a single dataarray
         quantity = concat(*values, dim=dim)
+
+    # Preserve attrs
+    quantity.attrs = attrs
 
     return quantity
 

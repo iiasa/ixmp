@@ -640,8 +640,10 @@ def add_test_data(scen):
     scen.add_set('y', y)
 
     # Data
+    ureg = pint.get_application_registry()
     x = xr.DataArray(np.random.rand(len(t), len(y)),
-                     coords=[t, y], dims=['t', 'y'])
+                     coords=[t, y], dims=['t', 'y'],
+                     attrs={'_unit': ureg.Unit('kg')})
 
     # As a pd.DataFrame with units
     x_df = x.to_series().rename('value').reset_index()

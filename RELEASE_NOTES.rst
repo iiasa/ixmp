@@ -4,9 +4,10 @@ Next release
 All changes
 -----------
 
-- `#304 <https://github.com/iiasa/ixmp/pull/304>`_: Add CLI command to run model solver.
+- `#310 <https://github.com/iiasa/ixmp/pull/310>`_: :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes.
+- `#304 <https://github.com/iiasa/ixmp/pull/304>`_: Add CLI command ``ixmp solve`` to run model solver.
 - `#303 <https://github.com/iiasa/ixmp/pull/303>`_: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).
-- `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by `Scenario.timeseries()`.
+- `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by :meth:`.TimeSeries.timeseries`.
 - `#286 <https://github.com/iiasa/ixmp/pull/286>`_,
   `#297 <https://github.com/iiasa/ixmp/pull/297>`_: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix`.
 - `#270 <https://github.com/iiasa/ixmp/pull/270>`_: Include all tests in the ixmp package.

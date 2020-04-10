@@ -1515,7 +1515,7 @@ class Scenario(TimeSeries):
         self._backend('set_meta', name, value)
 
     # Input and output
-    def to_excel(self, path, items=ItemType.SET | ItemType.PAR):
+    def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=1e6):
         """Write Scenario to a Microsoft Excel file.
 
         Parameters
@@ -1526,6 +1526,8 @@ class Scenario(TimeSeries):
             Types of items to write. Either :attr:`.SET` | :attr:`.PAR` (i.e.
             only sets and parameters), or :attr:`.MODEL` (also variables and
             equations, i.e. model solution data).
+        max_row: int, optional
+            max number of rows
 
         See also
         --------
@@ -1533,7 +1535,8 @@ class Scenario(TimeSeries):
         read_excel
         """
         self.platform._backend.write_file(Path(path), items,
-                                          filters=dict(scenario=self))
+                                          filters=dict(scenario=self),
+                                          max_row=max_row)
 
     def read_excel(self, path, add_units=False, init_items=False,
                    commit_steps=False):

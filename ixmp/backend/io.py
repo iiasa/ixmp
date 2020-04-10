@@ -193,6 +193,11 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         if first_pass:
             # Read data
             data = xf.parse(name)
+            # appending data from repeated sheets due to max row limit
+            sheets = [s for s in xf.sheet_names() if name + '(' in s]
+            if sheets:
+                for s in sheets:
+                    data.append(xf.parse(s), ignore_index=True)
 
         # Determine index set(s) for this set
         idx_sets = data.columns.to_list()
@@ -252,6 +257,11 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         # Only parameters beyond this point
 
         df = xf.parse(name)
+        # appending data from repeated sheets due to max row limit
+        sheets = [s for s in xf.sheet_names() if name + '(' in s]
+        if sheets:
+            for s in sheets:
+                data.append(xf.parse(s), ignore_index=True)
 
         if add_units:
             # New units appearing in this parameter

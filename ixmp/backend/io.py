@@ -2,6 +2,7 @@ from collections import deque
 import logging
 
 import pandas as pd
+import numpy as np
 
 from ixmp.utils import as_str_list
 from . import ItemType
@@ -35,7 +36,7 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type):
+def s_write_excel(be, s, path, item_type, max_row=1e6):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
@@ -84,7 +85,23 @@ def s_write_excel(be, s, path, item_type):
                 empty_sets.append((name, data))
             continue
 
-        data.to_excel(writer, sheet_name=name, index=False)
+        if len(data) > max_row:
+            for i in range(1, int(np.ceil(len(data) / max_row)) + 1):
+                last_row = min(max_row * i, len(data))
+                if isinstance(data, pd.Series):
+                    part = data.loc[(i - 1) * max_row:last_row]
+                else:
+                    part = data.iloc[(i - 1) * max_row:last_row, :]
+
+                if i > 1:
+                    suffix = '({})'.format(i)
+                else:
+                    suffix = ''
+
+                part.to_excel(writer, sheet_name=name + suffix,
+                              index=False)
+        else:
+            data.to_excel(writer, sheet_name=name, index=False)
 
     # Discard entries that were not written
     for name in omitted:

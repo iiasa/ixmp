@@ -198,9 +198,10 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == 0, result.output
 
     # Export with a maximum row limit per sheet
-    tmp_path2 = tmp_path.split('dentzig')[0] + 'dantzig2.xlsx'
+    tmp_path2 = str(tmp_path).split('dantzig')[0] + 'dantzig2.xlsx'
+    #assert 'value' in (str(tmp_path2))
     cmd[cmd.index(str(tmp_path))] = str(tmp_path2)
-    cmd.insert(-1, '--max-row')
+    cmd = cmd + ['--max-row', 4]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 

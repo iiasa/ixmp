@@ -455,7 +455,9 @@ class Reporter:
 
         # Add the basic product to the graph and index
         self.add(key, tuple([computations.product] + base_keys))
-        self._index[key.drop(True)] = key
+        # Index <foo:a-b> as 'foo'; <foo:a-b:tag> as 'foo::tag'
+        idx = str(key.drop(True)).rstrip(':')
+        self._index[idx] = key
 
         if sums:
             # Add partial sums of the product

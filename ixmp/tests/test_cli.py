@@ -197,6 +197,13 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
+    # Export with a maximum row limit per sheet
+    tmp_path2 = tmp_path.split('dentzig')[0] + 'dantzig2.xlsx'
+    cmd[cmd.index(str(tmp_path))] = str(tmp_path2)
+    cmd.insert(-1, '--max-row')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
     # Fails without platform/scenario info
     assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
 
@@ -234,6 +241,11 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
 
     # Succeeds
     cmd.insert(-1, '--init-items')
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Import from a file that has multiple sheets (due to row limit)
+    cmd[cmd.index(str(tmp_path))] = str(tmp_path2)
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 

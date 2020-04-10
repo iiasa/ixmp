@@ -140,9 +140,11 @@ def config(action, key, value):
 
 
 @main.command()
+@click.option('--max-row', type=int, default=10,
+              help='Max row numbers in each sheet.')
 @click.argument('path', type=click.Path(writable=True))
 @click.pass_obj
-def export(context, path):
+def export(context, path, max_row):
     """Export scenario data to PATH."""
     # NB want to use type=click.Path(..., path_type=Path), but fails on bytes
     path = Path(path)
@@ -151,7 +153,7 @@ def export(context, path):
         raise click.UsageError('give --url, or --platform, --model, and '
                                '--scenario, before export')
 
-    context['scen'].to_excel(path)
+    context['scen'].to_excel(path, max_row)
 
 
 @main.group('import')

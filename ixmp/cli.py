@@ -153,7 +153,7 @@ def export(context, path, max_row):
         raise click.UsageError('give --url, or --platform, --model, and '
                                '--scenario, before export')
 
-    context['scen'].to_excel(path, max_row)
+    context['scen'].to_excel(path, max_row=max_row)
 
 
 @main.group('import')

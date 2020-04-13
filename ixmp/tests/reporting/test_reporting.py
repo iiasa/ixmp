@@ -135,6 +135,9 @@ def test_reporter_add_product(test_mp, ureg):
     exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
 
+    # add('product', ...) works
+    key = rep.add('product', 'x_squared', 'x', 'x', sums=True)
+
 
 def test_reporter_from_scenario(scenario):
     r = Reporter.from_scenario(scenario)

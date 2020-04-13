@@ -211,29 +211,21 @@ class Reporter:
         return self  # to allow chaining
 
     # Generic graph manipulations
-    def add(self, key, computation, strict=False, index=False, sums=False):
-        """Add *computation* to the Reporter under *key*.
+    def add(self, data, *args, sums=False, **kwargs):
+        """Add tasks to the Reporter.
+
+        :meth:`add` can be called in several ways.
 
         Parameters
         ----------
-        key: hashable
-            A string, Key, or other value identifying the output of *task*.
-        computation: object
-            One of:
-
-            1. any existing key in the Reporter.
-            2. any other literal value or constant.
-            3. a task, i.e. a tuple with a callable followed by one or more
-               computations.
-            4. A list containing one or more of #1, #2, and/or #3.
-        strict : bool, optional
-            If True, *key* must not already exist in the Reporter, and
-            any keys referred to by *computation* must exist.
-        index : bool, optional
-            If True, *key* is added to the index as a full-resolution key, so
-            it can be later retrieved with :meth:`full_key`.
+        data, *args : various
         sums : bool, optional
-            If True, all partial sums of *key* are also added to the Reporter.
+            If :obj:`True`, all partial sums of the key *data* are also added
+            to the Reporter.
+
+        Returns
+        -------
+        list of Keylike
 
         Raises
         ------
@@ -241,39 +233,80 @@ class Reporter:
             If `key` is already in the Reporter; any key referred to by
             `computation` does not exist; or ``sums=True`` and the key for one
             of the partial sums of `key` is already in the Reporter.
+
+        See also
+        ---------
+        add_single
         """
-        added = []
+        if isinstance(data, (str, Key)):
+            # *data* is a key
+            key = data
+            # Use a single tuple if supplied, else the remaining positional
+            # arguments are the computation
+            computation = args[0] if len(args) == 1 else args
 
-        if sums:
-            key = Key.from_str_or_key(key)
-            to_add = chain([(key, computation)], key.iter_sums())
+            if sums:
+                # Convert *key* to a Key object in order to use .iter_sums()
+                key = Key.from_str_or_key(key)
+
+                # List of added keys
+                added = []
+
+                for k, c in chain([(key, computation)], key.iter_sums()):
+                    # Add computations one by one
+                    added.append(self.add_single(k, c, **kwargs))
+
+                return added
+            else:
+                # Add a single computation (without converting to Key)
+                return self.add_single(key, computation, **kwargs)
         else:
-            to_add = [(key, computation)]
+            raise NotImplementedError
 
-        for k, comp in to_add:
-            if strict:
-                if k in self.graph:
-                    # Key already exists in graph
-                    raise KeyExistsError(key)
+    def add_single(self, key, computation, strict=False, index=False):
+        """Add a single *computation* at *key*.
 
-                # Check that keys used in *comp* are in the graph
-                keylike = filter(lambda e: isinstance(e, (str, Key)), comp)
-                self.check_keys(*keylike)
+        Parameters
+        ----------
+        key : str or Key or hashable
+            A string, Key, or other value identifying the output of *task*.
+        computation : object
+            Any dask computation, i.e. one of:
 
-            if index:
-                # String equivalent of *key* with all dimensions dropped
-                idx = str(Key.from_str_or_key(key, drop=True)).rstrip(':')
+            1. any existing key in the Reporter.
+            2. any other literal value or constant.
+            3. a task, i.e. a tuple with a callable followed by one or more
+               computations.
+            4. A list containing one or more of #1, #2, and/or #3.
 
-                # Add *key* to the index
-                self._index[idx] = key
+        strict : bool, optional
+            If True, *key* must not already exist in the Reporter, and
+            any keys referred to by *computation* must exist.
+        index : bool, optional
+            If True, *key* is added to the index as a full-resolution key, so
+            it can be later retrieved with :meth:`full_key`.
+        """
+        if strict:
+            if key in self.graph:
+                # Key already exists in graph
+                raise KeyExistsError(key)
 
-                # Don't index further elements of to_add, e.g. sums
-                index = False
+            # Check that keys used in *comp* are in the graph
+            keylike = filter(lambda e: isinstance(e, (str, Key)), computation)
+            self.check_keys(*keylike)
 
-            self.graph[k] = comp
-            added.append(k)
+        if index:
+            # String equivalent of *key* with all dimensions dropped, but name
+            # and tag retained
+            idx = str(Key.from_str_or_key(key, drop=True)).rstrip(':')
 
-        return added if sums else added[0]
+            # Add *key* to the index
+            self._index[idx] = key
+
+        # Add to the graph
+        self.graph[key] = computation
+
+        return key
 
     def apply(self, generator, *keys):
         """Add computations from `generator` applied to `key`.
@@ -544,7 +577,7 @@ class Reporter:
         if not callable(method):
             raise ValueError(method)
 
-        return self.add(key, tuple([method, qty] + args), True)
+        return self.add(key, tuple([method, qty] + args), strict=True)
 
     # Convenience methods
     def add_file(self, path, key=None, **kwargs):

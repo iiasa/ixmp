@@ -135,9 +135,11 @@ class Key:
         from . import computations
 
         for agg_dims, others in combo_partition(self.dims):
-            yield Key(self.name, agg_dims, self.tag), \
-                (partial(computations.sum, dimensions=others, weights=None),
-                 self)
+            yield (
+                Key(self.name, agg_dims, self.tag),
+                partial(computations.sum, dimensions=others, weights=None),
+                self,
+            )
 
 
 def combo_partition(iterable):

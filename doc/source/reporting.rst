@@ -28,7 +28,7 @@ Others:
 
 .. autoclass:: ixmp.reporting.Reporter
    :members:
-   :exclude-members: graph, add
+   :exclude-members: graph, add, add_load_file, apply
 
    A Reporter is used to postprocess data from from one or more
    :class:`ixmp.Scenario` objects. The :meth:`get` method can be used to:
@@ -46,8 +46,8 @@ Others:
        - Execute user-defined methods.
 
    Every report and quantity (including the results of intermediate steps) is
-   identified by a :class:`utils.Key`; all the keys in a Reporter can be
-   listed with :meth:`keys`.
+   identified by a :class:`.Key`; all the keys in a Reporter can be listed with
+   :meth:`keys`.
 
    Reporter uses a :doc:`graph <graphs>` data structure to keep track of
    **computations**, the atomic steps in postprocessing: for example, a single
@@ -60,6 +60,8 @@ Others:
       add
       add_file
       add_product
+      add_queue
+      add_single
       aggregate
       apply
       check_keys
@@ -78,7 +80,14 @@ Others:
 
    .. automethod:: add
 
-      :meth:`add` may be used to:
+      :meth:`add` may be called with:
+
+      - :class:`list` : `data` is a list of computations like ``[(list(args1), dict(kwargs1)), (list(args2), dict(kwargs2)), ...]`` that are added one-by-one.
+      - the name of a function in :mod:`.computations` (e.g. 'select'): A computation is added with key ``args[0]``, applying the named function to ``args[1:]`` and `kwargs`.
+      - :class:`str`, the name of a :class:`Reporter` method (e.g. 'apply'): the corresponding method (e.g. :meth:`apply`) is called with the `args` and `kwargs`.
+      - Any other :class:`str` or :class:`.Key`: the arguments are passed to :meth:`add_single`.
+
+      :meth:`add` may also be used to:
 
       - Provide an alias from one *key* to another:
 
@@ -102,6 +111,29 @@ Others:
          argument for :meth:`add`; these may conflict with keys that
          identify the results of other computations.
 
+   .. automethod:: apply
+
+      The `generator` may have a type annotation for Reporter on its first positional argument.
+      In this case, a reference to the Reporter is supplied, and `generator` may use the Reporter methods to add computations:
+
+      .. code-block:: python
+
+         def gen0(r: ixmp.Reporter, **kwargs):
+             r.load_file('file0.txt', **kwargs)
+             r.load_file('file1.txt', **kwargs)
+
+         # Use the generator to add several computations
+         rep.apply(my_gen, units='kg')
+
+      Or, `generator` may ``yield`` a sequence (0 or more) of (`key`, `computation`), which are added to the :attr:`graph`:
+
+      .. code-block:: python
+
+         def gen1(**kwargs):
+             op = partial(computations.load_file, **kwargs)
+             yield from (f'file:{i}', op, 'file{i}.txt') for i in range(2)
+
+         rep.apply(my_gen, units='kg')
 
 .. autoclass:: ixmp.reporting.Key
    :members:

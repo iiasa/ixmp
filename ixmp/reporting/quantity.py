@@ -178,6 +178,8 @@ def as_sparse_xarray(obj, units=None):  # pragma: no cover
     return result
 
 
+#: Convert args to :class:`.Quantity` class.
+#:
 #: Returns
 #: -------
 #: .Quantity

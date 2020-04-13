@@ -22,12 +22,14 @@ from .utils import (
 
 __all__ = [
     'aggregate',
+    'apply_units',
     'concat',
     'data_for_quantity',
     'disaggregate_shares',
     'load_file',
     'product',
     'ratio',
+    'select',
     'sum',
     'write_report',
 ]
@@ -335,8 +337,8 @@ def select(qty, indexers, inverse=True):
 def sum(quantity, weights=None, dimensions=None):
     """Sum *quantity* over *dimensions*, with optional *weights*.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     quantity : .Quantity
     weights : .Quantity, optional
         If *dimensions* is given, *weights* must have at least these

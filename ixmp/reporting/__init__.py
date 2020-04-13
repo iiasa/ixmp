@@ -33,6 +33,7 @@ from dask.optimization import cull
 import pint
 import yaml
 
+from ixmp.utils import partial_split
 from . import computations
 from .describe import describe_recursive
 from .exceptions import ComputationError
@@ -268,9 +269,10 @@ class Reporter:
                 return getattr(self, f'add_{name}')(*args, **kwargs)
             else:
                 # Get the function directly
-                computation = getattr(self._computations, name)
+                func = getattr(self._computations, name)
                 # Rearrange arguments: key, computation function, args, …
-                return self.add(args[0], computation, *args[1:], **kwargs)
+                func, kwargs = partial_split(func, kwargs)
+                return self.add(args[0], func, *args[1:], **kwargs)
 
         elif isinstance(data, str) and data in dir(self):
             # Name of another method, e.g. 'apply'

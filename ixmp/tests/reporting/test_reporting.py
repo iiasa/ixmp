@@ -117,6 +117,15 @@ def test_reporter_add():
     r.add('foo:a-b-c', [], sums=True)
     assert 'foo:b' in r
 
+    # add(name, ...) where name is the name of a computation
+    r.add('select', 'bar', 'a', indexers={'dim': ['d0', 'd1', 'd2']})
+
+    # add(name, ...) with keyword arguments not recognized by the computation
+    # raises an exception
+    msg = "unexpected keyword argument 'bad_kwarg'"
+    with pytest.raises(TypeError, match=msg):
+        r.add('select', 'bar', 'a', bad_kwarg='foo', index=True)
+
 
 def test_reporter_add_queue():
     r = Reporter()

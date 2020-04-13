@@ -118,6 +118,33 @@ def test_reporter_add():
     assert 'foo:b' in r
 
 
+def test_reporter_add_queue():
+    r = Reporter()
+    r.add('foo-0', (lambda x: x, 42))
+
+    # A computation
+    def _product(a, b):
+        return a * b
+
+    # A queue of computations to add. Only foo-1 succeeds on the first pass;
+    # only foo-2 on the second pass, etc.
+    strict = dict(strict=True)
+    queue = [
+        (('foo-4', _product, 'foo-3', 10), strict),
+        (('foo-3', _product, 'foo-2', 10), strict),
+        (('foo-2', _product, 'foo-1', 10), strict),
+        (('foo-1', _product, 'foo-0', 10), {}),
+    ]
+
+    # Maximum 3 attempts → foo-4 fails on the start of the 3rd pass
+    with pytest.raises(MissingKeyError, match='foo-3'):
+        r.add(queue, max_tries=3, fail='raise')
+
+    # But foo-2 was successfully added on the second pass, and gives the
+    # correct result
+    assert r.get('foo-2') == 42 * 10 * 10
+
+
 def test_reporter_add_product(test_mp, ureg):
     scen = ixmp.Scenario(test_mp, 'reporter_add_product',
                          'reporter_add_product', 'new')

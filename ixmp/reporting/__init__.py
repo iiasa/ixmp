@@ -65,7 +65,7 @@ class KeyExistsError(KeyError):
 
 class MissingKeyError(KeyError):
     def __str__(self):
-        return f'required keys {self.args!r} not defined'
+        return f'required keys {repr(self.args)} not defined'
 
 
 class Reporter:
@@ -302,7 +302,7 @@ class Reporter:
             # Some other kind of import
             raise ValueError(data)
 
-    def add_queue(self, queue, max_tries=0, fail='raise'):
+    def add_queue(self, queue, max_tries=1, fail='raise'):
         """Add tasks from a list or `queue`.
 
         Parameters
@@ -321,29 +321,34 @@ class Reporter:
         added = []
 
         # Iterate over elements from queue, then from retry. On the first pass,
-        # count == 0; on subsequent passes, it is incremented.
-        for count, (args, kwargs) in chain(zip(repeat(0), queue), retry):
+        # count == 1; on subsequent passes, it is incremented.
+        for count, (args, kwargs) in chain(zip(repeat(1), queue), retry):
             try:
                 # Recurse
                 added.append(self.add(*args, **kwargs))
-            except KeyError as e:
+            except KeyError as exc:
                 # Adding failed
 
                 # Information for debugging
-                info = [repr(e), repr(args), repr(kwargs)]
+                info = [f'Failed {count} times to add:',
+                        f'    ({repr(args)}, {repr(kwargs)})',
+                        f'    with {repr(exc)}']
+
+                def _log(level):
+                    [log.log(level, i) for i in info]
 
                 if count < max_tries:
+                    _log(logging.DEBUG)
                     # This may only be due to items being out of order, so
                     # retry silently
-                    log.debug('\n  '.join(['Will retry adding:'] + info))
                     retry.append((count + 1, (args, kwargs)))
                 else:
                     # More than *max_tries* failures; something
                     if fail == 'raise':
-                        raise RuntimeError(info)
+                        _log(logging.ERROR)
+                        raise
                     else:
-                        log.log(fail.lower(),
-                                '\n  '.join(['Failed to add:'] + info))
+                        _log(getattr(logging, fail.upper()))
 
         return added
 

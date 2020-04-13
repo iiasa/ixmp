@@ -804,7 +804,7 @@ def configure(path=None, **config):
     RENAME_DIMS.update(config.get('rename_dims', {}))
 
 
-def _config_args(path=None, keys={}, sections=set()):
+def _config_args(path=None, keys={}):
     """Handle configuration arguments."""
     result = {}
 
@@ -820,12 +820,7 @@ def _config_args(path=None, keys={}, sections=set()):
     # Update with keys
     result.update(keys)
 
-    if sections:
-        if path:
-            sections.add('config_dir')
-        return {s: result[s] for s in sections}
-    else:
-        return result
+    return result
 
 
 def keys_for_quantity(ix_type, name, scenario):

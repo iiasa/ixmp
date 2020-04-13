@@ -235,7 +235,7 @@ def test_reporter_apply():
     def _product(a, b):
         return a * b
 
-    # A generator method that yields keys and computations
+    # A generator function that yields keys and computations
     def baz_qux(key):
         yield key + ':baz', (_product, key, 0.5)
         yield key + ':qux', (_product, key, 1.1)
@@ -264,12 +264,24 @@ def test_reporter_apply():
     assert r.get('foo:baz__bar:qux') == 42 * 0.5 * 11 * 1.1
 
     # A useless generator that does nothing
-    def useless(key):
+    def useless():
         return
-    r.apply(useless, 'foo:baz__bar:qux')
+    r.apply(useless)
 
     # Nothing added to the reporter
     assert len(r.keys()) == N
+
+    # Adding with a generator that takes Reporter as the first argument
+    def add_many(rep: Reporter, max=5):
+        [rep.add(f'foo{x}', _product, 'foo', x) for x in range(max)]
+
+    r.apply(add_many, max=10)
+
+    # Function was called, adding keys
+    assert len(r.keys()) == N + 10
+
+    # Keys work
+    assert r.get('foo9') == 42 * 9
 
 
 def test_reporter_disaggregate():

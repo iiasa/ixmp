@@ -58,15 +58,26 @@ def apply_units(qty, units, quiet=False):
     quiet : bool, optional
         If :obj:`True` log on level ``DEBUG``.
     """
-    existing = getattr(qty.attrs.get('_unit', {}), 'dimensionality', {})
-    new_units = REGISTRY(units)
+    existing = qty.attrs.get('_unit', None)
+    existing_dims = getattr(existing, 'dimensionality', {})
+    new_units = REGISTRY.parse_units(units)
 
-    if len(existing) and existing != new_units:
-        log.warning(f'Overwriting {existing} with {new_units}')
+    if existing:
+        if existing_dims != new_units.dimensionality:
+            msg = f"Replace '{existing}' with incompatible '{new_units}'"
+            log.warning(msg)
+            result = qty.copy()
+        else:
+            log.debug(f"Convert '{existing}' to '{new_units}'")
+            # NB use a factor because pint.Quantity cannot wrap AttrSeries
+            factor = REGISTRY.Quantity(1.0, existing).to(new_units).magnitude
+            result = qty * factor
+    else:
+        result = qty.copy()
 
-    qty.attrs['_unit'] = new_units
+    result.attrs['_unit'] = new_units
 
-    return qty
+    return result
 
 
 def data_for_quantity(ix_type, name, column, scenario, config):
@@ -312,7 +323,7 @@ def ratio(numerator, denominator):
     return result
 
 
-def select(qty, indexers, inverse=True):
+def select(qty, indexers, inverse=False):
     """Select from *qty* based on *indexers*.
 
     Parameters

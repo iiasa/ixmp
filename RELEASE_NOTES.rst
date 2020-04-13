@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#312 <https://github.com/iiasa/ixmp/pull/312>`_: Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add`.
 - `#310 <https://github.com/iiasa/ixmp/pull/310>`_: :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes.
 - `#304 <https://github.com/iiasa/ixmp/pull/304>`_: Add CLI command ``ixmp solve`` to run model solver.
 - `#303 <https://github.com/iiasa/ixmp/pull/303>`_: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).

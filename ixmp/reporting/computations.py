@@ -94,8 +94,6 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     """
     log.debug(f'{name}: retrieve data')
 
-    ureg = pint.get_application_registry()
-
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
     filters = config.get('filters', None)
@@ -144,7 +142,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         if 'mixed units' in e.args[0]:
             # Discard mixed units
             log.warning(f'{name}: {e.args[0]} discarded')
-            attrs = {'_unit': ureg.parse_units('')}
+            attrs = {'_unit': REGISTRY.Unit('')}
         else:
             # Raise all other ValueErrors
             raise
@@ -157,7 +155,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     else:
         log.info(f"{name}: replace units {attrs.get('_unit', '(none)')} with "
                  f"{new_unit}")
-        attrs['_unit'] = ureg.parse_units(new_unit)
+        attrs['_unit'] = REGISTRY.Unit(new_unit)
 
     # Set index if 1 or more dimensions
     if len(dims):
@@ -188,21 +186,6 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         pass
 
     return qty
-
-
-# Calculation
-# TODO: should we call this weighted sum?
-def sum(quantity, weights=None, dimensions=None):
-    """Sum *quantity* over *dimensions*, with optional *weights*."""
-    if weights is None:
-        weights, w_total = 1, 1
-    else:
-        w_total = weights.sum(dim=dimensions)
-
-    result = (quantity * weights).sum(dim=dimensions) / w_total
-    result.attrs['_unit'] = collect_units(quantity)[0]
-
-    return result
 
 
 def aggregate(quantity, groups, keep):
@@ -308,7 +291,13 @@ def product(*quantities):
 
 
 def ratio(numerator, denominator):
-    """Return the ratio *numerator* / *denominator*."""
+    """Return the ratio *numerator* / *denominator*.
+
+    Parameters
+    ----------
+    numerator : .Quantity
+    denominator : .Quantity
+    """
     # Handle units
     u_num, u_denom = collect_units(numerator, denominator)
 
@@ -341,6 +330,30 @@ def select(qty, indexers, inverse=True):
         indexers = new_indexers
 
     return qty.sel(indexers)
+
+
+def sum(quantity, weights=None, dimensions=None):
+    """Sum *quantity* over *dimensions*, with optional *weights*.
+
+    Parameter
+    ---------
+    quantity : .Quantity
+    weights : .Quantity, optional
+        If *dimensions* is given, *weights* must have at least these
+        dimensions. Otherwise, any dimensions are valid.
+    dimensions : list of str, optional
+        If not provided, sum over all dimensions. If provided, sum over these
+        dimensions.
+    """
+    if weights is None:
+        weights, w_total = 1, 1
+    else:
+        w_total = weights.sum(dim=dimensions)
+
+    result = (quantity * weights).sum(dim=dimensions) / w_total
+    result.attrs['_unit'] = collect_units(quantity)[0]
+
+    return result
 
 
 # Input and output

@@ -175,6 +175,7 @@ Computations
 
    .. autosummary::
       aggregate
+      apply_units
       disaggregate_shares
       product
       ratio

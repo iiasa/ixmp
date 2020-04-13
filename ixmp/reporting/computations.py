@@ -35,9 +35,36 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
+# ixmp.reporting uses whichever pint.UnitRegistry is set as pint's application
+# -wide registry
+REGISTRY = pint.get_application_registry()
 
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
+
+
+def apply_units(qty, units, quiet=False):
+    """Simply apply *units* to *qty*.
+
+    Logs on level ``WARNING`` if *qty* already has existing units.
+
+    Parameters
+    ----------
+    qty : .Quantity
+    units : str or pint.Unit
+        Units to apply to *qty*
+    quiet : bool, optional
+        If :obj:`True` log on level ``DEBUG``.
+    """
+    existing = getattr(qty.attrs.get('_unit', {}), 'dimensionality', {})
+    new_units = REGISTRY(units)
+
+    if len(existing) and existing != new_units:
+        log.warning(f'Overwriting {existing} with {new_units}')
+
+    qty.attrs['_unit'] = new_units
+
+    return qty
 
 
 def data_for_quantity(ix_type, name, column, scenario, config):

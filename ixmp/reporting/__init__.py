@@ -69,7 +69,6 @@ class Reporter:
     """Class for generating reports on :class:`ixmp.Scenario` objects."""
     # TODO meet the requirements:
     # A3iii. Interpolation.
-    # A7. Renaming of outputs.
 
     #: A dask-format :doc:`graph <graphs>`.
     graph = {'config': {}}

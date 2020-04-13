@@ -321,6 +321,28 @@ def ratio(numerator, denominator):
     return result
 
 
+def select(qty, indexers, inverse=True):
+    """Select from *qty* based on *indexers*.
+
+    Parameters
+    ----------
+    qty : .Quantity
+    select : dict (str -> list of str)
+        Elements to be selected from *qty*. Mapping from dimension names to
+        labels along each dimension.
+    inverse : bool, optional
+        If :obj:`True`, *remove* the items in indexers instead of keeping them.
+    """
+    if inverse:
+        new_indexers = {}
+        for dim, labels in indexers.items():
+            new_indexers[dim] = list(filter(lambda l: l not in labels,
+                                            qty.coords[dim]))
+        indexers = new_indexers
+
+    return qty.sel(indexers)
+
+
 # Input and output
 def load_file(path, dims={}, units=None):
     """Read the file at *path* and return its contents as a :class:`.Quantity`.

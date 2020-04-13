@@ -179,6 +179,7 @@ Computations
       disaggregate_shares
       product
       ratio
+      select
       sum
 
    Input and output:

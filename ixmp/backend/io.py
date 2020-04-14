@@ -261,7 +261,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         sheets = [s for s in xf.sheet_names if name + '(' in s]
         if sheets:
             for s in sheets:
-                data.append(xf.parse(s), ignore_index=True)
+                df.append(xf.parse(s), ignore_index=True)
 
         if add_units:
             # New units appearing in this parameter

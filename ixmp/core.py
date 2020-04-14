@@ -1515,7 +1515,7 @@ class Scenario(TimeSeries):
         self._backend('set_meta', name, value)
 
     # Input and output
-    def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=1e6):
+    def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):
         """Write Scenario to a Microsoft Excel file.
 
         Parameters

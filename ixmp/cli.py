@@ -140,7 +140,7 @@ def config(action, key, value):
 
 
 @main.command()
-@click.option('--max-row', type=int, default=10,
+@click.option('--max-row', type=int, default=5,
               help='Max row numbers in each sheet.')
 @click.argument('path', type=click.Path(writable=True))
 @click.pass_obj

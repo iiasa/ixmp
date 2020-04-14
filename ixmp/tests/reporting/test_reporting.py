@@ -27,6 +27,8 @@ from ixmp.testing import (
     assert_qty_equal,
 )
 
+from . import add_test_data
+
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -117,6 +119,42 @@ def test_reporter_add():
     r.add('foo:a-b-c', [], sums=True)
     assert 'foo:b' in r
 
+    # add(name, ...) where name is the name of a computation
+    r.add('select', 'bar', 'a', indexers={'dim': ['d0', 'd1', 'd2']})
+
+    # add(name, ...) with keyword arguments not recognized by the computation
+    # raises an exception
+    msg = "unexpected keyword argument 'bad_kwarg'"
+    with pytest.raises(TypeError, match=msg):
+        r.add('select', 'bar', 'a', bad_kwarg='foo', index=True)
+
+
+def test_reporter_add_queue():
+    r = Reporter()
+    r.add('foo-0', (lambda x: x, 42))
+
+    # A computation
+    def _product(a, b):
+        return a * b
+
+    # A queue of computations to add. Only foo-1 succeeds on the first pass;
+    # only foo-2 on the second pass, etc.
+    strict = dict(strict=True)
+    queue = [
+        (('foo-4', _product, 'foo-3', 10), strict),
+        (('foo-3', _product, 'foo-2', 10), strict),
+        (('foo-2', _product, 'foo-1', 10), strict),
+        (('foo-1', _product, 'foo-0', 10), {}),
+    ]
+
+    # Maximum 3 attempts → foo-4 fails on the start of the 3rd pass
+    with pytest.raises(MissingKeyError, match='foo-3'):
+        r.add(queue, max_tries=3, fail='raise')
+
+    # But foo-2 was successfully added on the second pass, and gives the
+    # correct result
+    assert r.get('foo-2') == 42 * 10 * 10
+
 
 def test_reporter_add_product(test_mp, ureg):
     scen = ixmp.Scenario(test_mp, 'reporter_add_product',
@@ -134,6 +172,9 @@ def test_reporter_add_product(test_mp, ureg):
     exp = as_quantity(x * x, name='x')
     exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
+
+    # add('product', ...) works
+    key = rep.add('product', 'x_squared', 'x', 'x', sums=True)
 
 
 def test_reporter_from_scenario(scenario):
@@ -232,7 +273,7 @@ def test_reporter_apply():
     def _product(a, b):
         return a * b
 
-    # A generator method that yields keys and computations
+    # A generator function that yields keys and computations
     def baz_qux(key):
         yield key + ':baz', (_product, key, 0.5)
         yield key + ':qux', (_product, key, 1.1)
@@ -261,12 +302,24 @@ def test_reporter_apply():
     assert r.get('foo:baz__bar:qux') == 42 * 0.5 * 11 * 1.1
 
     # A useless generator that does nothing
-    def useless(key):
+    def useless():
         return
-    r.apply(useless, 'foo:baz__bar:qux')
+    r.apply(useless)
 
     # Nothing added to the reporter
     assert len(r.keys()) == N
+
+    # Adding with a generator that takes Reporter as the first argument
+    def add_many(rep: Reporter, max=5):
+        [rep.add(f'foo{x}', _product, 'foo', x) for x in range(max)]
+
+    r.apply(add_many, max=10)
+
+    # Function was called, adding keys
+    assert len(r.keys()) == N + 10
+
+    # Keys work
+    assert r.get('foo9') == 42 * 9
 
 
 def test_reporter_disaggregate():
@@ -624,35 +677,6 @@ def test_report_size(test_mp):
 
     # All quantities together trigger MemoryError
     rep.get('bigmem')
-
-
-def add_test_data(scen):
-    # New sets
-    t_foo = ['foo{}'.format(i) for i in (1, 2, 3)]
-    t_bar = ['bar{}'.format(i) for i in (4, 5, 6)]
-    t = t_foo + t_bar
-    y = list(map(str, range(2000, 2051, 10)))
-
-    # Add to scenario
-    scen.init_set('t')
-    scen.add_set('t', t)
-    scen.init_set('y')
-    scen.add_set('y', y)
-
-    # Data
-    ureg = pint.get_application_registry()
-    x = xr.DataArray(np.random.rand(len(t), len(y)),
-                     coords=[t, y], dims=['t', 'y'],
-                     attrs={'_unit': ureg.Unit('kg')})
-
-    # As a pd.DataFrame with units
-    x_df = x.to_series().rename('value').reset_index()
-    x_df['unit'] = 'kg'
-
-    scen.init_par('x', ['t', 'y'])
-    scen.add_par('x', x_df)
-
-    return t, t_foo, t_bar, x
 
 
 def test_aggregate(test_mp):

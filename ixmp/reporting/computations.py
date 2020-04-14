@@ -22,12 +22,14 @@ from .utils import (
 
 __all__ = [
     'aggregate',
+    'apply_units',
     'concat',
     'data_for_quantity',
     'disaggregate_shares',
     'load_file',
     'product',
     'ratio',
+    'select',
     'sum',
     'write_report',
 ]
@@ -35,9 +37,49 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
+# ixmp.reporting uses whichever pint.UnitRegistry is set as pint's application
+# -wide registry
+REGISTRY = pint.get_application_registry()
 
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
+
+
+def apply_units(qty, units, quiet=False):
+    """Simply apply *units* to *qty*.
+
+    Logs on level ``WARNING`` if *qty* already has existing units.
+
+    Parameters
+    ----------
+    qty : .Quantity
+    units : str or pint.Unit
+        Units to apply to *qty*
+    quiet : bool, optional
+        If :obj:`True` log on level ``DEBUG``.
+    """
+    existing = qty.attrs.get('_unit', None)
+    existing_dims = getattr(existing, 'dimensionality', {})
+    new_units = REGISTRY.parse_units(units)
+
+    if len(existing_dims):
+        # Some existing dimensions: log a message either way
+        if existing_dims == new_units.dimensionality:
+            log.debug(f"Convert '{existing}' to '{new_units}'")
+            # NB use a factor because pint.Quantity cannot wrap AttrSeries
+            factor = REGISTRY.Quantity(1.0, existing).to(new_units).magnitude
+            result = qty * factor
+        else:
+            msg = f"Replace '{existing}' with incompatible '{new_units}'"
+            log.warning(msg)
+            result = qty.copy()
+    else:
+        # No units, or dimensionless
+        result = qty.copy()
+
+    result.attrs['_unit'] = new_units
+
+    return result
 
 
 def data_for_quantity(ix_type, name, column, scenario, config):
@@ -66,8 +108,6 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         Data for *name*.
     """
     log.debug(f'{name}: retrieve data')
-
-    ureg = pint.get_application_registry()
 
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
@@ -117,7 +157,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         if 'mixed units' in e.args[0]:
             # Discard mixed units
             log.warning(f'{name}: {e.args[0]} discarded')
-            attrs = {'_unit': ureg.parse_units('')}
+            attrs = {'_unit': REGISTRY.Unit('')}
         else:
             # Raise all other ValueErrors
             raise
@@ -130,7 +170,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     else:
         log.info(f"{name}: replace units {attrs.get('_unit', '(none)')} with "
                  f"{new_unit}")
-        attrs['_unit'] = ureg.parse_units(new_unit)
+        attrs['_unit'] = REGISTRY.Unit(new_unit)
 
     # Set index if 1 or more dimensions
     if len(dims):
@@ -161,21 +201,6 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         pass
 
     return qty
-
-
-# Calculation
-# TODO: should we call this weighted sum?
-def sum(quantity, weights=None, dimensions=None):
-    """Sum *quantity* over *dimensions*, with optional *weights*."""
-    if weights is None:
-        weights, w_total = 1, 1
-    else:
-        w_total = weights.sum(dim=dimensions)
-
-    result = (quantity * weights).sum(dim=dimensions) / w_total
-    result.attrs['_unit'] = collect_units(quantity)[0]
-
-    return result
 
 
 def aggregate(quantity, groups, keep):
@@ -281,7 +306,13 @@ def product(*quantities):
 
 
 def ratio(numerator, denominator):
-    """Return the ratio *numerator* / *denominator*."""
+    """Return the ratio *numerator* / *denominator*.
+
+    Parameters
+    ----------
+    numerator : .Quantity
+    denominator : .Quantity
+    """
     # Handle units
     u_num, u_denom = collect_units(numerator, denominator)
 
@@ -290,6 +321,52 @@ def ratio(numerator, denominator):
 
     if Quantity is AttrSeries:
         result.dropna(inplace=True)
+
+    return result
+
+
+def select(qty, indexers, inverse=False):
+    """Select from *qty* based on *indexers*.
+
+    Parameters
+    ----------
+    qty : .Quantity
+    select : dict (str -> list of str)
+        Elements to be selected from *qty*. Mapping from dimension names to
+        labels along each dimension.
+    inverse : bool, optional
+        If :obj:`True`, *remove* the items in indexers instead of keeping them.
+    """
+    if inverse:
+        new_indexers = {}
+        for dim, labels in indexers.items():
+            new_indexers[dim] = list(filter(lambda l: l not in labels,
+                                            qty.coords[dim]))
+        indexers = new_indexers
+
+    return qty.sel(indexers)
+
+
+def sum(quantity, weights=None, dimensions=None):
+    """Sum *quantity* over *dimensions*, with optional *weights*.
+
+    Parameters
+    ----------
+    quantity : .Quantity
+    weights : .Quantity, optional
+        If *dimensions* is given, *weights* must have at least these
+        dimensions. Otherwise, any dimensions are valid.
+    dimensions : list of str, optional
+        If not provided, sum over all dimensions. If provided, sum over these
+        dimensions.
+    """
+    if weights is None:
+        weights, w_total = 1, 1
+    else:
+        w_total = weights.sum(dim=dimensions)
+
+    result = (quantity * weights).sum(dim=dimensions) / w_total
+    result.attrs['_unit'] = collect_units(quantity)[0]
 
     return result
 

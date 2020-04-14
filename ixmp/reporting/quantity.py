@@ -169,7 +169,6 @@ def as_sparse_xarray(obj, units=None):  # pragma: no cover
     elif isinstance(obj, pd.Series):
         result = xr.DataArray.from_series(obj, sparse=True)
     else:
-        print(type(obj), type(obj.data))
         result = obj
 
     if units:

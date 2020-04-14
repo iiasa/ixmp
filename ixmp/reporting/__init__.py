@@ -17,6 +17,12 @@
 #     DataArrays is non-trivial; see https://stackoverflow.com/q/56396122/
 #   - Internal computations have .attr['_unit'] describing the units of the
 #     quantity, to carry these through calculations.
+#
+# - Always call pint.get_application_registry() from *within* functions
+#   (instead of in global scope); this allows downstream code to change which
+#   registry is used.
+#   - The top-level methods pint.Quantity() and pint.Unit() can also be used;
+#     these use the application registry.
 
 from functools import partial
 from inspect import signature
@@ -55,8 +61,6 @@ __all__ = [
 ]
 
 log = logging.getLogger(__name__)
-
-REGISTRY = pint.get_application_registry()
 
 
 class KeyExistsError(KeyError):
@@ -462,7 +466,6 @@ class Reporter:
         dsk, deps = cull(self.graph, key)
         log.debug('Cull {} -> {} keys'.format(len(self.graph), len(dsk)))
 
-        print(dsk)
         try:
             # Protect 'config' dict, so that dask schedulers do not try to
             # interpret its contents as further tasks. Workaround for
@@ -760,7 +763,8 @@ class Reporter:
 
     @property
     def unit_registry(self):
-        return REGISTRY
+        """The :meth:`pint.UnitRegistry` used by the Reporter."""
+        return pint.get_application_registry()
 
 
 def configure(path=None, **config):
@@ -796,8 +800,9 @@ def configure(path=None, **config):
     units = config.get('units', {})
 
     # Define units
+    registry = pint.get_application_registry()
     try:
-        REGISTRY.define(units['define'].strip())
+        registry.define(units['define'].strip())
     except KeyError:
         pass
     except pint.DefinitionSyntaxError as e:

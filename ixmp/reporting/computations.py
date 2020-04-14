@@ -37,10 +37,6 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-# ixmp.reporting uses whichever pint.UnitRegistry is set as pint's application
-# -wide registry
-REGISTRY = pint.get_application_registry()
-
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
 
@@ -58,16 +54,18 @@ def apply_units(qty, units, quiet=False):
     quiet : bool, optional
         If :obj:`True` log on level ``DEBUG``.
     """
+    registry = pint.get_application_registry()
+
     existing = qty.attrs.get('_unit', None)
     existing_dims = getattr(existing, 'dimensionality', {})
-    new_units = REGISTRY.parse_units(units)
+    new_units = registry.parse_units(units)
 
     if len(existing_dims):
         # Some existing dimensions: log a message either way
         if existing_dims == new_units.dimensionality:
             log.debug(f"Convert '{existing}' to '{new_units}'")
             # NB use a factor because pint.Quantity cannot wrap AttrSeries
-            factor = REGISTRY.Quantity(1.0, existing).to(new_units).magnitude
+            factor = registry.Quantity(1.0, existing).to(new_units).magnitude
             result = qty * factor
         else:
             msg = f"Replace '{existing}' with incompatible '{new_units}'"
@@ -108,6 +106,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         Data for *name*.
     """
     log.debug(f'{name}: retrieve data')
+
+    registry = pint.get_application_registry()
 
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
@@ -157,7 +157,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         if 'mixed units' in e.args[0]:
             # Discard mixed units
             log.warning(f'{name}: {e.args[0]} discarded')
-            attrs = {'_unit': REGISTRY.Unit('')}
+            attrs = {'_unit': registry.Unit('')}
         else:
             # Raise all other ValueErrors
             raise
@@ -170,7 +170,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     else:
         log.info(f"{name}: replace units {attrs.get('_unit', '(none)')} with "
                  f"{new_unit}")
-        attrs['_unit'] = REGISTRY.Unit(new_unit)
+        attrs['_unit'] = registry.Unit(new_unit)
 
     # Set index if 1 or more dimensions
     if len(dims):

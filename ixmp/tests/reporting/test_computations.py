@@ -1,6 +1,7 @@
 import logging
 
 from pandas.testing import assert_series_equal
+import pint
 import pytest
 
 import ixmp
@@ -8,6 +9,9 @@ from ixmp.reporting import Reporter, as_quantity, computations
 from ixmp.testing import assert_logs
 
 from . import add_test_data
+
+
+REGISTRY = pint.get_application_registry()
 
 
 @pytest.fixture(scope='function')
@@ -24,14 +28,27 @@ def test_apply_units(data, caplog):
     # Brute-force replacement with incompatible units
     with assert_logs(caplog, "Replace 'kilogram' with incompatible 'liter'"):
         result = computations.apply_units(x, 'litres')
+    assert result.attrs['_unit'] == REGISTRY.Unit('litre')
+    # No change in values
     assert_series_equal(result.to_series(), x.to_series())
 
     caplog.set_level(logging.DEBUG)
 
-    # Compatible units are converted
+    # Compatible units: magnitudes are also converted
     with assert_logs(caplog, "Convert 'kilogram' to 'metric_ton'"):
         result = computations.apply_units(x, 'tonne')
+    assert result.attrs['_unit'] == REGISTRY.Unit('tonne')
     assert_series_equal(result.to_series(), x.to_series() * 0.001)
+
+    # Remove unit
+    x.attrs['_unit'] = REGISTRY.Unit('dimensionless')
+
+    caplog.clear()
+    result = computations.apply_units(x, 'kg')
+    # Nothing logged when _unit attr is missing
+    assert len(caplog.messages) == 0
+    assert result.attrs['_unit'] == REGISTRY.Unit('kg')
+    assert_series_equal(result.to_series(), x.to_series())
 
 
 def test_select(data):

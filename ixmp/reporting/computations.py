@@ -62,17 +62,19 @@ def apply_units(qty, units, quiet=False):
     existing_dims = getattr(existing, 'dimensionality', {})
     new_units = REGISTRY.parse_units(units)
 
-    if existing:
-        if existing_dims != new_units.dimensionality:
-            msg = f"Replace '{existing}' with incompatible '{new_units}'"
-            log.warning(msg)
-            result = qty.copy()
-        else:
+    if len(existing_dims):
+        # Some existing dimensions: log a message either way
+        if existing_dims == new_units.dimensionality:
             log.debug(f"Convert '{existing}' to '{new_units}'")
             # NB use a factor because pint.Quantity cannot wrap AttrSeries
             factor = REGISTRY.Quantity(1.0, existing).to(new_units).magnitude
             result = qty * factor
+        else:
+            msg = f"Replace '{existing}' with incompatible '{new_units}'"
+            log.warning(msg)
+            result = qty.copy()
     else:
+        # No units, or dimensionless
         result = qty.copy()
 
     result.attrs['_unit'] = new_units

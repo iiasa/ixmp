@@ -7,7 +7,7 @@ import numpy as np
 from ixmp.utils import as_str_list
 from . import ItemType
 
-
+EXCEL_MAX_ROWS = 1048576
 log = logging.getLogger(__name__)
 
 
@@ -36,7 +36,7 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type, max_row=1e6):
+def s_write_excel(be, s, path, item_type, max_row=None):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
@@ -62,6 +62,9 @@ def s_write_excel(be, s, path, item_type, max_row=1e6):
     omitted = set()
     empty_sets = []
 
+    # Don't allow the user to set a value that will truncate data
+    max_row = int(min([x for x in [max_row, EXCEL_MAX_ROWS] if x is not None]))
+
     for name, ix_type in name_type.items():
         # Extract data: dict, pd.Series, or pd.DataFrame
         data = be.item_get_elements(s, ix_type, name)
@@ -85,13 +88,13 @@ def s_write_excel(be, s, path, item_type, max_row=1e6):
                 empty_sets.append((name, data))
             continue
 
-        if len(data) > int(max_row):
-            for i in range(1, int(np.ceil(len(data) / int(max_row))) + 1):
-                last_row = min(int(max_row) * i, len(data))
+        if len(data) > max_row:
+            for i in range(1, int(np.ceil(len(data) / max_row)) + 1):
+                last_row = min(max_row * i, len(data))
                 if isinstance(data, pd.Series):
-                    part = data.loc[(i - 1) * int(max_row):last_row]
+                    part = data.loc[(i - 1) * max_row:last_row]
                 else:
-                    part = data.iloc[(i - 1) * int(max_row):last_row, :]
+                    part = data.iloc[(i - 1) * max_row:last_row, :]
 
                 if i > 1:
                     suffix = '({})'.format(i)
@@ -194,10 +197,10 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             # Read data
             data = xf.parse(name)
             # appending data from repeated sheets due to max row limit
-            sheets = [s for s in xf.sheet_names if name + '(' in s]
+            sheets = [x for x in xf.sheet_names if (name + '(') in x]
             if sheets:
-                for s in sheets:
-                    data.append(xf.parse(s), ignore_index=True)
+                for x in sheets:
+                    data.append(xf.parse(x), ignore_index=True)
 
         # Determine index set(s) for this set
         idx_sets = data.columns.to_list()
@@ -258,10 +261,10 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         df = xf.parse(name)
         # appending data from repeated sheets due to max row limit
-        sheets = [s for s in xf.sheet_names if name + '(' in s]
+        sheets = [x for x in xf.sheet_names if (name + '(') in x]
         if sheets:
-            for s in sheets:
-                df.append(xf.parse(s), ignore_index=True)
+            for x in sheets:
+                df.append(xf.parse(x), ignore_index=True)
 
         if add_units:
             # New units appearing in this parameter

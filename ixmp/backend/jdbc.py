@@ -277,6 +277,8 @@ class JDBCBackend(CachingBackend):
                             'already closed')
             else:
                 log.warning(str(e))
+        except AttributeError:
+            pass  # self.jobj is None, e.g. cleanup after __init__ fails
 
     def get_auth(self, user, models, kind):
         return self.jobj.checkModelAccess(user, kind, to_jlist(models))

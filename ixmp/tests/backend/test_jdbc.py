@@ -212,9 +212,15 @@ def test_del_ts():
 
 
 @pytest.mark.test_gc
-def test_gc():
+def test_gc():  # prama: no cover
+    """Test Java-side garbage collection (GC)."""
+    # NB coverage is omitted because this test is not included in the standard
+    #    suite
+
+    # Create a platform with a very small memory limit (7 MiB)
     mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
                        url=f'jdbc:hsqldb:mem:test_gc', jvmargs='-Xmx7m')
+    # Force Java GC
     jpype.java.lang.System.gc()
 
     def allocate_scenarios(n):
@@ -223,19 +229,21 @@ def test_gc():
                 ixmp.Scenario(mp, 'foo', f'bar{i}', version='new')
             )
 
-    # create a list of some Scenario objects
     scenarios = []
-    raises(RuntimeError, allocate_scenarios, 100000)
+    # Fill *scenarios* with Scenario object until out of memory
+    raises(jpype.java.lang.OutOfMemoryError, allocate_scenarios, 100000)
+    # Record the maximum number
     max = len(scenarios)
 
-    # cleanup
+    # Clean up and GC Python and Java memory
     scenarios = []
     gc.collect()
     jpype.java.lang.System.gc()
 
-    # try to allocate
+    # Can allocate *max* scenarios again
     allocate_scenarios(max)
-    raises(RuntimeError, allocate_scenarios, max)
+    # …but not twice as many
+    raises(jpype.java.lang.OutOfMemoryError, allocate_scenarios, max)
 
 
 def test_docs(test_mp):

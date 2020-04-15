@@ -70,6 +70,20 @@ def test_connect_message(capfd, caplog):
     assert msg in captured.out
 
 
+@pytest.mark.parametrize('arg', [True, False])
+def test_cache_arg(arg):
+    """Test 'cache' argument, passed to CachingBackend."""
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
+                       url='jdbc:hsqldb:mem://test_cache_false',
+                       cache=arg)
+    scen = make_dantzig(mp)
+
+    # Maybe put something in the cache
+    scen.par('a')
+
+    assert len(mp._backend._cache) == (1 if arg else 0)
+
+
 def test_read_file(test_mp, tmp_path):
     be = test_mp._backend
 

@@ -817,10 +817,6 @@ class Scenario(TimeSeries):
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)
 
-    @property
-    def _cache(self):
-        return hasattr(self.platform._backend, '_cache')
-
     @classmethod
     def from_url(cls, url, errors='warn'):
         """Instantiate a Scenario given an ixmp-scheme URL.
@@ -895,7 +891,7 @@ class Scenario(TimeSeries):
         ValueError
             If the Scenario was instantiated with ``cache=False``.
         """
-        if not self._cache:
+        if not getattr(self.platform._backend, 'cache_enabled', False):
             raise ValueError('Cache must be enabled to load scenario data')
 
         for ix_type in 'equ', 'par', 'set', 'var':

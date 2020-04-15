@@ -332,7 +332,7 @@ class Backend(ABC):
         s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
         if path.suffix == '.xlsx' and item_type in xlsx_types and s:
-            s_write_excel(self, s, path, item_type)
+            s_write_excel(self, s, path, item_type, **kwargs)
         else:
             raise NotImplementedError
 

@@ -200,7 +200,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             sheets = [x for x in xf.sheet_names if (name + '(') in x]
             if sheets:
                 for x in sheets:
-                    data.append(xf.parse(x), ignore_index=True)
+                    data = data.append(xf.parse(x), ignore_index=True)
 
         # Determine index set(s) for this set
         idx_sets = data.columns.to_list()
@@ -264,7 +264,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         sheets = [x for x in xf.sheet_names if (name + '(') in x]
         if sheets:
             for x in sheets:
-                df.append(xf.parse(x), ignore_index=True)
+                df = df.append(xf.parse(x), ignore_index=True)
 
         if add_units:
             # New units appearing in this parameter

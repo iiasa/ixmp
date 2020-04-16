@@ -1502,14 +1502,14 @@ class Scenario(TimeSeries):
         all_meta = self._backend('get_meta')
         return all_meta[name] if name else all_meta
 
-    def set_meta(self, name, value):
+    def set_meta(self, name, value=None):
         """Set scenario metadata.
 
         Parameters
         ----------
-        name : str
+        name : str or list
             metadata attribute name
-        value : str or number or bool
+        value : str or number or bool, optional
             metadata attribute value
         """
         self._backend('set_meta', name, value)

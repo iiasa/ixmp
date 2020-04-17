@@ -832,12 +832,12 @@ class JDBCBackend(CachingBackend):
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
-    def set_meta(self, s, name, value=None):
-        if type(name) == dict:
-            name = list(name.items())
-        if type(name) == list:
+    def set_meta(self, s, name_or_data, value=None):
+        if type(name_or_data) == dict:
+            name_or_data = list(name_or_data.items())
+        if type(name_or_data) == list:
             jdata = java.LinkedHashMap()
-            for k, v in name:
+            for k, v in name_or_data:
                 jdata.put(str(k), v)
             self.jindex[s].setMeta(jdata)
             return
@@ -848,7 +848,7 @@ class JDBCBackend(CachingBackend):
         except KeyError:
             raise TypeError(f'Cannot store metadata of type {_type}')
 
-        getattr(self.jindex[s], method_name)(name, value)
+        getattr(self.jindex[s], method_name)(name_or_data, value)
 
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario

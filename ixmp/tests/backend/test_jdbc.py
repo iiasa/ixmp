@@ -26,15 +26,17 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-def test_close(test_mp, caplog):
+def test_close(test_mp, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
     # Close once
     test_mp.close_db()
 
     # Close again, once already closed
     test_mp.close_db()
-    assert caplog.records[0].message == \
-        'Database connection could not be closed or was already closed'
+
+    captured = capfd.readouterr()
+    msg = 'Database connection could not be closed or was already closed'
+    assert msg in captured.out
 
 
 def test_pass_properties():

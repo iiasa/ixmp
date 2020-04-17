@@ -197,7 +197,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         if first_pass:
             # Read data
             data = xf.parse(name)
-            # appending data from repeated sheets due to max row limit
+            # Appending data from repeated sheets due to max row limit
             sheets = [x for x in xf.sheet_names if x.startswith(name + '(')]
             if sheets:
                 for x in sheets:
@@ -261,7 +261,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         # Only parameters beyond this point
 
         df = xf.parse(name)
-        # appending data from repeated sheets due to max row limit
+        # Appending data from repeated sheets due to max row limit
         sheets = [x for x in xf.sheet_names if x.startswith(name + '(')]
         if sheets:
             for x in sheets:

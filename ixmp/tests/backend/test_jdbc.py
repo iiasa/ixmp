@@ -143,3 +143,23 @@ def test_verbose_exception(test_mp, exception_verbose_true):
             "(version: -1)  in the database!" in exc_msg)
     assert "at.ac.iiasa.ixmp.database.DbDAO.getRunId" in exc_msg
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
+
+
+def test_docs(test_mp):
+    scen = make_dantzig(test_mp)
+    # test model docs
+    test_mp.set_doc('model', {scen.model: 'Dantzig model'})
+    assert test_mp.get_doc('model') == {'canning problem': 'Dantzig model'}
+
+    # test timeseries variables docs
+    gdp = ('Gross Domestic Product (GDP) is the monetary value of all '
+           'finished goods and services made within a country during '
+           'a specific period.')
+    test_mp.set_doc('timeseries', dict(GDP=gdp))
+    assert test_mp.get_doc('timeseries', 'GDP') == gdp
+
+    # test bad domain
+    ex = raises(ValueError, test_mp.set_doc, 'baddomain', {})
+    exp = ('No such domain: baddomain, existing domains: '
+           'scenario, model, region, metadata, timeseries')
+    assert ex.value.args[0] == exp

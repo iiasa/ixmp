@@ -46,11 +46,13 @@ JAVA_CLASSES = [
     'java.lang.Double',
     'java.lang.Integer',
     'java.lang.NoClassDefFoundError',
+    'java.lang.IllegalArgumentException',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
     'java.util.Properties',
+    'at.ac.iiasa.ixmp.dto.DocumentationKey',
 ]
 
 
@@ -118,6 +120,16 @@ def _raise_jexception(exc, msg='unhandled Java exception: '):
     else:
         msg += exc.message()
     raise RuntimeError(msg) from None
+
+
+def _domain_enum(domain):
+    domain_enum = java.DocumentationKey.DocumentationDomain
+    try:
+        return domain_enum.valueOf(domain.upper())
+    except java.IllegalArgumentException:
+        domains = ', '.join([d.name().lower() for d in domain_enum.values()])
+        raise ValueError(f'No such domain: {domain}, '
+                         f'existing domains: {domains}')
 
 
 class JDBCBackend(CachingBackend):
@@ -225,6 +237,24 @@ class JDBCBackend(CachingBackend):
     def get_log_level(self):
         levels = {v: k for k, v in LOG_LEVELS.items()}
         return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
+
+    def set_doc(self, domain, docs):
+        dd = _domain_enum(domain)
+        jdata = java.LinkedHashMap()
+        if type(docs) == dict:
+            docs = list(docs.items())
+        for k, v in docs:
+            jdata.put(str(k), str(v))
+        self.jobj.setDoc(dd, jdata)
+
+    def get_doc(self, domain, name=None):
+        dd = _domain_enum(domain)
+        if name is None:
+            doc = self.jobj.getDoc(dd)
+            return {entry.getKey(): entry.getValue()
+                    for entry in doc.entrySet()}
+        else:
+            return self.jobj.getDoc(dd, str(name))
 
     def open_db(self):
         """(Re-)open the database connection."""

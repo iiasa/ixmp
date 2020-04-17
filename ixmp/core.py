@@ -55,6 +55,8 @@ class Platform:
     _backend_direct = [
         'open_db',
         'close_db',
+        'get_doc',
+        'set_doc',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -1548,7 +1550,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name : str or list
+        name : str or list or dict
             metadata attribute name
         value : str or number or bool, optional
             metadata attribute value

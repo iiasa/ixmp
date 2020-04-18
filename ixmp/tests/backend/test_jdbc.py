@@ -7,7 +7,18 @@ import pytest
 from pytest import raises
 
 import ixmp
-from ixmp.testing import make_dantzig
+import ixmp.backend.jdbc
+from ixmp.backend.jdbc import java
+from ixmp.testing import (
+    add_random_model_data,
+    bool_param_id,
+    make_dantzig,
+    memory_usage,
+    # random_ts_data,
+)
+
+
+log = logging.getLogger(__name__)
 
 
 def test_jvm_warn(recwarn):
@@ -174,11 +185,9 @@ def test_del_ts():
 
     # Create a list of some Scenario objects
     N = 8
-    scenarios = []
-    for i in range(N):
-        scenarios.append(
-            ixmp.Scenario(mp, 'foo', f'bar{i}', version='new')
-        )
+    scenarios = [make_dantzig(mp)]
+    for i in range(1, N):
+        scenarios.append(scenarios[0].clone(scenario=f'clone {i}'))
 
     # Number of referenced objects has increased by 8
     assert len(mp._backend.jindex) == N_obj + N
@@ -251,6 +260,149 @@ def test_gc_lowmem(request):  # prama: no cover
     allocate_scenarios(max)
     # …but not twice as many
     raises(jpype.java.lang.OutOfMemoryError, allocate_scenarios, max)
+
+
+@pytest.fixture(scope='session')
+def rc_data_size():
+    """Number of data rows for :meth:`test_reload_cycle` and its fixtures."""
+    return 5e4
+
+
+@pytest.fixture(scope='session')
+def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):
+    """Set up a Platform with *rc_data_size* of  random data."""
+    # Command-line option for the JVM memory limit
+    jvm_mem_limit = request.config.getoption('--jvm-mem-limit')
+
+    # Path for this database
+    path = tmp_path_factory.mktemp('reload_cycle') / 'base'
+
+    # Create the Platform. This should be the first in the process, so the
+    # jvmargs are used in :func:`.jdbc.start_jvm`.
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb', path=path,
+                       jvmargs=f'-Xmx{jvm_mem_limit}M')
+
+    s0 = ixmp.Scenario(mp, model='foo', scenario='bar 0', version='new')
+
+    # Add data
+
+    # currently omitted: time series data with *rc_data_size* elements
+    # s0.add_timeseries(random_ts_data(rc_data_size))
+
+    # A set named 'random_set' and parameter 'random_par' with *rc_data_size*
+    # elements
+    add_random_model_data(s0, rc_data_size)
+
+    s0.commit('')
+
+    yield s0
+
+
+@pytest.mark.performance
+@pytest.mark.parametrize('cache', [True, False], ids=bool_param_id('cache'))
+@pytest.mark.parametrize('gc', [True, False], ids=bool_param_id('gc'))
+def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
+                      gc, rc_data_size, N_cycles=30):  # pragma: no cover
+    """Test a cycle of Platform/Scenario reloading.
+
+    This test simulates the usage in the 'runscripts' often used for the
+    IIASA MESSAGEix-GLOBIOM global model. Namely:
+
+    1. A large Scenario is created (see the :meth:`reload_cycle_scenario` and
+       :meth:`rc_data_size` fixtures).
+    2. The Platform instance is discarded, and recreated.
+    3. A base Scenario is loaded.
+    4. This Scenario is cloned.
+    5. The Scenario is solved. (This test omits this step.)
+    6. Repeat from (2).
+
+    In order to use this test:
+
+    - Adjust the value in :meth:`rc_data_size`.
+    - Adjust the keyword argument `N_cycles`, the minimum number of cycles (
+      steps (2) through (5)) required for the test pass.
+    - Run by invoking pytest with, e.g.::
+
+        pytest -m performance -k reload_cycle \
+          --verbose --log-cli-level=DEBUG -rA \
+          --resource-limit=DATA:1024 \
+          --jvm-mem-limit=256
+
+      Line by line, these options:
+
+      - Select the current test.
+      - Set verbose output, including log messages from the DEBUG level,
+        even when the tests pass.
+      - Limit Python's resource.RLIMIT_DATA to 1024 MiB.
+      - Limit the JVM memory usage to 256 MiB.
+    """
+    # NB coverage is omitted because this test is not included in the standard
+    #    suite
+
+    # Clone reload_cycle_scenario onto a new Platform for this test
+    platform_args = dict(backend='jdbc', driver='hsqldb',
+                         path=tmp_path / 'testdb', cache=cache,
+                         log_level='WARNING')
+    mp = ixmp.Platform(**platform_args)
+    reload_cycle_scenario.clone(platform=mp)
+
+    # Throw away the reference to mp
+    mp = None
+
+    # GC before cycling
+    java.System.gc()
+
+    # Set the garbage collection behaviour of JDBCBackend
+    ixmp.backend.jdbc._GC_AGGRESSIVE = gc
+
+    pre = memory_usage('setup')
+
+    for i in range(1, N_cycles + 1):
+        # New Platform instance
+        mp = ixmp.Platform(**platform_args)
+
+        # Load existing Scenario
+        s0 = ixmp.Scenario(mp, model='foo', scenario=f'bar {i-1}', version=1)
+
+        memory_usage(f'pass {i} -- platform instantiated')
+
+        # Clone Scenario
+        s1 = s0.clone(scenario=f'bar {i}')
+
+        memory_usage(f'pass {i} -- cloned')
+
+        # Load data into memory
+        df_par = s1.par('random_par')
+        # commented: omitted
+        # df_ts = s1.timeseries()
+
+        memory_usage(f'pass {i} -- data loaded')
+
+        # The variable 's0' is the only reference to this Scenario object
+        assert getrefcount(s0) - 1 == 1
+
+        # Use, then throw away, references to s0 and data
+        assert len(df_par) == rc_data_size
+        s0, df_par = None, None
+        # commented: omitted
+        # assert len(df_ts) == rc_data_size
+        # df_ts = None
+
+        memory_usage(f'pass {i} -- replaced')
+
+        # Throw away reference to mp
+        mp = None
+
+    post = memory_usage('post')
+
+    log.info('JVM memory usage gained {:.3f} MiB / cycle'
+             .format((post[-2] - pre[-2]) / N_cycles))
+    log.info('Total memory usage gained {:.3f} MiB / cycle'
+             .format((post[0] - pre[0]) / N_cycles))
+
+    del s1
+
+    memory_usage('shutdown')
 
 
 def test_docs(test_mp):

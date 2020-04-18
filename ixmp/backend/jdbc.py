@@ -1,6 +1,7 @@
 from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
+import gc
 from itertools import chain
 import logging
 import os
@@ -23,6 +24,10 @@ log = logging.getLogger(__name__)
 
 
 _EXCEPTION_VERBOSE = os.environ.get('IXMP_JDBC_EXCEPTION_VERBOSE', '0') == '1'
+
+# Whether to collect garbage aggressively when instances of TimeSeries die.
+# See JDBCBackend.gc().
+_GC_AGGRESSIVE = True
 
 # Map of Python to Java log levels
 # https://logging.apache.org/log4j/2.x/log4j-api/apidocs/org/apache/logging/log4j/Level.html
@@ -48,6 +53,8 @@ JAVA_CLASSES = [
     'java.lang.Integer',
     'java.lang.NoClassDefFoundError',
     'java.lang.IllegalArgumentException',
+    'java.lang.Runtime',
+    'java.lang.System',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
@@ -507,6 +514,12 @@ class JDBCBackend(CachingBackend):
 
         self._index_and_set_attrs(jobj, ts)
 
+    def del_ts(self, ts):
+        super().del_ts(ts)
+
+        # Aggressively free memory
+        self.gc()
+
     def check_out(self, ts, timeseries_only):
         try:
             self.jindex[ts].checkOut(timeseries_only)
@@ -929,6 +942,15 @@ class JDBCBackend(CachingBackend):
 
     def __del__(self):
         self.close_db()
+
+    @classmethod
+    def gc(cls):
+        if _GC_AGGRESSIVE:
+            # log.debug('Collect garbage')
+            java.System.gc()
+            gc.collect()
+        # else:
+        #     log.debug('Skip garbage collection')
 
 
 def start_jvm(jvmargs=None):

@@ -138,6 +138,15 @@ def test_mp(request, tmp_env, test_data_path):
     ixmp_config.remove_platform(platform_name)
 
 
+def bool_param_id(name):
+    """Parameter ID callback for :meth:`pytest.mark.parametrize`.
+
+    This formats a boolean value as 'name0' (False) or 'name1' (True) for
+    easier selection with e.g. ``pytest -k 'name0'``.
+    """
+    return lambda value: '{}{}'.format(name, int(value))
+
+
 # Create and populate ixmp databases
 
 MODEL = "canning problem"

@@ -1,7 +1,8 @@
+import gc
+import logging
 from sys import getrefcount
 
 import jpype
-import gc
 import pytest
 from pytest import raises
 
@@ -211,15 +212,21 @@ def test_del_ts():
     assert len(mp._backend.jindex) == N_obj
 
 
-@pytest.mark.test_gc
-def test_gc():  # prama: no cover
-    """Test Java-side garbage collection (GC)."""
+@pytest.mark.performance
+def test_gc_lowmem(request):  # prama: no cover
+    """Test Java-side garbage collection (GC).
+
+    By default, this test limits the JVM memory to 7 MiB. To change this limit,
+    use the command-line option --jvm-mem-limit=7.
+    """
     # NB coverage is omitted because this test is not included in the standard
     #    suite
 
-    # Create a platform with a very small memory limit (7 MiB)
+    # Create a platform with a small memory limit (default 7 MiB)
+    jvm_mem_limit = request.config.getoption('--jvm-mem-limit', 7)
     mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
-                       url=f'jdbc:hsqldb:mem:test_gc', jvmargs='-Xmx7m')
+                       url=f'jdbc:hsqldb:mem:test_gc',
+                       jvmargs=f'-Xmx{jvm_mem_limit}M')
     # Force Java GC
     jpype.java.lang.System.gc()
 

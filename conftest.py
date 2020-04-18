@@ -1,6 +1,3 @@
-import pytest
-
-
 pytest_plugins = ['ixmp.testing']
 
 
@@ -8,22 +5,16 @@ pytest_plugins = ['ixmp.testing']
 
 def pytest_addoption(parser):
     parser.addoption(
-        '--test-r',
-        action='store_true',
-        help='also run tests of the ixmp R interface.',
+        '--jvm-mem-limit',
+        action='store',
+        default=-1,
+        help=('Memory limit, in MiB, for the Java Virtual Machine (JVM) '
+              'started by the ixmp JDBCBackend'),
     )
     parser.addoption(
-        '--test-gc',
-        action='store_true',
-        default=False,
-        help='also run GC tests.',
+        '--resource-limit',
+        action='store',
+        default='DATA:-1',
+        help=("Limit a Python resource via the ixmp.testing.resource_limit "
+              "fixture. Use e.g. 'DATA:500' to limit RLIMIT_DATA to 500 MiB"),
     )
-
-
-def pytest_runtest_setup(item):
-    if 'rixmp' in item.keywords and \
-       not item.config.getoption('--test-r'):
-        pytest.skip('skipping rixmp test without --test-r flag')
-    test_gc = item.config.getoption('--test-gc')
-    if bool('test_gc' in item.keywords) != bool(test_gc):
-        pytest.skip('skipping gc test without --test-gc flag')

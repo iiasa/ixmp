@@ -300,6 +300,12 @@ class TestScenario:
         exp = test_dict['test_string']
         assert obs == exp
 
+        scen.delete_meta(['test_int', 'test_bool'])
+        obs = scen.get_meta()
+        assert len(obs) == 4
+        assert set(obs.keys()) == {'test_string', 'test_number',
+                                   'test_number_negative', 'test_bool_false'}
+
         # Setting with a type other than int, float, bool, str raises TypeError
         with pytest.raises(TypeError, match='Cannot store metadata of type'):
             scen.set_meta('test_string', complex(1, 1))

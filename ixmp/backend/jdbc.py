@@ -883,6 +883,14 @@ class JDBCBackend(CachingBackend):
 
         getattr(self.jindex[s], method_name)(name_or_data, value)
 
+    def delete_meta(self, s, name_or_names):
+        if type(name_or_names) == str:
+            name_or_names = [str]
+        jdata = java.LinkedList()
+        for k in name_or_names:
+            jdata.add(str(k))
+        self.jindex[s].removeMeta(jdata)
+
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario
 

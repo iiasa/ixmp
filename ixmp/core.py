@@ -1559,6 +1559,18 @@ class Scenario(TimeSeries):
         """
         self._backend('set_meta', name_or_data, value)
 
+    def delete_meta(self, name_or_names):
+        """Set scenario metadata.
+
+        Parameters
+        ----------
+        name_or_names : str or list
+            If the argument is list, it used to remove multiple metadata
+            entries at once. Otherwise, use the argument
+            as the single metadata attribute name.
+        """
+        self._backend('delete_meta', name_or_names)
+
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):
         """Write Scenario to a Microsoft Excel file.

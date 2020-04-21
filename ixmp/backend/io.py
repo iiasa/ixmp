@@ -7,8 +7,12 @@ import numpy as np
 from ixmp.utils import as_str_list
 from . import ItemType
 
-EXCEL_MAX_ROWS = 1048576
+
 log = logging.getLogger(__name__)
+
+#: Maximum number of rows supported by the Excel file format. See
+#: :meth:`.to_excel` and :ref:`excel-data-format`.
+EXCEL_MAX_ROWS = 1048576
 
 
 def ts_read_file(ts, path, firstyear=None, lastyear=None):

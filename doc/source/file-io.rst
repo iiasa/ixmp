@@ -27,8 +27,7 @@ The files have the following structure:
   - 'item': the name of an ixmp item.
   - 'ix_type': the item's type as a length-3 string: 'set', 'par', 'var', or 'equ'.
 
-- One sheet per item. If the length of data is greater than the maximum row numbers per Excel sheet, the item will be saved in multiple sheets,
-e.g., foo, foo(2), foo(3).
+- One or more sheet per item. If the length of data is greater than the maximum number of rows per sheet supported by the Excel file format (:data:`.EXCEL_MAX_ROWS`), the item is split across multiple sheets named, e.g., 'foo', 'foo(2)', 'foo(3)'.
 
 - Sets:
 

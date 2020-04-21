@@ -1527,7 +1527,10 @@ class Scenario(TimeSeries):
             only sets and parameters), or :attr:`.MODEL` (also variables and
             equations, i.e. model solution data).
         max_row: int, optional
-            max number of rows
+            Maximum number of rows in each sheet. If the number of elements in
+            an item exceeds this number or :data:`.EXCEL_MAX_ROWS`, then an
+            item is written to multiple sheets named, e.g. 'foo', 'foo(2)',
+            'foo(3)', etc.
 
         See also
         --------

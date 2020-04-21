@@ -67,7 +67,7 @@ def s_write_excel(be, s, path, item_type, max_row=None):
     empty_sets = []
 
     # Don't allow the user to set a value that will truncate data
-    max_row = int(min([x for x in [max_row, EXCEL_MAX_ROWS] if x is not None]))
+    max_row = min(int(max_row or EXCEL_MAX_ROWS), EXCEL_MAX_ROWS)
 
     for name, ix_type in name_type.items():
         # Extract data: dict, pd.Series, or pd.DataFrame

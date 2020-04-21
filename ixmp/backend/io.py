@@ -185,6 +185,17 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     # Queue of (set name, data) to add
     sets_to_add = deque((n, None) for n in name_type.index[name_type == 'set'])
 
+    def parse_item_sheets(name):
+        """Read data for item *name*, possibly across multiple sheets."""
+        dfs = [xf.parse(name)]
+
+        # Collect data from repeated sheets due to max_row limit
+        for x in filter(lambda n: n.startswith(name + '('), xf.sheet_names):
+            dfs.append(xf.parse(x))
+
+        # Concatenate once and return
+        return pd.concat(dfs, axis=1)
+
     # Add sets in two passes:
     # 1. Index sets, required to initialize other sets.
     # 2. Sets indexed by others.
@@ -200,11 +211,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         first_pass = data is None
         if first_pass:
             # Read data
-            data = xf.parse(name)
-            # Appending data from repeated sheets due to max row limit
-            sheets = [x for x in xf.sheet_names if x.startswith(name + '(')]
-            for x in sheets:
-                data = data.append(xf.parse(x), ignore_index=True)
+            data = parse_item_sheets(name)
 
         # Determine index set(s) for this set
         idx_sets = data.columns.to_list()
@@ -263,11 +270,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         # Only parameters beyond this point
 
-        df = xf.parse(name)
-        # Appending data from repeated sheets due to max row limit
-        sheets = [x for x in xf.sheet_names if x.startswith(name + '(')]
-        for x in sheets:
-            df = df.append(xf.parse(x), ignore_index=True)
+        df = parse_item_sheets(name)
 
         if add_units:
             # New units appearing in this parameter

@@ -2,7 +2,6 @@ from collections import deque
 import logging
 
 import pandas as pd
-import numpy as np
 
 from ixmp.utils import as_str_list
 from . import ItemType
@@ -92,24 +91,20 @@ def s_write_excel(be, s, path, item_type, max_row=None):
                 empty_sets.append((name, data))
             continue
 
-        if len(data) > max_row:
-            for sheet_num in range(1, int(np.ceil(len(data) / max_row)) + 1):
-                first_row = (sheet_num - 1) * max_row
-                last_row = min(max_row * sheet_num, len(data))
-                if isinstance(data, pd.Series):
-                    part = data.loc[first_row:last_row]
-                else:
-                    part = data.iloc[first_row:last_row, :]
+        # Write data in multiple sheets
 
-                if sheet_num > 1:
-                    suffix = '({})'.format(sheet_num)
-                else:
-                    suffix = ''
+        # List of break points, plus the final row
+        splits = list(range(0, len(data), max_row)) + [len(data)]
+        # Pairs of row numbers, e.g. (0, 100), (100, 200), ...
+        first_last = zip(splits, splits[1:])
 
-                part.to_excel(writer, sheet_name=name + suffix,
-                              index=False)
-        else:
-            data.to_excel(writer, sheet_name=name, index=False)
+        for sheet_num, (first_row, last_row) in enumerate(first_last, start=1):
+            # Format the sheet name, possibly with a suffix
+            sheet_name = name + (f'({sheet_num})' if sheet_num > 1 else '')
+
+            # Subset the data (only on rows, if a DataFrame) and write
+            data.iloc[first_row:last_row] \
+                .to_excel(writer, sheet_name, index=False)
 
     # Discard entries that were not written
     for name in omitted:

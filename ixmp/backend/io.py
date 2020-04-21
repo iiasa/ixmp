@@ -9,6 +9,10 @@ from . import ItemType
 
 log = logging.getLogger(__name__)
 
+#: Maximum number of rows supported by the Excel file format. See
+#: :meth:`.to_excel` and :ref:`excel-data-format`.
+EXCEL_MAX_ROWS = 1048576
+
 
 def ts_read_file(ts, path, firstyear=None, lastyear=None):
     """Read data from a CSV or Microsoft Excel file at *path* into *ts*.
@@ -35,7 +39,7 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type):
+def s_write_excel(be, s, path, item_type, max_row=None):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
@@ -61,6 +65,9 @@ def s_write_excel(be, s, path, item_type):
     omitted = set()
     empty_sets = []
 
+    # Don't allow the user to set a value that will truncate data
+    max_row = min(int(max_row or EXCEL_MAX_ROWS), EXCEL_MAX_ROWS)
+
     for name, ix_type in name_type.items():
         # Extract data: dict, pd.Series, or pd.DataFrame
         data = be.item_get_elements(s, ix_type, name)
@@ -84,7 +91,20 @@ def s_write_excel(be, s, path, item_type):
                 empty_sets.append((name, data))
             continue
 
-        data.to_excel(writer, sheet_name=name, index=False)
+        # Write data in multiple sheets
+
+        # List of break points, plus the final row
+        splits = list(range(0, len(data), max_row)) + [len(data)]
+        # Pairs of row numbers, e.g. (0, 100), (100, 200), ...
+        first_last = zip(splits, splits[1:])
+
+        for sheet_num, (first_row, last_row) in enumerate(first_last, start=1):
+            # Format the sheet name, possibly with a suffix
+            sheet_name = name + (f'({sheet_num})' if sheet_num > 1 else '')
+
+            # Subset the data (only on rows, if a DataFrame) and write
+            data.iloc[first_row:last_row] \
+                .to_excel(writer, sheet_name, index=False)
 
     # Discard entries that were not written
     for name in omitted:
@@ -160,6 +180,17 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     # Queue of (set name, data) to add
     sets_to_add = deque((n, None) for n in name_type.index[name_type == 'set'])
 
+    def parse_item_sheets(name):
+        """Read data for item *name*, possibly across multiple sheets."""
+        dfs = [xf.parse(name)]
+
+        # Collect data from repeated sheets due to max_row limit
+        for x in filter(lambda n: n.startswith(name + '('), xf.sheet_names):
+            dfs.append(xf.parse(x))
+
+        # Concatenate once and return
+        return pd.concat(dfs, axis=1)
+
     # Add sets in two passes:
     # 1. Index sets, required to initialize other sets.
     # 2. Sets indexed by others.
@@ -175,7 +206,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         first_pass = data is None
         if first_pass:
             # Read data
-            data = xf.parse(name)
+            data = parse_item_sheets(name)
 
         # Determine index set(s) for this set
         idx_sets = data.columns.to_list()
@@ -234,7 +265,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         # Only parameters beyond this point
 
-        df = xf.parse(name)
+        df = parse_item_sheets(name)
 
         if add_units:
             # New units appearing in this parameter

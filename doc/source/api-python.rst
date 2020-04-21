@@ -159,6 +159,12 @@ Scenario
       var_list
 
 
+.. currentmodule:: ixmp.backend.io
+
+.. automodule:: ixmp.backend.io
+   :members: EXCEL_MAX_ROWS
+
+
 .. _configuration:
 
 Configuration

@@ -10,7 +10,8 @@ All changes
 - `#303 <https://github.com/iiasa/ixmp/pull/303>`_: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).
 - `#295 <https://github.com/iiasa/ixmp/pull/295>`_: Add option to include `subannual` column in dataframe returned by :meth:`.TimeSeries.timeseries`.
 - `#286 <https://github.com/iiasa/ixmp/pull/286>`_,
-  `#297 <https://github.com/iiasa/ixmp/pull/297>`_: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix`.
+  `#297 <https://github.com/iiasa/ixmp/pull/297>`_,
+  `#309 <https://github.com/iiasa/ixmp/pull/309>`_: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix` and enhanced for dealing with maximum row limits in Excel.
 - `#270 <https://github.com/iiasa/ixmp/pull/270>`_: Include all tests in the ixmp package.
 - `#212 <https://github.com/iiasa/ixmp/pull/212>`_: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.
 - `#267 <https://github.com/iiasa/ixmp/pull/267>`_: Apply units to reported quantities.

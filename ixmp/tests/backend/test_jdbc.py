@@ -272,15 +272,17 @@ def rc_data_size():
 def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
-    jvm_mem_limit = request.config.getoption('--jvm-mem-limit')
+    kwarg = dict()
+    jvm_mem_limit = int(request.config.getoption('--jvm-mem-limit'))
+    if jvm_mem_limit > 0:
+        kwarg['jvmargs'] = f'-Xmx{jvm_mem_limit}M'
 
     # Path for this database
     path = tmp_path_factory.mktemp('reload_cycle') / 'base'
 
     # Create the Platform. This should be the first in the process, so the
     # jvmargs are used in :func:`.jdbc.start_jvm`.
-    mp = ixmp.Platform(backend='jdbc', driver='hsqldb', path=path,
-                       jvmargs=f'-Xmx{jvm_mem_limit}M')
+    mp = ixmp.Platform(backend='jdbc', driver='hsqldb', path=path, **kwarg)
 
     s0 = ixmp.Scenario(mp, model='foo', scenario='bar 0', version='new')
 
@@ -301,8 +303,9 @@ def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):
 @pytest.mark.performance
 @pytest.mark.parametrize('cache', [True, False], ids=bool_param_id('cache'))
 @pytest.mark.parametrize('gc', [True, False], ids=bool_param_id('gc'))
+@pytest.mark.parametrize('gdx', [True, False], ids=bool_param_id('gdx'))
 def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
-                      gc, rc_data_size, N_cycles=30):  # pragma: no cover
+                      gc, gdx, rc_data_size, N_cycles=2):  # pragma: no cover
     """Test a cycle of Platform/Scenario reloading.
 
     This test simulates the usage in the 'runscripts' often used for the
@@ -313,7 +316,8 @@ def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
     2. The Platform instance is discarded, and recreated.
     3. A base Scenario is loaded.
     4. This Scenario is cloned.
-    5. The Scenario is solved. (This test omits this step.)
+    5. The Scenario is solved. (This tests omits this step, but when the `gdx`
+       argument is :obj:`True`, the GDX file is written.)
     6. Repeat from (2).
 
     In order to use this test:
@@ -358,7 +362,7 @@ def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
     pre = memory_usage('setup')
 
     for i in range(1, N_cycles + 1):
-        # New Platform instance
+        # New Platform instance; throw away old reference
         mp = ixmp.Platform(**platform_args)
 
         # Load existing Scenario
@@ -381,8 +385,17 @@ def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
         # The variable 's0' is the only reference to this Scenario object
         assert getrefcount(s0) - 1 == 1
 
+        if gdx:
+            # Write to file
+            mp._backend.write_file(
+                tmp_path / 'test.gdx',
+                ixmp.ItemType.SET | ixmp.ItemType.PAR,
+                filters=dict(scenario=s1))
+
+            memory_usage(f'pass {i} -- GDX written')
+
         # Use, then throw away, references to s0 and data
-        assert len(df_par) == rc_data_size
+        assert len(df_par) >= rc_data_size
         s0, df_par = None, None
         # commented: omitted
         # assert len(df_ts) == rc_data_size
@@ -400,7 +413,8 @@ def test_reload_cycle(resource_limit, reload_cycle_scenario, tmp_path, cache,
     log.info('Total memory usage gained {:.3f} MiB / cycle'
              .format((post[0] - pre[0]) / N_cycles))
 
-    del s1
+    # Throw away reference to s1
+    s1 = None
 
     memory_usage('shutdown')
 

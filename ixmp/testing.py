@@ -35,7 +35,9 @@ These include:
 from collections import namedtuple
 from contextlib import contextmanager
 import io
+from itertools import product
 import logging
+from math import ceil
 import os
 import resource
 import shutil
@@ -577,7 +579,7 @@ def memory_usage(message='', reset=False):
     result = [
         memory_profiler.memory_usage()[0],
         resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,  # to MiB
-        ]
+    ]
     if runtime:
         _RT = runtime
         result.extend([
@@ -619,42 +621,56 @@ def random_ts_data(length):
 
     Suitable for passage to :meth:`TimeSeries.add_timeseries`.
     """
-    return pd.DataFrame.from_dict(dict(
-         region='World',
-         variable=[f'foo|{i}' for i in range(int(length))],
-         year=2020,
-         value=np.random.rand(int(length)),
-         unit='GWa',
-    ))
+    return pd.DataFrame.from_dict(
+        dict(
+            region='World',
+            variable=[f'foo|{i}' for i in range(int(length))],
+            year=2020,
+            value=np.random.rand(int(length)),
+            unit='GWa',
+        ))
 
 
 def add_random_model_data(scenario, length):
     """Add a set and parameter with given *length* to *scenario*.
 
     The set is named 'random_set'. The parameter is named 'random_par', and
-    has one dimension indexed by 'random_set'.
+    has two dimensions indexed by 'random_set'.
     """
     set_data, par_data = random_model_data(length)
     scenario.init_set('random_set')
     scenario.add_set('random_set', set_data)
-    scenario.init_par('random_par', ['random_set'])
+    scenario.init_par(
+        'random_par',
+        idx_sets=['random_set', 'random_set'],
+        idx_names=['random_set0', 'random_set1'])
     scenario.add_par('random_par', par_data)
+    return len(par_data)
 
 
 def random_model_data(length):
-    """Random (set, parameter) data with *length* elements.
+    """Random (set, parameter) data with at least *length* elements.
 
     See also
     --------
     add_random_model_data
     """
-    set_data = list(str(i) for i in range(int(length)))
-    par_data = pd.DataFrame.from_dict(dict(
-         region='World',
-         random_set=set_data,
-         value=np.random.rand(int(length)),
-         unit='GWa',
-    ))
+    # Dimension size
+    dim_len = ceil(length ** 0.5)
+    set_data = list(str(i) for i in range(dim_len))
+
+    # Revised length, possibly slightly higher than original
+    length = dim_len ** 2
+
+    par_data = pd.concat([
+        pd.DataFrame.from_dict(dict(region='World',
+                               value=np.random.rand(length),
+                               unit='GWa')),
+        pd.DataFrame(
+            data=product(set_data, set_data),
+            columns=['random_set0', 'random_set1']),
+    ], axis=1)
+
     return set_data, par_data
 
 

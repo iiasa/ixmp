@@ -611,7 +611,8 @@ class JDBCBackend(CachingBackend):
 
         # Instantiate same class as the original object
         return s.__class__(platform_dest, model, scenario,
-                           version=jclone.getVersion())
+                           version=jclone.getVersion(),
+                           scheme=jclone.getScheme())
 
     def has_solution(self, s):
         return self.jindex[s].hasSolution()

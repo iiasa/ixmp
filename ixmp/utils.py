@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 import pandas as pd
 
 
+log = logging.getLogger(__name__)
+
 # globally accessible logger
 _LOGGER = None
 
@@ -58,6 +60,51 @@ def check_year(y, s):
     if y is not None:
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
+        return True
+
+
+def maybe_check_out(scenario, state=None):
+    """Check out *scenario* depending on *state*.
+
+    If `state` is :obj:`None`, then :meth:`.check_out` is called, and
+    maybe_check_out returns:
+
+      - :obj:`True` if a check out was performed, i.e. the scenario was
+        previously not in a checked-out state.
+      - :obj:`False` if no check out was performed, i.e. the scenario was
+        already in a checked-out state.
+
+    For any other value of `state`, maybe_check_out does nothing.
+    """
+    if state is not None:
+        return state  # Already tried to check out
+    try:
+        # If *scenario* is already committed to the Backend, it must be
+        # checked out.
+        scenario.check_out()
+    except RuntimeError:
+        # If *scenario* is new (has not been committed), the checkout
+        # attempt raises an exception
+        return False
+    else:
+        return True
+
+
+def maybe_commit(scenario, condition, message):
+    """Commit *scenario* with *message* if *condition* is :obj:`True`.
+
+    Any exception raised during an attempted commit is logged with level
+    `ERROR`, and :obj:`False` is returned. If a commit is performed,
+    :obj:`True` is returned.
+    """
+    if not condition:
+        return False
+    try:
+        scenario.commit(message)
+    except RuntimeError as exc:
+        log.error(str(exc))
+        return False
+    else:
         return True
 
 

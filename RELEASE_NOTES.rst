@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#316 <https://github.com/iiasa/ixmp/pull/316>`_: Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs).
 - `#315 <https://github.com/iiasa/ixmp/pull/315>`_: Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects.
 - `#320 <https://github.com/iiasa/ixmp/pull/320>`_: Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging.
 - `#312 <https://github.com/iiasa/ixmp/pull/312>`_: Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add`.
@@ -23,8 +24,7 @@ All changes
   - positional and ``dbtype=`` arguments to :class:`.Platform`/:class:`.JDBCBackend`.
   - ``first_model_year=``, ``keep_sol=``, and ``scen=`` arguments to :meth:`~.Scenario.clone`.
   - ``rixmp.legacy``, an earlier version of :ref:`the R interface <rixmp>` that did not use reticulate.
-- `#261 <https://github.com/iiasa/ixmp/pull/261>`_: Increase minimum pandas
-  version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
+- `#261 <https://github.com/iiasa/ixmp/pull/261>`_: Increase minimum pandas version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
 - `#243 <https://github.com/iiasa/ixmp/pull/243>`_: Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV.
 - `#264 <https://github.com/iiasa/ixmp/pull/264>`_: Implement methods to get and create new subannual timeslices.
 

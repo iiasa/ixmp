@@ -1,6 +1,7 @@
+from abc import ABC, abstractmethod
 import logging
 
-from abc import ABC, abstractmethod
+from ixmp.utils import maybe_check_out, maybe_commit
 
 
 log = logging.getLogger(__name__)
@@ -69,29 +70,68 @@ class Model(ABC):
         .init_set
         .init_var
         """
-        try:
-            # If *scenario* is already committed to the Backend, it must be
-            # checked out.
-            scenario.check_out()
-        except RuntimeError:
-            # If *scenario* is new (has not been committed), the checkout
-            # attempt raises an exception
-            pass
+        # Don't know if the Scenario is checked out
+        checkout = None
+
+        # Lists of items in the Scenario
+        existing_items = dict()
+
+        # Lists of items initialized
+        items_initialized = []
 
         for name, item_info in items.items():
             # Copy so that pop() below does not modify *items*
             item_info = item_info.copy()
 
-            # Get the appropriate method, e.g. init_set or init_par
+            # Check that the item exists
             ix_type = item_info.pop('ix_type')
-            init_method = getattr(scenario, 'init_{}'.format(ix_type))
 
+            if ix_type not in existing_items:
+                # Store a list of items of *ix_type*
+                method = getattr(scenario, f'{ix_type}_list')
+                existing_items[ix_type] = method()
+
+            # Item must be initialized if it does not exist
+
+            if name in existing_items[ix_type]:
+                # Item exists; check its index sets and names
+                for key, values in item_info.items():
+                    values = values or []
+                    existing = getattr(scenario, key)(name)
+                    if existing != values:
+                        # The existing index sets or names do not match
+                        log.error(
+                            f"Existing index {key.split('_')[-1]} of "
+                            f"{repr(name)} {repr(existing)} do not match "
+                            f"{repr(values)}"
+                        )
+
+                # Skip; can't do anything to existing items
+                continue
+
+            # Item doesn't exist and must be initialized
+
+            # Possibly check out the Scenario
             try:
-                # Add the item
-                init_method(name=name, **item_info)
-            except ValueError:
-                # Item already exists
-                pass
+                checkout = maybe_check_out(scenario, checkout)
+            except ValueError as exc:
+                # The Scenario has a solution; can't proceed
+                log.error(str(exc))
+                return
+
+            # Get the appropriate method, e.g. init_set, and add the item
+            log.info(f'Initialize {ix_type} {repr(name)} as {item_info}')
+            getattr(scenario, f'init_{ix_type}')(name=name, **item_info)
+
+            # Record
+            items_initialized.append(name)
+
+        maybe_commit(scenario, len(items_initialized),
+                     f'{cls.__name__}.initialize_items')
+
+        if len(items_initialized) and not checkout:
+            # Scenario was originally in a checked out state; restore
+            maybe_check_out(scenario)
 
     @abstractmethod
     def run(self, scenario):

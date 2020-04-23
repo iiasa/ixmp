@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ixmp.utils import update_par
+from ixmp.utils import maybe_check_out, maybe_commit, update_par
 from .gams import GAMSModel
 
 
@@ -78,6 +78,8 @@ class DantzigModel(GAMSModel):
         if not with_data:
             return
 
+        checkout = maybe_check_out(scenario)
+
         # Add set elements
         scenario.add_set('i', DATA['i'])
         scenario.add_set('j', DATA['j'])
@@ -89,3 +91,5 @@ class DantzigModel(GAMSModel):
 
         # TODO avoid overwriting the existing value
         scenario.change_scalar('f', *DATA['f'])
+
+        maybe_commit(scenario, checkout, f'{cls.__name__}.initialize')

@@ -882,15 +882,17 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_meta(self, s: Scenario, name, value):
-        """Set a single metadata key.
+    def set_meta(self, s: Scenario, name_or_data, value=None):
+        """Set single or multiple metadata entries.
 
         Parameters
         ----------
-        name : str
-            Metadata key name.
-        value : int or float or bool or str
-            Value for *name*.
+        name_or_data : str or dict
+            If the argument is dict, it used as a mapping of metadata
+            categories (names) to values. Otherwise, use the argument
+            as the metadata attribute name.
+        value : str or number or bool, optional
+            Metadata attribute value.
 
         Returns
         -------
@@ -900,6 +902,20 @@ class Backend(ABC):
         ------
         TypeError
             If *value* is not a valid type.
+        """
+
+    @abstractmethod
+    def delete_meta(self, s, name_or_names):
+        """Remove single or multiple metadata entries.
+
+        Parameters
+        ----------
+        name_or_names : str or list of str
+            Either single metadata key or list of keys.
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod

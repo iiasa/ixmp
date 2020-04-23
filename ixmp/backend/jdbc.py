@@ -858,14 +858,13 @@ class JDBCBackend(CachingBackend):
                 for entry in self.jindex[s].getMeta().entrySet()}
 
     def set_meta(self, s, name_or_data, value=None):
-        if type(name_or_data) == dict:
-            name_or_data = list(name_or_data.items())
         if type(name_or_data) == list:
             jdata = java.LinkedHashMap()
             for k, v in name_or_data:
                 jdata.put(str(k), v)
             self.jindex[s].setMeta(jdata)
             return
+
         _type = type(value)
         try:
             _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]

@@ -1509,24 +1509,24 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        name_or_data : str or list or dict
+        name_or_data : str or dict
             If the argument is dict, it used as a mapping of metadata
             categories (names) to values. Otherwise, use the argument
             as the metadata attribute name.
         value : str or number or bool, optional
-            metadata attribute value
+            Metadata attribute value.
         """
+        if type(name_or_data) == dict:
+            name_or_data = list(name_or_data.items())
         self._backend('set_meta', name_or_data, value)
 
     def delete_meta(self, name_or_names):
-        """Set scenario metadata.
+        """Delete scenario metadata.
 
         Parameters
         ----------
-        name_or_names : str or list
-            If the argument is list, it used to remove multiple metadata
-            entries at once. Otherwise, use the argument
-            as the single metadata attribute name.
+        name_or_names : str or list of str
+            Either single metadata key or list of keys.
         """
         self._backend('delete_meta', name_or_names)
 

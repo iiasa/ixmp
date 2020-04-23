@@ -55,6 +55,7 @@ def test_class():
         set_data = noop
         set_geo = noop
         set_meta = noop
+        delete_meta = noop
         set_node = noop
         set_timeslice = noop
         set_unit = noop

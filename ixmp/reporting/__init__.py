@@ -477,12 +477,7 @@ class Reporter:
         try:
             return dask_get(dsk, key)
         except Exception as exc:
-            # Print the exception in case ComputationError.__str__ fails;
-            # workaround for https://github.com/iiasa/ixmp/issues/206
-            print(exc)
-            # To debug unprintable ComputationErrors:
-            # c = ComputationError(); c.__cause__ = exc; str(c)
-            raise ComputationError from exc
+            raise ComputationError(exc) from None
 
     def keys(self):
         """Return the keys of :attr:`graph`."""

@@ -632,66 +632,6 @@ Name: value, dtype: float64
 """)
 
 
-def test_report_size(test_mp):
-    """Stress-test reporting of large, sparse quantities."""
-    from itertools import zip_longest
-
-    import numpy as np
-
-    # test_mp.add_unit('kg')
-    scen = ixmp.Scenario(test_mp, 'size test', 'base', version='new')
-
-    # Dimensions and their lengths (Fibonacci numbers)
-    N_dims = 6
-    dims = 'abcdefgh'[:N_dims + 1]
-    sizes = [1, 5, 21, 21, 89, 377, 1597, 6765][:N_dims + 1]
-
-    # commented: "377 / 73984365 elements = 0.00051% full"
-    # from functools import reduce
-    # from operator import mul
-    # size = reduce(mul, sizes)
-    # print('{} / {} elements = {:.5f}% full'
-    #       .format(max(sizes), size, 100 * max(sizes) / size))
-
-    # Names like f_0000 ... f_1596 along each dimension
-    coords = []
-    for d, N in zip(dims, sizes):
-        coords.append([f'{d}_{i:04d}' for i in range(N)])
-        # Add to Scenario
-        scen.init_set(d)
-        scen.add_set(d, coords[-1])
-
-    def _make_values():
-        """Make a DataFrame containing each label in *coords* at least once."""
-        values = list(zip_longest(*coords, np.random.rand(max(sizes))))
-        result = pd.DataFrame(values, columns=list(dims) + ['value']) \
-                   .ffill()
-        result['unit'] = 'kg'
-        return result
-
-    # Fill the Scenario with quantities named q_01 ... q_09
-    N = 10
-    names = []
-    for i in range(10):
-        name = f'q_{i:02d}'
-        scen.init_par(name, list(dims))
-        scen.add_par(name, _make_values())
-        names.append(name)
-
-    # Create the reporter
-    rep = Reporter.from_scenario(scen)
-
-    # Add an operation that takes the product, i.e. requires all the q_*
-    keys = [rep.full_key(name) for name in names]
-    rep.add('bigmem', tuple([computations.product] + keys))
-
-    # One quantity fits in memory
-    rep.get(keys[0])
-
-    # All quantities together trigger MemoryError
-    rep.get('bigmem')
-
-
 def test_aggregate(test_mp):
     scen = ixmp.Scenario(test_mp, 'Group reporting', 'group reporting', 'new')
     t, t_foo, t_bar, x = add_test_data(scen)

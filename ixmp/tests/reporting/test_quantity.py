@@ -1,4 +1,5 @@
 """Tests for ixmp.reporting.quantity."""
+import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
@@ -18,6 +19,51 @@ class TestQuantity:
     def a(self):
         da = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
         yield Quantity(da)
+
+    @pytest.fixture(scope='class')
+    def scen_with_big_data(self, test_mp, num_params=10):
+        from itertools import zip_longest
+
+        # test_mp.add_unit('kg')
+        scen = Scenario(test_mp, 'TestQuantity', 'big data', version='new')
+
+        # Dimensions and their lengths (Fibonacci numbers)
+        N_dims = 6
+        dims = 'abcdefgh'[:N_dims + 1]
+        sizes = [1, 5, 21, 21, 89, 377, 1597, 6765][:N_dims + 1]
+
+        # commented: "377 / 73984365 elements = 0.00051% full"
+        # from functools import reduce
+        # from operator import mul
+        # size = reduce(mul, sizes)
+        # print('{} / {} elements = {:.5f}% full'
+        #       .format(max(sizes), size, 100 * max(sizes) / size))
+
+        # Names like f_0000 ... f_1596 along each dimension
+        coords = []
+        for d, N in zip(dims, sizes):
+            coords.append([f'{d}_{i:04d}' for i in range(N)])
+            # Add to Scenario
+            scen.init_set(d)
+            scen.add_set(d, coords[-1])
+
+        def _make_values():
+            """Make a DataFrame containing each label in *coords* ≥ 1 time."""
+            values = list(zip_longest(*coords, np.random.rand(max(sizes))))
+            result = pd.DataFrame(values, columns=list(dims) + ['value']) \
+                       .ffill()
+            result['unit'] = 'kg'
+            return result
+
+        # Fill the Scenario with quantities named q_01 ... q_09
+        names = []
+        for i in range(num_params):
+            name = f'q_{i:02d}'
+            scen.init_par(name, list(dims))
+            scen.add_par(name, _make_values())
+            names.append(name)
+
+        yield scen
 
     def test_assert(self, a):
         """Test assertions about Quantity.
@@ -63,6 +109,26 @@ class TestQuantity:
         # attrs are different
         a.attrs = {'bar': 'foo'}
         assert_qty_equal(a, b, check_attrs=False)
+
+    def test_size(self, scen_with_big_data):
+        """Stress-test reporting of large, sparse quantities."""
+        scen = scen_with_big_data
+
+        # Create the reporter
+        rep = Reporter.from_scenario(scen)
+
+        # Add a task to compute the product, i.e. requires all the q_*
+        keys = [rep.full_key(name) for name in scen.par_list()]
+        rep.add('bigmem', tuple([computations.product] + keys))
+
+        # One quantity fits in memory
+        rep.get(keys[0])
+
+        # All quantities can be multiplied without raising MemoryError
+        result = rep.get('bigmem')
+
+        # Result can be converted to pd.Series
+        result.to_series()
 
 
 class TestAttrSeries:

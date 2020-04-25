@@ -226,10 +226,6 @@ def aggregate(quantity, groups, keep):
         Same dimensionality as `quantity`.
 
     """
-    # NB .transpose() below is necessary only for Quantity == AttrSeries. It
-    #   can be removed when Quantity = xr.DataArray.
-    dim_order = quantity.dims
-
     attrs = quantity.attrs.copy()
 
     for dim, dim_groups in groups.items():
@@ -238,10 +234,16 @@ def aggregate(quantity, groups, keep):
 
         # Aggregate each group
         for group, members in dim_groups.items():
-            values.append(quantity.sel({dim: members})
-                                  .sum(dim=dim)
-                                  .assign_coords(**{dim: group})
-                                  .transpose(*dim_order))
+            agg = quantity.sel({dim: members}) \
+                          .sum(dim=dim) \
+                          .assign_coords(**{dim: group})
+            if Quantity.CLASS == 'AttrSeries':
+                # .transpose() is necesary for AttrSeries
+                agg = agg.transpose(*quantity.dims)
+            else:
+                # Restore fill_value=NaN for compatibility
+                agg = agg._sda.convert()
+            values.append(agg)
 
         # Reassemble to a single dataarray
         quantity = concat(*values, dim=dim)
@@ -263,8 +265,9 @@ def concat(*objs, **kwargs):
     if Quantity.CLASS == 'AttrSeries':
         kwargs.pop('dim')
         return pd.concat(objs, **kwargs)
-    elif Quantity is xr.DataArray:  # pragma: no cover
-        return xr.concat(objs, **kwargs)
+    else:
+        # Correct fill-values
+        return xr.concat(objs, **kwargs)._sda.convert()
 
 
 def disaggregate_shares(quantity, shares):

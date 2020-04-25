@@ -29,17 +29,17 @@ class TestQuantity:
         # Convert to pd.Series
         b = a.to_series()
 
-        assert_qty_equal(a, b)
-        assert_qty_equal(b, a)
-        assert_qty_allclose(a, b)
-        assert_qty_allclose(b, a)
+        assert_qty_equal(a, b, check_type=False)
+        assert_qty_equal(b, a, check_type=False)
+        assert_qty_allclose(a, b, check_type=False)
+        assert_qty_allclose(b, a, check_type=False)
 
         c = Quantity(a)
 
-        assert_qty_equal(a, c)
-        assert_qty_equal(c, a)
-        assert_qty_allclose(a, c)
-        assert_qty_allclose(c, a)
+        assert_qty_equal(a, c, check_type=True)
+        assert_qty_equal(c, a, check_type=True)
+        assert_qty_allclose(a, c, check_type=True)
+        assert_qty_allclose(c, a, check_type=True)
 
     def test_assert_with_attrs(self, a):
         """Test assertions about Quantity with attrs.
@@ -88,8 +88,7 @@ class TestAttrSeries:
         assert foo.drop('a').dims == ('b',)
 
 
-@pytest.mark.skip(reason="Pending #317")
-def test_as_sparse_xarray():
+def test_sda_accessor():
     """Test conversion to sparse.COO-backed xr.DataArray."""
     x_series = pd.Series(
         data=[1., 2, 3, 4],
@@ -98,25 +97,32 @@ def test_as_sparse_xarray():
     )
     y_series = pd.Series(data=[5., 6], index=pd.Index(['e', 'f'], name='baz'))
 
-    x = xr.DataArray.from_series(x_series, sparse=True)
-    y = xr.DataArray.from_series(y_series, sparse=True)
+    x = SparseDataArray.from_series(x_series)
+    y = SparseDataArray.from_series(y_series)
 
-    x_dense = xr.DataArray.from_series(x_series)
-    y_dense = xr.DataArray.from_series(y_series)
+    x_dense = x._sda.dense_super
+    y_dense = y._sda.dense_super
+    assert not x_dense._sda.COO_data or x_dense._sda.nan_fill
+    assert not y_dense._sda.COO_data or y_dense._sda.nan_fill
 
     with pytest.raises(ValueError, match='make sure that the broadcast shape'):
         x_dense * y
 
-    z1 = as_sparse_xarray(x_dense) * y
-    z2 = x * as_sparse_xarray(y_dense)
-    assert z1.dims == ('foo', 'bar', 'baz')
+    z1 = x_dense._sda.convert() * y
+
+    z2 = x * y_dense._sda.convert()
+    assert z1.dims == ('foo', 'bar', 'baz') == z2.dims
     assert_xr_equal(z1, z2)
 
-    z3 = as_sparse_xarray(x) * as_sparse_xarray(y)
+    z3 = x._sda.convert() * y._sda.convert()
     assert_xr_equal(z1, z3)
 
-    z4 = as_sparse_xarray(x) * y
+    z4 = x._sda.convert() * y
     assert_xr_equal(z1, z4)
 
-    z5 = as_sparse_xarray(x_series) * y
-    assert_xr_equal(z1, z5)
+    # Doesn't work: can't align automatically
+    with pytest.raises(ValueError, match='Please make sure that the broadcast '
+                       'shape of just the sparse arrays is the same as the '
+                       'broadcast shape of all the operands.'):
+        z5 = SparseDataArray(x_series) * y
+        assert_xr_equal(z1, z5)

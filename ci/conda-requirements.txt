@@ -2,7 +2,10 @@ click
 codecov
 dask
 graphviz
-JPype1!=0.7.2
+
+# Temporary exclusions; see iiasa/ixmp#279
+JPype1 != 0.7.2, != 0.7.3
+
 jupyter
 numpydoc
 pandas

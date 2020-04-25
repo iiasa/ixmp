@@ -20,7 +20,7 @@ from ixmp.reporting import (
     configure,
     computations,
 )
-from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
+from ixmp.reporting import Quantity
 from ixmp.testing import (
     make_dantzig,
     assert_logs,
@@ -173,7 +173,7 @@ def test_reporter_add_product(test_mp, ureg):
     assert key == 'x squared:t-y'
 
     # Product has the expected value
-    exp = as_quantity(x * x, name='x')
+    exp = Quantity(x * x, name='x')
     exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
 
@@ -203,7 +203,7 @@ def test_reporter_from_dantzig(test_mp, ureg):
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
-    assert d.shape == ((1,) if Quantity is AttrSeries else tuple())
+    assert d.shape == ((1,) if Quantity.CLASS == 'AttrSeries' else tuple())
     assert d.size == 1
     assert np.isclose(d.values, 11.7)
 
@@ -231,7 +231,7 @@ def test_reporter_from_dantzig(test_mp, ureg):
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    new_key = rep.disaggregate('b:j', 'p', args=[as_quantity(shares)])
+    new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
 
     # ...produces the expected key with new dimension added
     assert new_key == 'b:j-p'
@@ -377,7 +377,7 @@ def test_reporter_file(tmp_path):
 def test_file_formats(test_data_path, tmp_path):
     r = Reporter()
 
-    expected = as_quantity(
+    expected = Quantity(
         pd.read_csv(test_data_path / 'report-input0.csv',
                     index_col=['i', 'j'])['value'],
         units='km')
@@ -443,10 +443,10 @@ def test_units(ureg):
     # Create some dummy data
     dims = dict(coords=['a b c'.split()], dims=['x'])
     r.add('energy:x',
-          as_quantity(xr.DataArray([1., 3, 8], **dims), units='MJ'))
+          Quantity(xr.DataArray([1., 3, 8], **dims), units='MJ'))
     r.add('time',
-          as_quantity(xr.DataArray([5., 6, 8], **dims), units='hour'))
-    r.add('efficiency', as_quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
+          Quantity(xr.DataArray([5., 6, 8], **dims), units='hour'))
+    r.add('efficiency', Quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
@@ -701,7 +701,7 @@ def test_aggregate(test_mp):
     t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
 
     # Use the computation directly
-    agg1 = computations.aggregate(as_quantity(x), {'t': t_groups}, True)
+    agg1 = computations.aggregate(Quantity(x), {'t': t_groups}, True)
 
     # Expected set of keys along the aggregated dimension
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())

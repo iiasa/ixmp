@@ -10,7 +10,7 @@ import pandas as pd
 import pint
 import xarray as xr
 
-from .quantity import AttrSeries, Quantity, as_quantity
+from .quantity import Quantity
 from .utils import (
     RENAME_DIMS,
     dims_for_qty,
@@ -192,9 +192,10 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     # log.debug(' '.join(map(str, info)))
 
     # Convert to a Quantity, assign attrbutes and name
-    qty = as_quantity(data[column]) \
-        .assign_attrs(attrs) \
-        .rename(name + ('-margin' if column == 'mrg' else ''))
+    qty = Quantity(
+        data[column],
+        name=name + ('-margin' if column == 'mrg' else ''),
+        attrs=attrs)
 
     try:
         # Remove length-1 dimensions for scalars
@@ -259,7 +260,7 @@ def concat(*objs, **kwargs):
     Reporter.
     """
     objs = filter_concat_args(objs)
-    if Quantity is AttrSeries:
+    if Quantity.CLASS == 'AttrSeries':
         kwargs.pop('dim')
         return pd.concat(objs, **kwargs)
     elif Quantity is xr.DataArray:  # pragma: no cover
@@ -281,24 +282,12 @@ def product(*quantities):
     # Initialize result values with first entry
     result, u_result = next(items)
 
-    def _align_levels(ref, obj):
-        """Work around https://github.com/pandas-dev/pandas/issues/25760
-
-        Return a copy of *obj* with common levels in the same order as *ref*.
-
-        TODO remove when Quantity is xr.DataArray, or above issues is closed.
-        """
-        if not isinstance(obj.index, pd.MultiIndex):
-            return obj
-        common = [n for n in ref.index.names if n in obj.index.names]
-        unique = [n for n in obj.index.names if n not in common]
-        return obj.reorder_levels(common + unique)
-
     # Iterate over remaining entries
     for q, u in items:
-        if Quantity is AttrSeries:
-            result = (result * _align_levels(result, q)).dropna()
-        else:  # pragma: no cover
+        if Quantity.CLASS == 'AttrSeries':
+            # Work around pandas-dev/pandas#25760; see attrseries.py
+            result = (result * q.align_levels(result)).dropna()
+        else:
             result = result * q
         u_result *= u
 
@@ -321,7 +310,7 @@ def ratio(numerator, denominator):
     result = numerator / denominator
     result.attrs['_unit'] = u_num / u_denom
 
-    if Quantity is AttrSeries:
+    if Quantity.CLASS == 'AttrSeries':
         result.dropna(inplace=True)
 
     return result
@@ -343,7 +332,7 @@ def select(qty, indexers, inverse=False):
         new_indexers = {}
         for dim, labels in indexers.items():
             new_indexers[dim] = list(filter(lambda l: l not in labels,
-                                            qty.coords[dim]))
+                                            qty.coords[dim].data))
         indexers = new_indexers
 
     return qty.sel(indexers)
@@ -433,7 +422,7 @@ def load_file(path, dims={}, units=None):
                        .rename(columns=dims)
             index_columns = list(dims.values())
 
-        return as_quantity(data.set_index(index_columns)['value'], units=units)
+        return Quantity(data.set_index(index_columns)['value'], units=units)
     elif path.suffix in ('.xls', '.xlsx'):
         # TODO define expected Excel data input format
         raise NotImplementedError  # pragma: no cover

@@ -59,6 +59,7 @@ import pytest
 
 from . import cli, config as ixmp_config
 from .core import Platform, TimeSeries, Scenario, IAMC_IDX
+from .reporting import Quantity
 
 
 log = logging.getLogger(__name__)
@@ -480,51 +481,43 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
             pytest.fail('\n'.join(lines))
 
 
-def assert_qty_equal(a, b, check_attrs=True, **kwargs):
+def assert_qty_equal(a, b, check_type=True, check_attrs=True, **kwargs):
     """Assert that Quantity objects *a* and *b* are equal.
 
     When Quantity is AttrSeries, *a* and *b* are first passed through
     :meth:`as_quantity`.
     """
-    from xarray import DataArray
-    from xarray.testing import assert_equal as assert_xr_equal
+    if not check_type:
+        a = Quantity(a)
+        b = Quantity(b)
 
-    from .reporting.quantity import AttrSeries, Quantity, as_quantity
-
-    if Quantity is AttrSeries:
-        # Convert pd.Series automatically
-        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
-        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
-
+    if Quantity.CLASS == 'AttrSeries':
         assert_series_equal(a, b, check_dtype=False, **kwargs)
-    elif Quantity is DataArray:  # pragma: no cover
-        assert_xr_equal(a, b, **kwargs)
+    else:
+        import xarray.testing
+        xarray.testing.assert_equal(a, b, **kwargs)
 
     # check attributes are equal
     if check_attrs:
         assert a.attrs == b.attrs
 
 
-def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
+def assert_qty_allclose(a, b, check_type=True, check_attrs=True, **kwargs):
     """Assert that Quantity objects *a* and *b* have numerically close values.
 
     When Quantity is AttrSeries, *a* and *b* are first passed through
     :meth:`as_quantity`.
     """
-    from xarray import DataArray
-    from xarray.testing import assert_allclose as assert_xr_allclose
+    if not check_type:
+        a = Quantity(a)
+        b = Quantity(b)
 
-    from .reporting.quantity import AttrSeries, Quantity, as_quantity
-
-    if Quantity is AttrSeries:
-        # Convert pd.Series automatically
-        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
-        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
-
+    if Quantity.CLASS == 'AttrSeries':
         assert_series_equal(a, b, **kwargs)
-    elif Quantity is DataArray:  # pragma: no cover
+    else:
+        import xarray.testing
         kwargs.pop('check_dtype', None)
-        assert_xr_allclose(a, b, **kwargs)
+        xarray.testing.assert_allclose(a._sda.dense, b._sda.dense, **kwargs)
 
     # check attributes are equal
     if check_attrs:

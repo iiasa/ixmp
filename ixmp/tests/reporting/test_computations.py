@@ -5,7 +5,7 @@ import pint
 import pytest
 
 import ixmp
-from ixmp.reporting import Reporter, as_quantity, computations
+from ixmp.reporting import Reporter, Quantity, computations
 from ixmp.testing import assert_logs
 
 from . import add_test_data
@@ -53,19 +53,19 @@ def test_select(data):
     # Unpack
     *_, t_foo, t_bar, x = data
 
-    x = as_quantity(x)
-    assert len(x) == 6 * 6
+    x = Quantity(x)
+    assert x.size == 6 * 6
 
     # Selection with inverse=False
     indexers = {'t': t_foo[0:1] + t_bar[0:1]}
     result_0 = computations.select(x, indexers=indexers)
-    assert len(result_0) == 2 * 6
+    assert result_0.size == 2 * 6
 
     # Single indexer along one dimension results in 1D data
     indexers['y'] = '2010'
     result_1 = computations.select(x, indexers=indexers)
-    assert len(result_1) == 2 * 1
+    assert result_1.size == 2 * 1
 
     # Selection with inverse=True
     result_2 = computations.select(x, indexers=indexers, inverse=True)
-    assert len(result_2) == 4 * 5
+    assert result_2.size == 4 * 5

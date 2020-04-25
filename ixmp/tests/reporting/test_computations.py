@@ -11,6 +11,9 @@ from ixmp.testing import assert_logs
 from . import add_test_data
 
 
+pytestmark = pytest.mark.usefixtures('parametrize_quantity_class')
+
+
 @pytest.fixture(scope='function')
 def data(test_mp, request):
     scen = ixmp.Scenario(test_mp, request.node.name, request.node.name, 'new')

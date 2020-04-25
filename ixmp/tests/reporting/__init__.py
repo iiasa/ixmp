@@ -2,6 +2,9 @@ import numpy as np
 import pint
 import xarray as xr
 
+from ixmp.reporting import Quantity
+
+
 REGISTRY = pint.get_application_registry()
 
 

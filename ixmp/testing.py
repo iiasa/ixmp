@@ -98,6 +98,17 @@ def ixmp_cli(tmp_env):
     yield Runner()
 
 
+@pytest.fixture(params=['AttrSeries', 'SparseDataArray'])
+def parametrize_quantity_class(request):
+    """Fixture to run tests twice, for both reporting Quantity classes."""
+    pre = Quantity.CLASS
+
+    Quantity.CLASS = request.param
+    yield
+
+    Quantity.CLASS = pre
+
+
 @pytest.fixture
 def protect_pint_app_registry():
     """Protect pint's application registry.

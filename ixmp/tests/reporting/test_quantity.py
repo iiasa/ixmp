@@ -4,21 +4,20 @@ import pytest
 import xarray as xr
 from xarray.testing import assert_equal as assert_xr_equal
 
-from ixmp.reporting.quantity import AttrSeries, Quantity, as_sparse_xarray
+from ixmp import Reporter, Scenario
+from ixmp.reporting import Quantity, computations
+from ixmp.reporting.attrseries import AttrSeries
+from ixmp.reporting.sparsedataarray import SparseDataArray
 from ixmp.testing import assert_qty_allclose, assert_qty_equal
 
 
+@pytest.mark.usefixtures('parametrize_quantity_class')
 class TestQuantity:
-    """Tests of Quantity.
-
-    NB. these tests should pass whether Quantity is set to AttrSeries or
-    xr.DataArray in ixmp.reporting.utils. As written, they only test the
-    current form of Quantity. @gidden tested both by hand-swapping the Quantity
-    class and running tests as of commit df1ec6f of PR #147.
-    """
-    @pytest.fixture()
+    """Tests of Quantity."""
+    @pytest.fixture
     def a(self):
-        yield xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+        da = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
+        yield Quantity(da)
 
     def test_assert(self, a):
         """Test assertions about Quantity.

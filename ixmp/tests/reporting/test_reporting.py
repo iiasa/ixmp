@@ -31,6 +31,8 @@ from ixmp.testing import (
 from . import add_test_data
 
 
+pytestmark = pytest.mark.usefixtures('parametrize_quantity_class')
+
 test_args = ('Douglas Adams', 'Hitchhiker')
 
 TS_DF = {'year': [2010, 2020], 'value': [23.7, 23.8]}

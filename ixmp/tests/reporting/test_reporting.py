@@ -620,12 +620,12 @@ def test_cli(ixmp_cli, test_mp, test_data_path):
     assert result.output.endswith(
         "i          j       "  # Trailing whitespace
         """
-seattle    new-york    2.5
-           chicago     1.7
-           topeka      1.8
-san-diego  new-york    2.5
-           chicago     1.8
+san-diego  chicago     1.8
+           new-york    2.5
            topeka      1.4
+seattle    chicago     1.7
+           new-york    2.5
+           topeka      1.8
 Name: value, dtype: float64
 """)
 

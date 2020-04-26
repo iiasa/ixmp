@@ -10,7 +10,7 @@ filterwarnings(
     action='ignore',
     message="An import was requested from a module that has moved location.",
     module='sparse._coo.numba_extension',
-    )
+)
 
 import sparse  # noqa: E402
 
@@ -48,7 +48,7 @@ class SparseAccessor:
                 dims=self.da.dims,
                 name=self.da.name,
                 attrs=self.da.attrs,
-                )
+            )
 
     @property
     def COO_data(self):

@@ -39,7 +39,12 @@ from itertools import product
 import logging
 from math import ceil
 import os
-import resource
+try:
+    import resource
+    has_resource_module = True
+except ImportError:
+    # Windows
+    has_resource_module = False
 import shutil
 import subprocess
 import sys
@@ -685,6 +690,9 @@ def resource_limit(request):
     The original limit, if any, is reset after the test function in which the
     fixture is used.
     """
+    if not has_resource_module:
+        pytest.skip("Python module 'resource' not available (non-Unix OS)")
+
     name, value = request.config.getoption('--resource-limit').split(':')
     res = getattr(resource, f'RLIMIT_{name.upper()}')
     value = int(value)

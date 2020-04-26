@@ -139,18 +139,43 @@ class TestAttrSeries:
                                          names=['a', 'b'])
         yield AttrSeries([0, 1, 2, 3], index=idx)
 
-    def test_sum(self, foo):
+    @pytest.fixture
+    def bar(self):
+        yield AttrSeries([0, 1], index=pd.Index(['a1', 'a2'], name='a'))
+
+    def test_rename(self, foo):
+        assert foo.rename({'a': 'c', 'b': 'd'}).dims == ('c', 'd')
+
+    def test_sel(self, bar):
+        # Selecting 1 element from 1-D parameter still returns AttrSeries
+        result = bar.sel(a='a2')
+        assert isinstance(result, AttrSeries)
+        assert result.size == 1
+        assert result.dims == ('a',)
+        assert result.iloc[0] == 1
+
+    def test_sum(self, foo, bar):
         # AttrSeries can be summed across all dimensions
         result = foo.sum(dim=['a', 'b'])
         assert isinstance(result, AttrSeries)  # returns an AttrSeries
-        assert len(result) == 1                # with one element
-        assert result[0] == 6                  # that has the correct value
+        assert result.size == 1                # with one element
+        assert result.item() == 6              # that has the correct value
 
-    def test_others(self, foo):
+        # Sum with wrong dim raises ValueError
+        with pytest.raises(ValueError):
+            bar.sum('b')
+
+    def test_others(self, foo, bar):
         # Exercise other compatibility functions
         assert isinstance(foo.as_xarray(), xr.DataArray)
         assert type(foo.to_frame()) is pd.DataFrame
         assert foo.drop('a').dims == ('b',)
+        assert bar.dims == ('a',)
+
+        with pytest.raises(NotImplementedError):
+            bar.item('a2')
+        with pytest.raises(ValueError):
+            bar.item()
 
 
 def test_sda_accessor():
@@ -189,5 +214,5 @@ def test_sda_accessor():
     with pytest.raises(ValueError, match='Please make sure that the broadcast '
                        'shape of just the sparse arrays is the same as the '
                        'broadcast shape of all the operands.'):
-        z5 = SparseDataArray(x_series) * y
-        assert_xr_equal(z1, z5)
+        SparseDataArray(x_series) * y  # = z5
+        # assert_xr_equal(z1, z5)

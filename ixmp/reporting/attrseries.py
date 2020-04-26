@@ -1,8 +1,5 @@
-from collections.abc import Collection
-
 import pandas as pd
 import pandas.core.indexes.base as ibase
-import pint
 import xarray as xr
 
 
@@ -34,14 +31,10 @@ class AttrSeries(pd.Series):
     def _constructor(self):
         return AttrSeries
 
-    def __init__(self, data=None, *args, name=None, units=None, attrs=None,
-                 **kwargs):
+    def __init__(self, data=None, *args, name=None, attrs=None, **kwargs):
         attrs = attrs or dict()
-        if units:
-            # Insert the units into the attrs
-            attrs['_unit'] = pint.Unit(units)
 
-        if isinstance(data, (AttrSeries, xr.DataArray)):
+        if hasattr(data, 'attrs'):
             # Use attrs from an existing object
             new_attrs = data.attrs.copy()
 
@@ -49,9 +42,12 @@ class AttrSeries(pd.Series):
             new_attrs.update(attrs)
             attrs = new_attrs
 
+        if isinstance(data, (AttrSeries, xr.DataArray)):
+            # Extract name from existing object or use the argument
+            name = ibase.maybe_extract_name(name, data, type(self))
+
             # Pre-convert to pd.Series from xr.DataArray to preserve names and
             # labels. For AttrSeries, this is a no-op (see below).
-            name = ibase.maybe_extract_name(name, data, type(self))
             data = data.to_series()
 
         # Don't pass attrs to pd.Series constructor; it currently does not
@@ -64,10 +60,6 @@ class AttrSeries(pd.Series):
     @classmethod
     def from_series(cls, series, sparse=None):
         return cls(series)
-
-    def assign_attrs(self, d):
-        self.attrs.update(d)
-        return self
 
     def assign_coords(self, **kwargs):
         return pd.concat([self], keys=kwargs.values(), names=kwargs.keys())
@@ -87,6 +79,13 @@ class AttrSeries(pd.Series):
     def drop(self, label):
         return self.droplevel(label)
 
+    def item(self, *args):
+        if len(args) and args != (None,):
+            raise NotImplementedError
+        elif self.size != 1:
+            raise ValueError
+        return self.iloc[0]
+
     def rename(self, new_name_or_name_dict):
         if isinstance(new_name_or_name_dict, dict):
             return self.rename_axis(index=new_name_or_name_dict)
@@ -98,10 +97,17 @@ class AttrSeries(pd.Series):
         indexers.update(indexers_kwargs)
         if len(indexers) == 1:
             level, key = list(indexers.items())[0]
-            if not isinstance(key, Collection) and not drop:
-                # When using .loc[] to select 1 label on 1 level, pandas drops
-                # the level. Use .xs() to avoid this behaviour unless drop=True
-                return AttrSeries(self.xs(key, level=level, drop_level=False))
+            if isinstance(key, str) and not drop:
+                if isinstance(self.index, pd.MultiIndex):
+                    # When using .loc[] to select 1 label on 1 level, pandas
+                    # drops the level. Use .xs() to avoid this behaviour unless
+                    # drop=True
+                    return AttrSeries(self.xs(key, level=level,
+                                              drop_level=False))
+                else:
+                    # No MultiIndex; use .loc with a slice to avoid returning
+                    # scalar
+                    return self.loc[slice(key, key)]
 
         idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
         return AttrSeries(self.loc[idx])
@@ -116,19 +122,20 @@ class AttrSeries(pd.Series):
             dim = list(args)
             args = tuple()
 
-        if isinstance(self.index, pd.MultiIndex):
-            if len(dim) == len(self.index.names):
-                # assume dimensions = full multi index, do simple sum
-                kwargs = {}
-            else:
-                # pivot and sum across columns
-                obj = self.unstack(dim)
-                kwargs['axis'] = 1
-                attrs = self.attrs
+        if len(dim) == len(self.index.names):
+            bad_dims = set(dim) - set(self.index.names)
+            if bad_dims:
+                raise ValueError(f'{bad_dims} not found in array dimensions '
+                                 f'{self.index.names}')
+            # Simple sum
+            kwargs = {}
         else:
-            if dim != [self.index.name]:
-                raise ValueError(dim, self.index.name, self)
-            kwargs['level'] = dim
+            # pivot and sum across columns
+            obj = self.unstack(dim)
+            kwargs['axis'] = 1
+            # Result will be DataFrame; re-attach attrs when converted to
+            # AttrSeries
+            attrs = self.attrs
 
         return AttrSeries(obj.sum(*args, **kwargs), attrs=attrs)
 

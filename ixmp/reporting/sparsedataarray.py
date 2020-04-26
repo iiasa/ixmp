@@ -1,26 +1,14 @@
-from warnings import filterwarnings
-
 import numpy as np
 import pandas as pd
+import sparse  # NB warnings from sparse are filtered in computations.py
 import xarray as xr
 from xarray.core.utils import either_dict_or_kwargs
-
-# sparse 0.9.1, numba 0.49.0
-filterwarnings(
-    action='ignore',
-    message="An import was requested from a module that has moved location.",
-    module='sparse._coo.numba_extension',
-)
-
-import sparse  # noqa: E402
 
 
 @xr.register_dataarray_accessor('_sda')
 class SparseAccessor:
     """:mod:`xarray` accessor to help :class:`SparseDataArray`."""
     def __init__(self, obj):
-        if not isinstance(obj, xr.DataArray):
-            raise TypeError('._sda accessor only valid for xr.DataArray')
         self.da = obj
 
     def convert(self):
@@ -58,11 +46,8 @@ class SparseAccessor:
     @property
     def dense(self):
         """Return a copy with dense (:class:`.ndarray`) data."""
-        if self.COO_data:
-            # Use existing method xr.Variable._to_dense()
-            return self.da._replace(variable=self.da.variable._to_dense())
-        else:
-            return self.da
+        # Use existing method xr.Variable._to_dense()
+        return self.da._replace(variable=self.da.variable._to_dense())
 
     @property
     def dense_super(self):

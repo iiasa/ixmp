@@ -86,7 +86,7 @@ def test_reporter_add():
     with pytest.raises(KeyExistsError, match=r"key 'a' already exists"):
         r.add('a', 5, strict=True)
 
-    def gen(other):
+    def gen(other):  # pragma: no cover
         """A generator for apply()."""
         return (lambda a, b: a * b, 'a', other)
 

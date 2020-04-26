@@ -1,6 +1,16 @@
 import re
 
-from ixmp.testing import get_cell_output, run_notebook
+from ixmp.reporting import ComputationError
+from ixmp.testing import assert_logs, get_cell_output, run_notebook
+
+
+def test_computationerror(caplog):
+    ce_none = ComputationError(None)
+
+    msg = ("Exception raised while formatting None:\nAttributeError"
+           "(\"'NoneType' object has no attribute '__traceback__'\")")
+    with assert_logs(caplog, msg):
+        str(ce_none)
 
 
 # The TypeError message differs:

@@ -88,7 +88,7 @@ def process_dask_tb(exc):
                 # their string repr().
                 key = frame.locals['key']
                 task = frame.locals['task']
-            except (TypeError, KeyError):
+            except (TypeError, KeyError):  # pragma: no cover
                 # No locals, or 'key' or 'task' not present
                 pass
 

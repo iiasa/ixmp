@@ -187,6 +187,7 @@ So, if ``install.bat`` fails, check if::
 
 are all part of the PATH system variable. If they are not there, add them.
 
+Run `ixmp show-versions` on the command line to check that you have all dependencies installed, or when reporting issues.
 
 .. _`installing MESSAGEix`: https://message.iiasa.ac.at/en/latest/getting_started.html
 .. _`Anaconda`: https://www.continuum.io/downloads

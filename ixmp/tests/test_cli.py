@@ -255,6 +255,11 @@ def test_report(ixmp_cli):
     assert result.exit_code == UsageError.exit_code
 
 
+def test_show_versions(ixmp_cli):
+    result = ixmp_cli.invoke(['show-versions'])
+    assert result.exit_code == 0, result.output
+
+
 def test_solve(ixmp_cli, test_mp):
     populate_test_platform(test_mp)
     cmd = [

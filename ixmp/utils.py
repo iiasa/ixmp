@@ -2,7 +2,9 @@ from collections.abc import Iterable
 from functools import partial
 from inspect import Parameter, signature
 import logging
+from pathlib import Path
 import re
+import sys
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -258,6 +260,68 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         ])
 
     return lines
+
+
+def show_versions(file=sys.stdout):
+    """Print information about ixmp and its dependencies to *file*."""
+    import importlib
+    from subprocess import DEVNULL, check_output
+
+    from xarray.util.print_versions import get_sys_info
+
+    def _git_log(mod):
+        cmd = ['git', 'log', '--oneline', '--no-color', '--decorate', '-n 1']
+        cwd = Path(mod.__file__).parent
+        try:
+            info = check_output(cmd, cwd=cwd, encoding='utf-8', stderr=DEVNULL)
+        except Exception:
+            return ''
+        else:
+            return f'\n     {info.rstrip()}'
+
+    deps = [
+        # ixmp stack
+        'ixmp', 'message_ix', 'message_data', None,  # Separator
+
+        # ixmp dependencies
+        'click', 'dask', 'graphviz', 'jpype', 'pandas', 'pint', 'xarray',
+        'xlrd', 'xlsxwriter', 'yaml', None,
+
+        # Optional dependencies, dependencies of message_ix and message_data
+        'iam-units', 'jupyter', 'matplotlib', 'plotnine', 'pyam',
+    ]
+
+    # Use xarray to get system & Python information
+    info = [(None, None)]
+    info.extend(get_sys_info()[1:])  # Exclude the commit number
+    info.append((None, None))
+
+    for module_name in deps:
+        try:
+            # Import the module
+            mod = sys.modules.get(module_name, None) \
+                or importlib.import_module(module_name)
+        except Exception:
+            # Couldn't import
+            info.append((module_name, None))
+            continue
+
+        # Retrieve git log information, if any
+        gl = _git_log(mod)
+        try:
+            version = mod.__version__
+        except Exception:
+            # __version__ not available
+            version = 'installed'
+        finally:
+            info.append((module_name, version + gl))
+
+    for k, stat in info:
+        if (k, stat) == (None, None):
+            # Separator line
+            print('', file=file)
+        else:
+            print(f"{k + ':':12} {stat}", file=file)
 
 
 def update_par(scenario, name, data):

@@ -280,22 +280,20 @@ def show_versions(file=sys.stdout):
             return f'\n     {info.rstrip()}'
 
     deps = [
+        None,  # Prints a separator
+
         # ixmp stack
-        'ixmp', 'message_ix', 'message_data', None,  # Separator
+        'ixmp', 'message_ix', 'message_data', None,
 
         # ixmp dependencies
         'click', 'dask', 'graphviz', 'jpype', 'pandas', 'pint', 'xarray',
         'xlrd', 'xlsxwriter', 'yaml', None,
 
         # Optional dependencies, dependencies of message_ix and message_data
-        'iam-units', 'jupyter', 'matplotlib', 'plotnine', 'pyam',
+        'iam_units', 'jupyter', 'matplotlib', 'plotnine', 'pyam', None,
     ]
 
-    # Use xarray to get system & Python information
-    info = [(None, None)]
-    info.extend(get_sys_info()[1:])  # Exclude the commit number
-    info.append((None, None))
-
+    info = []
     for module_name in deps:
         try:
             # Import the module
@@ -315,6 +313,9 @@ def show_versions(file=sys.stdout):
             version = 'installed'
         finally:
             info.append((module_name, version + gl))
+
+    # Use xarray to get system & Python information
+    info.extend(get_sys_info()[1:])  # Exclude the commit number
 
     for k, stat in info:
         if (k, stat) == (None, None):

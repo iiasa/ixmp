@@ -1575,31 +1575,53 @@ class Scenario(TimeSeries):
                 break
 
     def get_meta(self, name=None):
-        """Get scenario metadata.
+        """Get Scenario metadata.
 
         Parameters
         ----------
         name : str, optional
-            metadata attribute name
+            Annotation ID.
+
+        Returns
+        -------
+        dict
+            if `name` was :obj:`None`; all annotations of the Scenario.
+        str or int or float or bool
+            if `name` was given; the value of the annotation.
+
+        See Also
+        --------
+        set_meta
         """
-        all_meta = self._backend('get_meta')
-        return all_meta[name] if name else all_meta
+        data = self._backend('get_anno', CodeList.run)
+        return data[name] if name else data
 
     def set_meta(self, name_or_data, value=None):
         """Set scenario metadata.
 
+        'Metadata' are annotations (see :meth:`Platform.annotate`) attached to
+        the Scenario object via its unique :meth:`.run_id`.
+        These may be used to used store information about the Scenario.
+
         Parameters
         ----------
         name_or_data : str or dict
-            If the argument is dict, it used as a mapping of metadata
-            categories (names) to values. Otherwise, use the argument
-            as the metadata attribute name.
-        value : str or number or bool, optional
-            Metadata attribute value.
+            If the argument is dict, it used as a mapping of annotation IDs
+            to values. Otherwise, use the argument as the annotation ID.
+        value : str or int or float or bool, optional
+            Annotation value.
+
+        See Also
+        --------
+        delete_meta
+        get_meta
+        Platform.annotate
         """
-        if type(name_or_data) == dict:
-            name_or_data = list(name_or_data.items())
-        self._backend('set_meta', name_or_data, value)
+        if isinstance(name_or_data, dict):
+            data = name_or_data
+        else:
+            data = {name_or_data: value}
+        self._backend('set_anno', CodeList.run, data)
 
     def delete_meta(self, name_or_names):
         """Delete scenario metadata.
@@ -1607,9 +1629,17 @@ class Scenario(TimeSeries):
         Parameters
         ----------
         name_or_names : str or list of str
-            Either single metadata key or list of keys.
+            Single annotation ID or list of IDs.
+
+        See Also
+        --------
+        set_meta
         """
-        self._backend('delete_meta', name_or_names)
+        if isinstance(name_or_names, str):
+            ids = [name_or_names]
+        else:
+            ids = name_or_names
+        self._backend('delete_anno', CodeList.run, ids)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

@@ -14,7 +14,7 @@ import pandas as pd
 
 from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered
-from . import FIELDS, ItemType
+from . import FIELDS, CodeList, ItemType
 from .base import CachingBackend
 
 
@@ -122,13 +122,17 @@ def _raise_jexception(exc, msg='unhandled Java exception: '):
     raise RuntimeError(msg) from None
 
 
-def _domain_enum(domain):
+def _domain_enum(codelist):
+    """Map from CodeList to the (Java) DocumentationDomain enum."""
     domain_enum = java.DocumentationKey.DocumentationDomain
+
+    cl = {'variable': 'timeseries'}.get(codelist, codelist)
+
     try:
-        return domain_enum.valueOf(domain.upper())
+        return domain_enum.valueOf(cl.upper())
     except java.IllegalArgumentException:
         domains = ', '.join([d.name().lower() for d in domain_enum.values()])
-        raise ValueError(f'No such domain: {domain}, '
+        raise ValueError(f'No such domain: {codelist}, '
                          f'existing domains: {domains}')
 
 
@@ -237,49 +241,6 @@ class JDBCBackend(CachingBackend):
     def get_log_level(self):
         levels = {v: k for k, v in LOG_LEVELS.items()}
         return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
-
-    def set_doc(self, domain, docs):
-        """ Save documentation to database
-
-        Parameters
-        ----------
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        docs : dict or array of tuples
-            Dictionary or tuple array containing mapping between name of domain
-            object (e.g. model name) and string representing fragment
-            of documentation
-        """
-        dd = _domain_enum(domain)
-        jdata = java.LinkedHashMap()
-        if type(docs) == dict:
-            docs = list(docs.items())
-        for k, v in docs:
-            jdata.put(str(k), str(v))
-        self.jobj.setDoc(dd, jdata)
-
-    def get_doc(self, domain, name=None):
-        """ Read documentation from database
-
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        name : str, optional
-            Name of domain entity (e.g. model name).
-        Returns
-        -------
-        str or dict
-            String representing fragment of documentation if name is passed as
-            parameter or dictionary containing mapping between name of domain
-            object (e.g. model name) and string representing fragment when
-            name parameter is omitted.
-        """
-        dd = _domain_enum(domain)
-        if name is None:
-            doc = self.jobj.getDoc(dd)
-            return {entry.getKey(): entry.getValue()
-                    for entry in doc.entrySet()}
-        else:
-            return self.jobj.getDoc(dd, str(name))
 
     def open_db(self):
         """(Re-)open the database connection."""
@@ -849,38 +810,80 @@ class JDBCBackend(CachingBackend):
 
         self.cache_invalidate(s, type, name)
 
-    def get_meta(self, s):
-        def unwrap(v):
-            """Unwrap metadata numeric value (BigDecimal -> Double)"""
-            return v.doubleValue() if isinstance(v, java.BigDecimal) else v
+    def set_anno(self, target_id, codelist, annotations):
+        jdata = java.LinkedHashMap()
 
-        return {entry.getKey(): unwrap(entry.getValue())
-                for entry in self.jindex[s].getMeta().entrySet()}
+        if isinstance(target_id, Scenario):
+            target = self.jindex[target_id]
 
-    def set_meta(self, s, name_or_data, value=None):
-        if type(name_or_data) == list:
-            jdata = java.LinkedHashMap()
-            for k, v in name_or_data:
-                jdata.put(str(k), v)
-            self.jindex[s].setMeta(jdata)
-            return
+            # 'metadata'
+            for key, value in annotations.items():
+                if not isinstance(value, (int, str, float, bool)):
+                    msg = f'Cannot store metadata of type {type(value)}'
+                    raise TypeError(msg)
+                jdata.put(key, value)
 
-        _type = type(value)
-        try:
-            _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
-            method_name = 'setMeta' + _type
-        except KeyError:
-            raise TypeError(f'Cannot store metadata of type {_type}')
+            target.setMeta(jdata)
+        else:
+            # 'documentation'
+            jdomain = _domain_enum(codelist.name)
 
-        getattr(self.jindex[s], method_name)(name_or_data, value)
+            if set(annotations.keys()) != {'doc'}:
+                raise ValueError(annotations)
 
-    def delete_meta(self, s, name_or_names):
-        if type(name_or_names) == str:
-            name_or_names = [str]
-        jdata = java.LinkedList()
-        for k in name_or_names:
-            jdata.add(str(k))
-        self.jindex[s].removeMeta(jdata)
+            jdata.put(target_id, annotations['doc'])
+
+            self.jobj.setDoc(jdomain, jdata)
+
+    def get_anno(self, target_id, codelist):
+        result = dict()
+
+        if isinstance(target_id, Scenario):
+            # 'metadata'
+            target = self.jindex[target_id]
+            for entry in target.getMeta().entrySet():
+                result[entry.getKey()] = unwrap_bigdecimal(entry.getValue())
+        else:
+            # 'documentation'
+            jdomain = _domain_enum(codelist.name)
+            print(jdomain, target_id)
+            result['doc'] = self.jobj.getDoc(jdomain, target_id)
+
+        return result
+
+    def delete_anno(self, target_id, codelist, annotation_ids):
+        if isinstance(target_id, str):
+            raise NotImplementedError("deletion of 'doc' annotations")
+
+        self.jindex[target_id].removeMeta(to_jlist(annotation_ids))
+
+    def get_codes(self, codelist):
+        result = set()
+
+        def from_iter_field(method, field, args=()):
+            """Helper to extract one *field* from the iterable *method*."""
+            idx = FIELDS[method].index(field)
+            result.update(row[idx] for row in getattr(self, method)(*args))
+
+        if codelist in (CodeList.model, CodeList.scenario):
+            from_iter_field('get_scenarios', codelist.name, (True, None, None))
+        elif codelist is CodeList.region:
+            from_iter_field('get_nodes', codelist.name)
+        elif codelist is CodeList.timeslice:
+            from_iter_field('get_timeslices', 'name')
+        elif codelist is CodeList.unit:
+            result.update(self.get_units())
+        elif codelist is CodeList.variable:
+            # TODO this very is hacky; should use Java method to do the same
+            scenarios = self.jobj.getScenarioList(True, None, None)
+            run_ids = to_jlist(s['run_id'] for s in scenarios)
+            for v_id in map(int, self.jobj.getIamVariablesOfRuns(run_ids)):
+                result.add(self.jobj.getIamVariable(v_id).getVariable())
+        else:
+            # CodeList.metadata
+            raise NotImplementedError
+
+        return list(result)
 
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario
@@ -985,7 +988,6 @@ def start_jvm(jvmargs=None):
 
 
 # Conversion methods
-
 def to_pylist(jlist):
     """Convert Java list types to :class:`list`."""
     try:
@@ -1024,3 +1026,8 @@ def to_jlist(arg, convert=None):
         raise ValueError(arg)
 
     return jlist
+
+
+def unwrap_bigdecimal(v):
+    """Unwrap metadata numeric value (BigDecimal -> Double)"""
+    return v.doubleValue() if isinstance(v, java.BigDecimal) else v

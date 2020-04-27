@@ -28,10 +28,13 @@ def test_class():
         clone = noop
         commit = noop
         delete = noop
+        delete_anno = noop
         delete_geo = noop
         delete_item = noop
         discard_changes = noop
         get = noop
+        get_anno = noop
+        get_codes = noop
         get_data = noop
         get_geo = noop
         get_meta = noop
@@ -51,6 +54,7 @@ def test_class():
         last_update = noop
         list_items = noop
         run_id = noop
+        set_anno = noop
         set_as_default = noop
         set_data = noop
         set_geo = noop

@@ -94,13 +94,17 @@ Backend API
       :nosignatures:
 
       close_db
+      delete_anno
+      get_anno
       get_auth
+      get_codes
       get_log_level
       get_nodes
       get_scenarios
       get_units
       open_db
       read_file
+      set_anno
       set_log_level
       set_node
       set_unit

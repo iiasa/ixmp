@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 from copy import copy
 import json
+from typing import Dict, List, Union
 
 from ixmp.core import TimeSeries, Scenario
-from . import ItemType
+from . import CodeList, ItemType
 from .io import ts_read_file, s_read_excel, s_write_excel
+
+
+# Type for hinting
+Annotations = Dict[str, Union[str, float, int, bool]]
 
 
 class Backend(ABC):
@@ -52,6 +57,94 @@ class Backend(ABC):
             user is authorized for the model.
         """
         return {model: True for model in models}
+
+    # Annotations
+
+    @abstractmethod
+    def set_anno(self, code: Union[str, TimeSeries], codelist: CodeList,
+                 annotations: Annotations) -> None:
+        """Attach annotations to a code.
+
+        Parameters
+        ----------
+        code : str or TimeSeries
+            Code to be annotated. If :class:`.TimeSeries`, equivalent to giving
+            :meth:`.TimeSeries.run_id`, and `codelist` must be
+            :attr:`.CodeList.run`.
+        codelist : CodeList
+            Code list containing `code`.
+        annotations : dict
+            Each item's key is the annotation's ID, and its value is the
+            annotation value.
+
+        See Also
+        --------
+        delete_anno
+        get_anno
+        """
+
+    @abstractmethod
+    def get_anno(self, code: Union[str, TimeSeries],
+                 codelist: CodeList) -> Annotations:
+        """Get annotations attached to a code.
+
+        Parameters
+        ----------
+        code : str or TimeSeries
+            Code for which to return annotations. If :class:`.TimeSeries`,
+            equivalent to giving :meth:`.TimeSeries.run_id`, and `codelist`
+            must be :attr:`.CodeList.run`.
+        codelist : CodeList
+            Code list containing `code`.
+
+        Return Type
+        -----------
+        dict
+
+        See Also
+        --------
+        delete_anno
+        set_anno
+        """
+
+    @abstractmethod
+    def delete_anno(self, code: Union[str, TimeSeries], codelist: CodeList,
+                    annotation_ids: List[str]) -> None:
+        """Delete annotations attached to a code.
+
+        Parameters
+        ----------
+        code : str or TimeSeries
+            Code from which to remove annotations. If :class:`.TimeSeries`,
+            equivalent to giving :meth:`.TimeSeries.run_id`, and `codelist`
+            must be :attr:`.CodeList.run`.
+        codelist : CodeList
+            Code list containing `code`.
+        annotation_ids : list of str
+            IDs of the annotations to delete from the code.
+
+        See Also
+        --------
+        get_anno
+        set_anno
+        """
+
+    # Code lists
+
+    @abstractmethod
+    def get_codes(self, codelist: CodeList) -> List[str]:
+        """Return the codes in *codelist*.
+
+        Parameters
+        ----------
+        codelist : CodeList
+
+        Returns
+        -------
+        list of str
+            Codes in `codelist`. This list **must** be a superset of all the
+            values used by other objects on the Platform.
+        """
 
     @abstractmethod
     def get_nodes(self):

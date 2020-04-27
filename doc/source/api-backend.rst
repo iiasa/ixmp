@@ -12,14 +12,6 @@ Developers wishing to add such capabilities may subclass :class:`ixmp.backend.ba
 Provided backends
 -----------------
 
-.. automodule:: ixmp.backend
-   :members: BACKENDS
-
-   .. autoclass:: ItemType
-      :members:
-      :undoc-members:
-      :member-order: bysource
-
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
@@ -47,30 +39,34 @@ Provided backends
 
 .. automethod:: ixmp.backend.jdbc.start_jvm
 
-Backend API
------------
 
 .. currentmodule:: ixmp.backend.base
 
+Backend API
+-----------
+
+:class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
+This means its methods can take many types of arguments, and will check and transform them in a way that provides modeler-users with easy, intuitive workflows.
+In contrast, :class:`Backend` has a *minimal* API that accepts arguments and returns values in basic Python data types and structures.
+
+As a result:
+
+- :class:`Platform <ixmp.Platform>` code is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
+- :class:`Backend` code does not need to perform argument checking; merely store and retrieve data reliably.
+
+This section describes the Backend API and associated data model.
+Additional Backends may inherit from the abstract classes :class:`Backend` or :class:`CachingBackend`.
+
 .. autosummary::
 
-   ixmp.backend.FIELDS
+   ixmp.backend.BACKENDS
    ixmp.backend.base.Backend
    ixmp.backend.base.CachingBackend
+   ixmp.backend.FIELDS
+   ixmp.backend.CodeList
+   ixmp.backend.ItemType
 
-- :class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
-  This means its methods can take many types of arguments, check, and transform them—in a way that provides modeler-users with easy, intuitive workflows.
-- In contrast, :class:`Backend` has a *very simple* API that accepts arguments and returns values in basic Python data types and structures.
-- As a result:
-
-  - :class:`Platform <ixmp.Platform>` code is not affected by where and how data is stored; it merely handles user arguments and then makes, usually, a single :class:`Backend` call.
-  - :class:`Backend` code does not need to perform argument checking; merely store and retrieve data reliably.
-
-- Additional Backends may inherit from :class:`Backend` or
-  :class:`CachingBackend`.
-
-
-.. autodata:: ixmp.backend.FIELDS
+.. autodata:: ixmp.backend.BACKENDS
 
 .. autoclass:: ixmp.backend.base.Backend
    :members:
@@ -174,3 +170,15 @@ Backend API
    CachingBackend stores cache values for multiple :class:`.TimeSeries`/:class:`Scenario` objects, and for multiple values of a *filters* argument.
 
    Subclasses **must** call :meth:`cache`, :meth:`cache_get`, and :meth:`cache_invalidate` as appropriate to manage the cache; CachingBackend does not enforce any such logic.
+
+.. automodule:: ixmp.backend
+   :members: FIELDS
+
+   .. autoclass:: CodeList
+      :members:
+      :member-order: bysource
+
+   .. autoclass:: ItemType
+      :members:
+      :undoc-members:
+      :member-order: bysource

@@ -7,8 +7,9 @@ from ixmp.testing import assert_logs, get_cell_output, run_notebook
 def test_computationerror(caplog):
     ce_none = ComputationError(None)
 
+    # Message ends with ',)' on Python 3.6, only ')' on Python 3.7
     msg = ("Exception raised while formatting None:\nAttributeError"
-           "(\"'NoneType' object has no attribute '__traceback__'\")")
+           "(\"'NoneType' object has no attribute '__traceback__'\"")
     with assert_logs(caplog, msg):
         str(ce_none)
 

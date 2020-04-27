@@ -157,11 +157,25 @@ def test_docs(test_mp):
     gdp = ('Gross Domestic Product (GDP) is the monetary value of all '
            'finished goods and services made within a country during '
            'a specific period.')
-    test_mp.set_doc('timeseries', dict(GDP=gdp))
-    assert test_mp.get_doc('timeseries', 'GDP') == gdp
+    test_mp.set_doc('variable', dict(GDP=gdp))
+    assert test_mp.get_doc('variable', 'GDP') == gdp
 
     # test bad domain
-    ex = raises(ValueError, test_mp.set_doc, 'baddomain', {})
-    exp = ('No such domain: baddomain, existing domains: '
-           'scenario, model, region, metadata, timeseries')
-    assert ex.value.args[0] == exp
+    with raises(KeyError):
+        test_mp.set_doc('baddomain', {})
+
+
+@pytest.mark.parametrize('cl', [
+    pytest.param('metadata',
+                 marks=pytest.mark.xfail(raises=NotImplementedError)),
+    'model',
+    'region',
+    'scenario',
+    'timeslice',
+    'unit',
+    'variable',
+])
+def test_get_codes(test_mp, cl):
+    make_dantzig(test_mp)
+
+    test_mp._backend.get_codes(ixmp.CodeList[cl])

@@ -32,6 +32,7 @@ def test_dict():
         'test_bool_false': False,
     }
 
+
 class TestScenario:
     # Initialize Scenario
     def test_init(self, test_mp, scen_empty):

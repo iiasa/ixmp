@@ -6,7 +6,7 @@ from ixmp.core import (  # noqa: F401
     Scenario,
 )
 from ._config import config  # noqa: F401
-from .backend import BACKENDS, ItemType  # noqa: F401
+from .backend import BACKENDS, CodeList, ItemType  # noqa: F401
 from .backend.jdbc import JDBCBackend
 from .model import MODELS
 from .model.gams import GAMSModel

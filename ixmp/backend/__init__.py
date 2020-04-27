@@ -1,4 +1,4 @@
-from enum import IntFlag
+from enum import Enum, IntFlag, auto
 
 
 #: Lists of field names for tuples returned by Backend API methods.
@@ -18,6 +18,27 @@ FIELDS = {
 #: Mapping from names to available backends. To register additional backends,
 #: add elements to this variable.
 BACKENDS = {}
+
+
+class CodeList(Enum):
+    """Lists of codes in the ixmp data model."""
+    #: Annotation IDs. See :meth:`.set_anno`
+    metadata = auto()
+    #: Model names appearing as :attr:`.TimeSeries.model` attributes.
+    model = auto()
+    #: Region names. See :meth:`.set_node`.
+    region = auto()
+    #: Values of :meth:`.TimeSeries.run_id`, which uniquely identifies
+    #: combinations of (model, scenario, version).
+    run = auto()
+    #: Scenario names appearing as :attr:`.TimeSeries.scenario` attributes.
+    scenario = auto()
+    #: Time slice names. See :meth:`.set_timeslice`.
+    timeslice = auto()
+    #: Units of measurement. See :meth:`.set_unit`.
+    unit = auto()
+    #: 'Variable' dimension of time series data. See :meth:`.set_data`.
+    variable = auto()
 
 
 class ItemType(IntFlag):

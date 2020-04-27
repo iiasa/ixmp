@@ -37,7 +37,6 @@ def test_class():
         get_codes = noop
         get_data = noop
         get_geo = noop
-        get_meta = noop
         get_nodes = noop
         get_scenarios = noop
         get_timeslices = noop
@@ -58,8 +57,6 @@ def test_class():
         set_as_default = noop
         set_data = noop
         set_geo = noop
-        set_meta = noop
-        delete_meta = noop
         set_node = noop
         set_timeslice = noop
         set_unit = noop

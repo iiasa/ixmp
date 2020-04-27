@@ -144,7 +144,6 @@ Backend API
 
       clone
       delete_item
-      get_meta
       has_solution
       init_s
       init_item
@@ -153,7 +152,6 @@ Backend API
       item_set_elements
       item_index
       list_items
-      set_meta
 
    Methods related to :class:`message_ix.Scenario`:
 

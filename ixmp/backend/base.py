@@ -961,57 +961,6 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, s: Scenario):
-        """Return all metadata.
-
-        Returns
-        -------
-        dict (str -> any)
-            Mapping from metadata keys to values.
-
-        See also
-        --------
-        s_get_meta
-        """
-
-    @abstractmethod
-    def set_meta(self, s: Scenario, name_or_data, value=None):
-        """Set single or multiple metadata entries.
-
-        Parameters
-        ----------
-        name_or_data : str or dict
-            If the argument is dict, it used as a mapping of metadata
-            categories (names) to values. Otherwise, use the argument
-            as the metadata attribute name.
-        value : str or number or bool, optional
-            Metadata attribute value.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError
-            If *value* is not a valid type.
-        """
-
-    @abstractmethod
-    def delete_meta(self, s, name_or_names):
-        """Remove single or multiple metadata entries.
-
-        Parameters
-        ----------
-        name_or_names : str or list of str
-            Either single metadata key or list of keys.
-
-        Returns
-        -------
-        None
-        """
-
-    @abstractmethod
     def clear_solution(self, s: Scenario, from_year=None):
         """Remove data associated with a model solution.
 

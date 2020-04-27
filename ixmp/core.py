@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ._config import config
-from .backend import BACKENDS, FIELDS, ItemType
+from .backend import BACKENDS, FIELDS, CodeList, ItemType
 from .model import get_model
 from .utils import (
     as_str_list,
@@ -55,8 +55,6 @@ class Platform:
     _backend_direct = [
         'open_db',
         'close_db',
-        'get_doc',
-        'set_doc',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -159,6 +157,89 @@ class Platform:
         """
         return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
                             columns=FIELDS['get_scenarios'])
+
+    # Annotations
+
+    def annotate(self, codelist, code, annotations):
+        """Annotate *obj* with *annotations*.
+
+        Parameters
+        ----------
+        codelist : CodeList or str
+        code : str
+        annotations : dict
+        """
+        cl = CodeList[codelist]
+        self._backend.set_anno(code, cl, annotations)
+
+    def get_annotations(self, codelist, code):
+        """Return annotations for *obj*.
+
+        Parameters
+        ----------
+        codelist : CodeList or str
+        code: str
+        """
+        cl = CodeList[codelist]
+        self._backend('get_anno', code, cl)
+
+    def delete_annotations(self, codelist, code, ids):
+        """Delete annotations of *obj*.
+
+        Parameters
+        ----------
+        codelist : CodeList or str
+        code : str
+        ids : str
+        """
+        cl = CodeList[codelist]
+        self._backend('delete_anno', code, cl, ids)
+
+    def set_doc(self, codelist, data, **kwarg_data):
+        """Set 'doc' annotations for items in *codelist*.
+
+        Parameters
+        ----------
+        codelist : CodeList or str
+        data : dict
+            Mapping from codes to str to be set as the 'doc' annotation for
+            each code.
+        kwarg_data
+            Additional `data` as keyword arguments.
+        """
+        cl = CodeList[codelist]
+        kwarg_data.update(data)
+        for id, value in kwarg_data.items():
+            self._backend.set_anno(id, cl, dict(doc=value))
+
+    def get_doc(self, codelist, code=None):
+        """Return 'doc' annotations for items in *codelist*.
+
+        Parameters
+        ----------
+        codelist : CodeList or str
+        code : str, optional
+            Only return the 'doc' annotation for this code.
+
+        Returns
+        -------
+        dict
+            if `code` is :obj:`None`.
+        various
+            if `code` is given
+        """
+        cl = CodeList[codelist]
+        if code is None:
+            result = dict()
+
+            for code in self._backend.get_codes(cl):
+                result[code] = self._backend.get_anno(code, cl)['doc']
+
+            return result
+        else:
+            return self._backend.get_anno(code, cl)['doc']
+
+    # I/O
 
     def export_timeseries_data(self, path, default=True, model=None,
                                scenario=None, variable=None):

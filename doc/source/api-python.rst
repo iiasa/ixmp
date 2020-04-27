@@ -23,9 +23,14 @@ Platform
       add_region
       add_region_synonym
       add_unit
+      annotate
       check_access
+      delete_annotations
+      get_annotations
+      get_doc
       regions
       scenario_list
+      set_doc
       set_log_level
       units
 

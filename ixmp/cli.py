@@ -95,6 +95,12 @@ def report(context, config, key):
     print(r.get(key))
 
 
+@main.command('show-versions')
+def show_versions_cmd():
+    """Print versions of ixmp and its dependencies."""
+    ixmp.show_versions()
+
+
 @main.command()
 @click.option('--remove-solution', is_flag=True, default=False,
               help='Forces removing solution if exists.')

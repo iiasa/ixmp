@@ -1,17 +1,13 @@
+from ._config import config
 from ._version import get_versions
-from ixmp.core import (  # noqa: F401
-    IAMC_IDX,
-    Platform,
-    TimeSeries,
-    Scenario,
-)
-from ._config import config  # noqa: F401
-from .backend import BACKENDS, ItemType  # noqa: F401
+from .backend import BACKENDS, ItemType
 from .backend.jdbc import JDBCBackend
+from .core import IAMC_IDX, Platform, Scenario, TimeSeries
 from .model import MODELS
-from .model.gams import GAMSModel
 from .model.dantzig import DantzigModel
-from ixmp.reporting import Reporter  # noqa: F401
+from .model.gams import GAMSModel
+from .reporting import Reporter
+from .utils import show_versions
 
 __version__ = get_versions()['version']
 del get_versions
@@ -25,3 +21,14 @@ MODELS.update({
     'gams': GAMSModel,
     'dantzig': DantzigModel,
 })
+
+__all__ = [
+    'IAMC_IDX',
+    'ItemType',
+    'Platform',
+    'Reporter',
+    'Scenario',
+    'TimeSeries',
+    'config',
+    'show_versions',
+]

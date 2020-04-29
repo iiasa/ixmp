@@ -10,7 +10,7 @@ with open('README.md', 'r') as f:
 
 INSTALL_REQUIRES = [
     # Temporary exclusions; see iiasa/ixmp#279
-    'JPype1 >= 0.7, != 0.7.2, != 0.7.3',
+    'JPype1 >= 0.7, != 0.7.2, != 0.7.3, != 0.7.4',
     'click',
     'dask[array]',
     'graphviz',

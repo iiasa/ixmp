@@ -63,44 +63,66 @@ def check_year(y, s):
         return True
 
 
-def maybe_check_out(scenario, state=None):
-    """Check out *scenario* depending on *state*.
+def maybe_check_out(timeseries, state=None):
+    """Check out `timeseries` depending on `state`.
 
-    If `state` is :obj:`None`, then :meth:`.check_out` is called, and
-    maybe_check_out returns:
+    If `state` is :obj:`None`, then :meth:`check_out` is called.
 
-      - :obj:`True` if a check out was performed, i.e. the scenario was
-        previously not in a checked-out state.
-      - :obj:`False` if no check out was performed, i.e. the scenario was
-        already in a checked-out state.
+    Returns
+    -------
+    :obj:`True`
+        if `state` was :obj:`None` and a check out was performed, i.e.
+        `timeseries` was previously in a checked-in state.
+    :obj:`False`
+        if `state` was :obj:`None` and no check out was performed, i.e.
+        `timeseries` was already in a checked-out state.
+    `state`
+        if `state` was not :obj:`None` and no check out was attempted.
 
-    For any other value of `state`, maybe_check_out does nothing.
+    Raises
+    ------
+    ValueError
+        If `timeseries` is a :class:`.Scenario` object and
+        :meth:`.has_solution` is :obj:`True`.
+
+    See Also
+    --------
+    :meth:`.TimeSeries.check_out`
+    :meth:`.Scenario.check_out`
     """
     if state is not None:
-        return state  # Already tried to check out
+        return state
+
     try:
-        # If *scenario* is already committed to the Backend, it must be
-        # checked out.
-        scenario.check_out()
+        timeseries.check_out()
     except RuntimeError:
-        # If *scenario* is new (has not been committed), the checkout
+        # If `timeseries` is new (has not been committed), the checkout
         # attempt raises an exception
         return False
     else:
         return True
 
 
-def maybe_commit(scenario, condition, message):
-    """Commit *scenario* with *message* if *condition* is :obj:`True`.
+def maybe_commit(timeseries, condition, message):
+    """Commit `timeseries` with `message` if `condition` is :obj:`True`.
 
-    Any exception raised during an attempted commit is logged with level
-    `ERROR`, and :obj:`False` is returned. If a commit is performed,
-    :obj:`True` is returned.
+    Returns
+    -------
+    :obj:`True`
+        if a commit is performed.
+    :obj:`False`
+        if any exception is raised during the attempted commit. The exception
+        is logged with level ``ERROR``.
+
+    See Also
+    --------
+    :meth:`.TimeSeries.commit`
     """
     if not condition:
         return False
+
     try:
-        scenario.commit(message)
+        timeseries.commit(message)
     except RuntimeError as exc:
         log.error(str(exc))
         return False

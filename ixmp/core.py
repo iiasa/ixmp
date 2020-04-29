@@ -433,7 +433,15 @@ class TimeSeries:
         return False
 
     def check_out(self, timeseries_only=False):
-        """Check out the TimeSeries for modification."""
+        """Check out the TimeSeries.
+
+        Data in the TimeSeries can only be modified when it is in a checked-out
+        state.
+
+        See Also
+        --------
+        utils.maybe_check_out
+        """
         self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
@@ -447,6 +455,10 @@ class TimeSeries:
         ----------
         comment : str
             Description of the changes being committed.
+
+        See Also
+        --------
+        utils.maybe_commit
         """
         self._backend('commit', comment)
 
@@ -817,7 +829,18 @@ class Scenario(TimeSeries):
             return scenario, platform
 
     def check_out(self, timeseries_only=False):
-        """Check out the Scenario for modification."""
+        """Check out the Scenario.
+
+        Raises
+        ------
+        ValueError
+            If :meth:`has_solution` is :obj:`True`.
+
+        See Also
+        --------
+        TimeSeries.check_out
+        utils.maybe_check_out
+        """
         if not timeseries_only and self.has_solution():
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '

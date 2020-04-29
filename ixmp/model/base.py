@@ -37,7 +37,7 @@ class Model(ABC):
         Parameters
         ----------
         scenario : .Scenario
-            Scenario object to initialize.
+            Object to initialize.
 
         See also
         --------
@@ -50,18 +50,28 @@ class Model(ABC):
     def initialize_items(cls, scenario, items):
         """Helper for :meth:`initialize`.
 
-        All of the *items* are added to *scenario*. Existing items are not
-        modified.
+        All of the `items` are added to `scenario`. Existing items are not
+        modified. Errors are logged if the description in `items` conflicts
+        with the index set(s) and/or index name(s) of existing items.
+
+        initialize_items may perform one commit. `scenario` is in the same
+        state (checked in, or checked out) after initialize_items is complete.
 
         Parameters
         ----------
         scenario : .Scenario
-            Scenario object to initialize.
+            Object to initialize.
         items : dict of (str -> dict)
             Each key is the name of an ixmp item (set, parameter, equation, or
             variable) to initialize. Each dict **must** have the key 'ix_type';
             one of 'set', 'par', 'equ', or 'var'; any other entries are keyword
             arguments to the methods :meth:`.init_set` etc.
+
+        Raises
+        ------
+        ValueError
+            if `scenario` has a solution, i.e. :meth:`.has_solution` is
+            :obj:`True`.
 
         See also
         --------

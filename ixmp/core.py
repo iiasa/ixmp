@@ -373,9 +373,6 @@ class Platform:
             return {model: result.get(model) == 1 for model in models_list}
 
 
-# %% class TimeSeries
-
-
 class TimeSeries:
     """Collection of data in time series format.
 
@@ -411,29 +408,34 @@ class TimeSeries:
         # Check arguments
         if not isinstance(mp, Platform):
             raise TypeError('mp is not a valid `ixmp.Platform` instance')
+        elif version and not (version == 'new' or isinstance(version, int)):
+            raise ValueError(f'version={version!r}')
+        elif version == 'new' and annotation is None:
+            log.warning(f'Missing annotation for new {self.__class__.__name__}'
+                        f' {model}/{scenario}')
+            annotation = ''
+
+        # scheme= keyword argument only passed from Scenario.__init__;
+        # otherwise must be None
+        scheme = kwargs.get('scheme', None)
+        if scheme:
+            if self.__class__ is TimeSeries:
+                raise TypeError("'scheme' argument to TimeSeries()")
+            else:
+                self.scheme = scheme
 
         # Set attributes
         self.platform = mp
         self.model = model
         self.scenario = scenario
 
-        # scheme= keyword argument only passed from Scenario.__init__
-        scheme = kwargs.get('scheme', None)
-        if self.__class__ is TimeSeries and scheme:
-            raise ValueError("'scheme' argument to TimeSeries")
-
         if version == 'new':
-            if annotation is None:
-                msg = (f'Missing annotation for new {self.__class__.__name__} '
-                       f'{self.model}/{self.scenario}')
-                log.warning(msg)
-                annotation = ''
-
-            self._backend('init', annotation, scheme)
-        elif isinstance(version, int) or version is None:
-            self._backend('get', version)
+            # Initialize a new object
+            self._backend('init', annotation)
         else:
-            raise ValueError(f'version={version!r}')
+            # Retrieve an existing object
+            self.version = version
+            self._backend('get')
 
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
@@ -744,8 +746,6 @@ class TimeSeries:
         )
 
 
-# %% class Scenario
-
 class Scenario(TimeSeries):
     """Collection of model-related data.
 
@@ -755,21 +755,25 @@ class Scenario(TimeSeries):
     Parameters
     ----------
     scheme : str, optional
-        Use an explicit scheme for initializing a new scenario.
-    cache : bool, optional
-        Store data in memory and return cached values instead of repeatedly
-        querying the backend.
+        Use an explicit scheme to initialize the new scenario. The
+        :meth:`~.base.Model.initialize` method of the corresponding
+        :class:`.Model` subclass in :data:`.MODELS` is used to initialize items
+        in the Scenario.
     """
     #: Scheme of the Scenario.
     scheme = None
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
-                 annotation=None, cache=False, **model_init_args):
+                 annotation=None, **model_init_args):
         # Check arguments
         if version == 'new' and scheme is None:
-            msg = f'No scheme for new Scenario {self.model}/{self.scenario}'
-            log.info(msg)
+            log.info(f'No scheme for new Scenario {model}/{scenario}')
             scheme = ''
+
+        if 'cache' in model_init_args:
+            warn(f'Scenario(..., cache=...) is deprecated; use Platform(..., '
+                 'cache=...) instead', DeprecationWarning)
+            model_init_args.pop('cache')
 
         # Call the parent constructor
         super().__init__(

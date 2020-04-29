@@ -407,44 +407,53 @@ class JDBCBackend(CachingBackend):
 
     # Timeseries methods
 
-    def _index_and_set_attrs(self, jobj, ts, scheme, version=None):
-        """Helper for init and get."""
+    def _index_and_set_attrs(self, jobj, ts):
+        """Add *jobj* to index and update attributes of *ts*.
+
+        Helper for init and get.
+        """
         # Add to index
         self.jindex[ts] = jobj
 
-        # Retrieve or check the version
-        if version is None:
-            version = jobj.getVersion()
-        else:
-            assert version == jobj.getVersion()
-
-        # Update the version attribute
-        ts.version = version
+        # Retrieve the version of the Java object
+        v = jobj.getVersion()
+        if ts.version is None:
+            # The default version was requested; update the attribute
+            ts.version = v
+        elif v != ts.version:
+            raise RuntimeError(f'got version {v} instead of {ts.version}')
 
         if isinstance(ts, Scenario):
             # Also retrieve the scheme
-            ts.scheme = jobj.getScheme() or scheme
+            s = jobj.getScheme()
 
-    def init(self, ts, annotation, scheme):
-        # ixmp_source uses the reverse order; throw away 'scheme' if None
+            if ts.scheme and s != ts.scheme:
+                raise RuntimeError(f'got scheme {s} instead of {ts.scheme}')
+
+            ts.scheme = s
+
+    def init(self, ts, annotation):
         klass = ts.__class__.__name__
-        args = [scheme, annotation] if klass == 'Scenario' else [annotation]
+
+        # Final arguments: scheme only for Scenarios
+        args = [ts.scheme, annotation] if klass == 'Scenario' else [annotation]
 
         # Call either newTimeSeries or newScenario
         method = getattr(self.jobj, 'new' + klass)
         jobj = method(ts.model, ts.scenario, *args)
 
-        self._index_and_set_attrs(jobj, ts, scheme=scheme, version=None)
+        self._index_and_set_attrs(jobj, ts)
 
-    def get(self, ts, version):
+    def get(self, ts):
         args = [ts.model, ts.scenario]
-        if version is not None:
+        if ts.version is not None:
             # Load a TimeSeries of specific version
-            args.append(version)
+            args.append(ts.version)
 
         # either getTimeSeries or getScenario
         method = getattr(self.jobj, 'get' + ts.__class__.__name__)
         try:
+            # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
         except java.IxException as e:
             # Try to re-raise as a ValueError for bad model or scenario name
@@ -457,7 +466,7 @@ class JDBCBackend(CachingBackend):
             # Failed
             _raise_jexception(e)
 
-        self._index_and_set_attrs(jobj, ts, version)
+        self._index_and_set_attrs(jobj, ts)
 
     def check_out(self, ts, timeseries_only):
         try:

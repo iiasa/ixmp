@@ -357,21 +357,20 @@ class Backend(ABC):
     # Methods for ixmp.TimeSeries
 
     @abstractmethod
-    def init(self, ts: TimeSeries, annotation, scheme=None):
+    def init(self, ts: TimeSeries, annotation):
         """Create a new TimeSeries (or Scenario) *ts*.
 
         init **may** modify the :attr:`~TimeSeries.version` attribute of
         *ts*.
+
+        If *ts* is a :class:`Scenario`; the Backend **must** store the
+        :attr:`.Scenario.scheme` attribute.
 
         Parameters
         ----------
         annotation : str
             If *ts* is newly-created, the Backend **must** store this
             annotation with the TimeSeries.
-        scheme : str or None
-            Name of the model scheme, if *ts* is a :class:`Scenario`; the
-            Backend **must** set the :attr:`.Scenario.scheme` attribute to this
-            value. Otherwise, :obj:`None`.
 
         Returns
         -------
@@ -379,20 +378,22 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get(self, ts: TimeSeries, version):
-        """Retrieve the existing TimeSeries or Scenario *ts*.
+    def get(self, ts: TimeSeries):
+        """Retrieve the existing TimeSeries (or Scenario) *ts*.
 
-        The TimeSeries is identified based on its (:attr:`~.TimeSeries.model`,
-        :attr:`~.TimeSeries.scenario`) and *version*.
+        The TimeSeries is identified based on the unique combination of the
+        attributes of *ts*:
+
+        - :attr:`~.TimeSeries.model`,
+        - :attr:`~.TimeSeries.scenario`, and
+        - :attr:`~.TimeSeries.version`.
+
+        If :attr:`.version` is :obj:`None`, the Backend **must** return the
+        version marked as default, and **must** set the attribute value.
 
         If *ts* is a Scenario, :meth:`get` **must** set the
-        :attr:`~.Scenario.scheme` attribute on it.
-
-        Parameters
-        ----------
-        version : int or None
-            If :obj:`None`, the version marked as the default is returned, and
-            ts_get **must** set :attr:`.TimeSeries.version` attribute on *ts*.
+        :attr:`~.Scenario.scheme` attribute with the value previously passed to
+        :meth:`init`.
 
         Returns
         -------
@@ -406,7 +407,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_set_as_default
+        is_default
+        set_as_default
         """
 
     @abstractmethod
@@ -601,9 +603,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_is_default
-        ts_get
-        s_get
+        get
+        is_default
         """
 
     @abstractmethod
@@ -616,9 +617,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_set_as_default
-        ts_get
-        s_get
+        get
+        set_as_default
         """
 
     @abstractmethod

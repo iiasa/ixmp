@@ -407,20 +407,34 @@ class JDBCBackend(CachingBackend):
 
     # Timeseries methods
 
-    def _common_init(self, ts, klass, *args):
-        """Common code for ts_init and s_init."""
-        method = getattr(self.jobj, 'new' + klass)
-        # Create a new TimeSeries
-        jobj = method(ts.model, ts.scenario, *args)
-
+    def _index_and_set_attrs(self, jobj, ts, scheme, version=None):
+        """Helper for init and get."""
         # Add to index
         self.jindex[ts] = jobj
 
-        # Retrieve initial version
-        ts.version = jobj.getVersion()
+        # Retrieve or check the version
+        if version is None:
+            version = jobj.getVersion()
+        else:
+            assert version == jobj.getVersion()
 
-    def init_ts(self, ts, annotation=None):
-        self._common_init(ts, 'TimeSeries', annotation)
+        # Update the version attribute
+        ts.version = version
+
+        if isinstance(ts, Scenario):
+            # Also retrieve the scheme
+            ts.scheme = jobj.getScheme() or scheme
+
+    def init(self, ts, annotation, scheme):
+        # ixmp_source uses the reverse order; throw away 'scheme' if None
+        klass = ts.__class__.__name__
+        args = [scheme, annotation] if klass == 'Scenario' else [annotation]
+
+        # Call either newTimeSeries or newScenario
+        method = getattr(self.jobj, 'new' + klass)
+        jobj = method(ts.model, ts.scenario, *args)
+
+        self._index_and_set_attrs(jobj, ts, scheme=scheme, version=None)
 
     def get(self, ts, version):
         args = [ts.model, ts.scenario]
@@ -443,21 +457,7 @@ class JDBCBackend(CachingBackend):
             # Failed
             _raise_jexception(e)
 
-        # Add to index
-        self.jindex[ts] = jobj
-
-        # Retrieve or check the version
-        if version is None:
-            version = jobj.getVersion()
-        else:
-            assert version == jobj.getVersion()
-
-        # Update the version attribute
-        ts.version = version
-
-        if isinstance(ts, Scenario):
-            # Also retrieve the scheme
-            ts.scheme = jobj.getScheme()
+        self._index_and_set_attrs(jobj, ts, version)
 
     def check_out(self, ts, timeseries_only):
         try:
@@ -581,10 +581,6 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].removeGeoData(region, variable, subannual, years, unit)
 
     # Scenario methods
-
-    def init_s(self, s, scheme, annotation):
-        self._common_init(s, 'Scenario', scheme, annotation)
-
     def clone(self, s, platform_dest, model, scenario, annotation,
               keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend

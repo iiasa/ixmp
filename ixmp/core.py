@@ -406,7 +406,9 @@ class TimeSeries:
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
 
-    def __init__(self, mp, model, scenario, version=None, annotation=None):
+    def __init__(self, mp, model, scenario, version=None, annotation=None,
+                 **kwargs):
+        # Check arguments
         if not isinstance(mp, Platform):
             raise TypeError('mp is not a valid `ixmp.Platform` instance')
 
@@ -415,8 +417,19 @@ class TimeSeries:
         self.model = model
         self.scenario = scenario
 
+        # scheme= keyword argument only passed from Scenario.__init__
+        scheme = kwargs.get('scheme', None)
+        if self.__class__ is TimeSeries and scheme:
+            raise ValueError("'scheme' argument to TimeSeries")
+
         if version == 'new':
-            self._backend('init_ts', annotation)
+            if annotation is None:
+                msg = (f'Missing annotation for new {self.__class__.__name__} '
+                       f'{self.model}/{self.scenario}')
+                log.warning(msg)
+                annotation = ''
+
+            self._backend('init', annotation, scheme)
         elif isinstance(version, int) or version is None:
             self._backend('get', version)
         else:
@@ -752,28 +765,29 @@ class Scenario(TimeSeries):
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
                  annotation=None, cache=False, **model_init_args):
-        if not isinstance(mp, Platform):
-            raise TypeError('mp is not a valid `ixmp.Platform` instance')
+        # Check arguments
+        if version == 'new' and scheme is None:
+            msg = f'No scheme for new Scenario {self.model}/{self.scenario}'
+            log.info(msg)
+            scheme = ''
 
-        # Set attributes
-        self.platform = mp
-        self.scheme = scheme
-        self.model = model
-        self.scenario = scenario
-
-        if version == 'new':
-            self._backend('init_s', scheme, annotation)
-        elif isinstance(version, int) or version is None:
-            self._backend('get', version)
-        else:
-            raise ValueError(f'version={version!r}')
+        # Call the parent constructor
+        super().__init__(
+            mp=mp,
+            model=model,
+            scenario=scenario,
+            version=version,
+            scheme=scheme,
+            annotation=annotation,
+        )
 
         if self.scheme == 'MESSAGE' and self.__class__ is Scenario:
+            # Loaded scenario has an improper scheme
             raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
                                'scenario; use message_ix.Scenario().')
 
         # Retrieve the Model class correlating to the *scheme*
-        model_class = get_model(scheme).__class__
+        model_class = get_model(self.scheme).__class__
 
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)

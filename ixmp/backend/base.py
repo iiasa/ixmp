@@ -357,10 +357,10 @@ class Backend(ABC):
     # Methods for ixmp.TimeSeries
 
     @abstractmethod
-    def init_ts(self, ts: TimeSeries, annotation=None):
-        """Initialize the TimeSeries *ts*.
+    def init(self, ts: TimeSeries, annotation, scheme=None):
+        """Create a new TimeSeries (or Scenario) *ts*.
 
-        ts_init **may** modify the :attr:`~TimeSeries.version` attribute of
+        init **may** modify the :attr:`~TimeSeries.version` attribute of
         *ts*.
 
         Parameters
@@ -368,15 +368,14 @@ class Backend(ABC):
         annotation : str
             If *ts* is newly-created, the Backend **must** store this
             annotation with the TimeSeries.
+        scheme : str or None
+            Name of the model scheme, if *ts* is a :class:`Scenario`; the
+            Backend **must** set the :attr:`.Scenario.scheme` attribute to this
+            value. Otherwise, :obj:`None`.
 
         Returns
         -------
         None
-
-        Raises
-        ------
-        RuntimeError
-            if *ts* is newly created and :meth:`commit` has not been called.
         """
 
     @abstractmethod
@@ -644,25 +643,6 @@ class Backend(ABC):
         """OPTIONAL: Load *ts* data into memory."""
 
     # Methods for ixmp.Scenario
-
-    @abstractmethod
-    def init_s(self, s: Scenario, scheme, annotation):
-        """Initialize the Scenario *s*.
-
-        s_init **may** modify the :attr:`~.TimeSeries.version` attribute of
-        *s*.
-
-        Parameters
-        ----------
-        scheme : str
-            Description of the scheme of the Scenario.
-        annotation : str
-            Description of the Scenario.
-
-        Returns
-        -------
-        None
-        """
 
     @abstractmethod
     def clone(self, s: Scenario, platform_dest, model, scenario, annotation,

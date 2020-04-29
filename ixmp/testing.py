@@ -82,6 +82,20 @@ def ixmp_cli(tmp_env):
     yield Runner()
 
 
+@pytest.fixture
+def protect_pint_app_registry():
+    """Protect pint's application registry.
+
+    Use this fixture on tests which invoke code that calls
+    :meth:`pint.set_application_registry`. It ensures that the environment for
+    other tests is not altered.
+    """
+    import pint
+    saved = pint.get_application_registry()
+    yield
+    pint.set_application_registry(saved)
+
+
 @pytest.fixture(scope='session')
 def tmp_env(tmp_path_factory):
     """Return the os.environ dict with the IXMP_DATA variable set.

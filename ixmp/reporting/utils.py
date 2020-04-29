@@ -111,6 +111,21 @@ def parse_units(units_series):
                f'character(s) {repr(chars)}')
         return ValueError(msg)
 
+    # Helper method to add unit definitions
+    def define_unit_parts(expr):
+        # Split possible compound units
+        for part in expr.split('/'):
+            try:
+                registry.parse_units(part)
+            except pint.UndefinedUnitError:
+                # Part was unparseable; define it
+                definition = f'{part} = [{part}]'
+                log.info(f'Add unit definition: {definition}')
+
+                # This line will fail silently for parts like 'G$' containing
+                # characters like '$' that are discarded by pint
+                registry.define(definition)
+
     # Parse units
     try:
         unit = clean_units(unit[0])
@@ -120,18 +135,7 @@ def parse_units(units_series):
         unit = registry.parse_units('')
     except pint.UndefinedUnitError:
         # Unit(s) do not exist; define them in the UnitRegistry
-
-        # Split possible compound units
-        for u in unit.split('/'):
-            if u in dir(registry):
-                # Unit already defined
-                continue
-
-            definition = f'{u} = [{u}]'
-            log.info(f'Add unit definition: {definition}')
-
-            # This line will fail silently for units like 'G$'
-            registry.define(definition)
+        define_unit_parts(unit)
 
         # Try to parse again
         try:

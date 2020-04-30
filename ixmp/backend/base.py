@@ -357,11 +357,14 @@ class Backend(ABC):
     # Methods for ixmp.TimeSeries
 
     @abstractmethod
-    def init_ts(self, ts: TimeSeries, annotation=None):
-        """Initialize the TimeSeries *ts*.
+    def init(self, ts: TimeSeries, annotation):
+        """Create a new TimeSeries (or Scenario) *ts*.
 
-        ts_init **may** modify the :attr:`~TimeSeries.version` attribute of
+        init **may** modify the :attr:`~TimeSeries.version` attribute of
         *ts*.
+
+        If *ts* is a :class:`Scenario`; the Backend **must** store the
+        :attr:`.Scenario.scheme` attribute.
 
         Parameters
         ----------
@@ -372,28 +375,25 @@ class Backend(ABC):
         Returns
         -------
         None
-
-        Raises
-        ------
-        RuntimeError
-            if *ts* is newly created and :meth:`commit` has not been called.
         """
 
     @abstractmethod
-    def get(self, ts: TimeSeries, version):
-        """Retrieve the existing TimeSeries or Scenario *ts*.
+    def get(self, ts: TimeSeries):
+        """Retrieve the existing TimeSeries (or Scenario) *ts*.
 
-        The TimeSeries is identified based on its (:attr:`~.TimeSeries.model`,
-        :attr:`~.TimeSeries.scenario`) and *version*.
+        The TimeSeries is identified based on the unique combination of the
+        attributes of *ts*:
+
+        - :attr:`~.TimeSeries.model`,
+        - :attr:`~.TimeSeries.scenario`, and
+        - :attr:`~.TimeSeries.version`.
+
+        If :attr:`.version` is :obj:`None`, the Backend **must** return the
+        version marked as default, and **must** set the attribute value.
 
         If *ts* is a Scenario, :meth:`get` **must** set the
-        :attr:`~.Scenario.scheme` attribute on it.
-
-        Parameters
-        ----------
-        version : int or None
-            If :obj:`None`, the version marked as the default is returned, and
-            ts_get **must** set :attr:`.TimeSeries.version` attribute on *ts*.
+        :attr:`~.Scenario.scheme` attribute with the value previously passed to
+        :meth:`init`.
 
         Returns
         -------
@@ -407,7 +407,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_set_as_default
+        is_default
+        set_as_default
         """
 
     @abstractmethod
@@ -602,9 +603,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_is_default
-        ts_get
-        s_get
+        get
+        is_default
         """
 
     @abstractmethod
@@ -617,9 +617,8 @@ class Backend(ABC):
 
         See also
         --------
-        ts_set_as_default
-        ts_get
-        s_get
+        get
+        set_as_default
         """
 
     @abstractmethod
@@ -644,25 +643,6 @@ class Backend(ABC):
         """OPTIONAL: Load *ts* data into memory."""
 
     # Methods for ixmp.Scenario
-
-    @abstractmethod
-    def init_s(self, s: Scenario, scheme, annotation):
-        """Initialize the Scenario *s*.
-
-        s_init **may** modify the :attr:`~.TimeSeries.version` attribute of
-        *s*.
-
-        Parameters
-        ----------
-        scheme : str
-            Description of the scheme of the Scenario.
-        annotation : str
-            Description of the Scenario.
-
-        Returns
-        -------
-        None
-        """
 
     @abstractmethod
     def clone(self, s: Scenario, platform_dest, model, scenario, annotation,

@@ -373,9 +373,6 @@ class Platform:
             return {model: result.get(model) == 1 for model in models_list}
 
 
-# %% class TimeSeries
-
-
 class TimeSeries:
     """Collection of data in time series format.
 
@@ -406,9 +403,26 @@ class TimeSeries:
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
 
-    def __init__(self, mp, model, scenario, version=None, annotation=None):
+    def __init__(self, mp, model, scenario, version=None, annotation=None,
+                 **kwargs):
+        # Check arguments
         if not isinstance(mp, Platform):
             raise TypeError('mp is not a valid `ixmp.Platform` instance')
+        elif version and not (version == 'new' or isinstance(version, int)):
+            raise ValueError(f'version={version!r}')
+        elif version == 'new' and annotation is None:
+            log.warning(f'Missing annotation for new {self.__class__.__name__}'
+                        f' {model}/{scenario}')
+            annotation = ''
+
+        # scheme= keyword argument only passed from Scenario.__init__;
+        # otherwise must be None
+        scheme = kwargs.get('scheme', None)
+        if scheme:
+            if self.__class__ is TimeSeries:
+                raise TypeError("'scheme' argument to TimeSeries()")
+            else:
+                self.scheme = scheme
 
         # Set attributes
         self.platform = mp
@@ -416,11 +430,12 @@ class TimeSeries:
         self.scenario = scenario
 
         if version == 'new':
-            self._backend('init_ts', annotation)
-        elif isinstance(version, int) or version is None:
-            self._backend('get', version)
+            # Initialize a new object
+            self._backend('init', annotation)
         else:
-            raise ValueError(f'version={version!r}')
+            # Retrieve an existing object
+            self.version = version
+            self._backend('get')
 
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend."""
@@ -433,7 +448,15 @@ class TimeSeries:
         return False
 
     def check_out(self, timeseries_only=False):
-        """Check out the TimeSeries for modification."""
+        """Check out the TimeSeries.
+
+        Data in the TimeSeries can only be modified when it is in a checked-out
+        state.
+
+        See Also
+        --------
+        utils.maybe_check_out
+        """
         self._backend('check_out', timeseries_only)
 
     def commit(self, comment):
@@ -447,6 +470,10 @@ class TimeSeries:
         ----------
         comment : str
             Description of the changes being committed.
+
+        See Also
+        --------
+        utils.maybe_commit
         """
         self._backend('commit', comment)
 
@@ -719,8 +746,6 @@ class TimeSeries:
         )
 
 
-# %% class Scenario
-
 class Scenario(TimeSeries):
     """Collection of model-related data.
 
@@ -730,38 +755,43 @@ class Scenario(TimeSeries):
     Parameters
     ----------
     scheme : str, optional
-        Use an explicit scheme for initializing a new scenario.
-    cache : bool, optional
-        Store data in memory and return cached values instead of repeatedly
-        querying the backend.
+        Use an explicit scheme to initialize the new scenario. The
+        :meth:`~.base.Model.initialize` method of the corresponding
+        :class:`.Model` subclass in :data:`.MODELS` is used to initialize items
+        in the Scenario.
     """
     #: Scheme of the Scenario.
     scheme = None
 
     def __init__(self, mp, model, scenario, version=None, scheme=None,
-                 annotation=None, cache=False, **model_init_args):
-        if not isinstance(mp, Platform):
-            raise TypeError('mp is not a valid `ixmp.Platform` instance')
+                 annotation=None, **model_init_args):
+        # Check arguments
+        if version == 'new' and scheme is None:
+            log.info(f'No scheme for new Scenario {model}/{scenario}')
+            scheme = ''
 
-        # Set attributes
-        self.platform = mp
-        self.scheme = scheme
-        self.model = model
-        self.scenario = scenario
+        if 'cache' in model_init_args:
+            warn(f'Scenario(..., cache=...) is deprecated; use Platform(..., '
+                 'cache=...) instead', DeprecationWarning)
+            model_init_args.pop('cache')
 
-        if version == 'new':
-            self._backend('init_s', scheme, annotation)
-        elif isinstance(version, int) or version is None:
-            self._backend('get', version)
-        else:
-            raise ValueError(f'version={version!r}')
+        # Call the parent constructor
+        super().__init__(
+            mp=mp,
+            model=model,
+            scenario=scenario,
+            version=version,
+            scheme=scheme,
+            annotation=annotation,
+        )
 
         if self.scheme == 'MESSAGE' and self.__class__ is Scenario:
+            # Loaded scenario has an improper scheme
             raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
                                'scenario; use message_ix.Scenario().')
 
         # Retrieve the Model class correlating to the *scheme*
-        model_class = get_model(scheme).__class__
+        model_class = get_model(self.scheme).__class__
 
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)
@@ -817,7 +847,18 @@ class Scenario(TimeSeries):
             return scenario, platform
 
     def check_out(self, timeseries_only=False):
-        """Check out the Scenario for modification."""
+        """Check out the Scenario.
+
+        Raises
+        ------
+        ValueError
+            If :meth:`has_solution` is :obj:`True`.
+
+        See Also
+        --------
+        TimeSeries.check_out
+        utils.maybe_check_out
+        """
         if not timeseries_only and self.has_solution():
             raise ValueError('This Scenario has a solution, '
                              'use `Scenario.remove_solution()` or '

@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#315 <https://github.com/iiasa/ixmp/pull/315>`_: Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects.
 - `#320 <https://github.com/iiasa/ixmp/pull/320>`_: Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging.
 - `#312 <https://github.com/iiasa/ixmp/pull/312>`_: Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add`.
 - `#310 <https://github.com/iiasa/ixmp/pull/310>`_: :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes.

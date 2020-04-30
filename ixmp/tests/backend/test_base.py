@@ -40,9 +40,8 @@ def test_class():
         get_timeslices = noop
         get_units = noop
         has_solution = noop
+        init = noop
         init_item = noop
-        init_s = noop
-        init_ts = noop
         is_default = noop
         item_delete_elements = noop
         item_get_elements = noop

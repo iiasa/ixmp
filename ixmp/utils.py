@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 import pandas as pd
 
 
+log = logging.getLogger(__name__)
+
 # globally accessible logger
 _LOGGER = None
 
@@ -58,6 +60,73 @@ def check_year(y, s):
     if y is not None:
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
+        return True
+
+
+def maybe_check_out(timeseries, state=None):
+    """Check out `timeseries` depending on `state`.
+
+    If `state` is :obj:`None`, then :meth:`check_out` is called.
+
+    Returns
+    -------
+    :obj:`True`
+        if `state` was :obj:`None` and a check out was performed, i.e.
+        `timeseries` was previously in a checked-in state.
+    :obj:`False`
+        if `state` was :obj:`None` and no check out was performed, i.e.
+        `timeseries` was already in a checked-out state.
+    `state`
+        if `state` was not :obj:`None` and no check out was attempted.
+
+    Raises
+    ------
+    ValueError
+        If `timeseries` is a :class:`.Scenario` object and
+        :meth:`.has_solution` is :obj:`True`.
+
+    See Also
+    --------
+    :meth:`.TimeSeries.check_out`
+    :meth:`.Scenario.check_out`
+    """
+    if state is not None:
+        return state
+
+    try:
+        timeseries.check_out()
+    except RuntimeError:
+        # If `timeseries` is new (has not been committed), the checkout
+        # attempt raises an exception
+        return False
+    else:
+        return True
+
+
+def maybe_commit(timeseries, condition, message):
+    """Commit `timeseries` with `message` if `condition` is :obj:`True`.
+
+    Returns
+    -------
+    :obj:`True`
+        if a commit is performed.
+    :obj:`False`
+        if any exception is raised during the attempted commit. The exception
+        is logged with level ``INFO``.
+
+    See Also
+    --------
+    :meth:`.TimeSeries.commit`
+    """
+    if not condition:
+        return False
+
+    try:
+        timeseries.commit(message)
+    except RuntimeError as exc:
+        log.info(f"maybe_commit() didn't commit: {exc}")
+        return False
+    else:
         return True
 
 

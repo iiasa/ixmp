@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from ixmp import Scenario
-from ixmp.testing import make_dantzig
+from ixmp.testing import assert_logs, make_dantzig
 from ixmp.model.base import Model
 from ixmp.model.dantzig import DantzigModel
 
@@ -36,7 +36,8 @@ def test_model_initialize(test_mp, caplog):
 
     # Modify a value for 'b'
     s.check_out()
-    s.add_par('b', 'chicago', 600, 'cases')
+    new_value = 301
+    s.add_par('b', 'chicago', new_value, 'cases')
     s.commit('Overwrite b(chicago)')
 
     # Model.initialize runs on an already-initialized Scenario, without error
@@ -46,25 +47,41 @@ def test_model_initialize(test_mp, caplog):
     b2 = s.par('b')
     assert len(b2) == 3
     # ...but modified value(s) are not overwritten
-    assert (b2.query("j == 'chicago'")['value'] == 600).all()
+    assert (b2.query("j == 'chicago'")['value'] == new_value).all()
 
     # Unrecognized Scenario(scheme=...) is initialized using the base method, a
     # no-op
     caplog.set_level(logging.DEBUG)
-    Scenario(test_mp, model='model name', scenario='scenario name',
-             version='new', scheme='unknown')
-    assert caplog.records[-1].message == \
-        "No initialization for 'unknown'-scheme Scenario"
+    with assert_logs(caplog, [
+            "No scheme for new Scenario model-name/scenario-name",
+            "No initialization for None-scheme Scenario"]):
+        Scenario(test_mp, model='model-name', scenario='scenario-name',
+                 version='new')
+
+    with assert_logs(caplog, "No initialization for 'foo'-scheme Scenario"):
+        Scenario(test_mp, model='model-name', scenario='scenario-name',
+                 version='new', scheme='foo')
 
     # Keyword arguments to Scenario(...) that are not recognized by
     # Model.initialize() raise an intelligible exception
     with pytest.raises(TypeError,
                        match="unexpected keyword argument 'bad_arg1'"):
-        Scenario(test_mp, model='model name', scenario='scenario name',
+        Scenario(test_mp, model='model-name', scenario='scenario-name',
                  version='new', scheme='unknown', bad_arg1=111)
 
     with pytest.raises(TypeError,
                        match="unexpected keyword argument 'bad_arg2'"):
-        Scenario(test_mp, model='model name', scenario='scenario name',
+        Scenario(test_mp, model='model-name', scenario='scenario-name',
                  version='new', scheme='dantzig', with_data=True,
                  bad_arg2=222)
+
+    # Replace b[j] with a parameter of the same name, but different indices
+    s.check_out()
+    s.remove_par('b')
+    s.init_par('b', idx_sets=['i'], idx_names=['i_dim'])
+
+    # Logs an error message
+    caplog.set_level(logging.WARNING)
+    with assert_logs(caplog,
+                     "Existing index sets of 'b' ['i'] do not match ['j']"):
+        DantzigModel.initialize(s)

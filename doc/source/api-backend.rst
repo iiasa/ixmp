@@ -122,7 +122,7 @@ Backend API
       get
       get_data
       get_geo
-      init_ts
+      init
       is_default
       last_update
       preload
@@ -142,7 +142,6 @@ Backend API
       delete_item
       get_meta
       has_solution
-      init_s
       init_item
       item_delete_elements
       item_get_elements

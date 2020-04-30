@@ -501,8 +501,13 @@ def test_platform_units(test_mp, caplog, ureg):
     scen.add_par('x', x)
 
     # Unrecognized units are added automatically, with log messages emitted
-    with assert_logs(caplog, ['Add unit definition: kWa = [kWa]']):
-        rep.get(x_key)
+    caplog.clear()
+    rep.get(x_key)
+    # NB cannot use assert_logs here. reporting.utils.parse_units uses the
+    #    pint application registry, so depending which tests are run and in
+    #    which order, this unit may already be defined.
+    if len(caplog.messages):
+        assert 'Add unit definition: kWa = [kWa]' in caplog.messages
 
     # Mix of recognized/unrecognized units can be added: USD is already in the
     # unit registry, so is not re-added
@@ -531,7 +536,7 @@ def test_platform_units(test_mp, caplog, ureg):
     # Applied units are pint objects with the correct dimensionality
     unit = x.attrs['_unit']
     assert isinstance(unit, pint.Unit)
-    assert unit.dimensionality == {'[USD]': 1, '[km]': -1}
+    assert unit.dimensionality == {'[USD]': 1, '[pkm]': -1}
 
 
 def test_reporter_describe(test_mp, test_data_path, capsys):

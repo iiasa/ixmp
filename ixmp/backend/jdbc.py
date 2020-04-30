@@ -420,14 +420,16 @@ class JDBCBackend(CachingBackend):
         if ts.version is None:
             # The default version was requested; update the attribute
             ts.version = v
-        elif v != ts.version:
+        elif v != ts.version:  # pragma: no cover
+            # Something went wrong on the Java side
             raise RuntimeError(f'got version {v} instead of {ts.version}')
 
         if isinstance(ts, Scenario):
             # Also retrieve the scheme
             s = jobj.getScheme()
 
-            if ts.scheme and s != ts.scheme:
+            if ts.scheme and s != ts.scheme:  # pragma: no cover
+                # Something went wrong on the Java side
                 raise RuntimeError(f'got scheme {s} instead of {ts.scheme}')
 
             ts.scheme = s

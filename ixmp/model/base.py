@@ -108,9 +108,10 @@ class Model(ABC):
                 for key, values in item_info.items():
                     values = values or []
                     existing = getattr(scenario, key)(name)
+                    print(name, key, values, existing)
                     if existing != values:
                         # The existing index sets or names do not match
-                        log.error(
+                        log.warning(
                             f"Existing index {key.split('_')[-1]} of "
                             f"{repr(name)} {repr(existing)} do not match "
                             f"{repr(values)}"
@@ -124,8 +125,11 @@ class Model(ABC):
             # Possibly check out the Scenario
             try:
                 checkout = maybe_check_out(scenario, checkout)
-            except ValueError as exc:
-                # The Scenario has a solution; can't proceed
+            except ValueError as exc:  # pragma: no cover
+                # The Scenario has a solution. This indicates an inconsistent
+                # situation: the Scenario lacks the item *name*, but somehow it
+                # was successfully solved without it, and the solution stored.
+                # Can't proceed further.
                 log.error(str(exc))
                 return
 

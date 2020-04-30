@@ -138,7 +138,8 @@ class GAMSModel(Model):
             # Write model data to file
             backend.write_file(self.in_file, ItemType.SET | ItemType.PAR,
                                **s_arg)
-        except NotImplementedError:
+        except NotImplementedError:  # pragma: no cover
+            # Currently there is no such Backend
             raise NotImplementedError('GAMSModel requires a Backend that can '
                                       'write to GDX files, e.g. JDBCBackend')
 

@@ -2,7 +2,7 @@
 import pytest
 from pytest import mark, param
 
-from ixmp import utils
+from ixmp import Scenario, utils
 from ixmp.testing import populate_test_platform
 
 
@@ -93,3 +93,15 @@ def test_format_scenario_list(test_mp):
         'ixmp://{}/canning problem/standard#2',
     ]))
     assert exp == utils.format_scenario_list(test_mp, as_url=True)
+
+
+def test_maybe_commit(caplog, test_mp):
+    s = Scenario(test_mp, 'maybe_commit', 'maybe_commit', version='new')
+
+    # A new Scenario is not committed, so this works
+    assert utils.maybe_commit(s, True, message='foo') is True
+
+    # *s* is already commited. No commit is performed, but the function call
+    # succeeds and a message is logged
+    assert utils.maybe_commit(s, True, message='foo') is False
+    assert caplog.messages[-1].startswith("maybe_commit() didn't commit: ")

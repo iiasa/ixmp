@@ -112,7 +112,7 @@ def maybe_commit(timeseries, condition, message):
         if a commit is performed.
     :obj:`False`
         if any exception is raised during the attempted commit. The exception
-        is logged with level ``ERROR``.
+        is logged with level ``INFO``.
 
     See Also
     --------
@@ -124,7 +124,7 @@ def maybe_commit(timeseries, condition, message):
     try:
         timeseries.commit(message)
     except RuntimeError as exc:
-        log.error(str(exc))
+        log.info(f"maybe_commit() didn't commit: {exc}")
         return False
     else:
         return True

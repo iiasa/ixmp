@@ -285,7 +285,7 @@ def make_dantzig(mp, solve=False):
 nbformat = pytest.importorskip('nbformat')
 
 
-def run_notebook(nb_path, tmp_path, env=None, kernel=None):
+def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
     """Execute a Jupyter notebook via ``nbconvert`` and collect output.
 
     Modified from
@@ -303,6 +303,10 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None):
     kernel : str, optional
         Jupyter kernel to use. Default: 'python2' or 'python3', matching the
         current Python version.
+    allow_errors : bool, optional
+        Whether to pass the ``--allow-errors`` option to ``nbconvert``. If
+        :obj:`True`, the execution always succeeds, and cell output contains
+        exception information.
 
     Returns
     -------
@@ -320,6 +324,7 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None):
     fname = tmp_path / 'test.ipynb'
     args = [
         "jupyter", "nbconvert", "--to", "notebook", "--execute",
+        "--allow-errors" if allow_errors else "",
         "--ExecutePreprocessor.timeout=60",
         "--ExecutePreprocessor.kernel_name={}".format(kernel),
         "--output", str(fname), str(nb_path)]
@@ -338,7 +343,7 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None):
     return nb, errors
 
 
-def get_cell_output(nb, name_or_index):
+def get_cell_output(nb, name_or_index, kind='data'):
     """Retrieve a cell from *nb* according to its metadata *name_or_index*:
 
     The Jupyter notebook format allows specifying a document-wide unique 'name'
@@ -349,6 +354,13 @@ def get_cell_output(nb, name_or_index):
 
     Return the cell matching *name_or_index* if a string; or the cell at the
     int index; or raise ValueError.
+
+    Parameters
+    ----------
+    kind : str, optional
+        Kind of cell output to retrieve. For 'data', the data in format
+        'text/plain' is run through :func:`eval`. To retrieve an exception
+        message, use 'evalue'.
     """
     if isinstance(name_or_index, int):
         cell = nb.cells[name_or_index]
@@ -362,9 +374,11 @@ def get_cell_output(nb, name_or_index):
                 continue
 
     try:
-        return eval(cell['outputs'][0]['data']['text/plain'])
-    except NameError:
-        raise ValueError('no cell named {!r}'.format(name_or_index))
+        result = cell['outputs'][0][kind]
+    except NameError:  # pragma: no cover
+        raise ValueError(f'no cell named {name_or_index}')
+    else:
+        return eval(result['text/plain']) if kind == 'data' else result
 
 
 # Assertions for testing

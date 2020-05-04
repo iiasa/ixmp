@@ -37,4 +37,4 @@ build: false
 
 test_script:
 # Run tests. These include the equivalent of Travis R tests via test_r.py.
-- pytest -m 'rixmp or not performance' --verbose
+- pytest -m "rixmp or not performance" --verbose

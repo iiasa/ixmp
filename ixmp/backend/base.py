@@ -849,12 +849,12 @@ class Backend(ABC):
 
     @abstractmethod
     def get_meta(self, s: Scenario):
-        """Return all metadata.
+        """Return all meta.
 
         Returns
         -------
         dict (str -> any)
-            Mapping from metadata keys to values.
+            Mapping from meta keys to values.
 
         See also
         --------
@@ -868,11 +868,11 @@ class Backend(ABC):
         Parameters
         ----------
         name_or_dict : str or dict
-            If the argument is dict, it used as a mapping of metadata
+            If the argument is dict, it used as a mapping of meta
             categories (names) to values. Otherwise, use the argument
-            as the metadata attribute name.
+            as the meta attribute name.
         value : str or number or bool, optional
-            Metadata attribute value.
+            Meta attribute value.
 
         Returns
         -------
@@ -886,12 +886,12 @@ class Backend(ABC):
 
     @abstractmethod
     def delete_meta(self, s, name):
-        """Remove single or multiple metadata entries.
+        """Remove single or multiple meta entries.
 
         Parameters
         ----------
         name : str or list of str
-            Either single metadata key or list of keys.
+            Either single meta key or list of keys.
 
         Returns
         -------

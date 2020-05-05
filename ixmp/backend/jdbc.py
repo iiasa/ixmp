@@ -862,7 +862,7 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(self, s):
         def unwrap(v):
-            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            """Unwrap meta numeric value (BigDecimal -> Double)"""
             return v.doubleValue() if isinstance(v, java.BigDecimal) else v
 
         return {entry.getKey(): unwrap(entry.getValue())
@@ -881,7 +881,7 @@ class JDBCBackend(CachingBackend):
             _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
             method_name = 'setMeta' + _type
         except KeyError:
-            raise TypeError(f'Cannot store metadata of type {_type}')
+            raise TypeError(f'Cannot store meta of type {_type}')
 
         getattr(self.jindex[s], method_name)(name_or_dict, value)
 

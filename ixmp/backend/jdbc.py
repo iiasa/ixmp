@@ -239,7 +239,7 @@ class JDBCBackend(CachingBackend):
         return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
 
     def set_doc(self, domain, docs):
-        """ Save documentation to database
+        """Save documentation to database
 
         Parameters
         ----------
@@ -261,10 +261,13 @@ class JDBCBackend(CachingBackend):
     def get_doc(self, domain, name=None):
         """ Read documentation from database
 
+        Parameters
+        ----------
         domain : str
             Documentation domain, e.g. model, scenario etc
         name : str, optional
             Name of domain entity (e.g. model name).
+
         Returns
         -------
         str or dict
@@ -865,10 +868,10 @@ class JDBCBackend(CachingBackend):
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
-    def set_meta(self, s, name_or_data, value=None):
-        if type(name_or_data) == list:
+    def set_meta(self, s, name_or_dict, value=None):
+        if type(name_or_dict) == list:
             jdata = java.LinkedHashMap()
-            for k, v in name_or_data:
+            for k, v in name_or_dict:
                 jdata.put(str(k), v)
             self.jindex[s].setMeta(jdata)
             return
@@ -880,13 +883,13 @@ class JDBCBackend(CachingBackend):
         except KeyError:
             raise TypeError(f'Cannot store metadata of type {_type}')
 
-        getattr(self.jindex[s], method_name)(name_or_data, value)
+        getattr(self.jindex[s], method_name)(name_or_dict, value)
 
-    def delete_meta(self, s, name_or_names):
-        if type(name_or_names) == str:
-            name_or_names = [str]
+    def delete_meta(self, s, name):
+        if type(name) == str:
+            name = [name]
         jdata = java.LinkedList()
-        for k in name_or_names:
+        for k in name:
             jdata.add(str(k))
         self.jindex[s].removeMeta(jdata)
 

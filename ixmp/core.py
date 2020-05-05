@@ -1545,31 +1545,31 @@ class Scenario(TimeSeries):
         all_meta = self._backend('get_meta')
         return all_meta[name] if name else all_meta
 
-    def set_meta(self, name_or_data, value=None):
+    def set_meta(self, name_or_dict, value=None):
         """Set scenario metadata.
 
         Parameters
         ----------
-        name_or_data : str or dict
+        name_or_dict : str or dict
             If the argument is dict, it used as a mapping of metadata
             categories (names) to values. Otherwise, use the argument
             as the metadata attribute name.
         value : str or number or bool, optional
             Metadata attribute value.
         """
-        if type(name_or_data) == dict:
-            name_or_data = list(name_or_data.items())
-        self._backend('set_meta', name_or_data, value)
+        if type(name_or_dict) == dict:
+            name_or_dict = list(name_or_dict.items())
+        self._backend('set_meta', name_or_dict, value)
 
-    def delete_meta(self, name_or_names):
+    def delete_meta(self, name):
         """Delete scenario metadata.
 
         Parameters
         ----------
-        name_or_names : str or list of str
+        name : str or list of str
             Either single metadata key or list of keys.
         """
-        self._backend('delete_meta', name_or_names)
+        self._backend('delete_meta', name)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

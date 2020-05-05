@@ -95,18 +95,18 @@ Backend API
 
       close_db
       get_auth
+      get_doc
       get_log_level
       get_nodes
       get_scenarios
       get_units
       open_db
       read_file
+      set_doc
       set_log_level
       set_node
       set_unit
       write_file
-      get_doc
-      set_doc
 
    Methods related to :class:`ixmp.TimeSeries`:
 

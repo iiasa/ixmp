@@ -29,6 +29,12 @@ Platform
       set_log_level
       units
 
+   The methods
+   :meth:`~.base.Backend.open_db`,
+   :meth:`~.base.Backend.close_db`,
+   :meth:`~.base.Backend.get_doc`, and
+   :meth:`~.base.Backend.set_doc` may also be called via Platform.
+
 
 TimeSeries
 ----------

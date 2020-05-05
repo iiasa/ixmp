@@ -239,17 +239,6 @@ class JDBCBackend(CachingBackend):
         return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
 
     def set_doc(self, domain, docs):
-        """Save documentation to database
-
-        Parameters
-        ----------
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        docs : dict or array of tuples
-            Dictionary or tuple array containing mapping between name of domain
-            object (e.g. model name) and string representing fragment
-            of documentation
-        """
         dd = _domain_enum(domain)
         jdata = java.LinkedHashMap()
         if type(docs) == dict:
@@ -259,23 +248,6 @@ class JDBCBackend(CachingBackend):
         self.jobj.setDoc(dd, jdata)
 
     def get_doc(self, domain, name=None):
-        """ Read documentation from database
-
-        Parameters
-        ----------
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        name : str, optional
-            Name of domain entity (e.g. model name).
-
-        Returns
-        -------
-        str or dict
-            String representing fragment of documentation if name is passed as
-            parameter or dictionary containing mapping between name of domain
-            object (e.g. model name) and string representing fragment when
-            name parameter is omitted.
-        """
         dd = _domain_enum(domain)
         if name is None:
             doc = self.jobj.getDoc(dd)

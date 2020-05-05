@@ -105,6 +105,8 @@ Backend API
       set_node
       set_unit
       write_file
+      get_doc
+      set_doc
 
    Methods related to :class:`ixmp.TimeSeries`:
 

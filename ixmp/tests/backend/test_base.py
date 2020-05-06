@@ -30,9 +30,11 @@ def test_class():
         delete = noop
         delete_geo = noop
         delete_item = noop
+        delete_meta = noop
         discard_changes = noop
         get = noop
         get_data = noop
+        get_doc = noop
         get_geo = noop
         get_meta = noop
         get_nodes = noop
@@ -54,6 +56,7 @@ def test_class():
         set_data = noop
         set_geo = noop
         set_meta = noop
+        set_doc = noop
         set_node = noop
         set_timeslice = noop
         set_unit = noop

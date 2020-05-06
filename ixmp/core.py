@@ -55,6 +55,8 @@ class Platform:
     _backend_direct = [
         'open_db',
         'close_db',
+        'get_doc',
+        'set_doc',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -1533,27 +1535,41 @@ class Scenario(TimeSeries):
                 break
 
     def get_meta(self, name=None):
-        """Get scenario metadata.
+        """Get scenario meta.
 
         Parameters
         ----------
         name : str, optional
-            metadata attribute name
+            meta attribute name
         """
         all_meta = self._backend('get_meta')
         return all_meta[name] if name else all_meta
 
-    def set_meta(self, name, value):
-        """Set scenario metadata.
+    def set_meta(self, name_or_dict, value=None):
+        """Set scenario meta.
 
         Parameters
         ----------
-        name : str
-            metadata attribute name
-        value : str or number or bool
-            metadata attribute value
+        name_or_dict : str or dict
+            If the argument is dict, it used as a mapping of meta
+            categories (names) to values. Otherwise, use the argument
+            as the meta attribute name.
+        value : str or number or bool, optional
+            Meta attribute value.
         """
-        self._backend('set_meta', name, value)
+        if type(name_or_dict) == dict:
+            name_or_dict = list(name_or_dict.items())
+        self._backend('set_meta', name_or_dict, value)
+
+    def delete_meta(self, name):
+        """Delete scenario meta.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single meta key or list of keys.
+        """
+        self._backend('delete_meta', name)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

@@ -205,6 +205,40 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def set_doc(self, domain, docs):
+        """Save documentation to database
+
+        Parameters
+        ----------
+        domain : str
+            Documentation domain, e.g. model, scenario etc
+        docs : dict or array of tuples
+            Dictionary or tuple array containing mapping between name of domain
+            object (e.g. model name) and string representing fragment
+            of documentation
+        """
+
+    @abstractmethod
+    def get_doc(self, domain, name=None):
+        """ Read documentation from database
+
+        Parameters
+        ----------
+        domain : str
+            Documentation domain, e.g. model, scenario etc
+        name : str, optional
+            Name of domain entity (e.g. model name).
+
+        Returns
+        -------
+        str or dict
+            String representing fragment of documentation if name is passed as
+            parameter or dictionary containing mapping between name of domain
+            object (e.g. model name) and string representing fragment when
+            name parameter is omitted.
+        """
+
+    @abstractmethod
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         """Add a node name to the Platform.
 
@@ -849,12 +883,12 @@ class Backend(ABC):
 
     @abstractmethod
     def get_meta(self, s: Scenario):
-        """Return all metadata.
+        """Return all meta.
 
         Returns
         -------
         dict (str -> any)
-            Mapping from metadata keys to values.
+            Mapping from meta keys to values.
 
         See also
         --------
@@ -862,15 +896,17 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_meta(self, s: Scenario, name, value):
-        """Set a single metadata key.
+    def set_meta(self, s: Scenario, name_or_dict, value=None):
+        """Set single or multiple meta entries.
 
         Parameters
         ----------
-        name : str
-            Metadata key name.
-        value : int or float or bool or str
-            Value for *name*.
+        name_or_dict : str or dict
+            If the argument is dict, it used as a mapping of meta
+            categories (names) to values. Otherwise, use the argument
+            as the meta attribute name.
+        value : str or number or bool, optional
+            Meta attribute value.
 
         Returns
         -------
@@ -880,6 +916,20 @@ class Backend(ABC):
         ------
         TypeError
             If *value* is not a valid type.
+        """
+
+    @abstractmethod
+    def delete_meta(self, s, name):
+        """Remove single or multiple meta entries.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single meta key or list of keys.
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod

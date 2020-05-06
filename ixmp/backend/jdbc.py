@@ -46,11 +46,13 @@ JAVA_CLASSES = [
     'java.lang.Double',
     'java.lang.Integer',
     'java.lang.NoClassDefFoundError',
+    'java.lang.IllegalArgumentException',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
     'java.util.Properties',
+    'at.ac.iiasa.ixmp.dto.DocumentationKey',
 ]
 
 
@@ -118,6 +120,16 @@ def _raise_jexception(exc, msg='unhandled Java exception: '):
     else:
         msg += exc.message()
     raise RuntimeError(msg) from None
+
+
+def _domain_enum(domain):
+    domain_enum = java.DocumentationKey.DocumentationDomain
+    try:
+        return domain_enum.valueOf(domain.upper())
+    except java.IllegalArgumentException:
+        domains = ', '.join([d.name().lower() for d in domain_enum.values()])
+        raise ValueError(f'No such domain: {domain}, '
+                         f'existing domains: {domains}')
 
 
 class JDBCBackend(CachingBackend):
@@ -225,6 +237,24 @@ class JDBCBackend(CachingBackend):
     def get_log_level(self):
         levels = {v: k for k, v in LOG_LEVELS.items()}
         return levels.get(self.jobj.getLogLevel(), 'UNKNOWN')
+
+    def set_doc(self, domain, docs):
+        dd = _domain_enum(domain)
+        jdata = java.LinkedHashMap()
+        if type(docs) == dict:
+            docs = list(docs.items())
+        for k, v in docs:
+            jdata.put(str(k), str(v))
+        self.jobj.setDoc(dd, jdata)
+
+    def get_doc(self, domain, name=None):
+        dd = _domain_enum(domain)
+        if name is None:
+            doc = self.jobj.getDoc(dd)
+            return {entry.getKey(): entry.getValue()
+                    for entry in doc.entrySet()}
+        else:
+            return self.jobj.getDoc(dd, str(name))
 
     def open_db(self):
         """(Re-)open the database connection."""
@@ -804,21 +834,36 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(self, s):
         def unwrap(v):
-            """Unwrap metadata numeric value (BigDecimal -> Double)"""
+            """Unwrap meta numeric value (BigDecimal -> Double)"""
             return v.doubleValue() if isinstance(v, java.BigDecimal) else v
 
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
-    def set_meta(self, s, name, value):
+    def set_meta(self, s, name_or_dict, value=None):
+        if type(name_or_dict) == list:
+            jdata = java.LinkedHashMap()
+            for k, v in name_or_dict:
+                jdata.put(str(k), v)
+            self.jindex[s].setMeta(jdata)
+            return
+
         _type = type(value)
         try:
             _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
             method_name = 'setMeta' + _type
         except KeyError:
-            raise TypeError(f'Cannot store metadata of type {_type}')
+            raise TypeError(f'Cannot store meta of type {_type}')
 
-        getattr(self.jindex[s], method_name)(name, value)
+        getattr(self.jindex[s], method_name)(name_or_dict, value)
+
+    def delete_meta(self, s, name):
+        if type(name) == str:
+            name = [name]
+        jdata = java.LinkedList()
+        for k in name:
+            jdata.add(str(k))
+        self.jindex[s].removeMeta(jdata)
 
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario

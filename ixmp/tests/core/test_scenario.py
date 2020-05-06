@@ -21,6 +21,17 @@ def scen_empty(request, test_mp):
                         scenario='test', version='new')
 
 
+@pytest.fixture(scope='function')
+def test_dict():
+    return {
+        "test_string": 'test12345',
+        "test_number": 123.456,
+        "test_number_negative": -123.456,
+        'test_int': 12345,
+        'test_bool': True,
+        'test_bool_false': False,
+    }
+
 class TestScenario:
     # Initialize Scenario
     def test_init(self, test_mp, scen_empty):
@@ -273,16 +284,7 @@ class TestScenario:
         s.read_excel(tmp_path, add_units=True, init_items=True)
 
     # Combined tests
-    def test_meta(self, mp):
-        test_dict = {
-            "test_string": 'test12345',
-            "test_number": 123.456,
-            "test_number_negative": -123.456,
-            'test_int': 12345,
-            'test_bool': True,
-            'test_bool_false': False,
-        }
-
+    def test_meta(self, mp, test_dict):
         scen = ixmp.Scenario(mp, **models['dantzig'], version=1)
         for k, v in test_dict.items():
             scen.set_meta(k, v)
@@ -298,9 +300,30 @@ class TestScenario:
         exp = test_dict['test_string']
         assert obs == exp
 
+        scen.delete_meta(['test_int', 'test_bool'])
+        obs = scen.get_meta()
+        assert len(obs) == 4
+        assert set(obs.keys()) == {'test_string', 'test_number',
+                                   'test_number_negative', 'test_bool_false'}
+
         # Setting with a type other than int, float, bool, str raises TypeError
-        with pytest.raises(TypeError, match='Cannot store metadata of type'):
+        with pytest.raises(TypeError, match='Cannot store meta of type'):
             scen.set_meta('test_string', complex(1, 1))
+
+    def test_meta_bulk(self, mp, test_dict):
+        scen = ixmp.Scenario(mp, **models['dantzig'], version=1)
+        scen.set_meta(test_dict)
+
+        # test all
+        obs_dict = scen.get_meta()
+        for k, exp in test_dict.items():
+            obs = obs_dict[k]
+            assert obs == exp
+
+        # check updating metadata (replace and append)
+        scen.set_meta({'test_int': 1234567, 'new_attr': 'new_attr'})
+        assert scen.get_meta('test_int') == 1234567
+        assert scen.get_meta('new_attr') == 'new_attr'
 
 
 def test_range(scen_empty):

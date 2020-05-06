@@ -830,7 +830,11 @@ class JDBCBackend(CachingBackend):
         for key in keys:
             jitem.removeElement(to_jlist(key))
 
-        self.cache_invalidate(s, type, name)
+        # Since `name` may be an index set, clear the cache entirely. This
+        # ensures that e.g. parameter elements for parameters indexed by `name`
+        # are also refreshed on the next call to item_get_elements.
+        args = (s,) if type == 'set' else (s, type, name)
+        self.cache_invalidate(*args)
 
     def get_meta(self, s):
         def unwrap(v):

@@ -413,7 +413,7 @@ def get_cell_output(nb, name_or_index, kind='data'):
 
 
 @contextmanager
-def assert_logs(caplog, message_or_messages=None):
+def assert_logs(caplog, message_or_messages=None, at_level=None):
     """Assert that *message_or_messages* appear in logs.
 
     Use assert_logs as a context manager for a statement that is expected to
@@ -433,6 +433,9 @@ def assert_logs(caplog, message_or_messages=None):
         The pytest caplog fixture.
     message_or_messages : str or list of str
         String(s) that must appear in log messages.
+    at_level : int, optional
+        Messages must appear on 'ixmp' or a sub-logger with at least this
+        level.
     """
     # Wrap a string in a list
     expected = [message_or_messages] if isinstance(message_or_messages, str) \
@@ -441,15 +444,33 @@ def assert_logs(caplog, message_or_messages=None):
     # Record the number of records prior to the managed block
     first = len(caplog.records)
 
+    if at_level is not None:
+        # Use the pytest caplog fixture's built-in context manager to
+        # temporarily set the level of the 'ixmp' logger
+        ctx = caplog.at_level(at_level, logger='ixmp')
+    else:
+        # ctx does nothing
+        ctx = nullcontext()
+
     try:
-        yield  # Nothing provided to the managed block
+        with ctx:
+            yield  # Nothing provided to the managed block
     finally:
+        # List of bool indicating whether each of `expected` was found
         found = [any(e in msg for msg in caplog.messages[first:])
                  for e in expected]
+
         if not all(found):
-            missing = [msg for i, msg in enumerate(expected) if not found[i]]
-            raise AssertionError(f'Did not log {missing}\namong:\n'
-                                 f'{caplog.messages[first:]}')
+            # Format a description of the missing messages
+            lines = chain(
+                ['Did not log:'],
+                [f'    {repr(msg)}' for i, msg in enumerate(expected)
+                 if not found[i]],
+                ['among:'],
+                ['    []'] if len(caplog.records) == first else
+                [f'    {repr(msg)}' for msg in caplog.messages[first:]],
+            )
+            pytest.fail('\n'.join(lines))
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):

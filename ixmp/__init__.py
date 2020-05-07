@@ -1,3 +1,5 @@
+import logging
+
 from ._config import config
 from ._version import get_versions
 from .backend import BACKENDS, ItemType
@@ -8,6 +10,18 @@ from .model.dantzig import DantzigModel
 from .model.gams import GAMSModel
 from .reporting import Reporter
 from .utils import show_versions
+
+__all__ = [
+    'IAMC_IDX',
+    'ItemType',
+    'Platform',
+    'Reporter',
+    'Scenario',
+    'TimeSeries',
+    'config',
+    'log',
+    'show_versions',
+]
 
 __version__ = get_versions()['version']
 del get_versions
@@ -22,13 +36,9 @@ MODELS.update({
     'dantzig': DantzigModel,
 })
 
-__all__ = [
-    'IAMC_IDX',
-    'ItemType',
-    'Platform',
-    'Reporter',
-    'Scenario',
-    'TimeSeries',
-    'config',
-    'show_versions',
-]
+
+# Configure the 'ixmp' logger: write messages to std out, defaulting to level
+# WARNING and above
+log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler())
+log.setLevel(logging.WARNING)

@@ -109,12 +109,21 @@ class Platform:
         level : str
             Name of a :py:ref:`Python logging level <levels>`.
         """
-        if level not in dir(logging):
-            msg = '{} not a valid Python logger level, see ' + \
+        if not (level in dir(logging) or isinstance(level, int)):
+            raise ValueError(
+                f'{repr(level)} is not a valid Python logger level, see '
                 'https://docs.python.org/3/library/logging.html#logging-level'
-            raise ValueError(msg.format(level))
-        log.setLevel(level)
-        logger().setLevel(level)
+            )
+
+        # Set the level for the 'ixmp' logger
+        # NB this may produce unexpected results when multiple Platforms exist
+        #    and different log levels are set. To fix, could use a sub-logger
+        #    per Platform instance.
+        logging.getLogger('ixmp').setLevel(level)
+
+        # Set the level for the 'ixmp.backend.*' logger. For JDBCBackend, this
+        # also has the effect of setting the level for Java log messages that
+        # are printed to stdout.
         self._backend.set_log_level(level)
 
     def get_log_level(self):

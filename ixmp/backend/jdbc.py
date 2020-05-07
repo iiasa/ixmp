@@ -37,7 +37,7 @@ LOG_LEVELS = {
     'WARNING': 'WARN',
     'INFO': 'INFO',
     'DEBUG': 'DEBUG',
-    'NOTSET': 'OFF',
+    'NOTSET': 'ALL',
 }
 
 # Java classes, loaded by start_jvm(). These become available as e.g.
@@ -207,8 +207,11 @@ class JDBCBackend(CachingBackend):
         # Invoke the parent constructor to initialize the cache
         super().__init__(cache_enabled=kwargs.pop('cache', True))
 
-        # Extract a log_level keyword argument before _create_properties()
-        log_level = kwargs.pop('log_level', 'INFO')
+        # Extract a log_level keyword argument before _create_properties().
+        # By default, use the same level as the 'ixmp' logger, whatever that
+        # has been set to.
+        ixmp_logger = logging.getLogger('ixmp')
+        log_level = kwargs.pop('log_level', ixmp_logger.getEffectiveLevel())
 
         # Create a database properties object
         if properties:
@@ -249,6 +252,13 @@ class JDBCBackend(CachingBackend):
     # Platform methods
 
     def set_log_level(self, level):
+        # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled
+        # by the 'ixmp' logger; see ixmp/__init__.py.
+        log.setLevel(level)
+
+        # Translate to Java log level and set
+        if isinstance(level, int):
+            level = logging.getLevelName(level)
         self.jobj.setLogLevel(LOG_LEVELS[level])
 
     def get_log_level(self):

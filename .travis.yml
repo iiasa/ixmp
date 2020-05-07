@@ -1,6 +1,11 @@
 # Continuous integration configuration for Travis
 # NB use https://config.travis-ci.com/explore to validate changes
 
+branches:
+  only:
+  - master
+  - 2.0.x
+
 dist: xenial
 
 language: r

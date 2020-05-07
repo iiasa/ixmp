@@ -33,7 +33,8 @@ These include:
 
 """
 from collections import namedtuple
-from contextlib import contextmanager, nullcontext
+import contextlib
+from contextlib import contextmanager
 from copy import deepcopy
 import io
 from itertools import chain, product
@@ -453,6 +454,8 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
         # temporarily set the level of the 'ixmp' logger
         ctx = caplog.at_level(at_level, logger='ixmp')
     else:
+        # Python 3.6 compatibility: use suppress for nullcontext
+        nullcontext = getattr(contextlib, 'nullcontext', contextlib.suppress)
         # ctx does nothing
         ctx = nullcontext()
 

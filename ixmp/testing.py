@@ -33,9 +33,10 @@ These include:
 
 """
 from collections import namedtuple
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
+from copy import deepcopy
 import io
-from itertools import product
+from itertools import chain, product
 import logging
 from math import ceil
 import os
@@ -104,7 +105,10 @@ def protect_pint_app_registry():
     other tests is not altered.
     """
     import pint
-    saved = pint.get_application_registry()
+    # Use deepcopy() in case the wrapped code modifies the application
+    # registry without swapping out the UnitRegistry instance for a different
+    # one
+    saved = deepcopy(pint.get_application_registry())
     yield
     pint.set_application_registry(saved)
 

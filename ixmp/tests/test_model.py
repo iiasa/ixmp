@@ -51,10 +51,11 @@ def test_model_initialize(test_mp, caplog):
 
     # Unrecognized Scenario(scheme=...) is initialized using the base method, a
     # no-op
-    with assert_logs(caplog, [
-            "No scheme for new Scenario model-name/scenario-name",
-            "No initialization for None-scheme Scenario",
-            ], at_level=logging.DEBUG):
+    messages = [
+        "No scheme for new Scenario model-name/scenario-name",
+        "No initialization for None-scheme Scenario",
+    ]
+    with assert_logs(caplog, messages, at_level=logging.DEBUG):
         Scenario(test_mp, model='model-name', scenario='scenario-name',
                  version='new')
 

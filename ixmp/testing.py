@@ -145,9 +145,13 @@ def test_mp(request, tmp_env, test_data_path):
     # Launch Platform
     mp = Platform(name=platform_name)
     yield mp
-    mp.set_log_level('NOTSET')
+
+    # Teardown: don't show log messages when destroying the platform, even if
+    # the test using the fixture modified the log level
+    mp._backend.set_log_level(logging.CRITICAL)
     del mp
-    # Teardown: remove from config
+
+    # Remove from config
     ixmp_config.remove_platform(platform_name)
 
 

@@ -199,7 +199,7 @@ class TestScenario:
 
     def test_load_scenario_data_clear_cache(self, mp):
         # this fails on commit: 4376f54
-        scen = ixmp.Scenario(mp, **models['dantzig'], cache=True)
+        scen = ixmp.Scenario(mp, **models['dantzig'])
         scen.load_scenario_data()
         scen.platform._backend.cache_invalidate(scen, 'par', 'd')
 

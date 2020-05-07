@@ -165,3 +165,19 @@ def test_docs(test_mp):
     exp = ('No such domain: baddomain, existing domains: '
            'scenario, model, region, metadata, timeseries')
     assert ex.value.args[0] == exp
+
+
+def test_cache_clear(test_mp):
+    """Removing set elements causes the cache to be cleared entirely."""
+    scen = make_dantzig(test_mp)
+
+    # Load an item so that it is cached
+    d0 = scen.par('d')
+
+    # Remove a set element
+    scen.check_out()
+    scen.remove_set('j', 'topeka')
+
+    # The retrieved item content reflects the removal of 'topeka'; not the
+    # cached value used to return d0
+    assert scen.par('d').shape[0] < d0.shape[0]

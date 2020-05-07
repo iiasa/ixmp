@@ -51,14 +51,15 @@ def test_model_initialize(test_mp, caplog):
 
     # Unrecognized Scenario(scheme=...) is initialized using the base method, a
     # no-op
-    caplog.set_level(logging.DEBUG)
     with assert_logs(caplog, [
             "No scheme for new Scenario model-name/scenario-name",
-            "No initialization for None-scheme Scenario"]):
+            "No initialization for None-scheme Scenario",
+            ], at_level=logging.DEBUG):
         Scenario(test_mp, model='model-name', scenario='scenario-name',
                  version='new')
 
-    with assert_logs(caplog, "No initialization for 'foo'-scheme Scenario"):
+    with assert_logs(caplog, "No initialization for 'foo'-scheme Scenario",
+                     at_level=logging.DEBUG):
         Scenario(test_mp, model='model-name', scenario='scenario-name',
                  version='new', scheme='foo')
 
@@ -81,7 +82,6 @@ def test_model_initialize(test_mp, caplog):
     s.init_par('b', idx_sets=['i'], idx_names=['i_dim'])
 
     # Logs an error message
-    caplog.set_level(logging.WARNING)
     with assert_logs(caplog,
                      "Existing index sets of 'b' ['i'] do not match ['j']"):
         DantzigModel.initialize(s)

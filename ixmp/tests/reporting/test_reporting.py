@@ -1,4 +1,5 @@
 """Tests for ixmp.reporting."""
+import logging
 import os
 
 import ixmp
@@ -524,13 +525,15 @@ def test_platform_units(test_mp, caplog, ureg):
     x.loc[0, 'unit'] = 'kg'
     scen.add_par('x', x)
 
-    with assert_logs(caplog, "x: mixed units ['kg', 'USD/pkm'] discarded"):
+    with assert_logs(caplog, "x: mixed units ['kg', 'USD/pkm'] discarded",
+                     at_level=logging.INFO):
         rep.get(x_key)
 
     # Configured unit substitutions are applied
     rep.graph['config']['units'] = dict(apply=dict(x='USD/pkm'))
 
-    with assert_logs(caplog, "x: replace units dimensionless with USD/pkm"):
+    with assert_logs(caplog, "x: replace units dimensionless with USD/pkm",
+                     at_level=logging.INFO):
         x = rep.get(x_key)
 
     # Applied units are pint objects with the correct dimensionality

@@ -34,13 +34,6 @@ def log_level_mp(test_mp):
     ('NOTSET', None),
     # An unknown string fails
     ('FOO', ValueError),
-    # TODO also support Python standard library values
-    (logging.CRITICAL, ValueError),
-    (logging.ERROR, ValueError),
-    (logging.WARNING, ValueError),
-    (logging.INFO, ValueError),
-    (logging.DEBUG, ValueError),
-    (logging.NOTSET, ValueError),
 ])
 def test_log_level(log_level_mp, level, exc):
     """Log level can be set and retrieved."""

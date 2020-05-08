@@ -1,4 +1,6 @@
 """Tests for ixmp.utils."""
+import logging
+
 import pytest
 from pytest import mark, param
 
@@ -103,5 +105,6 @@ def test_maybe_commit(caplog, test_mp):
 
     # *s* is already commited. No commit is performed, but the function call
     # succeeds and a message is logged
+    caplog.set_level(logging.INFO, logger='ixmp')
     assert utils.maybe_commit(s, True, message='foo') is False
     assert caplog.messages[-1].startswith("maybe_commit() didn't commit: ")

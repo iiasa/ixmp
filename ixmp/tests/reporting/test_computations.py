@@ -31,10 +31,9 @@ def test_apply_units(data, caplog):
     # No change in values
     assert_series_equal(result.to_series(), x.to_series())
 
-    caplog.set_level(logging.DEBUG)
-
     # Compatible units: magnitudes are also converted
-    with assert_logs(caplog, "Convert 'kilogram' to 'metric_ton'"):
+    with assert_logs(caplog, "Convert 'kilogram' to 'metric_ton'",
+                     at_level=logging.DEBUG):
         result = computations.apply_units(x, 'tonne')
     assert result.attrs['_unit'] == registry.Unit('tonne')
     assert_series_equal(result.to_series(), x.to_series() * 0.001)

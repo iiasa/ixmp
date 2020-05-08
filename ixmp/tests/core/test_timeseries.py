@@ -7,6 +7,7 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import TimeSeries, Scenario
 from ixmp.core import IAMC_IDX
+from datetime import datetime, timedelta
 
 # Test data.
 # NB the columns are in a specific order; model and scenario come last in the
@@ -185,9 +186,10 @@ def test_last_update(ts):
 
     ts.commit('')
 
-    pytest.xfail()  # FIXME
     # After committing, last_update() returns a string
-    assert ts.last_update() == 'foo'
+    last_update = ts.last_update()
+    actual = datetime.strptime(last_update, '%Y-%m-%d %H:%M:%S.%f')
+    assert abs(actual - datetime.now()) < timedelta(seconds=1)
 
 
 @pytest.mark.parametrize('fmt', ['long', 'wide'])

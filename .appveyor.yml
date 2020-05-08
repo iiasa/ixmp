@@ -1,6 +1,11 @@
 # Continuous integration configuration for AppVeyor
 # Based on https://github.com/rmcgibbo/python-appveyor-conda-example
 
+branches:
+  only:
+  - master
+  - 2.0.x
+
 environment:
   # Use the JDK installed on AppVeyor images
   JAVA_HOME: C:\Program Files\Java\jdk13
@@ -37,4 +42,4 @@ build: false
 
 test_script:
 # Run tests. These include the equivalent of Travis R tests via test_r.py.
-- pytest --test-r --verbose
+- pytest -m "rixmp or not performance" --verbose

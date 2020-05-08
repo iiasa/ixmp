@@ -1,12 +1,14 @@
 from copy import copy
 from collections import ChainMap
 from collections.abc import Collection, Iterable
+import gc
 from itertools import chain
 import logging
 import os
 from pathlib import Path, PurePosixPath
 import re
 from types import SimpleNamespace
+from weakref import WeakKeyDictionary
 
 import jpype
 from jpype import JClass
@@ -22,6 +24,10 @@ log = logging.getLogger(__name__)
 
 
 _EXCEPTION_VERBOSE = os.environ.get('IXMP_JDBC_EXCEPTION_VERBOSE', '0') == '1'
+
+# Whether to collect garbage aggressively when instances of TimeSeries die.
+# See JDBCBackend.gc().
+_GC_AGGRESSIVE = True
 
 # Map of Python to Java log levels
 # https://logging.apache.org/log4j/2.x/log4j-api/apidocs/org/apache/logging/log4j/Level.html
@@ -47,6 +53,8 @@ JAVA_CLASSES = [
     'java.lang.Integer',
     'java.lang.NoClassDefFoundError',
     'java.lang.IllegalArgumentException',
+    'java.lang.Runtime',
+    'java.lang.System',
     'java.math.BigDecimal',
     'java.util.HashMap',
     'java.util.LinkedHashMap',
@@ -133,7 +141,7 @@ def _domain_enum(domain):
 
 
 class JDBCBackend(CachingBackend):
-    """Backend using JPype/JDBC to connect to Oracle and HyperSQLDB instances.
+    """Backend using JPype/JDBC to connect to Oracle and HyperSQL databases.
 
     Parameters
     ----------
@@ -149,6 +157,9 @@ class JDBCBackend(CachingBackend):
         Database user name.
     password : str, optional
         Database user password.
+    cache : bool, optional
+        If :obj:`True` (the default), cache Python objects after conversion
+        from Java objects.
     jvmargs : str, optional
         Java Virtual Machine arguments. See :meth:`.start_jvm`.
     dbprops : path-like, optional
@@ -174,7 +185,7 @@ class JDBCBackend(CachingBackend):
 
     #: Mapping from ixmp.TimeSeries object to the underlying
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
-    jindex = {}
+    jindex = WeakKeyDictionary()
 
     def __init__(self, jvmargs=None, **kwargs):
         properties = None
@@ -192,6 +203,15 @@ class JDBCBackend(CachingBackend):
                 raise FileNotFoundError(dbprops)
 
         start_jvm(jvmargs)
+
+        # Invoke the parent constructor to initialize the cache
+        super().__init__(cache_enabled=kwargs.pop('cache', True))
+
+        # Extract a log_level keyword argument before _create_properties().
+        # By default, use the same level as the 'ixmp' logger, whatever that
+        # has been set to.
+        ixmp_logger = logging.getLogger('ixmp')
+        log_level = kwargs.pop('log_level', ixmp_logger.getEffectiveLevel())
 
         # Create a database properties object
         if properties:
@@ -226,12 +246,19 @@ class JDBCBackend(CachingBackend):
                 msg = f'when initializing database:'
             _raise_jexception(e, f'{msg}\n(Java: {jclass})')
 
-        # Invoke the parent constructor to initialize the cache
-        super().__init__()
+        # Set the log level
+        self.set_log_level(log_level)
 
     # Platform methods
 
     def set_log_level(self, level):
+        # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled
+        # by the 'ixmp' logger; see ixmp/__init__.py.
+        log.setLevel(level)
+
+        # Translate to Java log level and set
+        if isinstance(level, int):
+            level = logging.getLevelName(level)
         self.jobj.setLogLevel(LOG_LEVELS[level])
 
     def get_log_level(self):
@@ -275,6 +302,8 @@ class JDBCBackend(CachingBackend):
                             'already closed')
             else:
                 log.warning(str(e))
+        except AttributeError:
+            pass  # self.jobj is None, e.g. cleanup after __init__ fails
 
     def get_auth(self, user, models, kind):
         return self.jobj.checkModelAccess(user, kind, to_jlist(models))
@@ -500,6 +529,12 @@ class JDBCBackend(CachingBackend):
 
         self._index_and_set_attrs(jobj, ts)
 
+    def del_ts(self, ts):
+        super().del_ts(ts)
+
+        # Aggressively free memory
+        self.gc()
+
     def check_out(self, ts, timeseries_only):
         try:
             self.jindex[ts].checkOut(timeseries_only)
@@ -525,8 +560,8 @@ class JDBCBackend(CachingBackend):
 
     def last_update(self, ts):
         timestamp = self.jindex[ts].getLastUpdateTimestamp()
-        if timestamp:
-            timestamp.toString()
+        if timestamp is not None:
+            return timestamp.toString()
         else:
             return timestamp  # None
 
@@ -919,6 +954,18 @@ class JDBCBackend(CachingBackend):
                 raise KeyError(name) from None
             else:  # pragma: no cover
                 _raise_jexception(e)
+
+    def __del__(self):
+        self.close_db()
+
+    @classmethod
+    def gc(cls):
+        if _GC_AGGRESSIVE:
+            # log.debug('Collect garbage')
+            java.System.gc()
+            gc.collect()
+        # else:
+        #     log.debug('Skip garbage collection')
 
 
 def start_jvm(jvmargs=None):

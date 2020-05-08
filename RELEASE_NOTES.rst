@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- `#298 <https://github.com/iiasa/ixmp/pull/298>`_: Improve memory management in :class:`.JDBCBackend`.
 - `#316 <https://github.com/iiasa/ixmp/pull/316>`_: Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs).
 - `#315 <https://github.com/iiasa/ixmp/pull/315>`_: Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects.
 - `#320 <https://github.com/iiasa/ixmp/pull/320>`_: Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging.

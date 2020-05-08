@@ -1,6 +1,11 @@
 # Continuous integration configuration for Travis
 # NB use https://config.travis-ci.com/explore to validate changes
 
+branches:
+  only:
+  - master
+  - 2.0.x
+
 dist: xenial
 
 language: r
@@ -54,7 +59,7 @@ install:
 script:
   - python -c "import os, sys; assert os.environ['PYVERSION'] == sys.version[0]"
   # Run tests. These include the equivalent of Travis R tests via test_r.py.
-  - pytest --test-r --verbose ixmp --cov-report=xml
+  - pytest ixmp -m 'rixmp or not performance' --verbose --cov-report=xml
   # Test that documentation can be built
   - cd doc
   - pip install -r requirements.txt

@@ -3,6 +3,7 @@ from itertools import repeat, zip_longest
 import logging
 from pathlib import Path
 from warnings import warn
+from weakref import ProxyType, proxy
 
 import numpy as np
 import pandas as pd
@@ -50,6 +51,9 @@ class Platform:
         Keyword arguments to specific to the `backend`. See
         :class:`.JDBCBackend`.
     """
+
+    # Storage back end for the platform
+    _backend = None
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
@@ -105,12 +109,21 @@ class Platform:
         level : str
             Name of a :py:ref:`Python logging level <levels>`.
         """
-        if level not in dir(logging):
-            msg = '{} not a valid Python logger level, see ' + \
+        if not (level in dir(logging) or isinstance(level, int)):
+            raise ValueError(
+                f'{repr(level)} is not a valid Python logger level, see '
                 'https://docs.python.org/3/library/logging.html#logging-level'
-            raise ValueError(msg.format(level))
-        log.setLevel(level)
-        logger().setLevel(level)
+            )
+
+        # Set the level for the 'ixmp' logger
+        # NB this may produce unexpected results when multiple Platforms exist
+        #    and different log levels are set. To fix, could use a sub-logger
+        #    per Platform instance.
+        logging.getLogger('ixmp').setLevel(level)
+
+        # Set the level for the 'ixmp.backend.*' logger. For JDBCBackend, this
+        # also has the effect of setting the level for Java log messages that
+        # are printed to stdout.
         self._backend.set_log_level(level)
 
     def get_log_level(self):
@@ -427,9 +440,13 @@ class TimeSeries:
                 self.scheme = scheme
 
         # Set attributes
-        self.platform = mp
         self.model = model
         self.scenario = scenario
+
+        # Store a weak reference to the Platform object. This reference is not
+        # enough to keep the Platform alive, i.e. 'del mp' will work even while
+        # this TimeSeries object lives.
+        self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)
 
         if version == 'new':
             # Initialize a new object
@@ -440,8 +457,19 @@ class TimeSeries:
             self._backend('get')
 
     def _backend(self, method, *args, **kwargs):
-        """Convenience for calling *method* on the backend."""
+        """Convenience for calling *method* on the backend.
+
+        The weak reference to the Platform object is used, if the Platform is
+        still alive.
+        """
         return self.platform._backend(self, method, *args, **kwargs)
+
+    def __del__(self):
+        # Instruct the back end to free memory associated with the TimeSeries
+        try:
+            self._backend('del_ts')
+        except ReferenceError:
+            pass  # The Platform has already been garbage-collected
 
     # Transactions and versioning
     # functions for platform management
@@ -798,10 +826,6 @@ class Scenario(TimeSeries):
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)
 
-    @property
-    def _cache(self):
-        return hasattr(self.platform._backend, '_cache')
-
     @classmethod
     def from_url(cls, url, errors='warn'):
         """Instantiate a Scenario given an ixmp-scheme URL.
@@ -876,7 +900,7 @@ class Scenario(TimeSeries):
         ValueError
             If the Scenario was instantiated with ``cache=False``.
         """
-        if not self._cache:
+        if not getattr(self.platform._backend, 'cache_enabled', False):
             raise ValueError('Cache must be enabled to load scenario data')
 
         for ix_type in 'equ', 'par', 'set', 'var':

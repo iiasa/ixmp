@@ -4,8 +4,9 @@ FROM openjdk:11-slim-buster
 ARG VIRTUAL_ENV=/opt/python3
 
 RUN apt-get update &&\
-    apt-get install -y --no-install-recommends curl graphviz python3 \
-      python3-distlib python3-pip python3-setuptools unzip &&\
+    apt-get install -y --no-install-recommends curl gcc graphviz python3 \
+      python3-dev python3-distlib python3-pip python3-setuptools python3-zmq \
+      unzip &&\
     pip3 install virtualenv &&\
     virtualenv -p python3 $VIRTUAL_ENV
 

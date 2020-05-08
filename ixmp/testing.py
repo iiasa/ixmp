@@ -32,14 +32,27 @@ These include:
      get_cell_output
 
 """
+from collections import namedtuple
+import contextlib
 from contextlib import contextmanager
+from copy import deepcopy
 import io
+from itertools import chain, product
+import logging
+from math import ceil
 import os
+try:
+    import resource
+    has_resource_module = True
+except ImportError:
+    # Windows
+    has_resource_module = False
 import shutil
 import subprocess
 import sys
 
 from click.testing import CliRunner
+import numpy as np
 import pandas as pd
 from pandas.testing import assert_series_equal
 import pytest
@@ -47,6 +60,8 @@ import pytest
 from . import cli, config as ixmp_config
 from .core import Platform, TimeSeries, Scenario, IAMC_IDX
 
+
+log = logging.getLogger(__name__)
 
 models = {
     'dantzig': {
@@ -91,7 +106,10 @@ def protect_pint_app_registry():
     other tests is not altered.
     """
     import pint
-    saved = pint.get_application_registry()
+    # Use deepcopy() in case the wrapped code modifies the application
+    # registry without swapping out the UnitRegistry instance for a different
+    # one
+    saved = deepcopy(pint.get_application_registry())
     yield
     pint.set_application_registry(saved)
 
@@ -130,10 +148,25 @@ def test_mp(request, tmp_env, test_data_path):
                              url=f'jdbc:hsqldb:mem:{platform_name}')
 
     # Launch Platform
-    yield Platform(name=platform_name)
+    mp = Platform(name=platform_name)
+    yield mp
 
-    # Teardown: remove from config
+    # Teardown: don't show log messages when destroying the platform, even if
+    # the test using the fixture modified the log level
+    mp._backend.set_log_level(logging.CRITICAL)
+    del mp
+
+    # Remove from config
     ixmp_config.remove_platform(platform_name)
+
+
+def bool_param_id(name):
+    """Parameter ID callback for :meth:`pytest.mark.parametrize`.
+
+    This formats a boolean value as 'name0' (False) or 'name1' (True) for
+    easier selection with e.g. ``pytest -k 'name0'``.
+    """
+    return lambda value: '{}{}'.format(name, int(value))
 
 
 # Create and populate ixmp databases
@@ -385,7 +418,7 @@ def get_cell_output(nb, name_or_index, kind='data'):
 
 
 @contextmanager
-def assert_logs(caplog, message_or_messages=None):
+def assert_logs(caplog, message_or_messages=None, at_level=None):
     """Assert that *message_or_messages* appear in logs.
 
     Use assert_logs as a context manager for a statement that is expected to
@@ -405,6 +438,9 @@ def assert_logs(caplog, message_or_messages=None):
         The pytest caplog fixture.
     message_or_messages : str or list of str
         String(s) that must appear in log messages.
+    at_level : int, optional
+        Messages must appear on 'ixmp' or a sub-logger with at least this
+        level.
     """
     # Wrap a string in a list
     expected = [message_or_messages] if isinstance(message_or_messages, str) \
@@ -413,15 +449,35 @@ def assert_logs(caplog, message_or_messages=None):
     # Record the number of records prior to the managed block
     first = len(caplog.records)
 
+    if at_level is not None:
+        # Use the pytest caplog fixture's built-in context manager to
+        # temporarily set the level of the 'ixmp' logger
+        ctx = caplog.at_level(at_level, logger='ixmp')
+    else:
+        # Python 3.6 compatibility: use suppress for nullcontext
+        nullcontext = getattr(contextlib, 'nullcontext', contextlib.suppress)
+        # ctx does nothing
+        ctx = nullcontext()
+
     try:
-        yield  # Nothing provided to the managed block
+        with ctx:
+            yield  # Nothing provided to the managed block
     finally:
+        # List of bool indicating whether each of `expected` was found
         found = [any(e in msg for msg in caplog.messages[first:])
                  for e in expected]
+
         if not all(found):
-            missing = [msg for i, msg in enumerate(expected) if not found[i]]
-            raise AssertionError(f'Did not log {missing}\namong:\n'
-                                 f'{caplog.messages[first:]}')
+            # Format a description of the missing messages
+            lines = chain(
+                ['Did not log:'],
+                [f'    {repr(msg)}' for i, msg in enumerate(expected)
+                 if not found[i]],
+                ['among:'],
+                ['    []'] if len(caplog.records) == first else
+                [f'    {repr(msg)}' for msg in caplog.messages[first:]],
+            )
+            pytest.fail('\n'.join(lines))
 
 
 def assert_qty_equal(a, b, check_attrs=True, **kwargs):
@@ -473,3 +529,219 @@ def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
     # check attributes are equal
     if check_attrs:
         assert a.attrs == b.attrs
+
+
+# Data structure for memory information used by :meth:`memory_usage`.
+_MemInfo = namedtuple('MemInfo', [
+    'profiled',
+    'max_rss',
+    'jvm_total',
+    'jvm_free',
+    'jvm_used',
+    'python',
+])
+
+
+def MemInfo(arr, cls=float):
+    """Return a namedtuple for *array*, with values as *cls*."""
+    # Format strings
+    cls = '{: >7.2f}'.format if cls is str else cls
+    return _MemInfo(*map(cls, arr))
+
+
+# Variables for memory_usage
+_COUNT = 0
+_PREV = np.zeros(6)
+_RT = None
+
+
+def memory_usage(message='', reset=False):
+    """Profile memory usage from within a test function.
+
+    The Python package ``memory_profiler`` and :mod:`jpype` are used to report
+    memory usage. A message is logged at the ``DEBUG`` level, similar to::
+
+       DEBUG    ixmp.testing:testing.py:527  42 <message>
+       MemInfo(profiled=' 533.76', max_rss=' 534.19', jvm_total=' 213.50',
+               jvm_free='  79.22', jvm_used=' 134.28', python='399.48')
+       MemInfo(profiled='   0.14', max_rss='   0.00', jvm_total='   0.00',
+               jvm_free=' -37.75', jvm_used='  37.75', python=' -37.61')
+
+    Parameters
+    ----------
+    message : str, optional
+        A string added to the log message, to aid in identifying points in
+        profiled code.
+    reset : bool, optional
+        If :obj:`True`, start profiling anew.
+
+    Returns
+    -------
+    collections.namedtuple
+        A ``MemInfo`` tuple with the following fields, all in MiB:
+
+        - ``profiled``: the instantaneous memory usage reported by
+          memory_profiler.
+        - ``max_rss``: the maximum resident set size (i.e. the maximum over
+          the entire life of the process) reported by
+          :meth:`resource.getrusage`.
+        - ``jvm_total``: total memory allocated for the Java Virtual Machine
+          (JVM) underlying JPype, used by :class:`.JDBCBackend`; the same as
+          ``java.lang.Runtime.getRuntime().totalMemory()``.
+        - ``jvm_free``: memory allocated to the JVM that is free.
+        - ``jvm_used``: memory used by the JVM, i.e. ``jvm_total`` minus
+          ``jvm_free``.
+        - ``python``: a rough estimate of Python memory usage, i.e.
+          ``profiled`` minus ``jvm_used``. This may not be accurate.
+    """
+    import memory_profiler
+    from ixmp.backend.jdbc import java
+
+    global _COUNT, _PREV, _RT
+
+    if reset:
+        _COUNT = 0
+        _PREV = np.zeros(6)
+    else:
+        _COUNT += 1
+
+    try:
+        # Get the Java runtime
+        runtime = _RT or java.Runtime.getRuntime()
+    except AttributeError:
+        # JVM not loaded
+        runtime = None
+
+    # Collect data
+    result = [
+        memory_profiler.memory_usage()[0],
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,  # to MiB
+    ]
+    if runtime:
+        _RT = runtime
+        result.extend([
+            _RT.totalMemory() / 1024 ** 2,
+            _RT.freeMemory() / 1024 ** 2,
+        ])
+    else:
+        result.extend([0, 0])
+
+    # JVM total - JVM free = JVM used
+    result.append(result[-2] - result[-1])
+
+    # Python used - JVM used = only-Python used?
+    result.append(result[0] - result[-1])
+
+    # Convert to a numpy array
+    result = np.array(result)
+
+    # Difference versus previous call
+    delta = result - _PREV
+
+    # Store current *result* to compute *delta* in subsequent calls
+    _PREV = result
+
+    # Log the results
+    msg = '\n'.join([
+        f'{_COUNT:3d} {message}',
+        repr(MemInfo(result, str)),
+        repr(MemInfo(delta, str)),
+    ])
+    log.debug(msg)
+
+    # Return the current result
+    return MemInfo(result)
+
+
+def random_ts_data(length):
+    """A :class:`pandas.DataFrame` of time series data with *length* rows.
+
+    Suitable for passage to :meth:`TimeSeries.add_timeseries`.
+    """
+    return pd.DataFrame.from_dict(
+        dict(
+            region='World',
+            variable=[f'foo|{i}' for i in range(int(length))],
+            year=2020,
+            value=np.random.rand(int(length)),
+            unit='GWa',
+        ))
+
+
+def add_random_model_data(scenario, length):
+    """Add a set and parameter with given *length* to *scenario*.
+
+    The set is named 'random_set'. The parameter is named 'random_par', and
+    has two dimensions indexed by 'random_set'.
+    """
+    set_data, par_data = random_model_data(length)
+    scenario.init_set('random_set')
+    scenario.add_set('random_set', set_data)
+    scenario.init_par(
+        'random_par',
+        idx_sets=['random_set', 'random_set'],
+        idx_names=['random_set0', 'random_set1'])
+    scenario.add_par('random_par', par_data)
+    return len(par_data)
+
+
+def random_model_data(length):
+    """Random (set, parameter) data with at least *length* elements.
+
+    See also
+    --------
+    add_random_model_data
+    """
+    # Dimension size
+    dim_len = ceil(length ** 0.5)
+    set_data = list(str(i) for i in range(dim_len))
+
+    # Revised length, possibly slightly higher than original
+    length = dim_len ** 2
+
+    par_data = pd.concat([
+        pd.DataFrame.from_dict(dict(region='World',
+                               value=np.random.rand(length),
+                               unit='GWa')),
+        pd.DataFrame(
+            data=product(set_data, set_data),
+            columns=['random_set0', 'random_set1']),
+    ], axis=1)
+
+    return set_data, par_data
+
+
+@pytest.fixture(scope='function')
+def resource_limit(request):
+    """A fixture that limits Python :mod:`resources`.
+
+    See the documentation (``pytest --help``) for the ``--resource-limit``
+    command-line option that selects (1) the specific resource and (2) the
+    level of the limit.
+
+    The original limit, if any, is reset after the test function in which the
+    fixture is used.
+    """
+    if not has_resource_module:
+        pytest.skip("Python module 'resource' not available (non-Unix OS)")
+
+    name, value = request.config.getoption('--resource-limit').split(':')
+    res = getattr(resource, f'RLIMIT_{name.upper()}')
+    value = int(value)
+
+    if res in (resource.RLIMIT_AS, resource.RLIMIT_DATA, resource.RLIMIT_RSS):
+        value = value * 1024 ** 2  # MiB → bytes
+
+    if value > 0:
+        # Store existing limit
+        before = resource.getrlimit(res)
+
+        log.debug(f'Change {res} from {before} to ({value}, {before[1]})')
+        resource.setrlimit(res, (value, before[1]))
+
+    try:
+        yield
+    finally:
+        if value > 0:
+            log.debug(f'Restore {res} to {before}')
+            resource.setrlimit(res, before)

@@ -134,15 +134,16 @@ def parse_units(units_series):
         # Quantity has no unit
         unit = registry.parse_units('')
     except pint.UndefinedUnitError:
-        # Unit(s) do not exist; define them in the UnitRegistry
-        define_unit_parts(unit)
-
-        # Try to parse again
         try:
+            # Unit(s) do not exist; define them in the UnitRegistry
+            define_unit_parts(unit)
+
+            # Try to parse again
             unit = registry.parse_units(unit)
-        except pint.UndefinedUnitError:
-            # Handle the silent failure of define(), above
-            raise invalid(unit)  # from None
+        except (pint.UndefinedUnitError, pint.RedefinitionError):
+            # Handle the silent failure of define(), above; or
+            # define_unit_parts didn't work
+            raise invalid(unit)
     except AttributeError:
         # Unit contains a character like '-' that throws off pint
         # NB this 'except' clause must be *after* UndefinedUnitError, since

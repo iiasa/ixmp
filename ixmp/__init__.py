@@ -9,7 +9,7 @@ from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario, TimeSeries
 from ixmp.model import MODELS
 from ixmp.model.base import ModelError
-from ixmp.model.dantzig import DantzigModel
+from ixmp.model.dantzig import DantzigGAMSModel, DantzigPyomoModel
 from ixmp.model.gams import GAMSModel
 from ixmp.reporting import Reporter
 from ixmp.utils import show_versions
@@ -41,7 +41,9 @@ MODELS.update(
     {
         "default": GAMSModel,
         "gams": GAMSModel,
-        "dantzig": DantzigModel,
+        "dantzig": DantzigGAMSModel,
+        "dantzig-gams": DantzigGAMSModel,
+        "dantzig-pyomo": DantzigPyomoModel,
     }
 )
 

@@ -1,11 +1,13 @@
 from collections import ChainMap
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 
 from ixmp.utils import maybe_check_out, maybe_commit, update_par
-
 from .gams import GAMSModel
+from .pyomo import PyomoModel
+
 
 ITEMS = {
     # Plants
@@ -61,21 +63,8 @@ DATA = {
 }
 
 
-class DantzigModel(GAMSModel):
-    """Dantzig's cannery/transport problem as a :class:`GAMSModel`.
-
-    Provided for testing :mod:`ixmp` code.
-    """
-
+class DantzigModel:
     name = "dantzig"
-
-    defaults = ChainMap(
-        {
-            # Override keys from GAMSModel
-            "model_file": Path(__file__).with_name("dantzig.gms"),
-        },
-        GAMSModel.defaults,
-    )
 
     @classmethod
     def initialize(cls, scenario, with_data=False):
@@ -106,3 +95,56 @@ class DantzigModel(GAMSModel):
         scenario.change_scalar("f", *DATA["f"])
 
         maybe_commit(scenario, checkout, f"{cls.__name__}.initialize")
+
+
+class DantzigGAMSModel(DantzigModel, GAMSModel):
+    """Dantzig's cannery/transport problem as a :class:`GAMSModel`.
+
+    Provided for testing :mod:`ixmp` code.
+    """
+
+    name = "dantzig-gams"
+
+    defaults = ChainMap(
+        {
+            # Override keys from GAMSModel
+            "model_file": Path(__file__).with_name("dantzig.gms"),
+        },
+        GAMSModel.defaults,
+    )
+
+
+def supply(model, i):
+    return sum(model.x[i, j] for j in model.j) <= model.a[i]
+
+
+def demand(model, j):
+    return sum(model.x[i, j] for i in model.i) >= model.b[j]
+
+
+@lru_cache()
+def c(model, i, j):
+    return model.f * model.d[i, j] / 1000
+
+
+def cost(model):
+    return sum(c(model, i, j) * model.x[i, j] for i in model.i for j in model.j)
+
+
+class DantzigPyomoModel(DantzigModel, PyomoModel):
+    """Dantzig's cannery/transport problem as a :class:`PyomoModel`.
+
+    Provided for testing :mod:`ixmp` code.
+    """
+
+    name = "dantzig-pyomo"
+    items = ITEMS
+    equation = dict(
+        supply=supply,
+        demand=demand,
+        cost=cost,
+    )
+    component_kwargs = dict(
+        x=dict(bounds=(0.0, None)),
+    )
+    objective = "cost"

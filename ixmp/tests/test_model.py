@@ -21,6 +21,26 @@ def test_base_model():
         M1()
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(comment=None),
+        dict(equ_list=None, var_list=["x"]),
+        dict(equ_list=["demand", "supply"], var_list=[]),
+    ],
+    ids=["null-comment", "null-list", "empty-list"],
+)
+def test_GAMSModel(test_mp, test_data_path, kwargs):
+    s = make_dantzig(test_mp)
+    s.solve(model="dantzig", **kwargs)
+
+
+def test_PyomoModel(test_mp):
+    """Pyomo version of the Dantzig model builds and solves."""
+    s = make_dantzig(test_mp, scheme="dantzig-pyomo")
+    s.solve(model="dantzig-pyomo")
+
+
 def test_model_initialize(test_mp, caplog):
     # Model.initialize runs on an empty Scenario
     s = make_dantzig(test_mp)

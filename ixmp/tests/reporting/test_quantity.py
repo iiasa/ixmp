@@ -88,6 +88,7 @@ class TestAttrSeries:
         assert foo.drop('a').dims == ('b',)
 
 
+@pytest.mark.skip(reason="Pending #317")
 def test_as_sparse_xarray():
     """Test conversion to sparse.COO-backed xr.DataArray."""
     x_series = pd.Series(

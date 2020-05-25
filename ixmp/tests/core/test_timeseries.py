@@ -206,6 +206,21 @@ def test_add_timeseries(ts, fmt):
 
 
 @pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_add_and_remove_timeseries_with_long_variable_name(ts, fmt):
+    data = (DATA[0] if fmt == 'long' else wide(DATA[0])).copy()
+    data.variable = 'x' * 256  # use long variable name (max 256 chars)
+
+    # Data added
+    ts.add_timeseries(data)
+    ts.commit('')
+
+    data = ts.timeseries()
+    ts.check_out()
+    ts.remove_timeseries(data)
+    ts.commit('')
+
+
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
 def test_add_timeseries_with_extra_col(caplog, ts, fmt):
     _data = DATA[0].copy()
     _data['climate_model'] = [0, 1]

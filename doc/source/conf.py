@@ -38,6 +38,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
     'sphinx.ext.doctest',
+    'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
@@ -300,13 +301,20 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 
-# Example configuration for intersphinx: refer to the Python standard library.
+# -- Options for sphinx.ext.extlinks ------------------------------------------
+
+extlinks = {
+    'pull': ("https://github.com/iiasa/ixmp/pull/%s", 'PR #'),
+}
+
+# -- Options for sphinx.ext.intersphinx ---------------------------------------
+
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
     'dask': ('https://docs.dask.org/en/stable/', None),
     'jpype': ('https://jpype.readthedocs.io/en/latest', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'pint': ('https://pint.readthedocs.io/en/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
     'xarray': ('https://xarray.pydata.org/en/stable/', None),
 }
 

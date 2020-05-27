@@ -70,8 +70,8 @@ class Model(ABC):
         Raises
         ------
         ValueError
-            if `scenario` has a solution, i.e. :meth:`.has_solution` is
-            :obj:`True`.
+            if `scenario` has a solution, i.e. :meth:`~.Scenario.has_solution`
+            is :obj:`True`.
 
         See also
         --------

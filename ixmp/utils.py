@@ -83,7 +83,7 @@ def maybe_check_out(timeseries, state=None):
     ------
     ValueError
         If `timeseries` is a :class:`.Scenario` object and
-        :meth:`.has_solution` is :obj:`True`.
+        :meth:`~.Scenario.has_solution` is :obj:`True`.
 
     See Also
     --------

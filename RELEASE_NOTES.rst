@@ -123,14 +123,14 @@ All changes
 - :pull:`116`: Bugfix and extend functionality for working with IAMC-style timeseries data.
 - :pull:`111`: Add functions to check if a Scenario has an item (set, par, var, equ).
 - :pull:`110`: Generalize the internal functions to format index dimensions for mapping sets and parameters.
-- `#108 <https://github.com/iiasa/ixmp/pull/105>`_: Improve documentation.
+- :pull:`108`: Improve documentation.
 - :pull:`105`: Replace `deprecated <http://pandas.pydata.org/pandas-docs/stable/indexing.html#ix-indexer-is-deprecated>`_ pandas ``.ix`` indexer with ``.iloc``.
 - :pull:`103`: Specify dependencies in setup.py.
 
 v0.1.3 (2018-11-21)
 ===================
 
-- `#88 <https://github.com/iiasa/ixmp/pull/80>`_: Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1.
+- :pull:`88`: Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1.
 - :pull:`80`: Can now set logging level which is harmonized between Java and Python.
 - :pull:`79`: Adding a deprecated-warning for `ixmp.Scenario` with `scheme=='MESSAGE'`.
 - :pull:`76`: Changing the API from ``mp.Scenario(...)`` to ``ixmp.Scenario(mp, ...)``.

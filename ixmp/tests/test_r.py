@@ -7,6 +7,11 @@ import sys
 import pytest
 
 
+pytestmark = pytest.mark.skip(
+    reason="Temporarily disabled; see https://github.com/iiasa/ixmp/issues/328"
+)
+
+
 @pytest.fixture
 def r_args(request, tmp_env, test_data_path, tmp_path_factory):
     """Arguments for subprocess calls to R."""

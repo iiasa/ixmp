@@ -1,9 +1,16 @@
 Next release
 ============
 
+Migration notes
+---------------
+
+**Updated dependencies.** The minimum version of JPype is 0.7.5.
+
+
 All changes
 -----------
 
+- `#327 <https://github.com/iiasa/ixmp/pull/327>`_: Bump JPype dependency to 0.7.5.
 - `#298 <https://github.com/iiasa/ixmp/pull/298>`_: Improve memory management in :class:`.JDBCBackend`.
 - `#316 <https://github.com/iiasa/ixmp/pull/316>`_: Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs).
 - `#315 <https://github.com/iiasa/ixmp/pull/315>`_: Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects.

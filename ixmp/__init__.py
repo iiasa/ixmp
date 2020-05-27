@@ -1,5 +1,6 @@
-from importlib.metadata import version, PackageNotFoundError
 import logging
+
+from pkg_resources import get_distribution, DistributionNotFound
 
 from ._config import config
 from .backend import BACKENDS, ItemType
@@ -24,10 +25,10 @@ __all__ = [
 ]
 
 try:
-    __version__ = version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # Package is not installed
+    __version__ = "999"
 
 # Register Backends provided by ixmp
 BACKENDS['jdbc'] = JDBCBackend

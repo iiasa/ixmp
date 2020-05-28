@@ -88,8 +88,10 @@ class Platform:
             backend_class = kwargs.pop('class')
             backend_class = BACKENDS[backend_class]
         except KeyError:
-            raise ValueError('backend class {!r} not among {}'
-                             .format(backend_class, sorted(BACKENDS.keys())))
+            raise ValueError(
+                f'backend class {repr(backend_class)} not among '
+                + str(sorted(BACKENDS.keys()))
+            )
 
         # Instantiate the backend
         self._backend = backend_class(**kwargs)
@@ -267,9 +269,13 @@ class Platform:
                 continue
 
             log.warning(
-                f'region {name!r} is already defined on the Platform'
-                + (f' as a synonym for {r.mapped_to!r}' if r.mapped_to else '')
-                + (f' under parent {r.parent!r}' if r.parent else ''))
+                f'region {repr(name)} is already defined on the Platform'
+                + (
+                    f' as a synonym for {repr(r.mapped_to)}' if r.mapped_to
+                    else ''
+                )
+                + (f' under parent {repr(r.parent)}' if r.parent else '')
+            )
             return True
 
         return False
@@ -424,10 +430,12 @@ class TimeSeries:
         if not isinstance(mp, Platform):
             raise TypeError('mp is not a valid `ixmp.Platform` instance')
         elif version and not (version == 'new' or isinstance(version, int)):
-            raise ValueError(f'version={version!r}')
+            raise ValueError(f'version={repr(version)}')
         elif version == 'new' and annotation is None:
-            log.warning(f'Missing annotation for new {self.__class__.__name__}'
-                        f' {model}/{scenario}')
+            log.warning(
+                f'Missing annotation for new {self.__class__.__name__}'
+                f' {model}/{scenario}'
+            )
             annotation = ''
 
         # scheme= keyword argument only passed from Scenario.__init__;
@@ -864,8 +872,10 @@ class Scenario(TimeSeries):
             scenario = cls(platform, **scenario_info)
         except Exception as e:
             if errors == 'warn':
-                log.warning('{}: {}\nwhen loading Scenario from url: {!r}'
-                            .format(e.__class__.__name__, e.args[0], url))
+                log.warning(
+                    f'{e.__class__.__name__}: {e.args[0]}\n'
+                    f'when loading Scenario from url: {repr(url)}'
+                )
                 return None, platform
             else:
                 raise
@@ -1028,8 +1038,9 @@ class Scenario(TimeSeries):
         if len(idx_names) == 0:
             # Basic set. Keys must be strings.
             if isinstance(key, (dict, pd.DataFrame)):
-                raise ValueError('dict, DataFrame keys invalid for '
-                                 f'basic set {name!r}')
+                raise ValueError(
+                    'dict, DataFrame keys invalid for basic set {repr(name)}'
+                )
 
             # Ensure keys is a list of str
             keys = as_str_list(key)
@@ -1087,12 +1098,14 @@ class Scenario(TimeSeries):
         for e, c in to_add:
             # Check for sentinel values
             if e is False:
-                raise ValueError(f'Comment {c!r} without matching key')
+                raise ValueError(f'Comment {repr(c)} without matching key')
             elif c is False:
-                raise ValueError(f'Key {e!r} without matching comment')
+                raise ValueError(f'Key {repr(e)} without matching comment')
             elif len(idx_names) and len(idx_names) != len(e):
-                raise ValueError(f'{len(e)}-D key {e!r} invalid for '
-                                 f'{len(idx_names)}-D set {name}{idx_names!r}')
+                raise ValueError(
+                    f'{len(e)}-D key {repr(e)} invalid for '
+                    f'{len(idx_names)}-D set {name}{repr(idx_names)}'
+                )
 
         # Send to backend
         elements = ((kc[0], None, None, kc[1]) for kc in to_add)
@@ -1526,7 +1539,7 @@ class Scenario(TimeSeries):
 
         # Validate *callback* argument
         if callback is not None and not callable(callback):
-            raise ValueError('callback={!r} is not callable'.format(callback))
+            raise ValueError(f'callback={repr(callback)} is not callable')
         elif callback is None:
             # Make the callback a no-op
             def callback(scenario, **kwargs):
@@ -1689,7 +1702,7 @@ def to_iamc_layout(df):
     required_cols = ['region', 'variable', 'unit']
     missing = list(set(required_cols) - set(df.columns))
     if len(missing):
-        raise ValueError(f'missing required columns {missing!r}')
+        raise ValueError(f'missing required columns {repr(missing)}')
 
     # Add a column 'subannual' with the default value
     if 'subannual' not in df.columns:

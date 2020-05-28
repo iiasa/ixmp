@@ -142,9 +142,10 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
         # Check for ambiguous index names
         ambiguous_idx = sorted(set(new_idx or []) - set(scenario.set_list()))
         if len(ambiguous_idx):
-            msg = (f'Cannot read {ix_type} {name!r}: index set(s) cannot be '
-                   f'inferred for name(s) {ambiguous_idx}')
-            log.warning(msg)
+            log.warning(
+                f'Cannot read {ix_type} {repr(name)}: index set(s) cannot be '
+                f'inferred for name(s) {ambiguous_idx}'
+            )
             raise ValueError from None
 
         # Initialize
@@ -157,9 +158,10 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
             new_idx = None
 
         if existing_names != new_idx:
-            msg = (f'Existing {ix_type} {name!r} has index names(s) '
-                   f' {existing_names} != {new_idx} in {path.name}')
-            log.warning(msg)
+            log.warning(
+                f'Existing {ix_type} {repr(name)} has index names(s) '
+                f' {existing_names} != {new_idx} in {path.name}'
+            )
             raise ValueError from None
 
 
@@ -247,7 +249,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         try:
             s.add_set(name, data)
         except KeyError:
-            raise ValueError(f'no set {name!r}; try init_items=True')
+            raise ValueError(f'no set {repr(name)}; try init_items=True')
 
     if commit_steps:
         s.commit(f'Loaded sets from {path}')
@@ -260,7 +262,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
     # Add equ/par/var data
     for name, ix_type in name_type[name_type != 'set'].items():
         if ix_type in ('equ', 'var'):
-            log.info(f'Cannot read {ix_type} {name!r}')
+            log.info(f'Cannot read {ix_type} {repr(name)}')
             continue
 
         # Only parameters beyond this point
@@ -301,5 +303,5 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         if commit_steps:
             # Commit after every parameter
-            s.commit(f'Loaded {ix_type} {name!r} from {path}')
+            s.commit(f'Loaded {ix_type} {repr(name)} from {path}')
             s.check_out()

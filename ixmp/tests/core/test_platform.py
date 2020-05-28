@@ -1,5 +1,4 @@
 """Test all functionality of ixmp.Platform."""
-import logging
 from sys import getrefcount
 from weakref import getweakrefcount
 

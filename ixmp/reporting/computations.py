@@ -138,8 +138,10 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     # TODO construct an empty Quantity with the correct dimensions *even if* no
     #      values are returned.
     if len(data) == 0:
-        log.warning(f'0 values for {ix_type} {name!r} using filters:'
-                    f'\n  {filters!r}\n  Subsequent computations may fail.')
+        log.warning(
+            f'0 values for {ix_type} {repr(name)} using filters:\n'
+            f'  {repr(filters)}\n  Subsequent computations may fail.'
+        )
 
     # Convert categorical dtype to str
     data = data.astype({col: str for col in idx_names})

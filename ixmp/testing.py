@@ -84,7 +84,7 @@ def pytest_sessionstart(session):
 
 def pytest_report_header(config, startdir):
     """Add the ixmp configuration to the pytest report header."""
-    return 'ixmp config: {!r}'.format(ixmp_config.values)
+    return f'ixmp config: {repr(ixmp_config.values)}'
 
 
 @pytest.fixture(scope='session')
@@ -217,7 +217,7 @@ def create_test_platform(tmp_path, data_path, name, **properties):
             any_files = True
 
     if not any_files:
-        raise ValueError(f'no files for test platform {name!r}')
+        raise ValueError(f'no files for test platform {repr(name)}')
 
     # Create properties file
     props_file = (tmp_path / name).with_suffix('.properties')

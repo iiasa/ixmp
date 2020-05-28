@@ -1,7 +1,8 @@
 import logging
 
+from pkg_resources import get_distribution, DistributionNotFound
+
 from ._config import config
-from ._version import get_versions
 from .backend import BACKENDS, ItemType
 from .backend.jdbc import JDBCBackend
 from .core import IAMC_IDX, Platform, Scenario, TimeSeries
@@ -23,8 +24,11 @@ __all__ = [
     'show_versions',
 ]
 
-__version__ = get_versions()['version']
-del get_versions
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # Package is not installed
+    __version__ = "999"
 
 # Register Backends provided by ixmp
 BACKENDS['jdbc'] = JDBCBackend

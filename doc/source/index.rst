@@ -30,39 +30,78 @@ For the scientific reference, see Huppmann et al. (2019)
    modeling platform, database backend,
    implementation of the |MESSAGEix| mathematical model formulation
 
-Platform documentation
-----------------------
+
+Getting started
+---------------
 
 .. toctree::
+   :caption: Getting started
+   :hidden:
    :maxdepth: 2
 
    install
    tutorials
-   Scientific programming API reference <api>
+
+- :doc:`install`
+- :doc:`tutorials`
+
+
+Scientific programming API
+--------------------------
+
+.. toctree::
+   :caption: Scientific programming API
+   :hidden:
+   :maxdepth: 2
+
+   api
+   api-r
+   api-backend
+   file-io
+   api-model
+   reporting
+
+The `ixmp` has application programming interfaces (API) for efficient scientific workflows and data processing.
+
+- :doc:`api`
+- :doc:`api-r`
+- :doc:`api-backend`
+- :doc:`file-io`
+- :doc:`api-model`
+- :doc:`reporting`
+
+
+Help & reference
+----------------
+
+The community mailing list for questions and discussions on new features is hosted using Google Groups.
+Please join at `groups.google.com/d/forum/message_ix`_ and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user community.
+
+.. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix
+
+.. toctree::
+   :caption: Help & reference
+   :hidden:
+   :maxdepth: 2
+
    whatsnew
    bibliography
+   notice
+   contributing
+   contributor_license
+
+- :doc:`whatsnew`
+- :doc:`bibliography`
 
 
-License and user guidelines
----------------------------
+License & user guidelines
+-------------------------
 
 The |ixmp| is licensed under an `APACHE 2.0 open-source license`_.
 
 .. _`APACHE 2.0 open-source license`: http://www.apache.org/licenses/LICENSE-2.0
 .. _`LICENSE`: https://github.com/iiasa/ixmp/blob/master/LICENSE
 
+
 Please see the :doc:`notice` for using the platform in scientific research.
-Contributions to the platform itself are also welcome.
-
-The community mailing list for questions and discussions on new features is hosted using Google Groups.
-Please join at `groups.google.com/d/forum/message_ix`_
-and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user community.
-
-.. toctree::
-   :maxdepth: 1
-
-   notice
-   contributing
-   contributor_license
-
-.. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix
+:doc:`Contributions <contributing>` to the platform itself are also welcome; new contributors are asked to sign a :doc:`contributor_license`.

@@ -65,7 +65,7 @@ log = logging.getLogger(__name__)
 
 class KeyExistsError(KeyError):
     def __str__(self):
-        return f'key {self.args[0]!r} already exists'
+        return f'key {repr(self.args[0])} already exists'
 
 
 class MissingKeyError(KeyError):

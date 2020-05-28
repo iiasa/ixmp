@@ -32,6 +32,7 @@ def test_dict():
         'test_bool_false': False,
     }
 
+
 class TestScenario:
     # Initialize Scenario
     def test_init(self, test_mp, scen_empty):
@@ -77,8 +78,10 @@ class TestScenario:
             scen, mp = ixmp.Scenario.from_url(url + '#10000', errors='raise')
 
         # Giving an invalid scenario with errors='warn' raises an exception
-        msg = ("ValueError: scenario='Hitchhikerfoo'\nwhen loading Scenario "
-               f"from url: {(url + 'foo')!r}")
+        msg = (
+            "ValueError: scenario='Hitchhikerfoo'\n"
+            f"when loading Scenario from url: {repr(url + 'foo')}"
+        )
         with assert_logs(caplog, msg):
             scen, mp = ixmp.Scenario.from_url(url + 'foo')
         assert scen is None and isinstance(mp, ixmp.Platform)

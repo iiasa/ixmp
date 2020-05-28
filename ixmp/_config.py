@@ -65,10 +65,9 @@ def _locate(filename=None):
         tried.append(str(directory))
 
     if filename:
-        raise FileNotFoundError('Could not find {} in {!r}'
-                                .format(filename, tried))
+        raise FileNotFoundError(f'Could not find {filename} in {repr(tried)}')
     else:
-        raise FileNotFoundError('Could not find any of {!r}'.format(tried))
+        raise FileNotFoundError(f'Could not find any of {repr(tried)}')
 
 
 class Config:
@@ -137,8 +136,8 @@ class Config:
             to supply the default, value, e.g. ``str()``.
         """
         if name in KEYS:
-            raise KeyError('configuration key {!r} already defined'
-                           .format(name))
+            raise KeyError(f'configuration key {repr(name)} already defined')
+
         # Register the key for future clear()
         KEYS[name] = (type, default)
 
@@ -157,8 +156,10 @@ class Config:
                 # Attempt to cast to the correct type
                 value = type_(value)
             except Exception:
-                raise TypeError('expected {} for {!r}; got {} {!r}'
-                                .format(type_, name, type(value), value))
+                raise TypeError(
+                    f'expected {type_} for {repr(name)}; got {type(value)} '
+                    f'{repr(value)}'
+                )
 
         self.values[name] = value
 
@@ -235,7 +236,9 @@ class Config:
             info = args[0]
 
             if info not in self.values['platform']:
-                raise ValueError("cannot set unknown {!r} as default platform")
+                raise ValueError(
+                    f'Cannot set unknown {repr(info)} as default platform'
+                )
         else:
             cls = args.pop(0)
             info = {'class': cls}
@@ -261,8 +264,10 @@ class Config:
                 raise ValueError(cls)
 
         if name in self.values['platform']:
-            log.warning('Overwriting existing config: {!r}'
-                        .format(self.values['platform'][name]))
+            log.warning(
+                'Overwriting existing config: '
+                + repr(self.values['platform'][name])
+            )
 
         self.values['platform'][name] = info
 
@@ -292,10 +297,11 @@ class Config:
         try:
             return name, copy(self.values['platform'][name])
         except KeyError:
-            message = 'platform name {!r} not among {!r}\nfrom {}' \
-                .format(name, sorted(self.values['platform'].keys()),
-                        self.path)
-            raise ValueError(message)
+            raise ValueError(
+                f'platform name {repr(name)} not among '
+                + repr(sorted(self.values['platform'].keys()))
+                + f'\nfrom {self.path}'
+            )
 
     def remove_platform(self, name):
         """Remove the configuration for platform *name*."""

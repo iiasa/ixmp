@@ -3,11 +3,6 @@
 Reporting
 =========
 
-.. warning::
-
-   :mod:`ixmp.reporting` is **experimental** in ixmp 2.0.
-   The API and functionality may change without advance notice or a deprecation period in subsequent releases.
-
 Top-level methods and classes:
 
 .. autosummary::

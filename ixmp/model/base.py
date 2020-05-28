@@ -43,8 +43,9 @@ class Model(ABC):
         --------
         initialize_items
         """
-        log.debug('No initialization for {!r}-scheme Scenario'
-                  .format(scenario.scheme))
+        log.debug(
+            f'No initialization for {repr(scenario.scheme)}-scheme Scenario'
+        )
 
     @classmethod
     def initialize_items(cls, scenario, items):
@@ -70,8 +71,8 @@ class Model(ABC):
         Raises
         ------
         ValueError
-            if `scenario` has a solution, i.e. :meth:`.has_solution` is
-            :obj:`True`.
+            if `scenario` has a solution, i.e. :meth:`~.Scenario.has_solution`
+            is :obj:`True`.
 
         See also
         --------

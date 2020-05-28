@@ -79,7 +79,9 @@ def _create_properties(driver=None, path=None, url=None, user=None,
     try:
         properties.setProperty('jdbc.driver', DRIVER_CLASS[driver])
     except KeyError:
-        raise ValueError(f'unrecognized/unsupported JDBC driver {driver!r}')
+        raise ValueError(
+            f'unrecognized/unsupported JDBC driver {repr(driver)}'
+        )
 
     if driver == 'oracle':
         if url is None or path is not None:
@@ -241,7 +243,7 @@ class JDBCBackend(CachingBackend):
             if jclass.endswith('HikariPool.PoolInitializationException'):
                 redacted = copy(kwargs)
                 redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
-                msg = f'unable to connect to database:\n{redacted!r}'
+                msg = f'unable to connect to database:\n{repr(redacted)}'
             elif jclass.endswith('FlywayException'):
                 msg = f'when initializing database:'
             _raise_jexception(e, f'{msg}\n(Java: {jclass})')
@@ -522,7 +524,7 @@ class JDBCBackend(CachingBackend):
             if match:
                 param = match.group(1).lower()
                 if param in ('model', 'scenario'):
-                    raise ValueError(f'{param}={getattr(ts, param)!r}')
+                    raise ValueError(f'{param}={repr(getattr(ts, param))}')
 
             # Failed
             _raise_jexception(e)
@@ -701,8 +703,10 @@ class JDBCBackend(CachingBackend):
 
         if idx_names:
             if len(idx_names) != len(idx_sets):
-                raise ValueError(f'index names {idx_names!r} must have same'
-                                 f'length as index sets {idx_sets!r}')
+                raise ValueError(
+                    f'index names {repr(idx_names)} must have same length as '
+                    f'index sets {repr(idx_sets)}'
+                )
             idx_names = to_jlist(idx_names)
         else:
             idx_names = idx_sets
@@ -716,7 +720,7 @@ class JDBCBackend(CachingBackend):
             func(name, idx_sets, idx_names)
         except jpype.JException as e:
             if 'already exists' in e.args[0]:
-                raise ValueError(f'{name!r} already exists')
+                raise ValueError(f'{repr(name)} already exists')
             else:
                 _raise_jexception(e)
 

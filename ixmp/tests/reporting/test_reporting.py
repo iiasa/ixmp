@@ -90,9 +90,12 @@ def test_reporter_add():
 
     def msg(*keys):
         """Return a regex for str(MissingKeyError(*keys))."""
-        return 'required keys {!r} not defined'.format(tuple(keys)) \
-                                               .replace('(', '\\(') \
-                                               .replace(')', '\\)')
+        return (
+            f'required keys {repr(tuple(keys))} not defined'
+            .replace('(', '\\(')
+            .replace(')', '\\)')
+        )
+
     # One missing key
     with pytest.raises(MissingKeyError, match=msg('b')):
         r.add_product('ab', 'a', 'b')
@@ -783,10 +786,7 @@ def test_filters(test_mp, tmp_path, caplog):
 
     # Write a temporary file containing the desired labels
     config_file = tmp_path / 'config.yaml'
-    config_file.write_text('\n'.join([
-        'filters:',
-        '  t: {!r}'.format(t_bar),
-    ]))
+    config_file.write_text('\n'.join(['filters:', f'  t: {repr(t_bar)}']))
 
     rep.configure(config_file)
     assert_t_indices(t_bar)

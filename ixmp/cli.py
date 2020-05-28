@@ -20,7 +20,7 @@ class VersionType(click.ParamType):
             try:
                 return int(value)
             except ValueError:
-                self.fail(f"{value!r} must be an integer or 'new'")
+                self.fail(f"{repr(value)} must be an integer or 'new'")
 
 
 @click.group()
@@ -230,7 +230,7 @@ def platform(action, name, values):
     if action == 'remove':
         assert len(values) == 0
         ixmp.config.remove_platform(name)
-        print('Removed platform config for {!r}'.format(name))
+        print(f'Removed platform config for {repr(name)}')
     elif action == 'add':
         ixmp.config.add_platform(name, *values)
 

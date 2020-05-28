@@ -85,7 +85,7 @@ def filter_concat_args(args):
     """
     for arg in args:
         if isinstance(arg, (str, Key)):
-            log.warn('concat() argument {arg!r} missing; will be omitted')
+            log.warn('concat() argument {repr(arg)} missing; will be omitted')
             continue
         yield arg
 

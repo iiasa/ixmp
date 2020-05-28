@@ -245,7 +245,7 @@ class JDBCBackend(CachingBackend):
                 redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
                 msg = f'unable to connect to database:\n{repr(redacted)}'
             elif jclass.endswith('FlywayException'):
-                msg = f'when initializing database:'
+                msg = 'when initializing database:'
             _raise_jexception(e, f'{msg}\n(Java: {jclass})')
 
         # Set the log level

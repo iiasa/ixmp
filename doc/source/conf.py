@@ -56,7 +56,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # A string of reStructuredText that will be included at the beginning of every
 # source file that is read.
 version = ixmp.__version__
-rst_prolog = """
+rst_prolog = r"""
 .. |MESSAGEix| replace:: MESSAGE\ :emphasis:`ix`
 
 .. |ixmp| replace:: :emphasis:`ix modeling platform`

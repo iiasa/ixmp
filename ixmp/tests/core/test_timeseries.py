@@ -76,6 +76,7 @@ COLS_FOR_YEARLY_DATA = ['model', 'scenario'] + IDX_COLS + ['value']
 COLS_WITH_SUBANNUAL = COLS_FOR_YEARLY_DATA.copy()
 COLS_WITH_SUBANNUAL.insert(4, 'subannual')
 
+
 # Utility methods
 def expected(df, ts):
     """Modify *df* with the 'model' and 'scenario' name from *ts."""

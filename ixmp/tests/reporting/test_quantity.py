@@ -195,8 +195,9 @@ def test_sda_accessor():
     assert not x_dense._sda.COO_data or x_dense._sda.nan_fill
     assert not y_dense._sda.COO_data or y_dense._sda.nan_fill
 
-    with pytest.raises(ValueError, match='make sure that the broadcast shape'):
-        x_dense * y
+    # As of sparse 0.10, sparse `y` is automatically broadcast to `x_dense`
+    # Previously, this raised ValueError.
+    x_dense * y
 
     z1 = x_dense._sda.convert() * y
 
@@ -210,9 +211,5 @@ def test_sda_accessor():
     z4 = x._sda.convert() * y
     assert_xr_equal(z1, z4)
 
-    # Doesn't work: can't align automatically
-    with pytest.raises(ValueError, match='Please make sure that the broadcast '
-                       'shape of just the sparse arrays is the same as the '
-                       'broadcast shape of all the operands.'):
-        SparseDataArray(x_series) * y  # = z5
-        # assert_xr_equal(z1, z5)
+    z5 = SparseDataArray.from_series(x_series) * y
+    assert_xr_equal(z1, z5)

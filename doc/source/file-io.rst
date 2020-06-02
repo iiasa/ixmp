@@ -50,6 +50,8 @@ Reading variables and equations
 
    Thus, while :meth:`.to_excel` will write files containing variable and equation data, :meth:`.read_excel` can not add these to a Scenario, and only emits log messages indicating that they are ignored.
 
+.. _excel-ambiguous-dims:
+
 Multiple dimensions indexed by the same set
    :meth:`.read_excel` provides the `init_items` argument to create new sets and parameters when reading a file.
    However, the file format does not capture information needed to reconstruct the original data in all cases.

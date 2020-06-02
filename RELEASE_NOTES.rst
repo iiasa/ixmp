@@ -1,10 +1,42 @@
-Next release
-============
+v3.0.0 (2020-06-05)
+===================
+
+ixmp v3.0.0 coincides with message_ix v3.0.0.
 
 Migration notes
 ---------------
 
-**Updated dependencies.** The minimum version of JPype is 0.7.5.
+Excel input/output (I/O)
+   The file format used by :meth:`.Scenario.to_excel` and :meth:`.read_excel` is now fully specified; see :doc:`file-io`.
+
+   ixmp writes and reads items with more elements than the ~10⁶ row maximum of the Excel data format, by splitting these across multiple sheets.
+
+   The I/O code now explicitly checks for situations where the index *sets* and *names* for an item are ambiguous; see :ref:`this example <excel-ambiguous-dims>` for how to initialize and read these items.
+
+Updated dependencies
+   The minimum versions of the following dependencies are increased:
+
+   - JPype1 0.7.5
+   - pandas 1.0
+   - dask 2.14 (for reporting)
+
+Deprecations and deprecation policy
+   The following items, marked as deprecated in ixmp 2.0, are removed (:pull:`254`):
+
+   - :file:`$HOME/.local/ixmp/` as a configuration location.
+     Configuration files are now placed in the standard :file:`$HOME/.local/share/ixmp/`.
+   - positional and ``dbtype=`` arguments to :class:`.Platform`/:class:`.JDBCBackend`.
+   - ``first_model_year=``, ``keep_sol=``, and ``scen=`` arguments to :meth:`~.Scenario.clone`.
+     Use `shift_first_model_year`, `keep_solution`, and `scenario`, respectively.
+   - ``rixmp.legacy``, an earlier version of :ref:`the R interface <rixmp>` that did not use reticulate.
+
+   Newly deprecated is:
+
+   - `cache` keyword argument to :class:`.Scenario`.
+     Caching is controlled at the :class:`.Platform`/Backend level, using the same keyword argument.
+
+   Starting with ixmp v3.0, arguments and other features marked as deprecated will follow a standard deprecation policy: they will be removed no sooner than the second major release following the release in which they are marked deprecated.
+   For instance, a feature marked deprecated in ixmp version "10.5" would be retained in ixmp versions "11.x", and removed only in version "12.0" or later.
 
 
 All changes
@@ -27,15 +59,10 @@ All changes
 - :pull:`270`: Include all tests in the ixmp package.
 - :pull:`212`: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.
 - :pull:`267`: Apply units to reported quantities.
-- :pull:`254`: Remove deprecated items:
-
-  - ~/.local/ixmp as a configuration location.
-  - positional and ``dbtype=`` arguments to :class:`.Platform`/:class:`.JDBCBackend`.
-  - ``first_model_year=``, ``keep_sol=``, and ``scen=`` arguments to :meth:`~.Scenario.clone`.
-  - ``rixmp.legacy``, an earlier version of :ref:`the R interface <rixmp>` that did not use reticulate.
 - :pull:`261`: Increase minimum pandas version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
 - :pull:`243`: Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV.
 - :pull:`264`: Implement methods to get and create new subannual timeslices.
+
 
 v2.0.0 (2020-01-14)
 ===================

@@ -1,8 +1,8 @@
 Package: rixmp
 Type: Package
 Title: R package for ix modeling platform (ixmp)
-Version: 2.0.0.9000
-Date: 2020-01-13
+Version: 3.0.0
+Date: 2020-05-02
 Authors@R: c(
   person("Adriano", "Vinca", email = "vinca@iiasa.ac.at", role = c("aut", "cre")),
   person("Matthew", "Gidden", role = "aut"),

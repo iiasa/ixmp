@@ -1,22 +1,21 @@
 Installation
-============
+************
 
-Most users will have the |ixmp| installed automatically when `installing MESSAGEix`_.
+A desktop or laptop computer is sufficient for most purposes using :mod:`ixmp`.
+Most users will have :mod:`ixmp` installed automatically when `installing MESSAGEix`_.
 
 The sections below cover other use cases:
 
-- Installing *ixmp* to be used alone (i.e., with models or frameworks other than
-  |MESSAGEix|):
+- Installing *ixmp* to be used alone (i.e., with models or frameworks other than |MESSAGEix|):
 
-  - see the section `Install GAMS`_,
+  - see the sections `Install system dependencies`_,
   - then `Install ixmp via Anaconda`_.
 
-- Installing *ixmp* from source, for development purposes: see
-  `Install ixmp from source`_.
+- Installing *ixmp* from source, for development purposes: see `Install ixmp from source`_.
 
 - Installing the R API to *ixmp*:
 
-  - Start with `Install GAMS`_.
+  - Start with `Install system dependencies`_.
   - Then install *ixmp* either via Anaconda, or from source.
   - Finally, see `Install rixmp`_.
 
@@ -25,87 +24,125 @@ The sections below cover other use cases:
 .. contents::
    :local:
 
+Install system dependencies
+===========================
 
-Technical requirements
-----------------------
+GAMS
+----
 
-A high-quality desktop computer or laptop is sufficient for most purposes
-using the |ixmp|.
+:mod:`ixmp` requires `GAMS`_.
 
+1. Download GAMS for your operating system; either the `latest version`_ or `version 29`_ (see note below).
 
-Install GAMS
-------------
+2. Run the installer.
 
-*ixmp* requires `GAMS`_.
-
-1. Download the latest version of `GAMS`_ for your operating system; run the
-   installer.
-
-2. Add GAMS to the ``PATH`` environment variable:
+3. Ensure that the ``PATH`` environment variable on your system includes the path to the GAMS program:
 
    - on Windows, in the GAMS installer…
-      - Check the box labeled “Use advanced installation mode.”
-      - Check the box labeled “Add GAMS directory to PATH environment variable”
-        on the Advanced Options page.
-   - on macOS or Linux, add the following line to your ``.bash_profile`` (Mac) or ``.bashrc`` (Linux)::
 
-          export PATH=$PATH:/path/to/gams-directory-with-gams-binary
+      - Check the box labeled “Use advanced installation mode.”
+      - Check the box labeled “Add GAMS directory to PATH environment variable” on the Advanced Options page.
+
+   - on other platforms (macOS or Linux), add the following line to a file such as :file:`~/.bash_profile` (macOS), :file:`~/.bashrc`, or :file:`~/.profile`::
+
+       export PATH=$PATH:/path/to/gams-directory-with-gams-binary
 
 .. note::
-   For using `GAMS`_ to solve numerical optimisation problems, you need to
-   install the latest version of GAMS (in particular 24.8 or higher). If you
-   only have a license for an older version, install both the older and the
-   latest version of GAMS.
+   :mod:`message_ix` requires GAMS version 24.8; :mod:`ixmp` has no minimum requirement *per se*.
+   The latest version is recommended.
+
+   GAMS is proprietary software and requires a license to solve optimization problems.
+   To run both the :mod:`ixmp` and :mod:`message_ix` tutorials and test suites, a “free demonstration” license is required; the free license is suitable for these small models.
+   Versions of GAMS up to `version 29`_ include such a license with the installer; since version 30, the free demo license is no longer included, but may be requested via the GAMS website.
+
+.. note::
+   If you only have a license for an older version of GAMS, install both the older and the latest versions.
 
 
-Install *ixmp* via Anaconda
----------------------------
+Graphviz
+--------
 
-After installing GAMS, we recommend that new users install Anaconda, and then
-use it to install *ixmp*. Advanced users may choose to install *ixmp* from
-source code (next section).
+:meth:`ixmp.reporting.Reporter.visualize` uses `Graphviz`_, a program for graph visualization.
+Installing ixmp causes the python :mod:`graphviz` package to be installed.
+If you want to use :meth:`.visualize` or run the test suite, the Graphviz program itself must also be installed; otherwise it is **optional**.
 
-3. Install Python via `Anaconda`_. We recommend the latest version, i.e.,
-   Python 3.6+.
+If you `Install ixmp via Anaconda`_, Graphviz is installed automatically via `its conda-forge package`_.
+For other methods of installation, see the `Graphviz download page`_ for downloads and instructions for your system.
 
-4. Open a command prompt. We recommend Windows users use the “Anaconda Prompt”
-   to avoid permissions issues when installing and using *ixmp*. This program
-   is available in the Windows Start menu after installing Anaconda.
 
-5. Install the ``ixmp`` package::
+Install ``ixmp`` via Anaconda
+=============================
+
+After installing GAMS, we recommend that new users install Anaconda, and then use it to install :mod:`ixmp`.
+Advanced users may choose to install :mod:`ixmp` from source code (next section).
+
+4. Install Python via `Anaconda`_.
+   We recommend the latest version; currently Python 3.8.
+
+5. Open a command prompt.
+   We recommend Windows users use the “Anaconda Prompt” to avoid permissions issues when installing and using :mod:`ixmp`.
+   This program is available in the Windows Start menu after installing Anaconda.
+
+6. Install the ``ixmp`` package::
 
     $ conda install -c conda-forge ixmp
 
 
-Install *ixmp* from source
---------------------------
+Install ``ixmp`` from source
+============================
 
-3. (Optional) If you intend to contribute changes to *ixmp*, first register
-   a Github account, and fork the `ixmp repository <https://github.com/iiasa/ixmp>`_. This will create a new repository ``<user>/ixmp``.
+4. (Optional) If you intend to contribute changes to *ixmp*, first register a Github account, and fork the `ixmp repository <https://github.com/iiasa/ixmp>`_.
+   This will create a new repository ``<user>/ixmp``.
 
-4. Clone either the main repository, or your fork; using the `Github Desktop`_
-   client, or the command line::
+5. Clone either the main repository, or your fork; using the `Github Desktop`_ client, or the command line::
 
     $ git clone git@github.com:iiasa/ixmp.git
 
     # or:
     $ git clone git@github.com:USER/ixmp.git
 
-5. Open a command prompt in the ``ixmp`` directory and type::
+6. Open a command prompt in the :file:`ixmp/` directory that is created, and type::
 
-    $ pip install --editable .
+    $ pip install --editable .[docs,tests,tutorial]
 
    The ``--editable`` flag ensures that changes to the source code are picked up every time ``import ixmp`` is used in Python code.
+   The ``[docs,tests,tutorial]`` extra dependencies ensure additional dependencies are installed.
 
-6. (Optional) Run the built-in test suite to check that *ixmp* functions
-   correctly on your system::
+7. (Optional) Run the built-in test suite to check that :mod:`ixmp` functions correctly on your system::
 
-    $ pip install --editable .[tests]
-    $ py.test
+    $ pytest
+
+
+Install development tools
+-------------------------
+
+Developers making changes to the :mod:`ixmp` source **may** need one or more of the following tools.
+Users developing models using existing functionality **should not** need these tools.
+
+Git
+   Use one of:
+
+   - https://git-scm.com/downloads
+   - https://desktop.github.com
+   - https://www.gitkraken.com
+
+   In addition, set up an account at https://github.com, and familiarize yourself with forking and cloning repositories, as well as pulling, committing and pushing changes.
+
+Java Development Kit (JDK)
+   - Install the Java Development Kit (JDK) for Java SE version 8 from https://www.oracle.com/technetwork/java/javase/downloads/index.html
+
+     .. note:: At this point, ixmp is not compatible with JAVA SE 9.
+
+   - Follow the `JDK website instructions <https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/>`_ to set the ``JAVA_HOME`` environment variable; if ``JAVA_HOME`` does not exist, add it as a new system variable.
+
+   - Update your ``PATH`` environment variable to point to the JRE binaries and server installation (e.g., :file:`C:\\Program Files\\Java\\jdk[YOUR JDK VERSION]\\jre\\bin\\`, :file:`C:\\Program Files\\Java\\jdk[YOUR JDK VERSION]\\jre\\bin\\server`).
+
+     .. warning:: Do not overwrite the existing ``PATH`` environment variable, but add to the list of existing paths.
+
 
 
 Install ``rixmp``
------------------
+=================
 
 See also the :ref:`rixmp documentation <rixmp>`.
 
@@ -117,79 +154,42 @@ See also the :ref:`rixmp documentation <rixmp>`.
 
 2. Enter the directory ``rixmp/`` and use R to build and install the package and its dependencies, including reticulate_::
 
-   $ cd rixmp
-   $ Rscript -e "install.packages(c('knitr', 'reticulate'), repos='http://cran.rstudio.com/')"
-   $ R CMD build .
+    $ cd rixmp
+    $ Rscript -e "install.packages(c('knitr', 'reticulate'), repos='http://cran.rstudio.com/')"
+    $ R CMD build .
 
-3. Check that there is only one ``*tar.gz`` in the folder::
+3. Check that there is only one ``*tar.gz`` in the folder, then run::
 
-   $ R CMD INSTALL rixmp_*
+    $ R CMD INSTALL rixmp_*
 
 4. (Optional) Run the built-in test suite to check that *ixmp* and *rixmp* functions, as in *Install ixmp from source 6.* (installing
    the R ``devtools`` package might be a pre-requisite). In the ``ixmp`` directory type::
 
-    $ py.test --test-r
+    $ pytest -m rixmp
 
-5. (Optional) For working with Jupyter notebooks using R, install the `IR kernel <https://irkernel.github.io>`_.
+5. (Optional) To use rixmp in Jupyter notebooks, install the `IR kernel <https://irkernel.github.io>`_.
 
 6. (Optional) Install `Rtools <https://cran.r-project.org/bin/windows/Rtools/>`_ and add the path to the environment variables.
 
 .. _reticulate: https://rstudio.github.io/reticulate/
 
 
-Install development tools
--------------------------
-
-Developers making changes to the *ixmp* source may need one or more of the following tools.
-Users developing models using existing *ixmp* functionality **should not** need these tools.
-
-- **Java Development Kit (JDK).**
-
-  - Install the Java Development Kit (JDK) for Java SE version 8 from
-    https://www.oracle.com/technetwork/java/javase/downloads/index.html
-
-    .. note:: At this point, ixmp is not compatible with JAVA SE 9.
-
-  - Follow the `JDK website instructions
-    <https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/>`_
-    to set the ``JAVA_HOME`` environment variable; if ``JAVA_HOME`` does not
-    exist, add as new system variable.
-
-  - Update your `PATH` environment variable to point to the JRE binaries and
-    server installation (e.g., ``C:\Program Files\Java\jdk[YOUR JDK
-    VERSION]\jre\bin\``, ``C:\Program Files\Java\jdk[YOUR JDK
-    VERSION]\jre\bin\server``).
-
-    .. warning:: Do not overwrite the existing `PATH` environment variable, but
-       add to the list of existing paths.
-
-- **Git.** Use one of:
-
-  - https://git-scm.com/downloads
-  - https://desktop.github.com
-  - https://www.gitkraken.com
-
-  In addition, set up an account at https://github.com, and familiarize
-  yourself with forking and cloning repositories, as well as pulling,
-  committing and pushing changes.
-
-
 Troubleshooting
----------------
+===============
 
-For Anaconda users experiencing problems during installation of ixmp,
-Anaconda might not have been added to the PATH system variable properly.
-So, if ``install.bat`` fails, check if::
+Run ``ixmp show-versions`` on the command line to check that you have all dependencies installed, or when reporting issues.
+
+For Anaconda users experiencing problems during installation of ixmp, check that the following paths are part of the ``PATH`` environment variable, and add them if missing::
 
     C:\[YOUR ANACONDA LOCATION]\Anaconda3;
     C:\[YOUR ANACONDA LOCATION]\Anaconda3\Scripts;
     C:\[YOUR ANACONDA LOCATION]\Anaconda3\Library\bin;
 
-are all part of the PATH system variable. If they are not there, add them.
-
-Run `ixmp show-versions` on the command line to check that you have all dependencies installed, or when reporting issues.
-
 .. _`installing MESSAGEix`: https://message.iiasa.ac.at/en/latest/getting_started.html
 .. _`Anaconda`: https://www.continuum.io/downloads
 .. _`GAMS`: http://www.gams.com
+.. _`latest version`: https://www.gams.com/download/
+.. _`version 29`: https://www.gams.com/29/
+.. _`its conda-forge package`: https://anaconda.org/conda-forge/graphviz
+.. _`Graphviz download page`: https://www.graphviz.org/download/
 .. _`Github Desktop`: https://desktop.github.com

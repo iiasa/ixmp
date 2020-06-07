@@ -128,6 +128,11 @@ Scenario
        GAMS code, so cannot be modified by a Scenario. See :meth:`init_equ`,
        :meth:`equ_list`, and :meth:`equ`.
 
+   .. deprecated:: 3.0
+      The `cache` keyword argument to :class:`Scenario` has no effect and raises a warning.
+      Use `cache` as one of the `backend_args` to :class:`Platform` to disable/enable caching for storage backends that support it.
+      Use :meth:`load_scenario_data` to load all data in the Scenario into an in-memory cache.
+
    .. autosummary::
       add_par
       add_set

@@ -22,6 +22,7 @@
 *#
 *.Rproj
 *.Rcheck
+*.eggs
 
 # Apple file system
 .DS_Store

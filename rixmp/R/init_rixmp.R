@@ -28,7 +28,7 @@ ixmp <- NULL
 
 .onLoad <- function(libname, pkgname) {
   # Force reticulate to pick up on e.g. RETICULATE_PYTHON environment variable
-  reticulate::py_config()
+  print(reticulate::py_config())
 
   # If $IXMP_DATA and $XDG_DATA_HOME are not set, ixmp._config.Config uses
   # $HOME/.local/ixmp for configuration and local databases. On Windows, $HOME

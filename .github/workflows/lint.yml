@@ -22,7 +22,7 @@ jobs:
         path: |
           $HOME/.cache/pip
           $HOME/Library/Caches/pip
-          $HOME/Local Settings/Application Data/pip/Cache
+          $HOME/appdata/local/pip/cache
         key: lint-${{ runner.os }}
 
     - name: Upgrade pip, wheel
@@ -31,8 +31,7 @@ jobs:
     - name: Lint with flake8
       run: |
         pip install flake8
-        find . -name "*.py" | flake8 --count --max-complexity=29 \
-                                     --show-source --statistics
+        flake8 --count --max-complexity=29 --show-source --statistics
 
     - name: Test package build
       run: |
@@ -40,7 +39,7 @@ jobs:
         python3 setup.py bdist_wheel sdist
         twine check dist/*
 
-    - name: Build documentation using Sphinx
+    - name: Test documentation build
       run: |
         pip install .[docs,tests,tutorial]
         make --directory=doc html

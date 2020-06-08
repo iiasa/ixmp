@@ -14,13 +14,13 @@ jobs:
     strategy:
       matrix:
         os:
-        # - macos-latest
+        - macos-latest
         - ubuntu-latest
         # - windows-latest
         include:
-        # - os: macos-latest
-        #   GAMS_OS: macosx
-        #   marks: not performance and not rixmp
+        - os: macos-latest
+          GAMS_OS: macosx
+          marks: not performance and not rixmp
         - os: ubuntu-latest
           GAMS_OS: linux
           marks: not performance and not rixmp
@@ -36,6 +36,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
+
+    - name: Use OpenJDK 14 (macOS only)
+      if: ${{ startsWith(matrix.os, 'macos') }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: '14'
 
     # - uses: r-lib/actions/setup-r@master
     #   if: ${{ contains(matrix.os, 'ubuntu') }}
@@ -79,11 +85,6 @@ jobs:
 
     - name: Upgrade pip, wheel
       run: python -m pip install --upgrade pip wheel
-
-    # commented: this isn't sufficient to prevent the failure
-    # - name: "(macOS) Update Python packages to avoid 'Abort trap: 6' failures"
-    #   if: ${{ contains(matrix.os, 'macos') }}
-    #   run: pip install --upgrade cryptography setuptools six
 
     - name: Install the Python package and dependencies
       run: pip install .[docs,tests,tutorial]

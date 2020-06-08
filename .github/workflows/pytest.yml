@@ -16,7 +16,7 @@ jobs:
         os:
         - macos-latest
         - ubuntu-latest
-        # - windows-latest
+        - windows-latest
         include:
         - os: macos-latest
           GAMS_OS: macosx
@@ -24,9 +24,9 @@ jobs:
         - os: ubuntu-latest
           GAMS_OS: linux
           marks: not performance and not rixmp
-        # - os: windows-latest
-        #   GAMS_OS: windows
-        #   marks: not performance and not rixmp
+        - os: windows-latest
+          GAMS_OS: windows
+          marks: not performance and not rixmp
 
       fail-fast: false
 
@@ -46,20 +46,19 @@ jobs:
     # - uses: r-lib/actions/setup-r@master
     #   if: ${{ contains(matrix.os, 'ubuntu') }}
 
-    # Temporarily disabled for debugging
-    # - name: Cache GAMS installer, Python and R packages
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: |
-    #       gams
-    #       $HOME/.cache/pip
-    #       $HOME/Library/Caches/pip
-    #       $HOME/Local Settings/Application Data/pip/Cache
-    #       ${{ env.R_LIBS_USER }}
-    #     key: ${{ matrix.os }}-${{ env.GAMS_VERSION }}
-    #     restore-keys: ${{ matrix.os }}-
+    - name: Cache GAMS installer, Python and R packages
+      uses: actions/cache@v2
+      with:
+        path: |
+          gams
+          $HOME/.cache/pip
+          $HOME/Library/Caches/pip
+          $HOME/appdata/local/pip/cache
+        # ${{ env.R_LIBS_USER }}
+        key: ${{ matrix.os }}-${{ env.GAMS_VERSION }}
+        restore-keys: ${{ matrix.os }}-
 
-    - name: Install system dependencies
+    - name: Install curl, GAMS, and Graphviz
       env:
         CI_OS: ${{ matrix.os }}
         GAMS_OS: ${{ matrix.GAMS_OS }}
@@ -69,13 +68,9 @@ jobs:
         ci/install-graphviz.sh
       shell: bash
 
-    # - name: (windows) Finalize GAMS install
-    #   if: ${{ contains(matrix.os, 'windows') }}
-    #   run: |
-    #     Start-Process "gams\gams.exe" "/SP- /SILENT /NORESTART" -Wait
-
     - name: Check GAMS
       run: gams
+      shell: bash
 
     # - name: (linux) Install system R dependencies
     #   # NB this is faster than allowing remotes::install_deps() to do the

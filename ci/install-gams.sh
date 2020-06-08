@@ -32,19 +32,32 @@ curl --silent $URL --output $BASE/gams.exe $TIME_CONDITION
 
 # TODO confirm checksum
 
-# Update PATH
-GAMS_PATH=$BASE/gams$(echo $GAMS_VERSION | cut -d. -f1-2)_$FRAGMENT
-export PATH=$GAMS_PATH:$PATH
-
-# For GitHub Actions
-echo "::add-path::$GAMS_PATH"
+# Path fragment for extraction or install
+DEST=gams$(echo $GAMS_VERSION | cut -d. -f1-2)_$FRAGMENT
 
 if [ $GAMS_OS = "windows" ]; then
-  $BASE/gams.exe /SP- /SILENT /NORESTART
+  cat << EOF >install-gams.ps1
+
+# Windows-format equivalent of BASE
+\$BASE = "\$PWD\gams"
+
+# Install to the same directory as Linux/macOS unzip
+Start-Process "\$BASE\gams.exe" "/SP-", "/SILENT", "/DIR=\$BASE\\$DEST", \`
+  "/NORESTART" -Wait
+
+EOF
+  cat install-gams.ps1
+  pwsh install-gams.ps1
 else
   # Extract files
   unzip -q -d $BASE $BASE/gams.exe
 fi
+
+# Update PATH
+export PATH=$BASE/$DEST:$PATH
+
+# For GitHub Actions
+echo "::add-path::$BASE/$DEST"
 
 # Show location
 which gams

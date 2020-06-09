@@ -1,21 +1,24 @@
 #!/bin/sh
 # Install GAMS.
 #
-# The environment variables GAMS_OS and GAMS_VERSION must be set.
+# The environment variables CI_OS and GAMS_VERSION must be set.
 
 BASE=$PWD/gams
 mkdir -p $BASE
 
-# Path fragment for source URL and extracted files
-case $GAMS_OS in
-  linux)
-    FRAGMENT=linux_x64_64_sfx
+# GAMS source URL fragment, and path fragment for extracted files
+case $CI_OS in
+  linux* | ubuntu*)
+    GAMS_OS=linux
+    FRAGMENT=${GAMS_OS}_x64_64_sfx
     ;;
-  macosx)
+  macos*)
+    GAMS_OS=macosx
     FRAGMENT=osx_x64_64_sfx
     ;;
-  windows)
-    FRAGMENT=windows_x64_64
+  windows*)
+    GAMS_OS=windows
+    FRAGMENT=${GAMS_OS}_x64_64
     ;;
 esac
 

@@ -17,21 +17,14 @@ jobs:
         - macos-latest
         - ubuntu-latest
         - windows-latest
-        include:
-        - os: macos-latest
-          GAMS_OS: macosx
-          marks: not performance
-        - os: ubuntu-latest
-          GAMS_OS: linux
-          marks: not performance
-        - os: windows-latest
-          GAMS_OS: windows
-          marks: not performance
+        python-version:
+        - '3.6' # Earliest supported by ixmp
+        - '3.8' # Latest available
 
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }}
 
     steps:
     - uses: actions/checkout@v2
@@ -46,7 +39,7 @@ jobs:
       with:
         java-version: '14'
 
-    - name: Cache GAMS installer, Python and R packages
+    - name: Cache GAMS installer, Python packages, and R packages
       uses: actions/cache@v2
       with:
         path: |
@@ -55,13 +48,14 @@ jobs:
           $HOME/Library/Caches/pip
           $HOME/appdata/local/pip/cache
           ${{ env.R_LIBS_USER }}
-        key: ${{ matrix.os }}-${{ env.GAMS_VERSION }}
-        restore-keys: ${{ matrix.os }}-
+        key: ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}
+        restore-keys: |
+          ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-
+          ${{ matrix.os }}-
 
     - name: Install curl, GAMS, and Graphviz
       env:
         CI_OS: ${{ matrix.os }}
-        GAMS_OS: ${{ matrix.GAMS_OS }}
       run: |
         ci/install-curl.sh
         ci/install-gams.sh
@@ -72,10 +66,10 @@ jobs:
       run: gams
       shell: bash
 
-    - name: Upgrade pip, wheel
+    - name: Upgrade pip and wheel
       run: python -m pip install --upgrade pip wheel
 
-    - name: Install the Python package and dependencies
+    - name: Install Python package and dependencies
       run: pip install .[docs,tests,tutorial]
 
     - name: Install system R dependencies (Linux only)
@@ -91,7 +85,7 @@ jobs:
       run: |
         Write-Host "::set-env name=RETICULATE_PYTHON::${{ env.PYTHONLOCATION }}\python.exe"
 
-    - name: Install the R package and dependencies
+    - name: Install R package and dependencies
       # To debug, add lines line:
       # print(reticulate::py_config())
       # reticulate::py_run_string("import os; print(os.environ)")
@@ -108,8 +102,8 @@ jobs:
         devtools::install("rixmp", args = "--no-multiarch")
       shell: Rscript {0}
 
-    - name: Run pytest
-      run: pytest ixmp -m "${{ matrix.marks }}" --verbose --cov-report=xml
+    - name: Run test suite using pytest
+      run: pytest ixmp -m "not performance" --verbose --cov-report=xml
 
     # This standard R check can replace the tests in tests/test_r.py, but
     # requires improvements to the rixmp packaging.

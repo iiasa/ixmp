@@ -2,7 +2,7 @@
 # Install cURL
 
 case $CI_OS in
-  windows|windows-latest)
+  windows*)
     choco install --no-progress curl
     ;;
 esac

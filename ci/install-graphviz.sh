@@ -2,13 +2,13 @@
 # Install Graphviz.
 
 case $CI_OS in
-  linux|ubuntu-latest)
+  linux* | ubuntu*)
     sudo apt install --quiet graphviz
     ;;
-  macosx|macos-latest)
+  macos*)
     brew install graphviz
     ;;
-  windows|windows-latest)
+  windows*)
     choco install --no-progress graphviz
     ;;
 esac

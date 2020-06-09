@@ -184,8 +184,11 @@ def test_verbose_exception(test_mp, exception_verbose_true):
 
 
 def test_del_ts():
-    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
-                       url=f'jdbc:hsqldb:mem:test_del_ts')
+    mp = ixmp.Platform(
+        backend='jdbc',
+        driver='hsqldb',
+        url='jdbc:hsqldb:mem:test_del_ts',
+    )
 
     # Number of Java objects referenced by the JDBCBackend
     N_obj = len(mp._backend.jindex)
@@ -239,10 +242,12 @@ def test_gc_lowmem(request):  # prama: no cover
     #    suite
 
     # Create a platform with a small memory limit (default 7 MiB)
-    jvm_mem_limit = request.config.getoption('--jvm-mem-limit', 7)
-    mp = ixmp.Platform(backend='jdbc', driver='hsqldb',
-                       url=f'jdbc:hsqldb:mem:test_gc',
-                       jvmargs=f'-Xmx{jvm_mem_limit}M')
+    mp = ixmp.Platform(
+        backend='jdbc',
+        driver='hsqldb',
+        url='jdbc:hsqldb:mem:test_gc',
+        jvmargs=f"-Xmx{request.config.getoption('--jvm-mem-limit', 7)}M",
+    )
     # Force Java GC
     jpype.java.lang.System.gc()
 

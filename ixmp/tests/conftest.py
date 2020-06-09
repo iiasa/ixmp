@@ -1,18 +1,4 @@
-"""Test configuration.
-
-Notes:
-
-- For tests that fail strangely on Appveyor (Windows continuous integration),
-  use a pattern like::
-
-    import os
-
-    @pytest.mark.xfail('APPVEYOR' in os.environ, strict=True
-                       reason='Description of the issue.')
-    def test_something(...):
-        # etc.
-
-"""
+"""Test configuration."""
 from pathlib import Path
 
 import pytest

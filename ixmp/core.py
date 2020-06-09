@@ -809,7 +809,7 @@ class Scenario(TimeSeries):
             scheme = ''
 
         if 'cache' in model_init_args:
-            warn(f'Scenario(..., cache=...) is deprecated; use Platform(..., '
+            warn('Scenario(..., cache=...) is deprecated; use Platform(..., '
                  'cache=...) instead', DeprecationWarning)
             model_init_args.pop('cache')
 

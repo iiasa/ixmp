@@ -1,28 +1,26 @@
 # GAMS, R, Python-specific auxiliary files
+*-checkpoint.ipynb
 *.~gm
 *.~op
-*.pyc
 *.bak
-*.egg-info
-*.gdx
-*.lst
-*.log
-*.lxi
-*.gch
-*.gpr
-/model/2*/**
-/model/$gms*
 *.dat
+*.egg*
+*.gch
+*.gdx
+*.gpr
+*.log
+*.lst
+*.lxi
+*.pyc
+*.Rcheck
+*.RData*
+*.Rproj
 *.swp
 *.tmp
-*.RData*
-*-checkpoint.ipynb
-*~
-#*
 *#
-*.Rproj
-*.Rcheck
-*.eggs
+*~
+/model/$gms*
+/model/2*/**
 
 # Apple file system
 .DS_Store
@@ -37,27 +35,27 @@ build
 dist
 
 # rixmp build folder and rhistory
-r*ixmp_*.tar.gz
-r*ixmp_*.zip
-rixmp/source/inst/docum/*.html
-rixmp/source/.Rhistory
 !rixmp/source/*.Rproj
 .Rproj.user
 *.Rcheck
+r*ixmp_*.tar.gz
+r*ixmp_*.zip
+rixmp/source/.Rhistory
+rixmp/source/inst/docum/*.html
 
 # virtualenv
 .env
 
 # pytest and related
-*.pid
 .coverage*
 .pytest_cache/
+*.pid
 coverage.xml
 htmlcov/
 
-# JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
-/**/.idea
+# JetBrains IDEs
 *.iml
+/**/.idea
 
 # temporary folder
 temp/

@@ -277,7 +277,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
                 log.info(f'Add missing unit: {unit}')
                 # FIXME cannot use the comment f'Loaded from {path}' here; too
                 #       long for JDBCBackend
-                be.set_unit(unit, f'Loaded from file')
+                be.set_unit(unit, 'Loaded from file')
 
             # Update the reference set to avoid re-adding these units
             units |= to_add

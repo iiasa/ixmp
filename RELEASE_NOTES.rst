@@ -1,3 +1,12 @@
+Next release
+============
+
+All changes
+-----------
+
+- :pull:`330`: Use GitHub Actions for continuous testing and integration.
+
+
 v3.0.0 (2020-06-05)
 ===================
 

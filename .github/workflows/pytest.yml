@@ -57,7 +57,6 @@ jobs:
       env:
         CI_OS: ${{ matrix.os }}
       run: |
-        ci/install-curl.sh
         ci/install-gams.sh
         ci/install-graphviz.sh
       shell: bash

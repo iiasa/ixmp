@@ -109,7 +109,7 @@ class AttrSeries(pd.Series):
                     # scalar
                     return self.loc[slice(key, key)]
 
-        idx = tuple(indexers.get(l, slice(None)) for l in self.index.names)
+        idx = tuple(indexers.get(n, slice(None)) for n in self.index.names)
         return AttrSeries(self.loc[idx])
 
     def sum(self, *args, **kwargs):

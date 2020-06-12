@@ -8,6 +8,8 @@ on:
 
 env:
   GAMS_VERSION: 25.1.1
+  # See description in lint.yml
+  depth: 100
 
 jobs:
   pytest:
@@ -28,6 +30,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: ${{ env.depth }}
+
+    - name: Fetch tags (for setuptools-scm)
+      run: git fetch --tags --depth=${{ env.depth }}
+
     - uses: actions/setup-python@v2
     - uses: r-lib/actions/setup-r@master
 
@@ -44,16 +52,16 @@ jobs:
       with:
         path: |
           gams
-          $HOME/.cache/pip
-          $HOME/Library/Caches/pip
-          $HOME/appdata/local/pip/cache
+          ~/.cache/pip
+          ~/Library/Caches/pip
+          ~/appdata/local/pip/cache
           ${{ env.R_LIBS_USER }}
         key: ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}
         restore-keys: |
           ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-
           ${{ matrix.os }}-
 
-    - name: Install curl, GAMS, and Graphviz
+    - name: Install GAMS and Graphviz
       env:
         CI_OS: ${{ matrix.os }}
       run: |
@@ -65,8 +73,8 @@ jobs:
       run: gams
       shell: bash
 
-    - name: Upgrade pip and wheel
-      run: python -m pip install --upgrade pip wheel
+    - name: Upgrade pip, wheel, setuptools-scm
+      run: python -m pip install --upgrade pip wheel setuptools-scm
 
     - name: Install Python package and dependencies
       run: pip install .[docs,tests,tutorial]

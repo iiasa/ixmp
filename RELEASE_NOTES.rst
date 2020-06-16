@@ -5,6 +5,7 @@ All changes
 -----------
 
 - :pull:`330`: Use GitHub Actions for continuous testing and integration.
+- :pull:`336`: Improve error handling adding timeseries data (check for units)
 
 
 v3.0.0 (2020-06-05)

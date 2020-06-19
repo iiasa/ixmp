@@ -38,3 +38,19 @@ class _QuantityFactory:
 
 
 Quantity = _QuantityFactory()
+
+
+def assert_quantity(*args):
+    """Assert that each of `args` is a Quantity object.
+
+    Raises
+    ------
+    TypeError
+        with a indicative message.
+    """
+    for i, arg in enumerate(args):
+        if arg.__class__.__name__ != Quantity.CLASS:
+            raise TypeError(
+                f"arg #{i} ({repr(arg)}) is not Quantity; likely an incorrect "
+                "key"
+            )

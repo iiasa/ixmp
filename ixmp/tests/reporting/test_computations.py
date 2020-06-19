@@ -1,12 +1,15 @@
 import logging
 
+import numpy as np
 from pandas.testing import assert_series_equal
 import pint
 import pytest
+import xarray as xr
 
 import ixmp
 from ixmp.reporting import Reporter, Quantity, computations
-from ixmp.testing import assert_logs
+from ixmp.reporting.testing import random_qty
+from ixmp.testing import assert_logs, assert_qty_equal
 
 from . import add_test_data
 
@@ -50,6 +53,37 @@ def test_apply_units(data, caplog):
     assert len(caplog.messages) == 0
     assert result.attrs['_unit'] == registry.Unit('kg')
     assert_series_equal(result.to_series(), x.to_series())
+
+
+@pytest.mark.xfail(
+    reason="Outer join of non-intersecting dimensions (AttrSeries only)"
+)
+def test_product0():
+    A = Quantity(
+        xr.DataArray([1, 2], coords=[["a0", "a1"]], dims=["a"])
+    )
+    B = Quantity(
+        xr.DataArray([3, 4], coords=[["b0", "b1"]], dims=["b"])
+    )
+    exp = Quantity(
+        xr.DataArray(
+            [[3, 4], [6, 8]],
+            coords=[["a0", "a1"], ["b0", "b1"]],
+            dims=["a", "b"],
+        ),
+        units="1",
+    )
+
+    assert_qty_equal(exp, computations.product(A, B))
+    computations.product(exp, B)
+
+
+def test_product1():
+    """Product of quantities with overlapping dimensions."""
+    A = random_qty(dict(a=2, b=2, c=2, d=2))
+    B = random_qty(dict(b=2, c=2, d=2, e=2, f=2))
+
+    assert computations.product(A, B).size == 2 ** 6
 
 
 def test_select(data):

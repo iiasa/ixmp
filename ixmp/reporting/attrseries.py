@@ -6,10 +6,6 @@ import xarray as xr
 class AttrSeries(pd.Series):
     """:class:`pandas.Series` subclass imitating :class:`xarray.DataArray`.
 
-    Future versions of :mod:`ixmp.reporting` will use :class:`xarray.DataArray`
-    as :class:`Quantity`; however, because :mod:`xarray` currently lacks sparse
-    matrix support, ixmp quantities may be too large for available memory.
-
     The AttrSeries class provides similar methods and behaviour to
     :class:`xarray.DataArray`, so that :mod:`ixmp.reporting.computations`
     methods can use xarray-like syntax.
@@ -59,14 +55,16 @@ class AttrSeries(pd.Series):
 
     @classmethod
     def from_series(cls, series, sparse=None):
+        """Like :meth:`xarray.DataArray.from_series`."""
         return cls(series)
 
     def assign_coords(self, **kwargs):
+        """Like :meth:`xarray.DataArray.assign_coords`."""
         return pd.concat([self], keys=kwargs.values(), names=kwargs.keys())
 
     @property
     def coords(self):
-        """Read-only."""
+        """Like :attr:`xarray.DataArray.coords`. Read-only."""
         result = dict()
         for name, levels in zip(self.index.names, self.index.levels):
             result[name] = xr.Dataset(None, coords={name: levels})[name]
@@ -74,12 +72,15 @@ class AttrSeries(pd.Series):
 
     @property
     def dims(self):
+        """Like :attr:`xarray.DataArray.dims`."""
         return tuple(self.index.names)
 
     def drop(self, label):
+        """Like :meth:`xarray.DataArray.drop`."""
         return self.droplevel(label)
 
     def item(self, *args):
+        """Like :meth:`xarray.DataArray.item`."""
         if len(args) and args != (None,):
             raise NotImplementedError
         elif self.size != 1:
@@ -87,12 +88,14 @@ class AttrSeries(pd.Series):
         return self.iloc[0]
 
     def rename(self, new_name_or_name_dict):
+        """Like :meth:`xarray.DataArray.rename`."""
         if isinstance(new_name_or_name_dict, dict):
             return self.rename_axis(index=new_name_or_name_dict)
         else:
             return super().rename(new_name_or_name_dict)
 
     def sel(self, indexers=None, drop=False, **indexers_kwargs):
+        """Like :meth:`xarray.DataArray.sel`."""
         indexers = indexers or {}
         indexers.update(indexers_kwargs)
         if len(indexers) == 1:
@@ -113,6 +116,7 @@ class AttrSeries(pd.Series):
         return AttrSeries(self.loc[idx])
 
     def sum(self, *args, **kwargs):
+        """Like :meth:`xarray.DataArray.sum`."""
         obj = super(AttrSeries, self)
         attrs = None
 
@@ -140,6 +144,7 @@ class AttrSeries(pd.Series):
         return AttrSeries(obj.sum(*args, **kwargs), attrs=attrs)
 
     def squeeze(self, dim=None, *args, **kwargs):
+        """Like :meth:`xarray.DataArray.squeeze`."""
         assert kwargs.pop("drop", True)
 
         try:
@@ -168,25 +173,22 @@ class AttrSeries(pd.Series):
 
         return self.droplevel(to_drop)
 
-    def as_xarray(self):
-        return xr.DataArray.from_series(self)
-
     def transpose(self, *dims):
+        """Like :meth:`xarray.DataArray.transpose`."""
         return self.reorder_levels(dims)
 
     def to_dataframe(self):
+        """Like :meth:`xarray.DataArray.to_dataframe`."""
         return self.to_frame()
 
     def to_series(self):
+        """Like :meth:`xarray.DataArray.to_series`."""
         return self
 
     def align_levels(self, other):
         """Work around https://github.com/pandas-dev/pandas/issues/25760.
 
         Return a copy of *obj* with common levels in the same order as *ref*.
-
-        .. todo:: remove when Quantity is xr.DataArray, or above issues is
-           closed.
         """
         if not isinstance(self.index, pd.MultiIndex):
             return self

@@ -7,7 +7,11 @@ from xarray.core.utils import either_dict_or_kwargs
 
 @xr.register_dataarray_accessor('_sda')
 class SparseAccessor:
-    """:mod:`xarray` accessor to help :class:`SparseDataArray`."""
+    """:mod:`xarray` accessor to help :class:`SparseDataArray`.
+
+    See the xarray accessor documentation, e.g.
+    :func:`~xarray.register_dataarray_accessor`.
+    """
     def __init__(self, obj):
         self.da = obj
 
@@ -56,37 +60,48 @@ class SparseAccessor:
 
 
 class SparseDataArray(xr.DataArray):
-    """:class:`xr.DataArray` with sparse data.
+    """:class:`~xarray.DataArray` with sparse data.
 
     SparseDataArray uses :class:`sparse.COO` for storage with :data:`numpy.nan`
-    as its :attr:`sparse.COO.fill_value`. Some methods of :class:`.DataArray`
-    are overridden to ensure data is in sparse, or dense, format as necessary,
-    to provide expected functionality not currently supported by :mod:`sparse`,
-    and to avoid exhausting memory for some operations that require dense data.
-
-    See Also
-    --------
-    SparseAccessor
+    as its :attr:`sparse.COO.fill_value`. Some methods of
+    :class:`~xarray.DataArray` are overridden to ensure data is in sparse, or
+    dense, format as necessary, to provide expected functionality not currently
+    supported by :mod:`sparse`, and to avoid exhausting memory for some
+    operations that require dense data.
     """
     __slots__ = tuple()
 
     @classmethod
     def from_series(cls, obj, sparse=True):
+        """Convert a pandas.Series into a SparseDataArray."""
         # Call the parent method always with sparse=True, then re-wrap
         return xr.DataArray.from_series(obj, sparse=True)._sda.convert()
 
-    def equals(self, other):
-        """Necessary for :meth:`xarray.testing.assert_equal` to work."""
+    def equals(self, other) -> bool:
+        """True if two SparseDataArrays have the same dims, coords, and values.
+
+        Overrides :meth:`~xarray.DataArray.equals` for sparse data.
+        """
+        # Necessary for :meth:`xarray.testing.assert_equal` to work.
         return self.variable.equals(other.variable, equiv=np.equal)
 
     @property
     def loc(self):
-        # FIXME doesn't allow assignment
+        """Attribute for location based indexing like pandas.
+
+        .. note:: This version does not allow assignment, since the underlying
+           sparse array is read-only. To modify the contents, create a copy or
+           perform an operation that returns a new array.
+        """
         return self._sda.dense_super.loc
 
     def sel(self, indexers=None, method=None, tolerance=None, drop=False,
             **indexers_kwargs) -> 'SparseDataArray':
-        """Handle >1-D indexers with sparse data."""
+        """Return a new array by selecting labels along the specified dim(s).
+
+        Overrides :meth:`~xarray.DataArray.sel` to handle >1-D indexers with
+        sparse data.
+        """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
         if isinstance(indexers, dict) and len(indexers) > 1:
             result = self
@@ -98,15 +113,22 @@ class SparseDataArray(xr.DataArray):
             return super().sel(indexers=indexers, method=method,
                                tolerance=tolerance, drop=drop)
 
-    def to_dataframe(self):
-        # FIXME this does exactly match the behaviour of xr.DataArray; it omits
-        #       coordinate variable
-        return self.to_series().to_frame()
+    def to_dataframe(self, name=None):
+        """Convert this array and its coords into a :class:`~xarray.DataFrame`.
+
+        Overrides :meth:`~xarray.DataArray.to_dataframe`.
+        """
+        return self.to_series().to_frame(name)
 
     def to_series(self) -> pd.Series:
-        # Use SparseArray.coords and .data (each already 1-D) to construct a
-        # pd.Series without first converting to a potentially very large
-        # ndarray
+        """Convert this array into a :class:`~pandas.Series`.
+
+        Overrides :meth:`~xarray.DataArray.to_series` to create the series
+        without first converting to a potentially very large
+        :class:`numpy.ndarray`.
+        """
+        # Use SparseArray.coords and .data (each already 1-D) to construct the
+        # pd.Series
 
         # Construct a pd.MultiIndex without using .from_product
         index = pd.MultiIndex.from_arrays(self.data.coords, names=self.dims) \

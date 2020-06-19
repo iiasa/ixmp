@@ -3,8 +3,30 @@ import pint
 
 
 class _QuantityFactory:
-    #: The current internal class used to represent reporting quantities.
-    #: :meth:`as_quantity` always converts to this type.
+    """Convert arguments to the internal Quantity data format.
+
+    Parameters
+    ----------
+    data
+        Quantity data.
+    args
+        Positional arguments, passed to :class:`.AttrSeries` or
+        :class:`.SparseDataArray`.
+    kwargs
+        Keyword arguments, passed to :class:`.AttrSeries` or
+        :class:`.SparseDataArray`.
+
+    Other parameters
+    ----------------
+    name : str, optional
+        Quantity name.
+    units : str, optional
+        Quantity units.
+    attrs : dict, optional
+        Dictionary of attributes; similar to :attr:`~xarray.DataArray.attrs`.
+    """
+    # The current internal class used to represent reporting quantities.
+    # :meth:`as_quantity` always converts to this type.
     CLASS = 'AttrSeries'
     # CLASS = 'SparseDataArray'
 

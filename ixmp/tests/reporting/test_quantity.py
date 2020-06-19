@@ -171,7 +171,6 @@ class TestAttrSeries:
 
     def test_others(self, foo, bar):
         # Exercise other compatibility functions
-        assert isinstance(foo.as_xarray(), xr.DataArray)
         assert type(foo.to_frame()) is pd.DataFrame
         assert foo.drop('a').dims == ('b',)
         assert bar.dims == ('a',)

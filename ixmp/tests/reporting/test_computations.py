@@ -20,8 +20,50 @@ pytestmark = pytest.mark.usefixtures('parametrize_quantity_class')
 @pytest.fixture(scope='function')
 def data(test_mp, request):
     scen = ixmp.Scenario(test_mp, request.node.name, request.node.name, 'new')
+    data_objs = list(add_test_data(scen))
     rep = Reporter.from_scenario(scen)
-    yield [scen, rep] + list(add_test_data(scen))
+    yield [scen, rep] + data_objs
+
+
+@pytest.mark.parametrize("operands, size", [
+    (("a", "a"), 18),
+    (("a", "x"), 36),
+    (("x", "b"), 36),
+    (("a", "b"), 36),
+    (("a", "x", "b"), 36),
+])
+def test_add(data, operands, size):
+    scen, rep, t, t_foo, t_bar, x = data
+
+    y = scen.set("y").tolist()
+    x = rep.get("x:t-y")
+    a = Quantity(
+        xr.DataArray(
+            np.random.rand(len(t_foo), len(y)),
+            coords=[t_foo, y],
+            dims=['t', 'y']
+        ),
+        units=x.attrs['_unit'],
+    )
+    b = Quantity(
+        xr.DataArray(
+            np.random.rand(len(t_bar), len(y)),
+            coords=[t_bar, y],
+            dims=['t', 'y']
+        ),
+        units=x.attrs['_unit'],
+    )
+
+    rep.add("a:t-y", a)
+    rep.add("b:t-y", b)
+
+    key = rep.add(
+        "result",
+        tuple([computations.add] + [f"{name}:t-y" for name in operands])
+    )
+
+    result = rep.get(key)
+    assert size == result.size, result.to_series()
 
 
 def test_apply_units(data, caplog):

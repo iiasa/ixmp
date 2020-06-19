@@ -44,7 +44,7 @@ from . import computations
 from .describe import describe_recursive
 from .exceptions import ComputationError
 from .key import Key
-from .quantity import Quantity, as_quantity
+from .quantity import Quantity
 from .utils import (
     REPLACE_UNITS,
     RENAME_DIMS,
@@ -56,7 +56,6 @@ __all__ = [
     'Key',
     'Quantity',
     'Reporter',
-    'as_quantity',
     'configure',
 ]
 

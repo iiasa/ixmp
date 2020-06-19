@@ -54,12 +54,14 @@ import sys
 from click.testing import CliRunner
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_series_equal
 import pytest
 
 from . import cli, config as ixmp_config
 from .core import Platform, TimeSeries, Scenario, IAMC_IDX
-
+from .reporting import Quantity
+from .reporting.testing import (  # noqa: F401
+    assert_qty_equal, assert_qty_allclose
+)
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +97,17 @@ def ixmp_cli(tmp_env):
             return super().invoke(cli.main, *args, env=tmp_env, **kwargs)
 
     yield Runner()
+
+
+@pytest.fixture(params=['AttrSeries', 'SparseDataArray'])
+def parametrize_quantity_class(request):
+    """Fixture to run tests twice, for both reporting Quantity classes."""
+    pre = Quantity.CLASS
+
+    Quantity.CLASS = request.param
+    yield
+
+    Quantity.CLASS = pre
 
 
 @pytest.fixture
@@ -478,57 +491,6 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
                 [f'    {repr(msg)}' for msg in caplog.messages[first:]],
             )
             pytest.fail('\n'.join(lines))
-
-
-def assert_qty_equal(a, b, check_attrs=True, **kwargs):
-    """Assert that Quantity objects *a* and *b* are equal.
-
-    When Quantity is AttrSeries, *a* and *b* are first passed through
-    :meth:`as_quantity`.
-    """
-    from xarray import DataArray
-    from xarray.testing import assert_equal as assert_xr_equal
-
-    from .reporting.quantity import AttrSeries, Quantity, as_quantity
-
-    if Quantity is AttrSeries:
-        # Convert pd.Series automatically
-        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
-        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
-
-        assert_series_equal(a, b, check_dtype=False, **kwargs)
-    elif Quantity is DataArray:  # pragma: no cover
-        assert_xr_equal(a, b, **kwargs)
-
-    # check attributes are equal
-    if check_attrs:
-        assert a.attrs == b.attrs
-
-
-def assert_qty_allclose(a, b, check_attrs=True, **kwargs):
-    """Assert that Quantity objects *a* and *b* have numerically close values.
-
-    When Quantity is AttrSeries, *a* and *b* are first passed through
-    :meth:`as_quantity`.
-    """
-    from xarray import DataArray
-    from xarray.testing import assert_allclose as assert_xr_allclose
-
-    from .reporting.quantity import AttrSeries, Quantity, as_quantity
-
-    if Quantity is AttrSeries:
-        # Convert pd.Series automatically
-        a = as_quantity(a) if isinstance(a, (pd.Series, DataArray)) else a
-        b = as_quantity(b) if isinstance(b, (pd.Series, DataArray)) else b
-
-        assert_series_equal(a, b, **kwargs)
-    elif Quantity is DataArray:  # pragma: no cover
-        kwargs.pop('check_dtype', None)
-        assert_xr_allclose(a, b, **kwargs)
-
-    # check attributes are equal
-    if check_attrs:
-        assert a.attrs == b.attrs
 
 
 # Data structure for memory information used by :meth:`memory_usage`.

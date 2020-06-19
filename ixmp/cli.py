@@ -92,7 +92,7 @@ def report(context, config, key):
     r.configure(config)
 
     # Print the target
-    print(r.get(key))
+    print(r.get(key).to_series().sort_index())
 
 
 @main.command('show-versions')

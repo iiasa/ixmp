@@ -1,7 +1,7 @@
 .. currentmodule:: ixmp.reporting
 
 Reporting
-=========
+*********
 
 Top-level methods and classes:
 
@@ -11,7 +11,6 @@ Top-level methods and classes:
    Reporter
    Key
    Quantity
-   as_quantity
 
 Others:
 
@@ -184,12 +183,30 @@ Others:
           >>> foo('a b c')
           foo:a-b-c
 
-.. automodule:: ixmp.reporting
-   :members: Quantity, as_quantity
+.. autodata:: ixmp.reporting.Quantity(data, *args, **kwargs)
+   :annotation:
+
+The :data:`.Quantity` constructor converts its arguments to an internal, :class:`xarray.DataArray`-like data format:
+
+.. code-block:: python
+
+   # Existing data
+   data = pd.Series(...)
+
+   # Convert to a Quantity for use in reporting calculations
+   qty = Quantity(data, name="Quantity name", units="kg")
+   rep.add("new_qty", qty)
+
+Common :mod:`ixmp.reporting` usage, e.g. in :mod:`message_ix`, creates large, sparse data frames (billions of possible elements, but <1% populated); :class:`~xarray.DataArray`'s default, 'dense' storage format would be too large for available memory.
+
+- Currently, Quantity is :class:`.AttrSeries`, a wrapped :class:`pandas.Series` that behaves like a :class:`~xarray.DataArray`.
+- In the future, :mod:`ixmp.reporting` will use :class:`.SparseDataArray`, and eventually :class:`~xarray.DataArray` backed by sparse data, directly.
+
+The goal is that reporting code, including built-in and user computations, can treat quantity arguments as if they were :class:`~xarray.DataArray`.
 
 
 Computations
-------------
+============
 
 .. automodule:: ixmp.reporting.computations
    :members:
@@ -201,6 +218,7 @@ Computations
    Calculations:
 
    .. autosummary::
+      add
       aggregate
       apply_units
       disaggregate_shares
@@ -221,10 +239,27 @@ Computations
       concat
 
 
-Utilities
----------
+Internal format for reporting quantities
+========================================
 
-.. autoclass:: ixmp.reporting.quantity.AttrSeries
+.. currentmodule:: ixmp.reporting.quantity
+
+.. automodule:: ixmp.reporting.quantity
+   :members: assert_quantity
+
+.. currentmodule:: ixmp.reporting.attrseries
+
+.. automodule:: ixmp.reporting.attrseries
+   :members:
+
+.. currentmodule:: ixmp.reporting.sparsedataarray
+
+.. automodule:: ixmp.reporting.sparsedataarray
+   :members: SparseDataArray, SparseAccessor
+
+
+Utilities
+=========
 
 .. automodule:: ixmp.reporting.utils
    :members:

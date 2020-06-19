@@ -2,6 +2,9 @@ import numpy as np
 import pint
 import xarray as xr
 
+from ixmp.reporting import Quantity
+
+
 REGISTRY = pint.get_application_registry()
 
 
@@ -23,6 +26,7 @@ def add_test_data(scen):
     x = xr.DataArray(np.random.rand(len(t), len(y)),
                      coords=[t, y], dims=['t', 'y'],
                      attrs={'_unit': ureg.Unit('kg')})
+    x = Quantity(x)
 
     # As a pd.DataFrame with units
     x_df = x.to_series().rename('value').reset_index()

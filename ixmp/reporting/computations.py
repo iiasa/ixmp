@@ -5,12 +5,12 @@
 from collections.abc import Mapping
 import logging
 from pathlib import Path
+from warnings import filterwarnings
 
 import pandas as pd
 import pint
-import xarray as xr
 
-from .quantity import AttrSeries, Quantity, as_quantity
+from .quantity import Quantity, assert_quantity
 from .utils import (
     RENAME_DIMS,
     dims_for_qty,
@@ -35,10 +35,41 @@ __all__ = [
 ]
 
 
+# sparse 0.9.1, numba 0.49.0, triggered by xarray import
+for msg in ["No direct replacement for 'numba.targets' available",
+            "An import was requested from a module that has moved location."]:
+    filterwarnings(action='ignore', message=msg,
+                   module='sparse._coo.numba_extension')
+
+import xarray as xr  # noqa: E402
+
+
 log = logging.getLogger(__name__)
 
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
+
+
+def add(*quantities, fill_value=0.0):
+    """Sum across multiple *quantities*."""
+    # TODO check units
+    assert_quantity(*quantities)
+
+    if Quantity.CLASS == "SparseDataArray":
+        quantities = map(Quantity, xr.broadcast(*quantities))
+
+    # Initialize result values with first entry
+    items = iter(quantities)
+    result = next(items)
+
+    # Iterate over remaining entries
+    for q in items:
+        if Quantity.CLASS == 'AttrSeries':
+            result = result.add(q, fill_value=fill_value).dropna()
+        else:
+            result = result + q
+
+    return result
 
 
 def apply_units(qty, units, quiet=False):
@@ -180,26 +211,17 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         data = data.rename(columns=RENAME_DIMS) \
                    .set_index(dims)
 
-    # Check sparseness
-    # try:
-    #     shape = list(map(len, data.index.levels))
-    # except AttributeError:
-    #     shape = [data.index.size]
-    # size = reduce(mul, shape)
-    # filled = 100 * len(data) / size if size else 'NA'
-    # need_to_chunk = size > 1e7 and filled < 1
-    # info = (name, shape, filled, size, need_to_chunk)
-    # log.debug(' '.join(map(str, info)))
-
     # Convert to a Quantity, assign attrbutes and name
-    qty = as_quantity(data[column]) \
-        .assign_attrs(attrs) \
-        .rename(name + ('-margin' if column == 'mrg' else ''))
+    qty = Quantity(
+        data[column],
+        name=name + ('-margin' if column == 'mrg' else ''),
+        attrs=attrs)
 
     try:
         # Remove length-1 dimensions for scalars
         qty = qty.squeeze('index', drop=True)
-    except KeyError:
+    except (KeyError, ValueError):
+        # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
 
     return qty
@@ -225,10 +247,6 @@ def aggregate(quantity, groups, keep):
         Same dimensionality as `quantity`.
 
     """
-    # NB .transpose() below is necessary only for Quantity == AttrSeries. It
-    #   can be removed when Quantity = xr.DataArray.
-    dim_order = quantity.dims
-
     attrs = quantity.attrs.copy()
 
     for dim, dim_groups in groups.items():
@@ -237,10 +255,16 @@ def aggregate(quantity, groups, keep):
 
         # Aggregate each group
         for group, members in dim_groups.items():
-            values.append(quantity.sel({dim: members})
-                                  .sum(dim=dim)
-                                  .assign_coords(**{dim: group})
-                                  .transpose(*dim_order))
+            agg = quantity.sel({dim: members}) \
+                          .sum(dim=dim) \
+                          .assign_coords(**{dim: group})
+            if Quantity.CLASS == 'AttrSeries':
+                # .transpose() is necesary for AttrSeries
+                agg = agg.transpose(*quantity.dims)
+            else:
+                # Restore fill_value=NaN for compatibility
+                agg = agg._sda.convert()
+            values.append(agg)
 
         # Reassemble to a single dataarray
         quantity = concat(*values, dim=dim)
@@ -259,11 +283,12 @@ def concat(*objs, **kwargs):
     Reporter.
     """
     objs = filter_concat_args(objs)
-    if Quantity is AttrSeries:
+    if Quantity.CLASS == 'AttrSeries':
         kwargs.pop('dim')
         return pd.concat(objs, **kwargs)
-    elif Quantity is xr.DataArray:  # pragma: no cover
-        return xr.concat(objs, **kwargs)
+    else:
+        # Correct fill-values
+        return xr.concat(objs, **kwargs)._sda.convert()
 
 
 def disaggregate_shares(quantity, shares):
@@ -281,24 +306,12 @@ def product(*quantities):
     # Initialize result values with first entry
     result, u_result = next(items)
 
-    def _align_levels(ref, obj):
-        """Work around https://github.com/pandas-dev/pandas/issues/25760
-
-        Return a copy of *obj* with common levels in the same order as *ref*.
-
-        TODO remove when Quantity is xr.DataArray, or above issues is closed.
-        """
-        if not isinstance(obj.index, pd.MultiIndex):
-            return obj
-        common = [n for n in ref.index.names if n in obj.index.names]
-        unique = [n for n in obj.index.names if n not in common]
-        return obj.reorder_levels(common + unique)
-
     # Iterate over remaining entries
     for q, u in items:
-        if Quantity is AttrSeries:
-            result = (result * _align_levels(result, q)).dropna()
-        else:  # pragma: no cover
+        if Quantity.CLASS == 'AttrSeries':
+            # Work around pandas-dev/pandas#25760; see attrseries.py
+            result = (result * q.align_levels(result)).dropna()
+        else:
             result = result * q
         u_result *= u
 
@@ -321,7 +334,7 @@ def ratio(numerator, denominator):
     result = numerator / denominator
     result.attrs['_unit'] = u_num / u_denom
 
-    if Quantity is AttrSeries:
+    if Quantity.CLASS == 'AttrSeries':
         result.dropna(inplace=True)
 
     return result
@@ -343,7 +356,7 @@ def select(qty, indexers, inverse=False):
         new_indexers = {}
         for dim, labels in indexers.items():
             new_indexers[dim] = list(filter(lambda l: l not in labels,
-                                            qty.coords[dim]))
+                                            qty.coords[dim].data))
         indexers = new_indexers
 
     return qty.sel(indexers)
@@ -433,7 +446,7 @@ def load_file(path, dims={}, units=None):
                        .rename(columns=dims)
             index_columns = list(dims.values())
 
-        return as_quantity(data.set_index(index_columns)['value'], units=units)
+        return Quantity(data.set_index(index_columns)['value'], units=units)
     elif path.suffix in ('.xls', '.xlsx'):
         # TODO define expected Excel data input format
         raise NotImplementedError  # pragma: no cover

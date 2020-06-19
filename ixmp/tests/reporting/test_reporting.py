@@ -20,7 +20,7 @@ from ixmp.reporting import (
     configure,
     computations,
 )
-from ixmp.reporting.quantity import AttrSeries, Quantity, as_quantity
+from ixmp.reporting import Quantity
 from ixmp.testing import (
     make_dantzig,
     assert_logs,
@@ -30,6 +30,8 @@ from ixmp.testing import (
 
 from . import add_test_data
 
+
+pytestmark = pytest.mark.usefixtures('parametrize_quantity_class')
 
 test_args = ('Douglas Adams', 'Hitchhiker')
 
@@ -84,7 +86,7 @@ def test_reporter_add():
     with pytest.raises(KeyExistsError, match=r"key 'a' already exists"):
         r.add('a', 5, strict=True)
 
-    def gen(other):
+    def gen(other):  # pragma: no cover
         """A generator for apply()."""
         return (lambda a, b: a * b, 'a', other)
 
@@ -173,7 +175,7 @@ def test_reporter_add_product(test_mp, ureg):
     assert key == 'x squared:t-y'
 
     # Product has the expected value
-    exp = as_quantity(x * x, name='x')
+    exp = Quantity(x * x, name='x')
     exp.attrs['_unit'] = ureg('kilogram ** 2').units
     assert_qty_equal(exp, rep.get(key))
 
@@ -203,7 +205,7 @@ def test_reporter_from_dantzig(test_mp, ureg):
 
     # Summation across all dimensions results a 1-element Quantity
     d = rep.get('d:')
-    assert d.shape == ((1,) if Quantity is AttrSeries else tuple())
+    assert d.shape == ((1,) if Quantity.CLASS == 'AttrSeries' else tuple())
     assert d.size == 1
     assert np.isclose(d.values, 11.7)
 
@@ -221,17 +223,17 @@ def test_reporter_from_dantzig(test_mp, ureg):
     # ...produces the expected new value
     obs = rep.get(new_key)
     d_ij = rep.get('d:i-j')
-    exp = (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    # FIXME attrs has to be explicitly copied here because math is done which
-    #       returns a pd.Series
-    exp.attrs = d_ij.attrs
+    exp = Quantity(
+        (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j']),
+        attrs=d_ij.attrs,
+    )
 
     assert_qty_equal(exp, obs)
 
     # Disaggregation with explicit data
     # (cases of canned food 'p'acked in oil or water)
     shares = xr.DataArray([0.8, 0.2], coords=[['oil', 'water']], dims=['p'])
-    new_key = rep.disaggregate('b:j', 'p', args=[as_quantity(shares)])
+    new_key = rep.disaggregate('b:j', 'p', args=[Quantity(shares)])
 
     # ...produces the expected key with new dimension added
     assert new_key == 'b:j-p'
@@ -377,7 +379,7 @@ def test_reporter_file(tmp_path):
 def test_file_formats(test_data_path, tmp_path):
     r = Reporter()
 
-    expected = as_quantity(
+    expected = Quantity(
         pd.read_csv(test_data_path / 'report-input0.csv',
                     index_col=['i', 'j'])['value'],
         units='km')
@@ -443,10 +445,10 @@ def test_units(ureg):
     # Create some dummy data
     dims = dict(coords=['a b c'.split()], dims=['x'])
     r.add('energy:x',
-          as_quantity(xr.DataArray([1., 3, 8], **dims), units='MJ'))
+          Quantity(xr.DataArray([1., 3, 8], **dims), units='MJ'))
     r.add('time',
-          as_quantity(xr.DataArray([5., 6, 8], **dims), units='hour'))
-    r.add('efficiency', as_quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
+          Quantity(xr.DataArray([5., 6, 8], **dims), units='hour'))
+    r.add('efficiency', Quantity(xr.DataArray([0.9, 0.8, 0.95], **dims)))
 
     # Aggregation preserves units
     r.add('energy', (computations.sum, 'energy:x', None, ['x']))
@@ -620,74 +622,14 @@ def test_cli(ixmp_cli, test_mp, test_data_path):
     assert result.output.endswith(
         "i          j       "  # Trailing whitespace
         """
-seattle    new-york    2.5
-           chicago     1.7
-           topeka      1.8
-san-diego  new-york    2.5
-           chicago     1.8
+san-diego  chicago     1.8
+           new-york    2.5
            topeka      1.4
+seattle    chicago     1.7
+           new-york    2.5
+           topeka      1.8
 Name: value, dtype: float64
 """)
-
-
-def test_report_size(test_mp):
-    """Stress-test reporting of large, sparse quantities."""
-    from itertools import zip_longest
-
-    import numpy as np
-
-    # test_mp.add_unit('kg')
-    scen = ixmp.Scenario(test_mp, 'size test', 'base', version='new')
-
-    # Dimensions and their lengths (Fibonacci numbers)
-    N_dims = 6
-    dims = 'abcdefgh'[:N_dims + 1]
-    sizes = [1, 5, 21, 21, 89, 377, 1597, 6765][:N_dims + 1]
-
-    # commented: "377 / 73984365 elements = 0.00051% full"
-    # from functools import reduce
-    # from operator import mul
-    # size = reduce(mul, sizes)
-    # print('{} / {} elements = {:.5f}% full'
-    #       .format(max(sizes), size, 100 * max(sizes) / size))
-
-    # Names like f_0000 ... f_1596 along each dimension
-    coords = []
-    for d, N in zip(dims, sizes):
-        coords.append([f'{d}_{i:04d}' for i in range(N)])
-        # Add to Scenario
-        scen.init_set(d)
-        scen.add_set(d, coords[-1])
-
-    def _make_values():
-        """Make a DataFrame containing each label in *coords* at least once."""
-        values = list(zip_longest(*coords, np.random.rand(max(sizes))))
-        result = pd.DataFrame(values, columns=list(dims) + ['value']) \
-                   .ffill()
-        result['unit'] = 'kg'
-        return result
-
-    # Fill the Scenario with quantities named q_01 ... q_09
-    N = 10
-    names = []
-    for i in range(10):
-        name = f'q_{i:02d}'
-        scen.init_par(name, list(dims))
-        scen.add_par(name, _make_values())
-        names.append(name)
-
-    # Create the reporter
-    rep = Reporter.from_scenario(scen)
-
-    # Add an operation that takes the product, i.e. requires all the q_*
-    keys = [rep.full_key(name) for name in names]
-    rep.add('bigmem', tuple([computations.product] + keys))
-
-    # One quantity fits in memory
-    rep.get(keys[0])
-
-    # All quantities together trigger MemoryError
-    rep.get('bigmem')
 
 
 def test_aggregate(test_mp):
@@ -701,7 +643,7 @@ def test_aggregate(test_mp):
     t_groups = {'foo': t_foo, 'bar': t_bar, 'baz': ['foo1', 'bar5', 'bar6']}
 
     # Use the computation directly
-    agg1 = computations.aggregate(as_quantity(x), {'t': t_groups}, True)
+    agg1 = computations.aggregate(Quantity(x), {'t': t_groups}, True)
 
     # Expected set of keys along the aggregated dimension
     assert set(agg1.coords['t'].values) == set(t) | set(t_groups.keys())

@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`317`: Make :class:`reporting.Quantity` classes interchangeable.
 - :pull:`330`: Use GitHub Actions for continuous testing and integration.
 
 

@@ -1,3 +1,6 @@
+context('Reporting')
+
+
 test_that('the canning problem can be reported', {
   # Create the Scenario
   mp <- test_mp()

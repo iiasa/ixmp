@@ -211,17 +211,6 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         data = data.rename(columns=RENAME_DIMS) \
                    .set_index(dims)
 
-    # Check sparseness
-    # try:
-    #     shape = list(map(len, data.index.levels))
-    # except AttributeError:
-    #     shape = [data.index.size]
-    # size = reduce(mul, shape)
-    # filled = 100 * len(data) / size if size else 'NA'
-    # need_to_chunk = size > 1e7 and filled < 1
-    # info = (name, shape, filled, size, need_to_chunk)
-    # log.debug(' '.join(map(str, info)))
-
     # Convert to a Quantity, assign attrbutes and name
     qty = Quantity(
         data[column],

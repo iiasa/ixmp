@@ -223,10 +223,10 @@ def test_reporter_from_dantzig(test_mp, ureg):
     # ...produces the expected new value
     obs = rep.get(new_key)
     d_ij = rep.get('d:i-j')
-    exp = (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j'])
-    # FIXME attrs has to be explicitly copied here because math is done which
-    #       returns a pd.Series
-    exp.attrs = d_ij.attrs
+    exp = Quantity(
+        (d_ij * weights).sum(dim=['j']) / weights.sum(dim=['j']),
+        attrs=d_ij.attrs,
+    )
 
     assert_qty_equal(exp, obs)
 

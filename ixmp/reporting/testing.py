@@ -1,9 +1,58 @@
 from typing import Dict
 
 import numpy as np
+from pandas.testing import assert_series_equal
 import xarray as xr
 
 from .quantity import Quantity
+
+
+def assert_qty_equal(a, b, check_type=True, check_attrs=True, **kwargs):
+    """Assert that Quantity objects *a* and *b* are equal.
+
+    When Quantity is AttrSeries, *a* and *b* are first passed through
+    :meth:`as_quantity`.
+    """
+    if not check_type:
+        a = Quantity(a)
+        b = Quantity(b)
+
+    if Quantity.CLASS == 'AttrSeries':
+        try:
+            a = a.sort_index()
+            b = b.sort_index()
+        except TypeError:
+            pass
+        assert_series_equal(a, b, check_dtype=False, **kwargs)
+    else:
+        import xarray.testing
+        xarray.testing.assert_equal(a, b, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs
+
+
+def assert_qty_allclose(a, b, check_type=True, check_attrs=True, **kwargs):
+    """Assert that Quantity objects *a* and *b* have numerically close values.
+
+    When Quantity is AttrSeries, *a* and *b* are first passed through
+    :meth:`as_quantity`.
+    """
+    if not check_type:
+        a = Quantity(a)
+        b = Quantity(b)
+
+    if Quantity.CLASS == 'AttrSeries':
+        assert_series_equal(a.sort_index(), b.sort_index(), **kwargs)
+    else:
+        import xarray.testing
+        kwargs.pop('check_dtype', None)
+        xarray.testing.assert_allclose(a._sda.dense, b._sda.dense, **kwargs)
+
+    # check attributes are equal
+    if check_attrs:
+        assert a.attrs == b.attrs
 
 
 def random_qty(shape: Dict[str, int], **kwargs):

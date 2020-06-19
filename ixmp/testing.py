@@ -54,13 +54,14 @@ import sys
 from click.testing import CliRunner
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_series_equal
 import pytest
 
 from . import cli, config as ixmp_config
 from .core import Platform, TimeSeries, Scenario, IAMC_IDX
 from .reporting import Quantity
-
+from .reporting.testing import (  # noqa: F401
+    assert_qty_equal, assert_qty_allclose
+)
 
 log = logging.getLogger(__name__)
 
@@ -490,49 +491,6 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
                 [f'    {repr(msg)}' for msg in caplog.messages[first:]],
             )
             pytest.fail('\n'.join(lines))
-
-
-def assert_qty_equal(a, b, check_type=True, check_attrs=True, **kwargs):
-    """Assert that Quantity objects *a* and *b* are equal.
-
-    When Quantity is AttrSeries, *a* and *b* are first passed through
-    :meth:`as_quantity`.
-    """
-    if not check_type:
-        a = Quantity(a)
-        b = Quantity(b)
-
-    if Quantity.CLASS == 'AttrSeries':
-        assert_series_equal(a, b, check_dtype=False, **kwargs)
-    else:
-        import xarray.testing
-        xarray.testing.assert_equal(a, b, **kwargs)
-
-    # check attributes are equal
-    if check_attrs:
-        assert a.attrs == b.attrs
-
-
-def assert_qty_allclose(a, b, check_type=True, check_attrs=True, **kwargs):
-    """Assert that Quantity objects *a* and *b* have numerically close values.
-
-    When Quantity is AttrSeries, *a* and *b* are first passed through
-    :meth:`as_quantity`.
-    """
-    if not check_type:
-        a = Quantity(a)
-        b = Quantity(b)
-
-    if Quantity.CLASS == 'AttrSeries':
-        assert_series_equal(a, b, **kwargs)
-    else:
-        import xarray.testing
-        kwargs.pop('check_dtype', None)
-        xarray.testing.assert_allclose(a._sda.dense, b._sda.dense, **kwargs)
-
-    # check attributes are equal
-    if check_attrs:
-        assert a.attrs == b.attrs
 
 
 # Data structure for memory information used by :meth:`memory_usage`.

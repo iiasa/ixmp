@@ -139,9 +139,34 @@ class AttrSeries(pd.Series):
 
         return AttrSeries(obj.sum(*args, **kwargs), attrs=attrs)
 
-    def squeeze(self, *args, **kwargs):
-        kwargs.pop('drop')
-        return super().squeeze(*args, **kwargs) if len(self) > 1 else self
+    def squeeze(self, dim=None, *args, **kwargs):
+        assert kwargs.pop("drop", True)
+
+        try:
+            idx = self.index.remove_unused_levels()
+        except AttributeError:
+            return self
+
+        to_drop = []
+        for i, name in enumerate(idx.names):
+            if dim and name != dim:
+                continue
+            elif len(idx.levels[i]) > 1:
+                if dim is None:
+                    continue
+                else:
+                    raise ValueError(
+                        "cannot select a dimension to squeeze out which has "
+                        "length greater than one"
+                    )
+
+            to_drop.append(name)
+
+        if dim and not to_drop:
+            # Specified dimension does not exist
+            raise KeyError(dim)
+
+        return self.droplevel(to_drop)
 
     def as_xarray(self):
         return xr.DataArray.from_series(self)

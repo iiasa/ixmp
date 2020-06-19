@@ -220,7 +220,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     try:
         # Remove length-1 dimensions for scalars
         qty = qty.squeeze('index', drop=True)
-    except KeyError:
+    except (KeyError, ValueError):
+        # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
 
     return qty

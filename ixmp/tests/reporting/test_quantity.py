@@ -154,6 +154,10 @@ class TestAttrSeries:
         assert result.dims == ('a',)
         assert result.iloc[0] == 1
 
+    def test_squeeze(self, foo):
+        assert foo.sel(a="a1").squeeze().dims == ("b",)
+        assert foo.sel(a="a2", b="b1").squeeze().values == 2
+
     def test_sum(self, foo, bar):
         # AttrSeries can be summed across all dimensions
         result = foo.sum(dim=['a', 'b'])

@@ -10,7 +10,7 @@ from warnings import filterwarnings
 import pandas as pd
 import pint
 
-from .quantity import Quantity
+from .quantity import Quantity, assert_quantity
 from .utils import (
     RENAME_DIMS,
     dims_for_qty,
@@ -48,6 +48,28 @@ log = logging.getLogger(__name__)
 
 # Carry unit attributes automatically
 xr.set_options(keep_attrs=True)
+
+
+def add(*quantities, fill_value=0.0):
+    """Sum across multiple *quantities*."""
+    # TODO check units
+    assert_quantity(*quantities)
+
+    if Quantity.CLASS == "SparseDataArray":
+        quantities = map(Quantity, xr.broadcast(*quantities))
+
+    # Initialize result values with first entry
+    items = iter(quantities)
+    result = next(items)
+
+    # Iterate over remaining entries
+    for q in items:
+        if Quantity.CLASS == 'AttrSeries':
+            result = result.add(q, fill_value=fill_value).dropna()
+        else:
+            result = result + q
+
+    return result
 
 
 def apply_units(qty, units, quiet=False):

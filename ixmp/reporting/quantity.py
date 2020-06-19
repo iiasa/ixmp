@@ -22,9 +22,12 @@ class _QuantityFactory:
             result = cls.from_series(data)
         elif self.CLASS == 'AttrSeries':
             result = cls(data, *args, **kwargs)
-        else:
-            assert len(args) == len(kwargs) == 0, (args, kwargs)
+        elif len(args) == len(kwargs) == 0:
+            # Single argument, possibly an xr.DataArray; convert to
+            # SparseDataArray
             result = data._sda.convert()
+        else:
+            result = cls(data, *args, **kwargs)
 
         if name:
             result.name = name

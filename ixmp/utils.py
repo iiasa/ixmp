@@ -384,6 +384,9 @@ def show_versions(file=sys.stdout):
         finally:
             info.append((module_name, version + gl))
 
+        if module_name == 'jpype':
+            info.append(('… JVM path', mod.getDefaultJVMPath()))
+
     # Use xarray to get system & Python information
     info.extend(get_sys_info()[1:])  # Exclude the commit number
 

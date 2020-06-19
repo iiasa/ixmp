@@ -10,10 +10,10 @@ The package is sourcing the ixmp-core Python package, translating it with the R 
 \details{
 Main features:
 
-- a platform core linked to a database instance,
+ - a platform core linked to a database instance,
 
-- integration with the |MESSAGEix| Integrated Assessment model
+ - integration with the |MESSAGEix| Integrated Assessment model
    and other numerical models
 
-- for full documentation of the Python functions, use py_help(<package>$<class>)
+ - for full documentation of the Python functions, use py_help(<package>$<class>)
 }

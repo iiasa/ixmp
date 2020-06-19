@@ -2,18 +2,23 @@
 % Please edit documentation in R/adapt_to_ret.R
 \name{adapt_to_ret}
 \alias{adapt_to_ret}
-\title{Auxiliary function for enabling correct conversion from R dataframes to python and GAMS}
+\title{Auxiliary function for conversion from R data.frame to Python}
 \usage{
 adapt_to_ret(set_par)
 }
 \arguments{
-\item{set_par}{dataframe corresponding to a set or a parameter to be loaded in ixmp}
+\item{set_par}{Dataframe corresponding to a set or a parameter to be loaded
+in ixmp}
 }
 \description{
-Auxiliary function for enabling correct conversion from R dataframes to python and GAMS
+This function converts an R data.frame to be a valid input to
+ixmp$Scenario$add_par() or ixmp$Scenario$add_set().
 }
 \examples{
-a.df = data.frame( i = c('a','b'), value = c(350 , 600) , unit = 'cases')
+if (FALSE) {
+
+a.df <- data.frame(i = c("a", "b"), value = c(350 , 600), unit = "cases")
 scen$add_par("a", adapt_to_ret(a.df))
 
+}
 }

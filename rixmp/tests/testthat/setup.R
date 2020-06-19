@@ -8,11 +8,12 @@ test_mp <- function () {
   # FIXME use pytest internals to call the fixture functions directly
 
   # Name for the temporary platform
-  url <- paste0('jdbc:hsqldb:mem:rixmp ', .test_mp_count)
+  url <- paste0("jdbc:hsqldb:mem:rixmp ", .test_mp_count)
   .test_mp_count <<- .test_mp_count + 1
+  print(url)
 
   # launch Platform and connect to testdb (reconnect if closed)
-  mp <- ixmp$Platform(backend='jdbc', driver='hsqldb', url=url)
+  mp <- ixmp$Platform(backend = "jdbc", driver = "hsqldb", url = url)
   mp$open_db()
 
   return(mp)

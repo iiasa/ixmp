@@ -456,12 +456,14 @@ class JDBCBackend(CachingBackend):
             model = filters.pop('model')
             scenario = filters.pop('scenario')
             variables = filters.pop('variable')
+            regions = filters.pop('region')
             default = filters.pop('default')
 
             scen_list = self.jobj.getScenarioList(default, model, scenario)
             run_ids = [s['run_id'] for s in scen_list]
             self.jobj.exportTimeseriesData(to_jlist(run_ids),
                                            to_jlist(variables),
+                                           to_jlist(regions),
                                            str(path))
         else:
             raise NotImplementedError

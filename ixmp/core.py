@@ -218,8 +218,8 @@ class Platform:
         None
         """
         filters = {
-            'model': model,
-            'scenario': scenario,
+            'model': as_str_list(model) or [],
+            'scenario': as_str_list(scenario) or [],
             'variable': as_str_list(variable) or [],
             'unit': as_str_list(unit) or [],
             'region': as_str_list(region) or [],

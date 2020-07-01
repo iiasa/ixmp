@@ -176,7 +176,8 @@ class Platform:
                             columns=FIELDS['get_scenarios'])
 
     def export_timeseries_data(self, path, default=True, model=None,
-                               scenario=None, variable=None, region=None):
+                               scenario=None, variable=None, unit=None,
+                               region=None):
         """Export timeseries data to CSV file across multiple scenarios.
 
         Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
@@ -207,6 +208,8 @@ class Platform:
             Only return data for this scenario name.
         variable: list of str, optional
             Only return data for variable name(s) in this list.
+        unit: list of str, optional
+            Only return data for unit name(s) in this list.
         region: list of str, optional
             Only return data for region(s) in this list.
 
@@ -218,6 +221,7 @@ class Platform:
             'model': model,
             'scenario': scenario,
             'variable': as_str_list(variable) or [],
+            'unit': as_str_list(unit) or [],
             'region': as_str_list(region) or [],
             'default': default
         }

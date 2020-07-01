@@ -456,6 +456,7 @@ class JDBCBackend(CachingBackend):
             model = filters.pop('model')
             scenario = filters.pop('scenario')
             variables = filters.pop('variable')
+            units = filters.pop('unit')
             regions = filters.pop('region')
             default = filters.pop('default')
 
@@ -463,6 +464,7 @@ class JDBCBackend(CachingBackend):
             run_ids = [s['run_id'] for s in scen_list]
             self.jobj.exportTimeseriesData(to_jlist(run_ids),
                                            to_jlist(variables),
+                                           to_jlist(units),
                                            to_jlist(regions),
                                            str(path))
         else:

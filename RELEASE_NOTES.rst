@@ -9,7 +9,7 @@ All changes
 - :pull:`339`: ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype.
 - :pull:`317`: Make :class:`reporting.Quantity` classes interchangeable.
 - :pull:`330`: Use GitHub Actions for continuous testing and integration.
-- :pull:`343`: Add regions parameter to :meth:`.Platform.export_timeseries_data`.
+- :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.
 
 
 v3.0.0 (2020-06-05)

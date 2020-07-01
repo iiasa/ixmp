@@ -51,7 +51,8 @@ def test_scenario_list(mp):
 
 def test_export_timeseries_data(mp, tmp_path):
     path = tmp_path / 'export.csv'
-    mp.export_timeseries_data(path, model='Douglas Adams')
+    mp.export_timeseries_data(path, model='Douglas Adams', unit='???',
+                              region='World')
 
     columns = ['model', 'scenario', 'version', 'variable', 'unit', 'region',
                'meta', 'subannual', 'year', 'value']

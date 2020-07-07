@@ -207,6 +207,13 @@ def test_add_timeseries(ts, fmt):
 
 
 @pytest.mark.parametrize('fmt', ['long', 'wide'])
+def test_add_timeseries_unit(ts, fmt):
+    data = DATA[0].copy() if fmt == 'long' else wide(DATA[0])
+    data['unit'] = 1
+    ts.add_timeseries(data)
+
+
+@pytest.mark.parametrize('fmt', ['long', 'wide'])
 def test_add_and_remove_timeseries_with_long_variable_name(ts, fmt):
     data = (DATA[0] if fmt == 'long' else wide(DATA[0])).copy()
     data.variable = 'x' * 256  # use long variable name (max 256 chars)

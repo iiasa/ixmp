@@ -196,7 +196,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
     def parse_item_sheets(name):
         """Read data for item *name*, possibly across multiple sheets."""
-        dfs = []
+        dfs = [xf.parse(name)]
 
         # Collect data from repeated sheets due to max_row limit
         for x in filter(lambda n: n.startswith(name + '('), xf.sheet_names):

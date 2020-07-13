@@ -174,8 +174,11 @@ def data_for_quantity(ix_type, name, column, scenario, config):
             f'  {repr(filters)}\n  Subsequent computations may fail.'
         )
 
-    # Convert categorical dtype to str
-    data = data.astype({col: str for col in idx_names})
+    # Convert columns with categorical dtype to str
+    data = data.astype({
+        dt[0]: str for dt in data.dtypes.items()
+        if isinstance(dt[1], pd.CategoricalDtype)
+    })
 
     # List of the dimensions
     dims = dims_for_qty(data)

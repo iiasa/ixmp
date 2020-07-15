@@ -96,7 +96,7 @@ class AttrSeries(pd.Series):
 
     def sel(self, indexers=None, drop=False, **indexers_kwargs):
         """Like :meth:`xarray.DataArray.sel`."""
-        indexers = indexers or {}
+        indexers = indexers.copy() if indexers else {}
         indexers.update(indexers_kwargs)
         if len(indexers) == 1:
             level, key = list(indexers.items())[0]

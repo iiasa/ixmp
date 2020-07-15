@@ -39,6 +39,7 @@ def test_class():
         get_data = noop
         get_doc = noop
         get_geo = noop
+        get_locked = noop
         get_meta = noop
         get_model_names = noop
         get_nodes = noop
@@ -62,6 +63,7 @@ def test_class():
         set_data = noop
         set_doc = noop
         set_geo = noop
+        set_locked = noop
         set_meta = noop
         set_node = noop
         set_timeslice = noop

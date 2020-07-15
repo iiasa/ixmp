@@ -98,6 +98,11 @@ TimeSeries
       set_as_default
       timeseries
 
+   and the following attribute:
+
+   .. autosummary::
+      locked
+
 
 Scenario
 --------

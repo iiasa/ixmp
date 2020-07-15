@@ -642,6 +642,24 @@ class JDBCBackend(CachingBackend):
     def is_default(self, ts):
         return bool(self.jindex[ts].isDefault())
 
+    def get_locked(self, ts):
+        # TimeSeries.state is protected in Java, and ixmp_source does not
+        # provide a method to simply check state
+        try:
+            self.jindex[ts].assertTimeSeriesIsLockedInDB(False)
+        except Exception:
+            # Assertion failed = ts was not locked
+            return False
+        else:
+            # Assertion passed = ts was locked
+            return True
+
+    def set_locked(self, ts, value):
+        if value is True:
+            raise NotImplementedError
+        elif value is False:
+            self.jobj.unlockRunid(self.run_id(ts))
+
     def last_update(self, ts):
         timestamp = self.jindex[ts].getLastUpdateTimestamp()
         if timestamp is not None:

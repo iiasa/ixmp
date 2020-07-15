@@ -523,6 +523,39 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def get_locked(self, ts: TimeSeries):
+        """Return the lock state of *ts*.
+
+        Returns
+        -------
+        bool
+            :obj:`True` if *ts* is locked; :obj:`False` otherwise.
+
+        See also
+        --------
+        set_locked
+        """
+
+    @abstractmethod
+    def set_locked(self, ts: TimeSeries, value: bool):
+        """Set the lock state of *ts*.
+
+        Parameters
+        -------
+        value : bool
+            If :obj:`True`, lock *ts*. If :obj:`False`, unlock *ts*.
+
+        Raises
+        ------
+        NotImplementedError
+            if the requested operation is not supported.
+
+        See also
+        --------
+        get_locked
+        """
+
+    @abstractmethod
     def set_as_default(self, ts: TimeSeries):
         """Set the current :attr:`.TimeSeries.version` as the default.
 

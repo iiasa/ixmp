@@ -499,6 +499,17 @@ class TimeSeries:
         # only Scenario class can have a solution
         return False
 
+    @property
+    def locked(self) -> bool:
+        """:obj:`True` if the TimeSeries is locked. Writeable."""
+        return self._backend('get_locked')
+
+    @locked.setter
+    def locked(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError(f"{value}; bool required")
+        self._backend('set_locked', value)
+
     def check_out(self, timeseries_only=False):
         """Check out the TimeSeries.
 

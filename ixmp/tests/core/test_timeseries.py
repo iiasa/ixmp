@@ -172,6 +172,33 @@ def test_default(mp, ts):
     assert not ts.is_default()
 
 
+def test_locked(mp, ts):
+    # *ts* fixture is initially checked out and not locked
+    assert not ts.locked
+
+    # Committed and checked in, but still not locked
+    ts.commit("foo")
+    assert not ts.locked
+
+    # With the default JDBCBackend, cannot manually lock a TimeSeries
+    with pytest.raises(NotImplementedError):
+        ts.locked = True
+
+    # Unlock when already unlocked, a no-op
+    ts.locked = False
+    assert not ts.locked
+
+    # TODO force ts to become locked somehow
+
+    # Unlock when locked
+    ts.locked = False
+    assert not ts.locked
+
+    # Invalid type
+    with pytest.raises(TypeError, match="123; bool required"):
+        ts.locked = 123
+
+
 def test_run_id(ts):
     # New, un-committed TimeSeries has run_id of -1
     assert ts.run_id() == -1

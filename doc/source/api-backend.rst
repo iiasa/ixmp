@@ -147,6 +147,7 @@ Backend API
       get
       get_data
       get_geo
+      get_locked
       init
       is_default
       last_update
@@ -155,6 +156,7 @@ Backend API
       set_data
       set_as_default
       set_geo
+      set_locked
 
    Methods related to :class:`ixmp.Scenario`:
 

@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`350`: Add read/write :attr:`.locked` attribute to :class:`.TimeSeries`/:class:`.Scenario`.
 - :pull:`345`: Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets.
 - :pull:`363`: Expand documentation and revise installation instructions.
 - :pull:`362`: Raise Python exceptions from :class:`.JDBCBackend`.

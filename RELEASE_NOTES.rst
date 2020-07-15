@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
 - :pull:`347`: Preserve dtypes of index columns in :func:`.data_for_quantity`.
 - :pull:`339`: ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype.
 - :pull:`317`: Make :class:`reporting.Quantity` classes interchangeable.

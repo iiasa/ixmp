@@ -1,6 +1,6 @@
 from copy import copy
 from collections import ChainMap
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable, Sequence
 import gc
 from itertools import chain
 import logging
@@ -1052,9 +1052,13 @@ def to_jlist(arg, convert=None):
     if convert:
         arg = map(convert, arg)
 
-    if isinstance(arg, Collection):
+    if isinstance(arg, str):
+        arg = [arg]
+
+    if isinstance(arg, Sequence):
         # Sized collection can be used directly
         jlist.addAll(arg)
+
     elif isinstance(arg, Iterable):
         # Transfer items from an iterable, generator, etc. to the LinkedList
         [jlist.add(value) for value in arg]

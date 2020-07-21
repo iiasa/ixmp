@@ -1,6 +1,6 @@
 from copy import copy
 from collections import ChainMap
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable, Sequence
 import gc
 from itertools import chain
 import logging
@@ -1038,7 +1038,7 @@ def to_jlist(arg, convert=None):
 
     Parameters
     ----------
-    arg : Collection or Iterable
+    arg : Collection or Iterable or str
     convert : callable, optional
         If supplied, every element of *arg* is passed through `convert` before
         being added.
@@ -1049,12 +1049,19 @@ def to_jlist(arg, convert=None):
     """
     jlist = java.LinkedList()
 
+    # Previously JPype1 (prior to 1.0) could take single argument
+    # in addAll method of Java collection. As string implements Sequence
+    # contract in Python we need to convert it explicitly to list here.
+    if isinstance(arg, str):
+        arg = [arg]
+
     if convert:
         arg = map(convert, arg)
 
-    if isinstance(arg, Collection):
+    if isinstance(arg, Sequence):
         # Sized collection can be used directly
         jlist.addAll(arg)
+
     elif isinstance(arg, Iterable):
         # Transfer items from an iterable, generator, etc. to the LinkedList
         [jlist.add(value) for value in arg]

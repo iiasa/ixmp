@@ -1,4 +1,4 @@
-"""Test all functionality of ixmp.Platform."""
+"""Test functionality of ixmp.Platform."""
 from sys import getrefcount
 from weakref import getweakrefcount
 

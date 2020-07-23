@@ -1587,7 +1587,7 @@ class Scenario(TimeSeries):
         name : str, optional
             meta attribute name
         """
-        all_meta = self._backend('get_meta')
+        all_meta = self._backend('get_scenario_meta')
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name_or_dict, value=None):
@@ -1604,7 +1604,7 @@ class Scenario(TimeSeries):
         """
         if type(name_or_dict) == dict:
             name_or_dict = list(name_or_dict.items())
-        self._backend('set_meta', name_or_dict, value)
+        self._backend('set_scenario_meta', name_or_dict, value)
 
     def delete_meta(self, name):
         """Delete scenario meta.
@@ -1614,7 +1614,7 @@ class Scenario(TimeSeries):
         name : str or list of str
             Either single meta key or list of keys.
         """
-        self._backend('delete_meta', name)
+        self._backend('delete_scenario_meta', name)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

@@ -888,8 +888,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, s: Scenario):
-        """Return all meta.
+    def get_scenario_meta(self, s: Scenario):
+        """Return all scenario meta.
 
         Returns
         -------
@@ -902,8 +902,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_meta(self, s: Scenario, name_or_dict, value=None):
-        """Set single or multiple meta entries.
+    def set_scenario_meta(self, s: Scenario, name_or_dict, value=None):
+        """Set single or multiple scenario meta entries.
 
         Parameters
         ----------
@@ -925,8 +925,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete_meta(self, s, name):
-        """Remove single or multiple meta entries.
+    def delete_scenario_meta(self, s, name):
+        """Remove single or multiple scenario meta entries.
 
         Parameters
         ----------

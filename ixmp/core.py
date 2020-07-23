@@ -400,6 +400,14 @@ class Platform:
         else:
             return {model: result.get(model) == 1 for model in models_list}
 
+    def get_meta(self, model=None, scenario=None, version=None):
+        """Retrieve meta entries."""
+        return ".. get metadata"
+
+    def set_meta(self, metadata):
+        """Set new or overwrite existing meta entries."""
+        return ".. set metadata"
+
 
 class TimeSeries:
     """Collection of data in time series format.

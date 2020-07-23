@@ -883,7 +883,7 @@ class JDBCBackend(CachingBackend):
         args = (s,) if type == 'set' else (s, type, name)
         self.cache_invalidate(*args)
 
-    def get_meta(self, s):
+    def get_scenario_meta(self, s):
         def unwrap(v):
             """Unwrap meta numeric value (BigDecimal -> Double)"""
             return v.doubleValue() if isinstance(v, java.BigDecimal) else v
@@ -891,7 +891,7 @@ class JDBCBackend(CachingBackend):
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
-    def set_meta(self, s, name_or_dict, value=None):
+    def set_scenario_meta(self, s, name_or_dict, value=None):
         if type(name_or_dict) == list:
             jdata = java.LinkedHashMap()
             for k, v in name_or_dict:
@@ -908,7 +908,7 @@ class JDBCBackend(CachingBackend):
 
         getattr(self.jindex[s], method_name)(name_or_dict, value)
 
-    def delete_meta(self, s, name):
+    def delete_scenario_meta(self, s, name):
         if type(name) == str:
             name = [name]
         jdata = java.LinkedList()

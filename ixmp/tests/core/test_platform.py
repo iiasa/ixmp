@@ -51,13 +51,28 @@ def test_scenario_list(mp):
 
 def test_export_timeseries_data(mp, tmp_path):
     path = tmp_path / 'export.csv'
-    mp.export_timeseries_data(path, model='Douglas Adams')
+    mp.export_timeseries_data(path, model='Douglas Adams', unit='???',
+                              region='World')
 
-    with open(path) as f:
-        first_line = f.readline()
-        assert first_line == ('MODEL,SCENARIO,VERSION,VARIABLE,UNIT,'
-                              'REGION,META,SUBANNUAL,YEAR,VALUE\n')
-        assert len(f.readlines()) == 2
+    columns = ['model', 'scenario', 'version', 'variable', 'unit', 'region',
+               'meta', 'subannual', 'year', 'value']
+    csv_dtype = dict(model=str, scenario=str, version=int, variable=str,
+                     unit=str, region=str, year=int, subannual=str, meta=int,
+                     value=float)
+    obs = pd.read_csv(path,
+                      index_col=False,
+                      header=0,
+                      names=columns,
+                      dtype=csv_dtype)
+    exp = pd.DataFrame(
+        [['Douglas Adams', 'Hitchhiker', 1, 'Testing', '???', 'World', 0,
+          'Year', '2010', 23.7],
+         ['Douglas Adams', 'Hitchhiker', 1, 'Testing', '???', 'World', 0,
+          'Year', '2020', 23.8]],
+        columns=['model', 'scenario', 'version', 'variable', 'unit', 'region',
+                 'meta', 'subannual', 'year', 'value'],
+    ).astype(csv_dtype)
+    assert_frame_equal(obs, exp)
 
 
 def test_unit_list(test_mp):

@@ -5,6 +5,7 @@ All changes
 -----------
 
 - :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
+- :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.
 - :pull:`347`: Preserve dtypes of index columns in :func:`.data_for_quantity`.
 - :pull:`339`: ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype.
 - :pull:`317`: Make :class:`reporting.Quantity` classes interchangeable.

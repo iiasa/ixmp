@@ -888,6 +888,77 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def get_meta(self, model: str, scenario: str, version) -> dict:
+        """Retrieve meta.
+
+        Parameters
+        ----------
+        model : str, optional
+            filter meta  meta by a model
+        scenario : str, optional
+            filter meta by a scenario
+        version : int or str, optional
+            retrieve meta of a specific model/scenario run version
+
+        Returns
+        -------
+        dict (str -> any)
+            Mapping from meta keys to values.
+        """
+
+    @abstractmethod
+    def set_meta(self, meta: dict, model: str, scenario: str, version):
+        """Set meta entries.
+
+        Parameters
+        ----------
+        meta : dict, containing meta key/value pairs
+        model : str, optional
+            model name that meta should be attached to
+        scenario : str, optional
+            scenario name that meta should be attached to
+        version : int or str, optional
+            run version that meta should be attached to
+        """
+
+    @abstractmethod
+    def set_scenario_meta(self, s: Scenario, name_or_dict, value=None):
+        """Set single or multiple scenario meta entries.
+
+        Parameters
+        ----------
+        name_or_dict : str or dict
+            If the argument is dict, it used as a mapping of meta
+            categories (names) to values. Otherwise, use the argument
+            as the meta attribute name.
+        value : str or number or bool, optional
+            Meta attribute value.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        TypeError
+            If *value* is not a valid type.
+        """
+
+    @abstractmethod
+    def delete_scenario_meta(self, s, name):
+        """Remove single or multiple scenario meta entries.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single meta key or list of keys.
+
+        Returns
+        -------
+        None
+        """
+
+    @abstractmethod
     def get_scenario_meta(self, s: Scenario):
         """Return all scenario meta.
 

@@ -53,6 +53,7 @@ JAVA_CLASSES = [
     'java.lang.Integer',
     'java.lang.NoClassDefFoundError',
     'java.lang.IllegalArgumentException',
+    'java.lang.Long',
     'java.lang.Runtime',
     'java.lang.System',
     'java.math.BigDecimal',
@@ -875,10 +876,30 @@ class JDBCBackend(CachingBackend):
         args = (s,) if type == 'set' else (s, type, name)
         self.cache_invalidate(*args)
 
+    def get_meta(self, model: str = None, scenario: str = None, version=None
+                ) -> str:
+        meta = self.jobj.getMeta(model, scenario, version)
+        return {entry.getKey(): entry.getValue() for entry in meta.entrySet()}
+
+    def set_meta(self, meta: dict, model: str = None, scenario: str = None,
+                 version = None):
+        if not (model or scenario or version):
+            msg = ('At least one parameter has to be provided out of: '
+                   'model, scenario, version')
+            raise ValueError(msg)
+        if version is not None:
+            version = java.Long(version)
+
+        jmeta = java.HashMap()
+        for k, v in meta.items():
+            jmeta.put(str(k), v)
+        return self.jobj.setMeta(model, scenario, version, jmeta)
+
     def get_scenario_meta(self, s):
         def unwrap(v):
             """Unwrap meta numeric value (BigDecimal -> Double)"""
             return v.doubleValue() if isinstance(v, java.BigDecimal) else v
+        # TODO: unwrapping isn't always working?
 
         return {entry.getKey(): unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}

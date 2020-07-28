@@ -61,6 +61,8 @@ class Platform:
         'close_db',
         'get_doc',
         'set_doc',
+        'get_meta',
+        'set_meta',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -400,39 +402,6 @@ class Platform:
         else:
             return {model: result.get(model) == 1 for model in models_list}
 
-    def get_meta(self, *args, **kwargs):
-        """Retrieve meta entries.
-
-        Parameters
-        ----------
-        model : str, optional
-            filter meta  meta by a model
-        scenario : str, optional
-            filter meta by a scenario
-        version : int or str, optional
-            retrieve meta of a specific model/scenario run version
-
-        Returns
-        -------
-        dict (str -> any)
-            Mapping from meta keys to values.
-        """
-        return self._backend.get_meta(*args, **kwargs)
-
-    def set_meta(self, *args, **kwargs):
-        """Set new or overwrite existing meta entries.
-
-        Parameters
-        ----------
-        metadata : dict
-        model : str, optional
-            filter meta by model name
-        scenario : str, optional
-            filter meta by scenario name
-        version : str, optional
-            filter meta by run version
-        """
-        return self._backend.set_meta(*args, **kwargs)
 
 class TimeSeries:
     """Collection of data in time series format.

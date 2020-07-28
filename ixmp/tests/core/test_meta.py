@@ -19,7 +19,8 @@ def test_set_meta(mp):
     meta = {'sample_string': 3}
     model = models['dantzig']['model']
     mp.set_meta(meta, model=model)
-    assert(mp.get_meta(model=model) == meta)
+    obs = mp.get_meta(model=model)
+    assert obs == meta
 
 
 def test_unique_meta(mp):
@@ -31,7 +32,7 @@ def test_unique_meta(mp):
     scenario.commit('save dummy scenario')
     mp.set_meta(sample_meta, model=model['model'])
     with pytest.raises(Exception) as err:
-        # TODO: look for more exact exception - 
+        # TODO: look for more exact exception -
         # jpype._jclass.at.ac.iiasa.ixmp.exceptions.IxException: at.ac.iiasa.ixmp.exceptions.IxException: Metadata already contains category another_string
         mp.set_meta(sample_meta, **model, version=scenario.version)
     scen = ixmp.Scenario(mp, **model)
@@ -45,7 +46,7 @@ def test_unique_meta_reversed(mp):
     level should fail too.
     """
     model = models['dantzig']
-    scen = mp.Scenario(mp, **model)
+    scen = ixmp.Scenario(mp, **model)
     scen.set_meta(sample_meta)
 
     with pytest.raises(Exception):

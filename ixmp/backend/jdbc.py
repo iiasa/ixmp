@@ -143,6 +143,11 @@ def _domain_enum(domain):
                          f'existing domains: {domains}')
 
 
+def _unwrap(v):
+    """Unwrap meta numeric value (BigDecimal -> Double)"""
+    return v.doubleValue() if isinstance(v, java.BigDecimal) else v
+
+
 class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQL databases.
 
@@ -876,10 +881,12 @@ class JDBCBackend(CachingBackend):
         args = (s,) if type == 'set' else (s, type, name)
         self.cache_invalidate(*args)
 
-    def get_meta(self, model: str = None, scenario: str = None, version=None
-                ) -> str:
+    def get_meta(self, model: str = None, scenario: str = None,
+                 version: int = None) -> dict:
+
         meta = self.jobj.getMeta(model, scenario, version)
-        return {entry.getKey(): entry.getValue() for entry in meta.entrySet()}
+        return {entry.getKey(): _unwrap(entry.getValue())
+                for entry in meta.entrySet()}
 
     def set_meta(self, meta: dict, model: str = None, scenario: str = None,
                  version = None):
@@ -896,12 +903,7 @@ class JDBCBackend(CachingBackend):
         return self.jobj.setMeta(model, scenario, version, jmeta)
 
     def get_scenario_meta(self, s):
-        def unwrap(v):
-            """Unwrap meta numeric value (BigDecimal -> Double)"""
-            return v.doubleValue() if isinstance(v, java.BigDecimal) else v
-        # TODO: unwrapping isn't always working?
-
-        return {entry.getKey(): unwrap(entry.getValue())
+        return {entry.getKey(): _unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
 
     def set_scenario_meta(self, s, name_or_dict, value=None):

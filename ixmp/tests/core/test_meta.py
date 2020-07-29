@@ -46,7 +46,7 @@ def test_unique_meta_model_scenario(mp):
     """
     model = models['dantzig']
     mp.set_meta(sample_meta, model=model['model'])
-    expected = ("Metadata already contains category")
+    expected = "Metadata already contains category"
     with pytest.raises(Exception, match=expected):
         mp.set_meta(sample_meta, **model)
 

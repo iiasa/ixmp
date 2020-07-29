@@ -922,6 +922,22 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def remove_meta(self, categories: list, model: str, scenario: str,
+                    version: int):
+        """Remove meta categories.
+
+        Parameters
+        ----------
+        categories : list of str, meta-categories to remove
+        model : str, optional
+            model name that meta should be attached to
+        scenario : str, optional
+            scenario name that meta should be attached to
+        version : int or str, optional
+            run version that meta should be attached to
+        """
+
+    @abstractmethod
     def set_scenario_meta(self, s: Scenario, name_or_dict, value=None):
         """Set single or multiple scenario meta entries.
 
@@ -996,7 +1012,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete_scenario_meta(self, s, name):
+    def remove_scenario_meta(self, s, name):
         """Remove single or multiple scenario meta entries.
 
         Parameters

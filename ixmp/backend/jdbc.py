@@ -910,6 +910,17 @@ class JDBCBackend(CachingBackend):
             jmeta.put(str(k), v)
         self.jobj.setMeta(model, scenario, version, jmeta)
 
+    def remove_meta(self, categories, model: str = None, scenario: str = None,
+                    version: int = None):
+        if not (model or scenario or version):
+            msg = ('At least one parameter has to be provided out of: '
+                   'model, scenario, version')
+            raise ValueError(msg)
+        if version is not None:
+            version = java.Long(version)
+        return self.jobj.removeMeta(model, scenario, version,
+                                    to_jlist(categories))
+
     def get_scenario_meta(self, s):
         return {entry.getKey(): _unwrap(entry.getValue())
                 for entry in self.jindex[s].getMeta().entrySet()}
@@ -931,7 +942,11 @@ class JDBCBackend(CachingBackend):
 
         getattr(self.jindex[s], method_name)(name_or_dict, value)
 
-    def delete_scenario_meta(self, s, name):
+    def delete_scenario_meta(self, *args, **kwargs):
+        # Add DeprecationWarning
+        return self.remove_scenario_meta(self, *args, **kwargs)
+
+    def remove_scenario_meta(self, s, name):
         if type(name) == str:
             name = [name]
         jdata = java.LinkedList()

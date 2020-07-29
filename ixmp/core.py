@@ -1180,7 +1180,49 @@ class Scenario(TimeSeries):
             Index names mapped to lists of index set elements. Elements not
             appearing in the respective index set(s) are silently ignored.
         """
+        if len(kwargs):
+            raise DeprecationWarning(
+                "ignored kwargs to Scenario.par(); will raise TypeError in 4.0"
+            )
         return self._backend('item_get_elements', 'par', name, filters)
+
+    def items(self, type=ItemType.PAR, filters=None):
+        """Iterate over model data items.
+
+        Parameters
+        ----------
+        type : ItemType, optional
+            Types of items to iterate, e.g. :data:`ItemType.PAR` for
+            parameters, the only value currently supported.
+        filters : dict, optional
+            Filters for values along dimensions; same as the `filters` argument
+            to :meth:`par`.
+
+        Yields
+        ------
+        (str, object)
+            Tuples of item name and data.
+        """
+        if type != ItemType.PAR:
+            raise NotImplementedError(
+                f"Scenario.items(type={type}); only ItemType.PAR is supported"
+            )
+
+        filters = filters or dict()
+
+        names = sorted(self.par_list())
+
+        for name in sorted(names):
+            idx_names = set(self.idx_names(name))
+            if len(filters) and not set(filters.keys()) & idx_names:
+                # No overlap between the filters and this item's dimensions
+                continue
+
+            # Retrieve the data, reducing the filters to only the dimensions of
+            # the item
+            yield name, self.par(name, filters={
+                k: v for k, v in filters.items() if k in idx_names
+            })
 
     def add_par(self, name, key_or_data=None, value=None, unit=None,
                 comment=None):

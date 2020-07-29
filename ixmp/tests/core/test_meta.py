@@ -31,26 +31,37 @@ def test_unique_meta(mp):
     scenario = ixmp.Scenario(mp, **model, version='new')
     scenario.commit('save dummy scenario')
     mp.set_meta(sample_meta, model=model['model'])
-    with pytest.raises(Exception) as err:
-        # TODO: look for more exact exception -
-        # jpype._jclass.at.ac.iiasa.ixmp.exceptions.IxException: at.ac.iiasa.ixmp.exceptions.IxException: Metadata already contains category another_string
+    expected = ("Metadata already contains category")
+    with pytest.raises(Exception, match=expected):
         mp.set_meta(sample_meta, **model, version=scenario.version)
     scen = ixmp.Scenario(mp, **model)
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match=expected):
         scen.set_meta(sample_meta)
 
 
-def test_unique_meta_reversed(mp):
+def test_unique_meta_model_scenario(mp):
     """
-    When setting a meta key on a lower level, setting the same key on an higher
-    level should fail too.
+    When setting a meta key for a Model, it shouldn't be possible to set it
+    for a Model+Scenario then.
+    """
+    model = models['dantzig']
+    mp.set_meta(sample_meta, model=model['model'])
+    expected = ("Metadata already contains category")
+    with pytest.raises(Exception, match=expected):
+        mp.set_meta(sample_meta, **model)
+
+
+def test_unique_meta_scenario(mp):
+    """
+    When setting a meta key on a specific Scenario run, setting the same key
+    on an higher level should fail too.
     """
     model = models['dantzig']
     scen = ixmp.Scenario(mp, **model)
     scen.set_meta(sample_meta)
 
-    with pytest.raises(Exception):
-        # TODO: look for more exact exception
+    expected = ("Metadata already contains category")
+    with pytest.raises(Exception, match=expected):
         mp.set_meta(sample_meta, **model)
-    with pytest.raises(Exception):
-        ixmp.set_meta(sample_meta, model=model['model'])
+    with pytest.raises(Exception, match=expected):
+        mp.set_meta(sample_meta, model=model['model'])

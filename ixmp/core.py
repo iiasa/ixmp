@@ -63,6 +63,7 @@ class Platform:
         'set_doc',
         'get_meta',
         'set_meta',
+        'remove_meta',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -1600,15 +1601,27 @@ class Scenario(TimeSeries):
             name_or_dict = list(name_or_dict.items())
         self._backend('set_scenario_meta', name_or_dict, value)
 
-    def delete_meta(self, name):
-        """Delete scenario meta.
+    def delete_meta(self, *args, **kwargs):
+        """DEPRECATED: Remove scenario meta.
 
         Parameters
         ----------
         name : str or list of str
             Either single meta key or list of keys.
         """
-        self._backend('delete_scenario_meta', name)
+        warn('Scenario.delete_meta is deprecated; use Scenario.remove_meta '
+             'instead', DeprecationWarning)
+        self.remove_meta(*args, **kwargs)
+
+    def remove_meta(self, name):
+        """Remove scenario meta.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single meta key or list of keys.
+        """
+        self._backend('remove_scenario_meta', name)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

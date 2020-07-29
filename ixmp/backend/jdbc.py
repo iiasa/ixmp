@@ -897,7 +897,7 @@ class JDBCBackend(CachingBackend):
                 for entry in meta.entrySet()}
 
     def set_meta(self, meta: dict, model: str = None, scenario: str = None,
-                 version = None):
+                 version: int = None) -> None:
         if not (model or scenario or version):
             msg = ('At least one parameter has to be provided out of: '
                    'model, scenario, version')
@@ -908,7 +908,7 @@ class JDBCBackend(CachingBackend):
         jmeta = java.HashMap()
         for k, v in meta.items():
             jmeta.put(str(k), v)
-        return self.jobj.setMeta(model, scenario, version, jmeta)
+        self.jobj.setMeta(model, scenario, version, jmeta)
 
     def get_scenario_meta(self, s):
         return {entry.getKey(): _unwrap(entry.getValue())

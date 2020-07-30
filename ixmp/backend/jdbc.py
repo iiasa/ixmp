@@ -1,6 +1,7 @@
 from copy import copy
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
+from typing import Generator
 import gc
 from itertools import chain
 import logging
@@ -18,7 +19,6 @@ from ixmp.core import Scenario
 from ixmp.utils import as_str_list, filtered
 from . import FIELDS, ItemType
 from .base import CachingBackend
-
 
 log = logging.getLogger(__name__)
 
@@ -342,6 +342,14 @@ class JDBCBackend(CachingBackend):
 
     def add_scenario(self, name):
         self.jobj.addScenario(str(name))
+
+    def list_models(self) -> Generator[str, None, None]:
+        for model in self.jobj.listModels():
+            yield str(model)
+
+    def list_scenarios(self) -> Generator[str, None, None]:
+        for scenario in self.jobj.listScenarios():
+            yield str(scenario)
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>

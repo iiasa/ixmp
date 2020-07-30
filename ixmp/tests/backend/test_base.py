@@ -66,7 +66,10 @@ def test_class():
         set_scenario_meta = noop
         delete_scenario_meta = noop
         remove_scenario_meta = noop
-
+        add_model = noop
+        add_scenario = noop
+        list_models = noop
+        list_scenarios = noop
 
     # Complete subclass can be instantiated
     be = BE2()

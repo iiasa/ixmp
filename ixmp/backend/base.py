@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from copy import copy
+from typing import Generator
 import json
 
 from ixmp.core import TimeSeries, Scenario
@@ -60,10 +61,21 @@ class Backend(ABC):
         :param name : str, new model name
         """
 
+    @abstractmethod
     def add_scenario(self, name: str):
         """ Add (register) new scenario name
 
         :param name : str, new scenario name
+        """
+
+    @abstractmethod
+    def list_models(self) -> Generator[str, None, None]:
+        """ List existing model names
+        """
+
+    @abstractmethod
+    def list_scenarios(self) -> Generator[str, None, None]:
+        """ List existing scenario names
         """
 
     @abstractmethod

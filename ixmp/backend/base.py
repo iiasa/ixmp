@@ -983,29 +983,6 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_scenario_meta(self, s: Scenario, name_or_dict, value=None):
-        """Set single or multiple scenario meta entries.
-
-        Parameters
-        ----------
-        name_or_dict : str or dict
-            If the argument is dict, it is used as a mapping of meta
-            categories (names) to values. Otherwise, use the argument
-            as the meta category name.
-        value : str or number or bool, optional
-            Meta category value.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError
-            If *value* is not a valid type.
-        """
-
-    @abstractmethod
     def get_scenario_meta(self, s: Scenario):
         """Return all scenario meta.
 

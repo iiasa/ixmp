@@ -9,47 +9,68 @@ from ixmp.testing import models
 
 sample_meta = {'sample_int': 3, 'sample_string': 'string_value',
                'sample_bool': False}
+meta_entries = [
+    {'sample_int': 3},
+    {'sample_string': 'string_value'},
+    {'sample_bool': False},
+    {
+        'sample_int': 3,
+        'sample_string': 'string_value',
+        'sample_bool': False,
+    },
+    {'mixed_category': ['string', 0.01, True]},
+]
 dantzig = models['dantzig']
 
 
-def test_set_meta_missing_argument(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_set_meta_missing_argument(mp, meta):
     with pytest.raises(ValueError):
-        mp.set_meta(sample_meta)
+        mp.set_meta(meta)
     with pytest.raises(ValueError):
-        mp.set_meta(sample_meta, model=dantzig['model'], version=0)
+        mp.set_meta(meta, model=dantzig['model'], version=0)
     with pytest.raises(ValueError):
-        mp.set_meta(sample_meta, scenario=dantzig['scenario'], version=0)
+        mp.set_meta(meta, scenario=dantzig['scenario'], version=0)
 
 
-def test_set_get_meta(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_set_get_meta(mp, meta):
     """Assert that storing+retrieving meta yields expected values"""
-    mp.set_meta(sample_meta, model=dantzig['model'])
+    mp.set_meta(meta, model=dantzig['model'])
     obs = mp.get_meta(model=dantzig['model'])
-    assert obs == sample_meta
+    assert obs == meta
     assert obs == mp.get_meta()
 
 
-def test_unique_meta(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_unique_meta(mp, meta):
     """
     When setting a meta key on two levels, a uniqueness error is expected.
     """
     scenario = ixmp.Scenario(mp, **dantzig, version='new')
     scenario.commit('save dummy scenario')
-    mp.set_meta(sample_meta, model=dantzig['model'])
+    mp.set_meta(meta, model=dantzig['model'])
     expected = ("Metadata already contains category")
     with pytest.raises(Exception, match=expected):
-        mp.set_meta(sample_meta, **dantzig, version=scenario.version)
+        mp.set_meta(meta, **dantzig, version=scenario.version)
     scen = ixmp.Scenario(mp, **dantzig)
     with pytest.raises(Exception, match=expected):
-        scen.set_meta(sample_meta)
+        scen.set_meta(meta)
+    # changing the category value type still should raise an error
+    meta = {'sample_entry': 3}
+    mp.set_meta(meta, **dantzig)
+    meta['sample_entry'] = 'test-string'
+    with pytest.raises(Exception, match=expected):
+        mp.set_meta(meta, **dantzig, version=scenario.version)
 
 
-def test_unique_meta_2(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_unique_meta_differing_model(mp, meta):
     """
     When meta is set on a model-level, setting it on a new model and a scenario
     should fail.
     """
-    mp.set_meta(sample_meta, model=dantzig['model'])
+    mp.set_meta(meta, model=dantzig['model'])
     dantzig2 = {
         'model': 'canning problem 2',
         'scenario': 'standard',
@@ -57,38 +78,40 @@ def test_unique_meta_2(mp):
     mp.add_model(dantzig2['model'])
     expected = "Metadata already contains category"
     with pytest.raises(Exception, match=expected):
-        mp.set_meta(sample_meta, **dantzig2)
+        mp.set_meta(meta, **dantzig2)
 
 
-def test_unique_meta_model_scenario(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_unique_meta_model_scenario(mp, meta):
     """
     When setting a meta key for a Model, it shouldn't be possible to set it
     for a Model+Scenario then.
     """
-    mp.set_meta(sample_meta, model=dantzig['model'])
+    mp.set_meta(meta, model=dantzig['model'])
     expected = "Metadata already contains category"
     with pytest.raises(Exception, match=expected):
-        mp.set_meta(sample_meta, **dantzig)
+        mp.set_meta(meta, **dantzig)
 
 
-def test_unique_meta_scenario(mp):
+@pytest.mark.parametrize('meta', meta_entries)
+def test_unique_meta_scenario(mp, meta):
     """
     When setting a meta key on a specific Scenario run, setting the same key
     on an higher level (Model or Model+Scenario) should fail.
     """
     scen = ixmp.Scenario(mp, **dantzig)
-    scen.set_meta(sample_meta)
+    scen.set_meta(meta)
     # add a second scenario and verify that setting Meta for it works
     scen2 = ixmp.Scenario(mp, **dantzig, version="new")
     scen2.commit('save dummy scenario')
-    scen2.set_meta(sample_meta)
+    scen2.set_meta(meta)
     assert scen2.get_meta() == scen.get_meta()
 
     expected = ("Metadata already contains category")
     with pytest.raises(Exception, match=expected):
-        mp.set_meta(sample_meta, **dantzig)
+        mp.set_meta(meta, **dantzig)
     with pytest.raises(Exception, match=expected):
-        mp.set_meta(sample_meta, model=dantzig['model'])
+        mp.set_meta(meta, model=dantzig['model'])
 
 
 def test_meta_partial_overwrite(mp):

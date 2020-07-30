@@ -976,7 +976,7 @@ class JDBCBackend(CachingBackend):
         if type(name_or_dict) == list:
             jdata = java.LinkedHashMap()
             for k, v in name_or_dict:
-                jdata.put(str(k), v)
+                jdata.put(str(k), _wrap(v))
             self.jindex[s].setMeta(jdata)
             return
 

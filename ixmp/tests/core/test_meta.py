@@ -181,3 +181,16 @@ def test_meta_arguments(mp):
     scen2.commit('save dummy scenario')
     scen2.set_meta(*meta.popitem())
     assert scen.get_meta() == scen2.get_meta()
+
+
+def test_update_meta_lists(mp):
+    """Set metadata categories having list/array values"""
+    sample_meta = {'list_category': ['a', 'b', 'c']}
+    mp.set_meta(sample_meta, model=dantzig['model'])
+    obs = mp.get_meta(model=dantzig['model'])
+    assert obs == sample_meta
+    # try updating meta
+    sample_meta = {'list_category': ['a', 'e', 'f']}
+    mp.set_meta(sample_meta, model=dantzig['model'])
+    obs = mp.get_meta(model=dantzig['model'])
+    assert obs == sample_meta

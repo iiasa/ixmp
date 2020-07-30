@@ -60,6 +60,7 @@ JAVA_CLASSES = [
     'java.util.HashMap',
     'java.util.LinkedHashMap',
     'java.util.LinkedList',
+    'java.util.ArrayList',
     'java.util.Properties',
     'at.ac.iiasa.ixmp.dto.DocumentationKey',
 ]
@@ -145,7 +146,22 @@ def _domain_enum(domain):
 
 def _unwrap(v):
     """Unwrap meta numeric value (BigDecimal -> Double)"""
-    return v.doubleValue() if isinstance(v, java.BigDecimal) else v
+    if isinstance(v, java.BigDecimal):
+        return v.doubleValue()
+    if isinstance(v, java.ArrayList):
+        return [_unwrap(elt) for elt in v]
+    return v
+
+
+def _wrap(value):
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    elif isinstance(value, (Sequence, Iterable)):
+        jlist = java.ArrayList()
+        [jlist.add(_wrap(elt)) for elt in value]
+        return jlist
+    else:
+        raise ValueError(f'Cannot use value {value} as metadata')
 
 
 class JDBCBackend(CachingBackend):
@@ -939,7 +955,7 @@ class JDBCBackend(CachingBackend):
 
         jmeta = java.HashMap()
         for k, v in meta.items():
-            jmeta.put(str(k), v)
+            jmeta.put(str(k), _wrap(v))
         self.jobj.setMeta(model, scenario, version, jmeta)
 
     def remove_meta(self, categories, model: str = None, scenario: str = None,

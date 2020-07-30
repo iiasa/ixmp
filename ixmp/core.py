@@ -64,6 +64,8 @@ class Platform:
         'get_meta',
         'set_meta',
         'remove_meta',
+        'add_model',
+        'add_scenario',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):

@@ -284,6 +284,7 @@ class TestScenario:
         # NB could make a more exact comparison of the Scenarios
 
         # Pre-initialize skipped items 'baz_2' and 'baz_3'
+        scen_empty.check_out()
         scen_empty.init_par('baz_2', ['i'], ['i_dim'])
         scen_empty.init_set('baz_3', ['i', 'i'], ['i', 'i_also'])
 
@@ -292,6 +293,7 @@ class TestScenario:
         scen_empty.read_excel(tmp_path)
 
         # Re-initialize an item with different index names
+        scen_empty.check_out()
         scen_empty.remove_par('d')
         scen_empty.init_par('d', idx_sets=['i', 'j'], idx_names=['I', 'J'])
 

@@ -154,11 +154,13 @@ def _unwrap(v):
 
 
 def _wrap(value):
-    if isinstance(value, (str, int, float, bool)):
+    if isinstance(value, (str, int, bool)):
         return value
+    if isinstance(value, float):
+        return java.BigDecimal(value)
     elif isinstance(value, (Sequence, Iterable)):
         jlist = java.ArrayList()
-        [jlist.add(_wrap(elt)) for elt in value]
+        jlist.addAll([_wrap(elt) for elt in value])
         return jlist
     else:
         raise ValueError(f'Cannot use value {value} as metadata')

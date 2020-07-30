@@ -194,3 +194,11 @@ def test_update_meta_lists(mp):
     mp.set_meta(sample_meta, model=dantzig['model'])
     obs = mp.get_meta(model=dantzig['model'])
     assert obs == sample_meta
+
+
+def test_meta_mixed_list(mp):
+    """Set metadata categories having list/array values"""
+    meta = {'mixed_category': ['string', 0.01, True]}
+    mp.set_meta(meta, model=dantzig['model'])
+    obs = mp.get_meta(model=dantzig['model'])
+    assert obs == meta

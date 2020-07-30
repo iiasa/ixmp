@@ -888,7 +888,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, model: str, scenario: str, version) -> dict:
+    def get_meta(self, model: str, scenario: str, version: int) -> dict:
         """Retrieve meta.
 
         Parameters

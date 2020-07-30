@@ -527,6 +527,9 @@ class JDBCBackend(CachingBackend):
                             allow_empty_args=False):
         """Validate arguments for setting/deleting meta"""
         valid = False
+        if allow_empty_args:
+            if not model and not scenario and version is None:
+                valid = True
         if model and not scenario and version is None:
             valid = True
         elif scenario and not model and version is None:
@@ -537,8 +540,8 @@ class JDBCBackend(CachingBackend):
             valid = True
         if not valid:
             msg = ('Invalid arguments. Valid model, scenario, version '
-                    'combinations are: (model), (scenario), (model, scenario),'
-                    ' (model, scenario, version)')
+                   'combinations are: (model), (scenario), (model, scenario), '
+                   '(model, scenario, version)')
             raise ValueError(msg)
 
     def init(self, ts, annotation):

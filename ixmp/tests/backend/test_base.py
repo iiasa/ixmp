@@ -61,9 +61,12 @@ def test_class():
         set_node = noop
         set_timeslice = noop
         set_unit = noop
+        remove_meta = noop
         get_scenario_meta = noop
         set_scenario_meta = noop
         delete_scenario_meta = noop
+        remove_scenario_meta = noop
+
 
     # Complete subclass can be instantiated
     be = BE2()

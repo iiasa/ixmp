@@ -1,4 +1,4 @@
-"""Test meta functionality of ixmp.Platform."""
+"""Test meta functionality of ixmp.Platform and ixmp.Scenario."""
 
 import copy
 import pytest
@@ -26,6 +26,7 @@ def test_set_get_meta(mp):
     mp.set_meta(sample_meta, model=dantzig['model'])
     obs = mp.get_meta(model=dantzig['model'])
     assert obs == sample_meta
+    assert obs == mp.get_meta()
 
 
 def test_unique_meta(mp):
@@ -41,6 +42,22 @@ def test_unique_meta(mp):
     scen = ixmp.Scenario(mp, **dantzig)
     with pytest.raises(Exception, match=expected):
         scen.set_meta(sample_meta)
+
+
+def test_unique_meta_2(mp):
+    """
+    When meta is set on a model-level, setting it on a new model and a scenario
+    should fail.
+    """
+    mp.set_meta(sample_meta, model=dantzig['model'])
+    dantzig2 = {
+        'model': 'canning problem 2',
+        'scenario': 'standard',
+    }
+    mp.add_model(dantzig2['model'])
+    expected = "Metadata already contains category"
+    with pytest.raises(Exception, match=expected):
+        mp.set_meta(sample_meta, **dantzig2)
 
 
 def test_unique_meta_model_scenario(mp):

@@ -39,13 +39,16 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type, max_row=None):
+def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
     --------
     Scenario.to_excel
     """
+    # Default: empty dict
+    filters = filters or dict()
+
     # Types of items to write
     ix_types = ['set', 'par']
     if ItemType.VAR in item_type:
@@ -69,8 +72,17 @@ def s_write_excel(be, s, path, item_type, max_row=None):
     max_row = min(int(max_row or EXCEL_MAX_ROWS), EXCEL_MAX_ROWS)
 
     for name, ix_type in name_type.items():
+        if ix_type == "par":
+            # Use only the filters corresponding to dimensions of this item
+            item_filters = {
+                k: v for k, v in filters.items()
+                if k in be.item_index(s, name, "names")
+            }
+        else:
+            item_filters = None
+
         # Extract data: dict, pd.Series, or pd.DataFrame
-        data = be.item_get_elements(s, ix_type, name)
+        data = be.item_get_elements(s, ix_type, name, item_filters)
 
         if isinstance(data, dict):
             # Scalar equ/par/var: series with index like 'value', 'unit'.

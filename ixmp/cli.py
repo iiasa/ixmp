@@ -148,17 +148,31 @@ def config(action, key, value):
 @main.command()
 @click.option('--max-row', type=int, help='Max row numbers in each sheet.')
 @click.argument('path', type=click.Path(writable=True))
+@click.argument("filter_args", metavar="[--] FILTERS", nargs=-1)
 @click.pass_obj
-def export(context, path, max_row):
-    """Export scenario data to PATH."""
+def export(context, path, filter_args, max_row):
+    """Export scenario data to PATH.
+
+    To export only part of the parameter data, e.g. for inspection, provide
+    FILTERS in the format:
+
+        … -- dim_1=val0,val1 dim_2=val2
+    """
     # NB want to use type=click.Path(..., path_type=Path), but fails on bytes
     path = Path(path)
 
     if not context or 'scen' not in context:
-        raise click.UsageError('give --url, or --platform, --model, and '
-                               '--scenario, before export')
+        raise click.UsageError(
+            "give --url, or --platform, --model, and --scenario, before export"
+        )
 
-    context['scen'].to_excel(path, max_row=max_row)
+    # Convert additional arguments into a filters dict()
+    filters = dict()
+    for group in filter_args:
+        dim, values = group.split("=", maxsplit=1)
+        filters[dim] = list(values.split(","))
+
+    context["scen"].to_excel(path, filters=filters, max_row=max_row)
 
 
 @main.group('import')

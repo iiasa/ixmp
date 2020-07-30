@@ -894,7 +894,7 @@ class Backend(ABC):
         Parameters
         ----------
         model : str, optional
-            filter meta  meta by a model
+            filter meta by a model
         scenario : str, optional
             filter meta by a scenario
         version : int or str, optional
@@ -903,22 +903,26 @@ class Backend(ABC):
         Returns
         -------
         dict (str -> any)
-            Mapping from meta keys to values.
+            Mapping from meta category keys to values.
         """
 
     @abstractmethod
-    def set_meta(self, meta: dict, model: str, scenario: str, version):
-        """Set meta entries.
+    def set_meta(self, meta: dict, model: str, scenario: str, version: int):
+        """Set meta categories.
 
         Parameters
         ----------
-        meta : dict, containing meta key/value pairs
+        meta : dict, containing meta key/value category pairs
         model : str, optional
             model name that meta should be attached to
         scenario : str, optional
             scenario name that meta should be attached to
-        version : int or str, optional
+        version : int, optional
             run version that meta should be attached to
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod
@@ -928,13 +932,17 @@ class Backend(ABC):
 
         Parameters
         ----------
-        categories : list of str, meta-categories to remove
+        categories : list of str, meta-category keys to remove
         model : str, optional
-            model name that meta should be attached to
+            only remove meta of a specific model
         scenario : str, optional
-            scenario name that meta should be attached to
-        version : int or str, optional
-            run version that meta should be attached to
+            only remove meta of a specific scenario
+        version : int, optional
+            only remove meta of a specific model/scenario run version
+
+        Returns
+        -------
+        None
         """
 
     @abstractmethod
@@ -944,11 +952,11 @@ class Backend(ABC):
         Parameters
         ----------
         name_or_dict : str or dict
-            If the argument is dict, it used as a mapping of meta
+            If the argument is dict, it is used as a mapping of meta
             categories (names) to values. Otherwise, use the argument
-            as the meta attribute name.
+            as the meta category name.
         value : str or number or bool, optional
-            Meta attribute value.
+            Meta category value.
 
         Returns
         -------

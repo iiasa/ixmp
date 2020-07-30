@@ -338,17 +338,9 @@ class JDBCBackend(CachingBackend):
         self.jobj.addTimeslice(name, category, java.Double(duration))
 
     def add_model(self, name):
-        """ Add (register) new model name
-
-        :param name: new model name
-        """
         self.jobj.addModel(str(name))
 
     def add_scenario(self, name):
-        """ Add (register) new scenario name
-
-        :param name: new scenario name
-        """
         self.jobj.addScenario(str(name))
 
     def get_scenarios(self, default, model, scenario):

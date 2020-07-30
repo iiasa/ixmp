@@ -54,6 +54,19 @@ class Backend(ABC):
         return {model: True for model in models}
 
     @abstractmethod
+    def add_model(self, name: str):
+        """ Add (register) new model name
+
+        :param name : str, new model name
+        """
+
+    def add_scenario(self, name: str):
+        """ Add (register) new scenario name
+
+        :param name : str, new scenario name
+        """
+
+    @abstractmethod
     def get_nodes(self):
         """Iterate over all nodes stored on the Platform.
 

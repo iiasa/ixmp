@@ -1591,7 +1591,7 @@ class Scenario(TimeSeries):
         Parameters
         ----------
         name : str, optional
-            meta attribute name
+            meta category name
         """
         all_meta = self._backend('get_scenario_meta')
         return all_meta[name] if name else all_meta
@@ -1604,9 +1604,9 @@ class Scenario(TimeSeries):
         name_or_dict : str or dict
             If the argument is dict, it used as a mapping of meta
             categories (names) to values. Otherwise, use the argument
-            as the meta attribute name.
+            as the meta category name.
         value : str or number or bool, optional
-            Meta attribute value.
+            Meta category value.
         """
         if type(name_or_dict) == dict:
             name_or_dict = list(name_or_dict.items())

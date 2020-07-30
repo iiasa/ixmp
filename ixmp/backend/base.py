@@ -1005,9 +1005,9 @@ class Backend(ABC):
         name_or_dict : str or dict
             If the argument is dict, it used as a mapping of meta
             categories (names) to values. Otherwise, use the argument
-            as the meta attribute name.
+            as the meta category name.
         value : str or number or bool, optional
-            Meta attribute value.
+            Meta category value.
 
         Returns
         -------

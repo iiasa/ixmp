@@ -93,17 +93,24 @@ Backend API
    .. autosummary::
       :nosignatures:
 
+      add_model
+      add_scenario
       close_db
       get_auth
       get_doc
       get_log_level
+      get_meta
       get_nodes
       get_scenarios
       get_units
+      list_models
+      list_scenarios
       open_db
       read_file
+      remove_meta
       set_doc
       set_log_level
+      set_meta
       set_node
       set_unit
       write_file
@@ -142,7 +149,7 @@ Backend API
 
       clone
       delete_item
-      get_meta
+      get_scenario_meta
       has_solution
       init_item
       item_delete_elements
@@ -150,7 +157,8 @@ Backend API
       item_set_elements
       item_index
       list_items
-      set_meta
+      remove_scenario_meta
+      set_scenario_meta
 
    Methods related to :class:`message_ix.Scenario`:
 

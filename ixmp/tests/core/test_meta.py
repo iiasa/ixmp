@@ -7,7 +7,8 @@ import ixmp
 from ixmp.testing import models
 
 
-sample_meta = {'sample_int': 3, 'sample_string': 'string_value'}
+sample_meta = {'sample_int': 3, 'sample_string': 'string_value',
+               'sample_bool': False}
 
 
 def test_set_meta_missing_argument(mp):
@@ -79,8 +80,10 @@ def test_unique_meta_scenario(mp):
 
 
 def test_meta_partial_overwrite(mp):
-    meta1 = {'sample_string': 3.0, 'another_string': 'string_value'}
-    meta2 = {'sample_string': 5.0, 'yet_another_string': 'hello'}
+    meta1 = {'sample_string': 3.0, 'another_string': 'string_value',
+            'sample_bool': False}
+    meta2 = {'sample_string': 5.0, 'yet_another_string': 'hello',
+             'sample_bool': True}
     model = models['dantzig']
     scen = ixmp.Scenario(mp, **model)
     scen.set_meta(meta1)
@@ -148,7 +151,7 @@ def test_scenario_delete_meta_warning(mp):
     meta = {'sample_int': 3, 'sample_string': 'string_value'}
     remove_key = 'sample_string'
 
-    scen.set_meta(sample_meta)
+    scen.set_meta(meta)
     with pytest.warns(DeprecationWarning):
         scen.delete_meta(remove_key)
     expected = copy.copy(meta)

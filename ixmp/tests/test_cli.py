@@ -244,6 +244,49 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == 0, result.output
 
 
+def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
+    populate_test_platform(test_mp)
+    tmp_path /= 'dantzig.xlsx'
+
+    url = (
+        f"ixmp://{test_mp.name}/{models['dantzig']['model']}/"
+        f"{models['dantzig']['scenario']}"
+    )
+
+    # Invoke the CLI to export data to Excel, with filters
+    cmd = [
+        "--url",
+        url,
+        "export",
+        str(tmp_path),
+        "--",
+        "i=seattle",
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Import into a new model name
+    url = f"ixmp://{test_mp.name}/foo model/bar scenario#new"
+    cmd = [
+        "--url",
+        url,
+        "import",
+        "scenario",
+        "--init-items",
+        str(tmp_path),
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Load one of the imported parameters
+    scen = ixmp.Scenario(test_mp, "foo model", "bar scenario")
+    d = scen.par("d")
+
+    # Data in (imported from) file has only filtered elements
+    assert set(d["i"].unique()) == {"seattle"}
+    assert len(d) == 3
+
+
 def test_report(ixmp_cli):
     # 'report' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(['report', 'key'])

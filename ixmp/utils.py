@@ -186,7 +186,15 @@ def parse_url(url):
         raise ValueError(f"queries ({components.query}) not supported in URLs")
 
     if len(components.fragment):
-        scenario_info['version'] = int(components.fragment)
+        try:
+            version = int(components.fragment)
+        except ValueError:
+            if components.fragment != "new":
+                raise
+            else:
+                version = "new"
+        finally:
+            scenario_info["version"] = version
 
     return platform_info, scenario_info
 

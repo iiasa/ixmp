@@ -11,8 +11,14 @@ sample_meta = {'sample_int': 3, 'sample_string': 'string_value'}
 
 
 def test_set_meta_missing_argument(mp):
+    model = models['dantzig']
+
     with pytest.raises(ValueError):
         mp.set_meta(sample_meta)
+    with pytest.raises(ValueError):
+        mp.set_meta(sample_meta, model=model['model'], version=0)
+    with pytest.raises(ValueError):
+        mp.set_meta(sample_meta, scenario=model['scenario'], version=0)
 
 
 def test_set_get_meta(mp):

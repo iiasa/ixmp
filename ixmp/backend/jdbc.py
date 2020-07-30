@@ -509,6 +509,24 @@ class JDBCBackend(CachingBackend):
 
             ts.scheme = s
 
+    def _validate_meta_args(self, model, scenario, version,
+                            allow_empty_args=False):
+        """Validate arguments for setting/deleting meta"""
+        valid = False
+        if model and not scenario and version is None:
+            valid = True
+        elif scenario and not model and version is None:
+            valid = True
+        elif model and scenario and version is None:
+            valid = True
+        elif model and scenario and version is not None:
+            valid = True
+        if not valid:
+            msg = ('Invalid arguments. Valid model, scenario, version '
+                    'combinations are: (model), (scenario), (model, scenario),'
+                    ' (model, scenario, version)')
+            raise ValueError(msg)
+
     def init(self, ts, annotation):
         klass = ts.__class__.__name__
 
@@ -891,17 +909,15 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(self, model: str = None, scenario: str = None,
                  version: int = None) -> dict:
-
+        self._validate_meta_args(model, scenario, version,
+                                 allow_empty_args=True)
         meta = self.jobj.getMeta(model, scenario, version)
         return {entry.getKey(): _unwrap(entry.getValue())
                 for entry in meta.entrySet()}
 
     def set_meta(self, meta: dict, model: str = None, scenario: str = None,
                  version: int = None) -> None:
-        if not (model or scenario or version):
-            msg = ('At least one parameter has to be provided out of: '
-                   'model, scenario, version')
-            raise ValueError(msg)
+        self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
 
@@ -912,10 +928,7 @@ class JDBCBackend(CachingBackend):
 
     def remove_meta(self, categories, model: str = None, scenario: str = None,
                     version: int = None):
-        if not (model or scenario or version):
-            msg = ('At least one parameter has to be provided out of: '
-                   'model, scenario, version')
-            raise ValueError(msg)
+        self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
         return self.jobj.removeMeta(model, scenario, version,

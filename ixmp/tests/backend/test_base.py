@@ -21,6 +21,8 @@ def test_class():
         pass
 
     class BE2(Backend):
+        add_model = noop
+        add_scenario = noop
         cat_get_elements = noop
         cat_list = noop
         cat_set_elements = noop
@@ -40,6 +42,7 @@ def test_class():
         get_meta = noop
         get_nodes = noop
         get_scenarios = noop
+        get_scenario_meta = noop
         get_timeslices = noop
         get_units = noop
         has_solution = noop
@@ -52,24 +55,20 @@ def test_class():
         item_set_elements = noop
         last_update = noop
         list_items = noop
+        list_models = noop
+        list_scenarios = noop
         run_id = noop
         set_as_default = noop
         set_data = noop
+        set_doc = noop
         set_geo = noop
         set_meta = noop
-        set_doc = noop
         set_node = noop
+        set_scenario_meta = noop
         set_timeslice = noop
         set_unit = noop
         remove_meta = noop
-        get_scenario_meta = noop
-        set_scenario_meta = noop
-        delete_scenario_meta = noop
         remove_scenario_meta = noop
-        add_model = noop
-        add_scenario = noop
-        list_models = noop
-        list_scenarios = noop
 
     # Complete subclass can be instantiated
     be = BE2()

@@ -4,6 +4,16 @@ Next release
 All changes
 -----------
 
+- :pull:`353`: Add meta functionality.
+  - add :meth:`Platform.add_model`
+  - add :meth:`Platform.add_scenario`
+  - add :meth:`Platform.list_models`
+  - add :meth:`Platform.list_scenarios`
+  - add :meth:`Platform.get_meta`
+  - add :meth:`Platform.set_meta`
+  - add :meth:`Platform.remove_meta`
+  - add :meth:`Scenario.remove_meta`
+  - deprecate :meth:`Scenario.delete_meta`
 - :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
 - :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.
 - :pull:`347`: Preserve dtypes of index columns in :func:`.data_for_quantity`.

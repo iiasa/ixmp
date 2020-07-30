@@ -525,7 +525,7 @@ class JDBCBackend(CachingBackend):
 
     def _validate_meta_args(self, model, scenario, version,
                             allow_empty_args=False):
-        """Validate arguments for setting/deleting meta"""
+        """Validate arguments for getting/setting/deleting meta"""
         valid = False
         if allow_empty_args:
             if not model and not scenario and version is None:
@@ -539,9 +539,8 @@ class JDBCBackend(CachingBackend):
         elif model and scenario and version is not None:
             valid = True
         if not valid:
-            msg = ('Invalid arguments. Valid model, scenario, version '
-                   'combinations are: (model), (scenario), (model, scenario), '
-                   '(model, scenario, version)')
+            msg = ('Invalid arguments. Valid combinations are: (model), '
+                   '(scenario), (model, scenario), (model, scenario, version)')
             raise ValueError(msg)
 
     def init(self, ts, annotation):
@@ -971,10 +970,6 @@ class JDBCBackend(CachingBackend):
             raise TypeError(f'Cannot store meta of type {_type}')
 
         getattr(self.jindex[s], method_name)(name_or_dict, value)
-
-    def delete_scenario_meta(self, *args, **kwargs):
-        # Add DeprecationWarning
-        return self.remove_scenario_meta(self, *args, **kwargs)
 
     def remove_scenario_meta(self, s, name):
         if type(name) == str:

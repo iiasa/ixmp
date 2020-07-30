@@ -58,24 +58,36 @@ class Backend(ABC):
     def add_model(self, name: str):
         """ Add (register) new model name
 
-        :param name : str, new model name
+        Parameters
+        ----------
+        user : str, new model name
         """
 
     @abstractmethod
     def add_scenario(self, name: str):
         """ Add (register) new scenario name
 
-        :param name : str, new scenario name
+        Parameters
+        ----------
+        user : str, new scenario name
         """
 
     @abstractmethod
     def list_models(self) -> Generator[str, None, None]:
         """ List existing model names
+
+        Returns
+        -------
+        list of str
         """
 
     @abstractmethod
     def list_scenarios(self) -> Generator[str, None, None]:
         """ List existing scenario names
+
+        Returns
+        -------
+        list of str
         """
 
     @abstractmethod
@@ -991,20 +1003,6 @@ class Backend(ABC):
         ------
         TypeError
             If *value* is not a valid type.
-        """
-
-    @abstractmethod
-    def delete_scenario_meta(self, s, name):
-        """Remove single or multiple scenario meta entries.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Either single meta key or list of keys.
-
-        Returns
-        -------
-        None
         """
 
     @abstractmethod

@@ -1,15 +1,19 @@
 context('Core')
 
-# Simulate 'library(rixmp)' without installing
-devtools::load_all(file.path('..', '..'))
 
-# Import fixtures
-source('conftest.R')
+test_that('correct Python and dependencies are used', {
+  ixmp$show_versions()
+})
+
+
+test_that('the JVM can be started', {
+  ixmp$backend$jdbc$start_jvm()
+})
 
 
 test_that('a local Platform can be instantiated', {
-  mp <- ixmp$Platform(name='default')
-  succeed()
+  ixmp$Platform(backend = "jdbc", driver = "hsqldb",
+                url="jdbc:hsqldb:mem:rixmp test")
 })
 
 
@@ -60,8 +64,9 @@ test_that('set, mapping sets and par values can be set on a Scenario', {
 test_that('the canning problem can be solved', {
   # Create the Scenario
   mp <- test_mp()
+
   scen <- ixmp$testing$make_dantzig(mp, solve = TRUE)
 
   # Check value
-  expect_equal(scen$var('z')$lvl, 153.675, tolerance = 1e-5)
+  expect_equal(scen$var("z")$lvl, 153.675, tolerance = 1e-4)
 })

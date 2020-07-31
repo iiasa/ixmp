@@ -1,14 +1,20 @@
-#' @title Auxiliary function for enabling correct conversion from R dataframes to python and GAMS
-#' @name adapt_to_ret
-#' @description Auxiliary function for enabling correct conversion from R dataframes to python and GAMS
+#' Auxiliary function for conversion from R data.frame to Python
 #'
-#' @param set_par dataframe corresponding to a set or a parameter to be loaded in ixmp
+#' @description
+#' This function converts an R data.frame to be a valid input to
+#' ixmp$Scenario$add_par() or ixmp$Scenario$add_set().
 #'
-#' @examples
-#' a.df = data.frame( i = c('a','b'), value = c(350 , 600) , unit = 'cases')
-#' scen$add_par("a", adapt_to_ret(a.df))
+#' @param set_par Dataframe corresponding to a set or a parameter to be loaded
+#'   in ixmp
 #'
 #' @export
+#' @examples
+#' if (FALSE) {
+#'
+#' a.df <- data.frame(i = c("a", "b"), value = c(350 , 600), unit = "cases")
+#' scen$add_par("a", adapt_to_ret(a.df))
+#'
+#' }
 
 adapt_to_ret = function(set_par) {
   tmp_par = set_par

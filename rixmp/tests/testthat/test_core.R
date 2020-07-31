@@ -5,6 +5,7 @@ test_that('correct Python and dependencies are used', {
   ixmp$show_versions()
 })
 
+
 test_that('the JVM can be started', {
   ixmp$backend$jdbc$start_jvm()
 })
@@ -67,5 +68,5 @@ test_that('the canning problem can be solved', {
   scen <- ixmp$testing$make_dantzig(mp, solve = TRUE)
 
   # Check value
-  expect_equal(scen$var('z')$lvl, 153.675, tolerance = 1e-5)
+  expect_equal(scen$var("z")$lvl, 153.675, tolerance = 1e-4)
 })

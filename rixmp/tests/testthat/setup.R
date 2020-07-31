@@ -10,7 +10,6 @@ test_mp <- function () {
   # Name for the temporary platform
   url <- paste0("jdbc:hsqldb:mem:rixmp ", .test_mp_count)
   .test_mp_count <<- .test_mp_count + 1
-  print(url)
 
   # launch Platform and connect to testdb (reconnect if closed)
   mp <- ixmp$Platform(backend = "jdbc", driver = "hsqldb", url = url)

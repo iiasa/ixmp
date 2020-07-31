@@ -66,7 +66,7 @@ def check_year(y, s):
         return True
 
 
-def diff(a, b, filters) -> Iterator[Tuple[str, pd.DataFrame]]:
+def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
     :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`.

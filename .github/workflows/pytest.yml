@@ -93,9 +93,6 @@ jobs:
         Write-Host "::set-env name=RETICULATE_PYTHON::${{ env.PYTHONLOCATION }}\python.exe"
 
     - name: Install R package and dependencies
-      # To debug, add lines line:
-      # print(reticulate::py_config())
-      # reticulate::py_run_string("import os; print(os.environ)")
       run: |
         install.packages(c("devtools", "remotes", "IRkernel"))
         remotes::install_cran("rcmdcheck")
@@ -104,8 +101,12 @@ jobs:
         # Set up R Jupyter kernel for tutorial notebooks
         IRkernel::installspec()
 
-        # --no-multiarch avoids building arch=i386 on Windows, which is not
-        # needed and causes errors
+        # commented: for debugging
+        # print(reticulate::py_config())
+        # reticulate::py_run_string("import os; print(os.environ)")
+
+        # --no-multiarch here (and below) avoids cross-compiling arch=i386 on
+        # Windows, which is not needed and causes errors
         devtools::install("rixmp", args = "--no-multiarch")
       shell: Rscript {0}
 
@@ -114,8 +115,12 @@ jobs:
 
     - name: Run R CMD check
       run: |
-        rcmdcheck::rcmdcheck("rixmp", args = c("--no-manual", "--as-cran"),
-                             error_on = "warning", check_dir = "check")
+        rcmdcheck::rcmdcheck(
+            "rixmp",
+            args = c("--no-manual", "--as-cran", "--no-multiarch"),
+            error_on = "warning",
+            check_dir = "check"
+        )
       shell: Rscript {0}
 
     - name: Upload test coverage to Codecov.io

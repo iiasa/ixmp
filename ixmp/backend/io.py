@@ -3,7 +3,7 @@ import logging
 
 import pandas as pd
 
-from ixmp.utils import as_str_list, maybe_check_out
+from ixmp.utils import as_str_list, maybe_check_out, maybe_commit
 from . import ItemType
 
 
@@ -263,12 +263,10 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         except KeyError:
             raise ValueError(f'no set {repr(name)}; try init_items=True')
 
-    if commit_steps:
-        s.commit(f"Loaded sets from {path}")
+    maybe_commit(s, commit_steps, f"Loaded sets from {path}")
 
-    if add_units:
-        # List of existing units for reference
-        units = set(be.get_units())
+    # List of existing units for reference
+    units = set(be.get_units())
 
     # Add equ/par/var data
     for name, ix_type in name_type[name_type != 'set'].items():
@@ -314,9 +312,9 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         s.add_par(name, df)
 
-        if commit_steps:
-            # Commit after every parameter
-            s.commit(f'Loaded {ix_type} {repr(name)} from {path}')
+        # Commit after every parameter
+        maybe_commit(
+            s, commit_steps, f"Loaded {ix_type} {repr(name)} from {path}"
+        )
 
-    if not commit_steps:
-        s.commit(f"Import from {path}")
+    maybe_commit(s, not commit_steps, f"Import from {path}")

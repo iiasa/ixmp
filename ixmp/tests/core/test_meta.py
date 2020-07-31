@@ -18,7 +18,7 @@ meta_entries = [
         'sample_string': 'string_value',
         'sample_bool': False,
     },
-    {'mixed_category': ['string', 0.01, True]},
+    {'mixed_category': ['string', 0.01, 2, True]},
 ]
 dantzig = models['dantzig']
 

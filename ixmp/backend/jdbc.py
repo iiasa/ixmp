@@ -154,9 +154,9 @@ def _unwrap(v):
 
 
 def _wrap(value):
-    if isinstance(value, (str, int, bool)):
+    if isinstance(value, (str, bool)):
         return value
-    if isinstance(value, float):
+    if isinstance(value, (int, float)):
         return java.BigDecimal(value)
     elif isinstance(value, (Sequence, Iterable)):
         jlist = java.ArrayList()

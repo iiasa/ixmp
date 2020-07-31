@@ -81,10 +81,7 @@ def test_diff(test_mp):
     ], columns="i j value_a unit_a value_b unit_b _merge".split())
 
     # Use the specific categorical produced by pd.merge()
-    merge_cat = pd.Categorical(
-        ["left_only", "right_only", "both"],
-        ["left_only", "right_only", "both"],
-    )
+    merge_cat = pd.CategoricalDtype(["left_only", "right_only", "both"])
     exp_b = exp_b.astype(dict(_merge=merge_cat))
     exp_d = exp_d.astype(dict(_merge=merge_cat))
 

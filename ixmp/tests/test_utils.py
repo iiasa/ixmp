@@ -1,11 +1,14 @@
 """Tests for ixmp.utils."""
 import logging
 
+import numpy as np
+import pandas as pd
+import pandas.testing as pdt
 import pytest
 from pytest import mark, param
 
 from ixmp import Scenario, utils
-from ixmp.testing import populate_test_platform
+from ixmp.testing import make_dantzig, populate_test_platform
 
 
 def test_check_year():
@@ -30,6 +33,78 @@ def test_check_year():
     s3 = 4
 
     assert utils.check_year(y3, s3) is True
+
+
+def test_diff(test_mp):
+    scen_a = make_dantzig(test_mp)
+    scen_b = make_dantzig(test_mp)
+
+    # Comparison of identical scenarios produces data of same length
+    for name, df in utils.diff(scen_a, scen_b):
+        data_a = utils.maybe_convert_scalar(scen_a.par(name))
+        assert len(data_a) == len(df)
+
+    # Comparison of identical data with filters
+    iterator = utils.diff(scen_a, scen_b, filters=dict(i=["seattle"]))
+    for (name, df), (exp_name, N) in zip(iterator, [("a", 1), ("d", 3)]):
+        assert exp_name == name and len(df) == N
+
+    # Modify `scen_a` and `scen_b`
+    scen_a.check_out()
+    scen_b.check_out()
+    # Remove elements from "b"
+    drop_args = dict(labels=["value", "unit"], axis=1)
+    scen_a.remove_par("b", scen_a.par("b").iloc[0:1, :].drop(**drop_args))
+    scen_b.remove_par("b", scen_b.par("b").iloc[1:2, :].drop(**drop_args))
+    # Remove elements from "d"
+    scen_a.remove_par(
+        "d", scen_a.par("d").query("i == 'san-diego'").drop(**drop_args)
+    )
+    # Modify values in "d"
+    scen_b.add_par(
+        "d", scen_b.par("d").query("i == 'seattle'").assign(value=123.4)
+    )
+
+    # Expected results
+    exp_b = pd.DataFrame([
+        ["chicago", 300.0, "cases", np.NaN, None, "left_only"],
+        ["new-york", np.NaN, None, 325.0, "cases", "right_only"],
+        ["topeka", 275.0, "cases", 275.0, "cases", "both"],
+    ], columns="j value_a unit_a value_b unit_b _merge".split())
+    exp_d = pd.DataFrame([
+        ["san-diego", "chicago", np.NaN, None, 1.8, "km", "right_only"],
+        ["san-diego", "new-york", np.NaN, None, 2.5, "km", "right_only"],
+        ["san-diego", "topeka", np.NaN, None, 1.4, "km", "right_only"],
+        ["seattle", "chicago", 1.7, "km", 123.4, "km", "both"],
+        ["seattle", "new-york", 2.5, "km", 123.4, "km", "both"],
+        ["seattle", "topeka", 1.8, "km", 123.4, "km", "both"],
+    ], columns="i j value_a unit_a value_b unit_b _merge".split())
+
+    # Use the specific categorical produced by pd.merge()
+    merge_cat = pd.Categorical(
+        ["left_only", "right_only", "both"],
+        ["left_only", "right_only", "both"],
+    )
+    exp_b = exp_b.astype(dict(_merge=merge_cat))
+    exp_d = exp_d.astype(dict(_merge=merge_cat))
+
+    # Compare different scenarios without filters
+    for name, df in utils.diff(scen_a, scen_b):
+        if name == "b":
+            pdt.assert_frame_equal(exp_b, df)
+        elif name == "d":
+            pdt.assert_frame_equal(exp_d, df)
+
+    # Compare different scenarios with filters
+    iterator = utils.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
+    for name, df in iterator:
+        # Same as above, except only the filtered rows should appear
+        if name == "b":
+            pdt.assert_frame_equal(exp_b.iloc[0:1, :], df)
+        elif name == "d":
+            pdt.assert_frame_equal(
+                exp_d.iloc[[0, 3], :].reset_index(drop=True), df
+            )
 
 
 m_s = dict(model='m', scenario='s')

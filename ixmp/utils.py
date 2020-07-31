@@ -1,13 +1,16 @@
 from collections.abc import Iterable
 from functools import partial
 from inspect import Parameter, signature
-import logging
 from pathlib import Path
+from typing import Iterator, Tuple
+from urllib.parse import urlparse
+import logging
 import re
 import sys
-from urllib.parse import urlparse
 
 import pandas as pd
+
+from ixmp.backend import ItemType
 
 
 log = logging.getLogger(__name__)
@@ -61,6 +64,78 @@ def check_year(y, s):
         if not isinstance(y, int):
             raise ValueError('arg `{}` must be an integer!'.format(s))
         return True
+
+
+def diff(a, b, filters) -> Iterator[Tuple[str, pd.DataFrame]]:
+    """Compute the difference between Scenarios `a` and `b`.
+
+    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`.
+    Only parameters are compared. :func:`~pandas.merge` is called with the
+    arguments ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True";
+    the merge is performed on all columns except 'value' or 'unit'.
+
+    Yields
+    ------
+    tuple of str, pandas.DataFrame
+        Tuples of item name and data.
+    """
+    # Iterators; index 0 corresponds to `a`, 1 to `b`
+    items = [
+        a.items(filters=filters, type=ItemType.PAR),
+        b.items(filters=filters, type=ItemType.PAR),
+    ]
+    # State variables for loop
+    name = [None, None]
+    data = [None, None]
+
+    # Elements for first iteration
+    name[0], data[0] = next(items[0])
+    name[1], data[1] = next(items[1])
+
+    while True:
+        # Convert scalars to pd.DataFrame
+        data = list(map(maybe_convert_scalar, data))
+
+        # Compare the names from `a` and `b` to ensure matching items
+        if name[0] == name[1]:
+            # Matching items in `a` and `b`
+            current_name, left, right = name[0], *data
+        else:
+            # Mismatched; either `a` or `b` has no data for these filters
+            current_name = min(*name)
+            if name[0] > current_name:
+                # No data in `a` for `current_name`; create an empty DataFrame
+                left, right = pd.DataFrame(columns=data[1].columns), data[1]
+            else:
+                left, right = data[0], pd.DataFrame(columns=data[0].columns)
+
+        # Either merge on remaining columns; or, for scalars, on the indices
+        on = sorted(set(left.columns) - {"value", "unit"})
+        on_arg = dict(on=on) if on else dict(left_index=True, right_index=True)
+
+        # Merge the data from each side
+        yield current_name, pd.merge(
+            left,
+            right,
+            how="outer",
+            **on_arg,
+            sort=True,
+            suffixes=("_a", "_b"),
+            indicator=True,
+        )
+
+        # Maybe advance each iterators
+        for i in (0, 1):
+            try:
+                if name[i] == current_name:
+                    # data was compared in this iteration; advance
+                    name[i], data[i] = next(items[i])
+            except StopIteration:
+                # No more data for this iterator
+                name[i], data[i] = "(end)", None
+
+        if name[0] == name[1] == "(end)":
+            break
 
 
 def maybe_check_out(timeseries, state=None):
@@ -128,6 +203,26 @@ def maybe_commit(timeseries, condition, message):
         return False
     else:
         return True
+
+
+def maybe_convert_scalar(obj) -> pd.DataFrame:
+    """Convert `obj` to :class:`pandas.DataFrame`.
+
+    Parameters
+    ----------
+    obj
+        Any value returned by :meth:`Scenario.par`. For a scalar
+        (0-dimensional) parameter, this will be :class:`dict`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        :meth:`maybe_convert_scalar` always returns a data frame.
+    """
+    if isinstance(obj, dict):
+        return pd.DataFrame.from_dict({0: obj}, orient="index")
+    else:
+        return obj
 
 
 def parse_url(url):

@@ -831,12 +831,12 @@ class JDBCBackend(CachingBackend):
             result = pd.Series(item.getCol(0, jList), dtype=object)
         elif type == 'par':
             # Scalar parameters
-            result = dict(value=item.getScalarValue().floatValue(),
+            result = dict(value=float(item.getScalarValue().floatValue()),
                           unit=str(item.getScalarUnit()))
         elif type in ('equ', 'var'):
             # Scalar equations and variables
-            result = dict(lvl=item.getScalarLevel().floatValue(),
-                          mrg=item.getScalarMarginal().floatValue())
+            result = dict(lvl=float(item.getScalarLevel().floatValue()),
+                          mrg=float(item.getScalarMarginal().floatValue()))
 
         # Store cache
         self.cache(s, type, name, filters, result)

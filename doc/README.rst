@@ -42,7 +42,7 @@ Read the Docs
 -------------
 
 The official version of the documentation is hosted on Read The Docs (RTD) at
-https://message.iiasa.ac.at/projects/ixmp/. RTD builds the docs using a command
+https://docs.messageix.org/projects/ixmp/. RTD builds the docs using a command
 similar to::
 
     sphinx-build -T -E -d _build/doctrees-readthedocs -D language=en . \

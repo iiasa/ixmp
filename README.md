@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/ixmp.svg)](https://pypi.python.org/pypi/ixmp/)
 [![Anaconda version](https://img.shields.io/conda/vn/conda-forge/ixmp)](https://anaconda.org/conda-forge/ixmp)
-[![Documentation build](https://readthedocs.com/projects/iiasa-energy-program-ixmp/badge/?version=master)](https://message.iiasa.ac.at/projects/ixmp/en/master/)
+[![Documentation build](https://readthedocs.com/projects/iiasa-energy-program-ixmp/badge/?version=master)](https://docs.messageix.org/)
 [![Build status](https://github.com/iiasa/ixmp/workflows/pytest/badge.svg)](https://github.com/iiasa/ixmp/actions?query=workflow:pytest)
 [![Test coverage](https://codecov.io/gh/iiasa/ixmp/branch/master/graph/badge.svg)](https://codecov.io/gh/iiasa/ixmp)
 
@@ -36,12 +36,12 @@ Please refer to the [NOTICE](NOTICE.rst) for details and user guidelines.
 
 Documentation of ixmp and the MESSAGEix framework is available in two forms:
 
-- The [MESSAGEix framework documentation](https://message.iiasa.ac.at/)
+- The [MESSAGEix framework documentation](https://docs.messageix.org/)
   includes documentation of the
-  [ixmp Python API](https://message.iiasa.ac.at/en/stable/api.html), which
+  [ixmp Python API](https://docs.messageix.org/en/stable/api.html), which
   is extended by the framework.
 - The [stand-alone ixmp
-  documentation](https://message.iiasa.ac.at/projects/ixmp/) contains
+  documentation](https://docs.messageix.org/projects/ixmp/) contains
   additional information on installing ixmp from source, the R API, etc.
 
 The online documentation is built automatically from the contents of the
@@ -54,16 +54,16 @@ See [`doc/README.rst`](doc/README.rst) for further details.
 ### Installation
 
 Most users will have ixmp installed automatically as a dependency when
-[installing MESSAGEix](https://message.iiasa.ac.at/en/stable/getting_started.html).
+[installing MESSAGEix](https://docs.messageix.org/en/stable/getting_started.html).
 
 To install the ixmp R API, or to install ixmp from source code, see
-[‘Installation’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/install.html).
+[‘Installation’ in the documentation](https://docs.messageix.org/projects/ixmp/en/stable/install.html).
 
 
 ### Tutorials
 
 Introductory tutorials are provided in both Python and R.
-See [‘Tutorials’ in the documentation](https://message.iiasa.ac.at/projects/ixmp/en/stable/tutorials.html) or [`tutorial/README.rst`](tutorial/README.rst).
+See [‘Tutorials’ in the documentation](https://docs.messageix.org/projects/ixmp/en/stable/tutorials.html) or [`tutorial/README.rst`](tutorial/README.rst).
 
 
 ## Scientific reference

@@ -24,7 +24,7 @@ Read and understand the file ``LICENSE``; in particular, clause 7 (“Disclaimer
 
 Cite Huppmann *et al.*—the full citation is given at :cite:`huppmann_messageix_2018`.
 
-In addition, include a hyperlink to the online documentation: https://message.iiasa.ac.at.
+In addition, include a hyperlink to the online documentation: https://docs.messageix.org.
 
 
 3. Use the naming convention for new model instances

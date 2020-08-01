@@ -56,7 +56,7 @@ class Backend(ABC):
 
     @abstractmethod
     def add_model(self, name: str):
-        """ Add (register) new model name
+        """ Add (register) new model name.
 
         Parameters
         ----------
@@ -65,7 +65,7 @@ class Backend(ABC):
 
     @abstractmethod
     def add_scenario(self, name: str):
-        """ Add (register) new scenario name
+        """ Add (register) new scenario name.
 
         Parameters
         ----------
@@ -74,7 +74,7 @@ class Backend(ABC):
 
     @abstractmethod
     def models(self) -> Generator[str, None, None]:
-        """ List existing model names
+        """ List existing model names.
 
         Returns
         -------
@@ -83,7 +83,7 @@ class Backend(ABC):
 
     @abstractmethod
     def scenarios(self) -> Generator[str, None, None]:
-        """ List existing scenario names
+        """ List existing scenario names.
 
         Returns
         -------

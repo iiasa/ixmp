@@ -145,7 +145,7 @@ def _domain_enum(domain):
 
 
 def _unwrap(v):
-    """Unwrap meta numeric value (BigDecimal -> Double)"""
+    """Unwrap meta numeric value or list of values (BigDecimal -> Double)."""
     if isinstance(v, java.BigDecimal):
         return v.doubleValue()
     if isinstance(v, java.ArrayList):

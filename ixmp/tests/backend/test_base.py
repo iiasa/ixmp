@@ -56,8 +56,8 @@ def test_class():
         last_update = noop
         list_items = noop
         models = noop
-        scenarios = noop
         run_id = noop
+        scenarios = noop
         set_as_default = noop
         set_data = noop
         set_doc = noop

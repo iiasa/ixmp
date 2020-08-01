@@ -35,7 +35,7 @@ def test_set_meta_missing_argument(mp, meta):
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
 def test_set_get_meta(mp, meta):
-    """Assert that storing+retrieving meta yields expected values"""
+    """Assert that storing+retrieving meta yields expected values."""
     mp.set_meta(meta, model=DANTZIG['model'])
     obs = mp.get_meta(model=DANTZIG['model'])
     assert obs == meta
@@ -45,7 +45,8 @@ def test_set_get_meta(mp, meta):
 @pytest.mark.parametrize('meta', META_ENTRIES)
 def test_unique_meta(mp, meta):
     """
-    When setting a meta key on two levels, a uniqueness error is expected.
+    When setting a meta category on two distinct levels, a uniqueness error is
+    expected.
     """
     scenario = ixmp.Scenario(mp, **DANTZIG, version='new')
     scenario.commit('save dummy scenario')
@@ -65,23 +66,6 @@ def test_unique_meta(mp, meta):
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
-def test_unique_meta_differing_model(mp, meta):
-    """
-    When meta is set on a model-level, setting it on a new model and a scenario
-    should fail.
-    """
-    mp.set_meta(meta, model=DANTZIG['model'])
-    DANTZIG2 = {
-        'model': 'canning problem 2',
-        'scenario': 'standard',
-    }
-    mp.add_model(DANTZIG2['model'])
-    expected = "Metadata already contains category"
-    with pytest.raises(Exception, match=expected):
-        mp.set_meta(meta, **DANTZIG2)
-
-
-@pytest.mark.parametrize('meta', META_ENTRIES)
 def test_unique_meta_model_scenario(mp, meta):
     """
     When setting a meta key for a Model, it shouldn't be possible to set it
@@ -92,6 +76,15 @@ def test_unique_meta_model_scenario(mp, meta):
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG)
 
+    # Setting this meta category on a new model should fail too
+    dantzig2 = {
+        'model': 'canning problem 2',
+        'scenario': 'standard',
+    }
+    mp.add_model(dantzig2['model'])
+    with pytest.raises(Exception, match=expected):
+        mp.set_meta(meta, **dantzig2)
+
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
 def test_unique_meta_scenario(mp, meta):
@@ -101,7 +94,7 @@ def test_unique_meta_scenario(mp, meta):
     """
     scen = ixmp.Scenario(mp, **DANTZIG)
     scen.set_meta(meta)
-    # add a second scenario and verify that setting Meta for it works
+    # add a second scenario and verify that setting+getting Meta works
     scen2 = ixmp.Scenario(mp, **DANTZIG, version="new")
     scen2.commit('save dummy scenario')
     scen2.set_meta(meta)
@@ -155,7 +148,7 @@ def test_remove_invalid_meta(mp):
 
 def test_set_and_remove_meta_scenario(mp):
     """
-    Test partial overwriting and meta deletion on scenario level
+    Test partial overwriting and meta deletion on scenario level.
     """
     meta1 = {'sample_string': 3.0, 'another_string': 'string_value'}
     meta2 = {'sample_string': 5.0, 'yet_another_string': 'hello'}
@@ -207,7 +200,7 @@ def test_meta_arguments(mp):
 
 
 def test_update_meta_lists(mp):
-    """Set metadata categories having list/array values"""
+    """Set metadata categories having list/array values."""
     SAMPLE_META = {'list_category': ['a', 'b', 'c']}
     mp.set_meta(SAMPLE_META, model=DANTZIG['model'])
     obs = mp.get_meta(model=DANTZIG['model'])
@@ -220,7 +213,7 @@ def test_update_meta_lists(mp):
 
 
 def test_meta_mixed_list(mp):
-    """Set metadata categories having list/array values"""
+    """Set metadata categories having list/array values."""
     meta = {'mixed_category': ['string', 0.01, True]}
     mp.set_meta(meta, model=DANTZIG['model'])
     obs = mp.get_meta(model=DANTZIG['model'])

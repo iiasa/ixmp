@@ -73,7 +73,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_models(self) -> Generator[str, None, None]:
+    def models(self) -> Generator[str, None, None]:
         """ List existing model names
 
         Returns
@@ -82,7 +82,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_scenarios(self) -> Generator[str, None, None]:
+    def scenarios(self) -> Generator[str, None, None]:
         """ List existing scenario names
 
         Returns

@@ -361,11 +361,11 @@ class JDBCBackend(CachingBackend):
     def add_scenario(self, name):
         self.jobj.addScenario(str(name))
 
-    def list_models(self) -> Generator[str, None, None]:
+    def models(self) -> Generator[str, None, None]:
         for model in self.jobj.listModels():
             yield str(model)
 
-    def list_scenarios(self) -> Generator[str, None, None]:
+    def scenarios(self) -> Generator[str, None, None]:
         for scenario in self.jobj.listScenarios():
             yield str(scenario)
 

@@ -37,10 +37,10 @@ Platform
       backend.base.Backend.close_db
       backend.base.Backend.get_doc
       backend.base.Backend.get_meta
-      backend.base.Backend.list_models
-      backend.base.Backend.list_scenarios
+      backend.base.Backend.models
       backend.base.Backend.open_db
       backend.base.Backend.remove_meta
+      backend.base.Backend.scenarios
       backend.base.Backend.set_doc
       backend.base.Backend.set_meta
 

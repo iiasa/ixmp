@@ -28,7 +28,8 @@ There are a number of guides out there, e.g. on docutils_.
 Building the docs locally
 -------------------------
 
-Install the dependencies, above.
+Install the dependencies, above. Repeat the installation steps on code changes
+of ixmp to be able to refer to the adapted code.
 
 From the command line, run::
 

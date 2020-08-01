@@ -103,11 +103,11 @@ Backend API
       get_nodes
       get_scenarios
       get_units
-      list_models
-      list_scenarios
+      models
       open_db
       read_file
       remove_meta
+      scenarios
       set_doc
       set_log_level
       set_meta

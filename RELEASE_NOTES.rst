@@ -8,8 +8,8 @@ All changes
 
   - :meth:`Platform.add_model` using :meth:`.Backend.add_model`
   - :meth:`Platform.add_scenario` using :meth:`.Backend.add_scenario`
-  - :meth:`Platform.list_models` using :meth:`.Backend.list_models`
-  - :meth:`Platform.list_scenarios` using :meth:`.Backend.list_scenarios`
+  - :meth:`Platform.models` using :meth:`.Backend.models`
+  - :meth:`Platform.scenarios` using :meth:`.Backend.scenarios`
   - :meth:`Platform.get_meta` using :meth:`.Backend.get_meta`
   - :meth:`Platform.set_meta` using :meth:`.Backend.set_meta`
   - :meth:`Platform.remove_meta` using :meth:`.Backend.remove_meta`

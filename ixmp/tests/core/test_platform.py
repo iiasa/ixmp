@@ -196,10 +196,10 @@ def test_weakref():
 
 def test_add_model(mp):
     mp.add_model('new_model_name')
-    assert 'new_model_name' in mp.list_models()
+    assert 'new_model_name' in mp.models()
 
 
 def test_add_scenario(mp):
     mp.add_scenario('new_scenario_name')
-    print(list(mp.list_scenarios()))
-    assert 'new_scenario_name' in mp.list_scenarios()
+    print(list(mp.scenarios()))
+    assert 'new_scenario_name' in mp.scenarios()

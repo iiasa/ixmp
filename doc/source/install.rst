@@ -185,7 +185,7 @@ For Anaconda users experiencing problems during installation of ixmp, check that
     C:\[YOUR ANACONDA LOCATION]\Anaconda3\Scripts;
     C:\[YOUR ANACONDA LOCATION]\Anaconda3\Library\bin;
 
-.. _`installing MESSAGEix`: https://docs.messageix.org/en/stable/getting_started.html
+.. _`installing MESSAGEix`: https://docs.messageix.org/en/latest/getting_started.html
 .. _`Anaconda`: https://www.continuum.io/downloads
 .. _`GAMS`: http://www.gams.com
 .. _`latest version`: https://www.gams.com/download/

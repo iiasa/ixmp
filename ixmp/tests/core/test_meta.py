@@ -50,8 +50,8 @@ def test_unique_meta(mp, meta):
     scenario = ixmp.Scenario(mp, **DANTZIG, version='new')
     scenario.commit('save dummy scenario')
     mp.set_meta(meta, model=DANTZIG['model'])
-    expected = (rf"The meta category .* is already used at another level: "
-                rf"model canning problem, scenario null, version null")
+    expected = (r"The meta category .* is already used at another level: "
+                r"model canning problem, scenario null, version null")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
     scen = ixmp.Scenario(mp, **DANTZIG)
@@ -61,8 +61,8 @@ def test_unique_meta(mp, meta):
     meta = {'sample_entry': 3}
     mp.set_meta(meta, **DANTZIG)
     meta['sample_entry'] = 'test-string'
-    expected = (rf"The meta category .* is already used at another level: "
-                rf"model canning problem, scenario standard, version null")
+    expected = (r"The meta category .* is already used at another level: "
+                r"model canning problem, scenario standard, version null")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
 

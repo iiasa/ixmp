@@ -941,6 +941,13 @@ class Backend(ABC):
         -------
         dict (str -> any)
             Mapping from meta category keys to values.
+
+        Raises
+        ------
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod
@@ -960,6 +967,13 @@ class Backend(ABC):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod
@@ -980,6 +994,13 @@ class Backend(ABC):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod
@@ -990,10 +1011,6 @@ class Backend(ABC):
         -------
         dict (str -> any)
             Mapping from meta keys to values.
-
-        See also
-        --------
-        s_get_meta
         """
 
     @abstractmethod

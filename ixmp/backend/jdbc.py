@@ -541,13 +541,9 @@ class JDBCBackend(CachingBackend):
 
             ts.scheme = s
 
-    def _validate_meta_args(self, model, scenario, version,
-                            allow_empty_args=False):
+    def _validate_meta_args(self, model, scenario, version):
         """Validate arguments for getting/setting/deleting meta"""
         valid = False
-        if allow_empty_args:
-            if not model and not scenario and version is None:
-                valid = True
         if model and not scenario and version is None:
             valid = True
         elif scenario and not model and version is None:
@@ -943,8 +939,7 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(self, model: str = None, scenario: str = None,
                  version: int = None) -> dict:
-        self._validate_meta_args(model, scenario, version,
-                                 allow_empty_args=True)
+        self._validate_meta_args(model, scenario, version)
         meta = self.jobj.getMeta(model, scenario, version)
         return {entry.getKey(): _unwrap(entry.getValue())
                 for entry in meta.entrySet()}

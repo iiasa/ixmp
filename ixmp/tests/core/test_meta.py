@@ -39,7 +39,6 @@ def test_set_get_meta(mp, meta):
     mp.set_meta(meta, model=DANTZIG['model'])
     obs = mp.get_meta(model=DANTZIG['model'])
     assert obs == meta
-    assert obs == mp.get_meta()
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
@@ -51,18 +50,29 @@ def test_unique_meta(mp, meta):
     scenario = ixmp.Scenario(mp, **DANTZIG, version='new')
     scenario.commit('save dummy scenario')
     mp.set_meta(meta, model=DANTZIG['model'])
-    expected = ("Metadata already contains category")
+    expected = (rf"The meta category .* is already used at another level: "
+                rf"model canning problem, scenario null, version null")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
     scen = ixmp.Scenario(mp, **DANTZIG)
     with pytest.raises(Exception, match=expected):
         scen.set_meta(meta)
-    # changing the category value type still should raise an error
+    # changing the category value type of an entry should also raise an error
     meta = {'sample_entry': 3}
     mp.set_meta(meta, **DANTZIG)
     meta['sample_entry'] = 'test-string'
+    expected = (rf"The meta category .* is already used at another level: "
+                rf"model canning problem, scenario standard, version null")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
+
+
+@pytest.mark.parametrize('meta', META_ENTRIES)
+def test_set_get_meta_equals(mp, meta):
+    initial_meta = mp.get_meta(scenario=DANTZIG['scenario'])
+    mp.set_meta(meta, model=DANTZIG['model'])
+    obs_meta = mp.get_meta(scenario=DANTZIG['scenario'])
+    assert obs_meta == initial_meta
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
@@ -72,7 +82,7 @@ def test_unique_meta_model_scenario(mp, meta):
     for a Model+Scenario then.
     """
     mp.set_meta(meta, model=DANTZIG['model'])
-    expected = "Metadata already contains category"
+    expected = r"The meta category .* is already used at another level: "
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG)
 
@@ -82,8 +92,58 @@ def test_unique_meta_model_scenario(mp, meta):
         'scenario': 'standard',
     }
     mp.add_model(dantzig2['model'])
+    expected = r"The meta category .* is already used at another level: "
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **dantzig2)
+
+
+@pytest.mark.parametrize('meta', META_ENTRIES)
+def test_setting_multiple_models(mp, meta):
+    """
+    Test meta indicators on various scenario/model combinations and levels.
+    """
+    model_meta = {'model_int': 3, 'model_string': 'string_value',
+                  'model_bool': False}
+    scenario_meta = {'scenario_int': 3, 'scenario_string': 'string_value',
+                     'scenario_bool': False}
+    meta2 = {'sample_int2': 3, 'sample_string2': 'string_value2',
+             'sample_bool2': False}
+    meta3 = {'sample_int3': 3, 'sample_string3': 'string_value3',
+             'sample_bool3': False, 'mixed3': ['string', 0.01, 2, True]}
+    scenario2 = 'standard 2'
+    model2 = 'canning problem 2'
+    mp.add_scenario(scenario2)
+    mp.add_model(model2)
+    dantzig2 = {
+        'model': model2,
+        'scenario': 'standard',
+    }
+    dantzig3 = {
+        'model': model2,
+        'scenario': scenario2,
+    }
+    mp.set_meta(model_meta, model=DANTZIG['model'])
+    mp.set_meta(scenario_meta, scenario=DANTZIG['scenario'])
+    mp.set_meta(meta, **DANTZIG)
+    mp.set_meta(meta2, **dantzig2)
+    mp.set_meta(meta3, **dantzig3)
+
+    obs1 = mp.get_meta(model=DANTZIG['model'])
+    assert obs1 == model_meta
+    obs2 = mp.get_meta(scenario=DANTZIG['scenario'])
+    assert obs2 == scenario_meta
+    obs3 = mp.get_meta(**DANTZIG)
+    exp3 = copy.copy(meta)
+    exp3.update(model_meta)
+    exp3.update(scenario_meta)
+    assert obs3 == exp3
+    obs4 = mp.get_meta(**dantzig2)
+    exp4 = copy.copy(meta2)
+    exp4.update(scenario_meta)
+    assert obs4 == exp4
+    obs5 = mp.get_meta(**dantzig3)
+    exp5 = copy.copy(meta3)
+    assert obs5 == exp5
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
@@ -100,7 +160,7 @@ def test_unique_meta_scenario(mp, meta):
     scen2.set_meta(meta)
     assert scen2.get_meta() == scen.get_meta()
 
-    expected = ("Metadata already contains category")
+    expected = ("Meta indicators already contain category")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG)
     with pytest.raises(Exception, match=expected):

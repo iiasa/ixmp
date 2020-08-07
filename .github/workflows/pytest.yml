@@ -98,7 +98,7 @@ jobs:
         # For R tutorial notebooks, run via the pytest suite: set up R kernel;
         # actually install the R package
         IRkernel::installspec()
-        remotes::install_local("rixmp")
+        remotes::install_local("rixmp", INSTALL_opts = c("--no-multiarch"))
       shell: Rscript {0}
 
     - name: Run test suite using pytest

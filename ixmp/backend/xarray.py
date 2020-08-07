@@ -1,8 +1,13 @@
 import json
+import logging
 
+import numpy as np
 import xarray as xr
 
 from .base import Backend
+
+
+log = logging.getLogger(__name__)
 
 
 class XarrayBackend(Backend):
@@ -12,6 +17,7 @@ class XarrayBackend(Backend):
 
     def _init_data(self):
         self._data = xr.Dataset()
+        self._ts = dict()
 
         # Counter
         self._data.attrs["next run_id"] = 1
@@ -29,6 +35,10 @@ class XarrayBackend(Backend):
                 coords=[[], ["name", "anno"]],
                 dims=[name, "_codelist"],
             ).astype(object)
+
+    def _ds_for_ts(self, ts):
+        run_id = self.run_id(ts)
+        return self._ts[run_id]
 
     def _add_code(self, cl, id, name, **anno):
         new = xr.Dataset(
@@ -73,6 +83,7 @@ class XarrayBackend(Backend):
         self._add_code("model", ts.model, annotation)
         self._add_code("scenario", ts.scenario, annotation)
 
+        # Store the run_id
         run_id = self._data.attrs["next run_id"]
         self._data.attrs["next run_id"] += 1
         new = xr.Dataset(
@@ -81,15 +92,24 @@ class XarrayBackend(Backend):
         )
         self._data = xr.combine_by_coords([self._data, new])
 
+        # Create a new Dataset for the TimeSeries/Scenario's data
+        self._ts[run_id] = xr.Dataset(attrs=dict(
+                model=ts.model,
+                scenario=ts.scenario,
+                run_id=run_id,
+        ))
+
     def list_items(self, s, type):
-        return self._data.attrs["items"]
+        return [
+            name for (name, da) in self._ds_for_ts(s).items()
+            if da.attrs.get("_type", None) == type
+        ]
 
     def init_item(self, s, type, name, idx_sets, idx_names):
+        ds = self._ds_for_ts(s)
         assert isinstance(name, str)
-        if name in self._data.attrs["items"]:
+        if name in ds:
             raise ValueError(f"item {name} already exists")
-        else:
-            self._data.attrs["items"].append(name)
 
         attrs = dict(_type=type)
 
@@ -97,19 +117,19 @@ class XarrayBackend(Backend):
             if len(idx_sets):
                 raise NotImplementedError("non-index sets")
 
-            self._data[name] = xr.DataArray([], dims=[name]).astype(str)
+            ds[name] = xr.DataArray([], dims=[name]).astype(str)
         elif type in ("par", "var", "equ"):
             attrs["_names"] = idx_names
-            self._data[name] = xr.DataArray(
+            ds[name] = xr.DataArray(
                 coords=[list() for _ in idx_sets], dims=idx_sets,
             )
         else:
             raise NotImplementedError(f"init_item(type={type})")
 
-        self._data[name].attrs.update(attrs)
+        ds[name].attrs.update(attrs)
 
     def item_index(self, s, name, sets_or_names):
-        da = self._data[name]
+        da = self._ds_for_ts(s)[name]
         coords = list(da.coords.keys())
         coords = [] if coords == [name] else coords
         if sets_or_names == "sets":
@@ -117,18 +137,59 @@ class XarrayBackend(Backend):
         else:
             return da.attrs.get("idx_names", coords)
 
+    def item_get_elements(self, s, type, name, filters=None):
+        if type != "par":
+            raise NotImplementedError(f"item_get_elements(type={type})")
+
+        if filters is not None:
+            raise NotImplementedError("item_get_elements() with filters")
+
+        ds = self._ds_for_ts(s)
+        return ds[name].to_series().rename("value").reset_index()
+
     def item_set_elements(self, s, type, name, elements):
-        print(s, type, name, elements)
+        ds = self._ds_for_ts(s)
 
-        # TODO attribute set above in init_item is missing
-        print(self._data, self._data[name])
-        assert self._data[name].attrs["_type"] == type
+        # FIXME attribute set above in init_item is missing
+        # assert ds[name].attrs["_type"] == type
 
-        raise NotImplementedError
+        if type == "set":
+            to_add = []
+            for key, value, unit, comment in elements:
+                assert value is unit is comment is None
+                to_add.append(key)
+            new = (
+                xr.DataArray(to_add, dims=[name], name=name)
+                .astype(str)
+                .to_dataset()
+                .set_coords(name)
+            )
+            ds = xr.combine_by_coords([ds, new], coords=[name])
+        else:
+            da = ds[name].copy()
+            stored_unit = da.attrs.get("_unit", None)
+            for key, value, unit, comment in elements:
+                if value is None:
+                    raise ValueError(f"set value None for key={key}")
+                if comment is not None:
+                    log.info(f"Discard comment: {comment}")
+                if unit not in (None, "nan"):
+                    if stored_unit and unit != stored_unit:
+                        raise ValueError(f"units {unit} != {stored_unit}")
+                    else:
+                        stored_unit = unit
+
+                da.loc[key] = value
+                da.attrs["_unit"] = stored_unit
+                ds[name] = da
+
+        self._ts[ds.attrs["run_id"]] = ds
 
     def get(self, ts):
         # Raises KeyError or TypeError if nonexistent
         self.run_id(ts)
+
+        # TODO load Dataset from file
 
         ts.version = -1
 
@@ -160,7 +221,6 @@ class XarrayBackend(Backend):
     has_solution = _noop
     is_default = _noop
     item_delete_elements = _noop
-    item_get_elements = _noop
     last_update = _noop
     set_as_default = _noop
     set_data = _noop

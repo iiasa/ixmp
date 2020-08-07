@@ -5,6 +5,7 @@ from pkg_resources import get_distribution, DistributionNotFound
 from ._config import config
 from .backend import BACKENDS, ItemType
 from .backend.jdbc import JDBCBackend
+from .backend.xarray import XarrayBackend
 from .core import IAMC_IDX, Platform, Scenario, TimeSeries
 from .model import MODELS
 from .model.dantzig import DantzigModel
@@ -32,6 +33,7 @@ except DistributionNotFound:
 
 # Register Backends provided by ixmp
 BACKENDS['jdbc'] = JDBCBackend
+BACKENDS['xarray'] = XarrayBackend
 
 # Register Models provided by ixmp
 MODELS.update({

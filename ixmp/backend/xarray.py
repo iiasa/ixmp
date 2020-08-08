@@ -1,7 +1,6 @@
 import json
 import logging
 
-import numpy as np
 import xarray as xr
 
 from .base import Backend
@@ -10,9 +9,14 @@ from .base import Backend
 log = logging.getLogger(__name__)
 
 
+CODELISTS = ["model", "node", "scenario", "timeslice", "unit", "variable"]
+
+
 class XarrayBackend(Backend):
-    # TODO store each TimeSeries' data as a distinct xr.Dataset
-    def __init__(self):
+    # TODO persist data to file
+    # TODO helper methods to increment version, run_id
+
+    def __init__(self, path=None):
         self._init_data()
 
     def _init_data(self):
@@ -21,7 +25,6 @@ class XarrayBackend(Backend):
 
         # Counter
         self._data.attrs["next run_id"] = 1
-        self._data.attrs["items"] = []
 
         # Dimension
         self._data["_codelist"] = (
@@ -29,12 +32,30 @@ class XarrayBackend(Backend):
         )
 
         # Default code lists
-        for name in ["item", "model", "node", "scenario", "timeslice", "unit"]:
-            self._data[name] = xr.DataArray([], dims=[name]).astype(str)
+        for name in CODELISTS:
+            self._data[name] = (
+                xr.DataArray([], dims=[name])
+                .astype(str if name != "year" else int)
+            )
             self._data[f"{name}_info"] = xr.DataArray(
                 coords=[[], ["name", "anno"]],
                 dims=[name, "_codelist"],
             ).astype(object)
+
+        # Storage for (model, scenario, version) attributes
+        self._data = self._data.assign_coords(version=[1])
+        self._data["run_id"] = xr.DataArray(
+            coords=[[], [], []], dims=["model", "scenario", "version"],
+        ).astype(int)
+        self._data["default_version"] = xr.DataArray(
+            coords=[[], []], dims=["model", "scenario"],
+        ).astype(int)
+
+        # Storage for data
+        self._data["timeseries_data"] = xr.DataArray(
+            coords=[[], [], [], [], [], []],
+            dims=["model", "scenario", "node", "variable", "year", "timeslice"]
+        )
 
     def _ds_for_ts(self, ts):
         run_id = self.run_id(ts)
@@ -83,20 +104,28 @@ class XarrayBackend(Backend):
         self._add_code("model", ts.model, annotation)
         self._add_code("scenario", ts.scenario, annotation)
 
+        ts.version = 1
+
         # Store the run_id
-        run_id = self._data.attrs["next run_id"]
+        run_id = int(self._data.attrs["next run_id"])
         self._data.attrs["next run_id"] += 1
-        new = xr.Dataset(
-            {"run_id": (["model", "scenario"], [[run_id]])},
-            coords=dict(model=[ts.model], scenario=[ts.scenario]),
-        )
-        self._data = xr.combine_by_coords([self._data, new])
+        idx = dict(model=ts.model, scenario=ts.scenario, version=ts.version)
+        da = self._data["run_id"].copy()
+        da.loc[idx] = run_id
+        self._data["run_id"] = da
+
+        # Set the default version for this model and scenario
+        idx = dict(model=ts.model, scenario=ts.scenario)
+        da = self._data["default_version"].copy()
+        da.loc[idx] = ts.version
+        self._data["default_version"] = da
 
         # Create a new Dataset for the TimeSeries/Scenario's data
         self._ts[run_id] = xr.Dataset(attrs=dict(
                 model=ts.model,
                 scenario=ts.scenario,
                 run_id=run_id,
+                checked_out=False,
         ))
 
     def list_items(self, s, type):
@@ -130,12 +159,11 @@ class XarrayBackend(Backend):
 
     def item_index(self, s, name, sets_or_names):
         da = self._ds_for_ts(s)[name]
-        coords = list(da.coords.keys())
-        coords = [] if coords == [name] else coords
+        dims = tuple() if da.dims == (name,) else da.dims
         if sets_or_names == "sets":
-            return coords
+            return dims
         else:
-            return da.attrs.get("idx_names", coords)
+            return da.attrs.get("_names", None) or dims
 
     def item_get_elements(self, s, type, name, filters=None):
         if type != "par":
@@ -144,8 +172,13 @@ class XarrayBackend(Backend):
         if filters is not None:
             raise NotImplementedError("item_get_elements() with filters")
 
-        ds = self._ds_for_ts(s)
-        return ds[name].to_series().rename("value").reset_index()
+        return (
+            self._ds_for_ts(s)[name]
+            .to_series()
+            .dropna()
+            .rename("value")
+            .reset_index()
+        )
 
     def item_set_elements(self, s, type, name, elements):
         ds = self._ds_for_ts(s)
@@ -167,6 +200,7 @@ class XarrayBackend(Backend):
             ds = xr.combine_by_coords([ds, new], coords=[name])
         else:
             da = ds[name].copy()
+
             stored_unit = da.attrs.get("_unit", None)
             for key, value, unit, comment in elements:
                 if value is None:
@@ -179,7 +213,14 @@ class XarrayBackend(Backend):
                     else:
                         stored_unit = unit
 
-                da.loc[key] = value
+                if len(da.dims):
+                    if len(da.dims) > 1:
+                        key = dict(zip(da.dims, key))
+                    da.loc[key] = value
+                else:
+                    # Scalar
+                    da.data = value
+
                 da.attrs["_unit"] = stored_unit
                 ds[name] = da
 
@@ -187,26 +228,73 @@ class XarrayBackend(Backend):
 
     def get(self, ts):
         # Raises KeyError or TypeError if nonexistent
+        if not ts.version:
+            idx = dict(model=ts.model, scenario=ts.scenario)
+            ts.version = int(self._data["default_version"].loc[idx])
+
         self.run_id(ts)
 
         # TODO load Dataset from file
 
-        ts.version = -1
+    def check_out(self, ts, timeseries_only):
+        self._ds_for_ts(ts).attrs["checked_out"] = True
+
+    def commit(self, ts, comment):
+        self._ds_for_ts(ts).attrs["checked_out"] = False
+
+        log.warning(f"discard comment: {comment}")
+
+    def set_as_default(self, ts):
+        idx = dict(model=ts.model, scenario=ts.scenario)
+        da = self._data["default_version"].copy()
+        da.loc[idx] = ts.version
+        self._data["default_version"] = da
 
     def run_id(self, ts):
         """Get the run id of this TimeSeries."""
-        return int(self._data["run_id"].loc[ts.model, ts.scenario])
+        return int(self._data["run_id"].loc[ts.model, ts.scenario, ts.version])
 
+    def set_data(self, ts, region, variable, data, unit, subannual, meta):
+        if subannual not in self._data["timeslice"]:
+            log.warning(f"add unknown timeslice: {subannual}")
+            self._add_code("timeslice", subannual, subannual)
+        if variable not in self._data["variable"]:
+            log.warning(f"add unknown variable: {variable}")
+            self._add_code("variable", variable, variable)
+
+        da = xr.DataArray.from_series(
+            data.rename_axis("year")
+            .rename("value")
+            .to_frame()
+            .assign(
+                model=ts.model,
+                scenario=ts.scenario,
+                node=region,
+                variable=variable,
+                timeslice=subannual
+            )
+            .set_index(
+                ["model", "scenario", "node", "variable", "timeslice"],
+                append=True,
+            )
+            .loc[:, "value"]
+        )
+        da.name = "timeseries_data"
+        da.attrs = dict(unit=unit, meta=meta)
+
+        self._data = self._data.update(
+            xr.combine_by_coords([self._data["timeseries_data"], da]),
+        )
+
+    # Methods not implemented yet
     def _noop(self, *args, **kwargs):
         raise NotImplementedError
 
     cat_get_elements = _noop
     cat_list = _noop
     cat_set_elements = _noop
-    check_out = _noop
     clear_solution = _noop
     clone = _noop
-    commit = _noop
     delete = _noop
     delete_geo = _noop
     delete_item = _noop
@@ -222,8 +310,6 @@ class XarrayBackend(Backend):
     is_default = _noop
     item_delete_elements = _noop
     last_update = _noop
-    set_as_default = _noop
-    set_data = _noop
     set_geo = _noop
     set_meta = _noop
     set_doc = _noop

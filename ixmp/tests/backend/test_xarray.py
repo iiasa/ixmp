@@ -35,7 +35,6 @@ def test_ts(mp):
     assert ts.run_id() == ts2.run_id()
 
 
-@pytest.mark.xfail
 def test_make_dantzig(mp):
     """The Dantzig model can be created."""
     make_dantzig(mp)

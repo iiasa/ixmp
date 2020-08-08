@@ -35,6 +35,10 @@ def test_ts(mp):
     assert ts.run_id() == ts2.run_id()
 
 
-def test_make_dantzig(mp):
+@pytest.mark.parametrize("solve", [
+    False,
+    pytest.param(True, marks=pytest.mark.xfail),
+])
+def test_make_dantzig(mp, solve):
     """The Dantzig model can be created."""
-    make_dantzig(mp)
+    make_dantzig(mp, solve=solve)

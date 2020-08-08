@@ -3,6 +3,8 @@ import logging
 
 import xarray as xr
 
+from ixmp.core import Scenario
+from . import ItemType
 from .base import Backend
 
 
@@ -99,6 +101,39 @@ class XarrayBackend(Backend):
     def get_units(self):
         return list(self._data["unit"].values)
 
+    def write_file(self, path, item_type: ItemType, **kwargs):
+        """Write Platform, TimeSeries, or Scenario data to file.
+
+        XarrayBackend supports writing to:
+
+        - ``path='*.gdx', item_type=ItemType.SET | ItemType.PAR``.
+
+        See also
+        --------
+        .Backend.write_file
+        """
+        try:
+            # Call the default implementation, e.g. for .xlsx
+            super().write_file(path, item_type, **kwargs)
+        except NotImplementedError:
+            pass
+        else:
+            return
+
+        ts, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
+        if path.suffix == '.gdx' and item_type is ItemType.SET | ItemType.PAR:
+            if len(filters):
+                raise NotImplementedError('write to GDX with filters')
+            elif not isinstance(ts, Scenario):
+                raise ValueError('write to GDX requires a Scenario object')
+
+            # In progress
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+
+    # TimeSeries methods
+
     def init(self, ts, annotation=None):
         annotation = annotation or ""
         self._add_code("model", ts.model, annotation)
@@ -126,7 +161,13 @@ class XarrayBackend(Backend):
                 scenario=ts.scenario,
                 run_id=run_id,
                 checked_out=False,
+                has_solution=False,
         ))
+
+    # Scenario methods
+
+    def has_solution(self, s):
+        return self._ds_for_ts(s).attrs["has_solution"]
 
     def list_items(self, s, type):
         return [
@@ -306,7 +347,6 @@ class XarrayBackend(Backend):
     get_meta = _noop
     get_scenarios = _noop
     get_timeslices = _noop
-    has_solution = _noop
     is_default = _noop
     item_delete_elements = _noop
     last_update = _noop

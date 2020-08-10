@@ -925,7 +925,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, model: str, scenario: str, version: int) -> dict:
+    def get_meta(self, model: str, scenario: str, version: int, strict: bool
+                 ) -> dict:
         """Retrieve meta.
 
         Parameters
@@ -936,6 +937,9 @@ class Backend(ABC):
             filter meta by a scenario
         version : int or str, optional
             retrieve meta of a specific model/scenario run version
+        strict : bool, optional
+            only retrieve indicators from the requested model-scenario-version
+            level
 
         Returns
         -------

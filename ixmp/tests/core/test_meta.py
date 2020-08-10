@@ -98,10 +98,12 @@ def test_unique_meta_model_scenario(mp, meta):
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)
-def test_setting_multiple_models(mp, meta):
+def test_get_meta_strict(mp, meta):
     """
-    Test meta indicators on various scenario/model combinations and levels.
+    Set meta indicators on several model/scenario/version levels and test
+    the 'strict' parameter of get_meta().
     """
+    # set meta on various levels
     model_meta = {'model_int': 3, 'model_string': 'string_value',
                   'model_bool': False}
     scenario_meta = {'scenario_int': 3, 'scenario_string': 'string_value',
@@ -110,6 +112,8 @@ def test_setting_multiple_models(mp, meta):
              'sample_bool2': False}
     meta3 = {'sample_int3': 3, 'sample_string3': 'string_value3',
              'sample_bool3': False, 'mixed3': ['string', 0.01, 2, True]}
+    meta_scen = {'sample_int4': 3, 'sample_string4': 'string_value4',
+                 'sample_bool4': False, 'mixed4': ['string', 0.01, 2, True]}
     scenario2 = 'standard 2'
     model2 = 'canning problem 2'
     mp.add_scenario(scenario2)
@@ -127,23 +131,53 @@ def test_setting_multiple_models(mp, meta):
     mp.set_meta(meta, **DANTZIG)
     mp.set_meta(meta2, **dantzig2)
     mp.set_meta(meta3, **dantzig3)
+    scen = ixmp.Scenario(mp, **DANTZIG, version="new")
+    scen.commit('save dummy scenario')
+    scen.set_meta(meta_scen)
 
+    # Retrieve and validate meta indicators
+    # model
     obs1 = mp.get_meta(model=DANTZIG['model'])
     assert obs1 == model_meta
-    obs2 = mp.get_meta(scenario=DANTZIG['scenario'])
+    # scenario
+    obs2 = mp.get_meta(scenario=DANTZIG['scenario'], strict=True)
     assert obs2 == scenario_meta
+    # model+scenario
     obs3 = mp.get_meta(**DANTZIG)
     exp3 = copy.copy(meta)
     exp3.update(model_meta)
     exp3.update(scenario_meta)
     assert obs3 == exp3
+    # model+scenario, strict
+    obs3_strict = mp.get_meta(**DANTZIG, strict=True)
+    assert obs3_strict == meta
+    assert obs3 != obs3_strict
+
+    # second model+scenario combination
     obs4 = mp.get_meta(**dantzig2)
     exp4 = copy.copy(meta2)
     exp4.update(scenario_meta)
     assert obs4 == exp4
+    # second model+scenario combination, strict
+    obs4_strict = mp.get_meta(**dantzig2, strict=True)
+    assert obs4_strict == meta2
+    assert obs4 != obs4_strict
+
+    # second model+scenario combination
     obs5 = mp.get_meta(**dantzig3)
     exp5 = copy.copy(meta3)
     assert obs5 == exp5
+
+    # model+scenario+version
+    obs6 = mp.get_meta(**DANTZIG, version=scen.version)
+    exp6 = copy.copy(meta_scen)
+    exp6.update(meta)
+    exp6.update(model_meta)
+    exp6.update(scenario_meta)
+    assert obs6 == exp6
+    obs6_strict = mp.get_meta(DANTZIG['model'], DANTZIG['scenario'],
+                              scen.version, strict=True)
+    assert obs6_strict == meta_scen
 
 
 @pytest.mark.parametrize('meta', META_ENTRIES)

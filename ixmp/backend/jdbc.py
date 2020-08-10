@@ -938,9 +938,11 @@ class JDBCBackend(CachingBackend):
         self.cache_invalidate(*args)
 
     def get_meta(self, model: str = None, scenario: str = None,
-                 version: int = None) -> dict:
+                 version: int = None, strict: bool = False) -> dict:
         self._validate_meta_args(model, scenario, version)
-        meta = self.jobj.getMeta(model, scenario, version)
+        if version is not None:
+            version = java.Long(version)
+        meta = self.jobj.getMeta(model, scenario, version, strict)
         return {entry.getKey(): _unwrap(entry.getValue())
                 for entry in meta.entrySet()}
 

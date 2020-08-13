@@ -1593,7 +1593,8 @@ class Scenario(TimeSeries):
         name : str, optional
             meta category name
         """
-        all_meta = self._backend('get_scenario_meta')
+        all_meta = self.platform._backend.get_meta(self.model, self.scenario,
+                                                   self.version)
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name_or_dict, value=None):
@@ -1608,9 +1609,16 @@ class Scenario(TimeSeries):
         value : str or number or bool, optional
             Meta category value.
         """
-        if type(name_or_dict) == dict:
-            name_or_dict = list(name_or_dict.items())
-        self._backend('set_scenario_meta', name_or_dict, value)
+        if not isinstance(name_or_dict, dict):
+            if isinstance(name_or_dict, str):
+                name_or_dict = {name_or_dict: value}
+            else:
+                msg = ('Unsupported parameter type of name_or_dict: %s. '
+                       'Supported parameter types for name_or_dict are '
+                       'String and Dictionary') % type(name_or_dict)
+                raise ValueError(msg)
+        self.platform._backend.set_meta(name_or_dict, self.model,
+                                        self.scenario, self.version)
 
     def delete_meta(self, *args, **kwargs):
         """DEPRECATED: Remove scenario meta.
@@ -1632,7 +1640,10 @@ class Scenario(TimeSeries):
         name : str or list of str
             Either single meta key or list of keys.
         """
-        self._backend('remove_scenario_meta', name)
+        if isinstance(name, str):
+            name = [name]
+        self.platform._backend.remove_meta(name, self.model, self.scenario,
+                                           self.version)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

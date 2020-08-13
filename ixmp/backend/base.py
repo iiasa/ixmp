@@ -1008,53 +1008,6 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_scenario_meta(self, s: Scenario):
-        """Return all scenario meta.
-
-        Returns
-        -------
-        dict (str -> any)
-            Mapping from meta keys to values.
-        """
-
-    @abstractmethod
-    def set_scenario_meta(self, s: Scenario, name_or_dict, value=None):
-        """Set single or multiple scenario meta entries.
-
-        Parameters
-        ----------
-        name_or_dict : str or dict
-            If the argument is dict, it used as a mapping of meta
-            categories (names) to values. Otherwise, use the argument
-            as the meta category name.
-        value : str or number or bool, optional
-            Meta category value.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError
-            If *value* is not a valid type.
-        """
-
-    @abstractmethod
-    def remove_scenario_meta(self, s, name):
-        """Remove single or multiple scenario meta entries.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Either single meta key or list of keys.
-
-        Returns
-        -------
-        None
-        """
-
-    @abstractmethod
     def clear_solution(self, s: Scenario, from_year=None):
         """Remove data associated with a model solution.
 

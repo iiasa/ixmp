@@ -965,35 +965,6 @@ class JDBCBackend(CachingBackend):
         return self.jobj.removeMeta(model, scenario, version,
                                     to_jlist(categories))
 
-    def get_scenario_meta(self, s):
-        return {entry.getKey(): _unwrap(entry.getValue())
-                for entry in self.jindex[s].getMeta().entrySet()}
-
-    def set_scenario_meta(self, s, name_or_dict, value=None):
-        if type(name_or_dict) == list:
-            jdata = java.LinkedHashMap()
-            for k, v in name_or_dict:
-                jdata.put(str(k), _wrap(v))
-            self.jindex[s].setMeta(jdata)
-            return
-
-        _type = type(value)
-        try:
-            _type = {int: 'Num', float: 'Num', str: 'Str', bool: 'Bool'}[_type]
-            method_name = 'setMeta' + _type
-        except KeyError:
-            raise TypeError(f'Cannot store meta of type {_type}')
-
-        getattr(self.jindex[s], method_name)(name_or_dict, value)
-
-    def remove_scenario_meta(self, s, name):
-        if type(name) == str:
-            name = [name]
-        jdata = java.LinkedList()
-        for k in name:
-            jdata.add(str(k))
-        self.jindex[s].removeMeta(jdata)
-
     def clear_solution(self, s, from_year=None):
         from ixmp.core import Scenario
 

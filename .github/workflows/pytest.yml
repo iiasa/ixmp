@@ -37,6 +37,9 @@ jobs:
       run: git fetch --tags --depth=${{ env.depth }}
 
     - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
     - uses: r-lib/actions/setup-r@master
 
     - name: Use OpenJDK 14 (macOS only)

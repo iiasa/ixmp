@@ -275,6 +275,18 @@ class JDBCBackend(CachingBackend):
         # Set the log level
         self.set_log_level(log_level)
 
+    def __del__(self):
+        self.close_db()
+
+    @classmethod
+    def gc(cls):
+        if _GC_AGGRESSIVE:
+            # log.debug('Collect garbage')
+            java.System.gc()
+            gc.collect()
+        # else:
+        #     log.debug('Skip garbage collection')
+
     # Platform methods
 
     def set_log_level(self, level):
@@ -721,6 +733,7 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].removeGeoData(region, variable, subannual, years, unit)
 
     # Scenario methods
+
     def clone(self, s, platform_dest, model, scenario, annotation,
               keep_solution, first_model_year=None):
         # Raise exceptions for limitations of JDBCBackend
@@ -1015,18 +1028,6 @@ class JDBCBackend(CachingBackend):
                 raise KeyError(name) from None
             else:  # pragma: no cover
                 _raise_jexception(e)
-
-    def __del__(self):
-        self.close_db()
-
-    @classmethod
-    def gc(cls):
-        if _GC_AGGRESSIVE:
-            # log.debug('Collect garbage')
-            java.System.gc()
-            gc.collect()
-        # else:
-        #     log.debug('Skip garbage collection')
 
 
 def start_jvm(jvmargs=None):

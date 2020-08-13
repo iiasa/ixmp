@@ -310,7 +310,7 @@ class TestScenario:
                                    'test_number_negative', 'test_bool_false'}
 
         # Setting with a type other than int, float, bool, str raises TypeError
-        with pytest.raises(TypeError, match='Cannot store meta of type'):
+        with pytest.raises(ValueError, match='Cannot use value'):
             scen.set_meta('test_string', complex(1, 1))
 
     def test_meta_bulk(self, mp, test_dict):

@@ -21,8 +21,8 @@ def test_class():
         pass
 
     class BE2(Backend):
-        add_model = noop
-        add_scenario = noop
+        add_model_name = noop
+        add_scenario_name = noop
         cat_get_elements = noop
         cat_list = noop
         cat_set_elements = noop
@@ -55,9 +55,9 @@ def test_class():
         item_set_elements = noop
         last_update = noop
         list_items = noop
-        models = noop
+        get_model_names = noop
         run_id = noop
-        scenarios = noop
+        get_scenario_names = noop
         set_as_default = noop
         set_data = noop
         set_doc = noop

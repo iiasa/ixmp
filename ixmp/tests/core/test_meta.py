@@ -91,7 +91,7 @@ def test_unique_meta_model_scenario(mp, meta):
         'model': 'canning problem 2',
         'scenario': 'standard',
     }
-    mp.add_model(dantzig2['model'])
+    mp.add_model_name(dantzig2['model'])
     expected = r"The meta category .* is already used at another level: "
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **dantzig2)
@@ -116,8 +116,8 @@ def test_get_meta_strict(mp, meta):
                  'sample_bool4': False, 'mixed4': ['string', 0.01, 2, True]}
     scenario2 = 'standard 2'
     model2 = 'canning problem 2'
-    mp.add_scenario(scenario2)
-    mp.add_model(model2)
+    mp.add_scenario_name(scenario2)
+    mp.add_model_name(model2)
     dantzig2 = {
         'model': model2,
         'scenario': 'standard',

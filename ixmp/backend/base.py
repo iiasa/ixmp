@@ -217,26 +217,28 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def add_model(self, name: str):
-        """ Add (register) new model name.
+    def add_model_name(self, name: str):
+        """Add (register) new model name.
 
         Parameters
         ----------
-        user : str, new model name
+        user : str
+            New model name
         """
 
     @abstractmethod
-    def add_scenario(self, name: str):
-        """ Add (register) new scenario name.
+    def add_scenario_name(self, name: str):
+        """Add (register) new scenario name.
 
         Parameters
         ----------
-        user : str, new scenario name
+        user : str
+            New scenario name
         """
 
     @abstractmethod
-    def models(self) -> Generator[str, None, None]:
-        """ List existing model names.
+    def get_model_names(self) -> Generator[str, None, None]:
+        """List existing model names.
 
         Returns
         -------
@@ -244,8 +246,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def scenarios(self) -> Generator[str, None, None]:
-        """ List existing scenario names.
+    def get_scenario_names(self) -> Generator[str, None, None]:
+        """List existing scenario names.
 
         Returns
         -------
@@ -963,7 +965,8 @@ class Backend(ABC):
 
         Parameters
         ----------
-        meta : dict, containing meta key/value category pairs
+        meta : dict
+            containing meta key/value category pairs
         model : str, optional
             model name that meta should be attached to
         scenario : str, optional
@@ -990,7 +993,8 @@ class Backend(ABC):
 
         Parameters
         ----------
-        categories : list of str, meta-category keys to remove
+        categories : list of str
+            meta-category keys to remove
         model : str, optional
             only remove meta of a specific model
         scenario : str, optional

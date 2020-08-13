@@ -194,12 +194,11 @@ def test_weakref():
     # *s* is garbage-collected at this point
 
 
-def test_add_model(mp):
-    mp.add_model('new_model_name')
-    assert 'new_model_name' in mp.models()
+def test_add_model_name(mp):
+    mp.add_model_name('new_model_name')
+    assert 'new_model_name' in mp.get_model_names()
 
 
-def test_add_scenario(mp):
-    mp.add_scenario('new_scenario_name')
-    print(list(mp.scenarios()))
-    assert 'new_scenario_name' in mp.scenarios()
+def test_add_scenario_name(mp):
+    mp.add_scenario_name('new_scenario_name')
+    assert 'new_scenario_name' in mp.get_scenario_names()

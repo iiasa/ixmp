@@ -367,17 +367,17 @@ class JDBCBackend(CachingBackend):
     def set_timeslice(self, name, category, duration):
         self.jobj.addTimeslice(name, category, java.Double(duration))
 
-    def add_model(self, name):
+    def add_model_name(self, name):
         self.jobj.addModel(str(name))
 
-    def add_scenario(self, name):
+    def add_scenario_name(self, name):
         self.jobj.addScenario(str(name))
 
-    def models(self) -> Generator[str, None, None]:
+    def get_model_names(self) -> Generator[str, None, None]:
         for model in self.jobj.listModels():
             yield str(model)
 
-    def scenarios(self) -> Generator[str, None, None]:
+    def get_scenario_names(self) -> Generator[str, None, None]:
         for scenario in self.jobj.listScenarios():
             yield str(scenario)
 

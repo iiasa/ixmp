@@ -57,17 +57,17 @@ class Platform:
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
-        'open_db',
+        'add_model_name',
+        'add_scenario_name',
         'close_db',
         'get_doc',
-        'set_doc',
         'get_meta',
-        'set_meta',
+        'get_model_names',
+        'get_scenario_names',
+        'open_db',
         'remove_meta',
-        'add_model',
-        'add_scenario',
-        'models',
-        'scenarios',
+        'set_doc',
+        'set_meta',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):

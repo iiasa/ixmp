@@ -413,7 +413,6 @@ class Backend(ABC):
         else:
             raise NotImplementedError
 
-
     # Methods for ixmp.TimeSeries
 
     @abstractmethod

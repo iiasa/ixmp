@@ -222,7 +222,7 @@ class Backend(ABC):
 
         Parameters
         ----------
-        user : str
+        name : str
             New model name
         """
 
@@ -232,7 +232,7 @@ class Backend(ABC):
 
         Parameters
         ----------
-        user : str
+        name : str
             New scenario name
         """
 
@@ -243,6 +243,7 @@ class Backend(ABC):
         Returns
         -------
         list of str
+            List of the retrieved model names.
         """
 
     @abstractmethod
@@ -252,6 +253,7 @@ class Backend(ABC):
         Returns
         -------
         list of str
+            List of the retrieved scenario names.
         """
 
     @abstractmethod
@@ -932,7 +934,7 @@ class Backend(ABC):
     @abstractmethod
     def get_meta(self, model: str, scenario: str, version: int, strict: bool
                  ) -> dict:
-        """Retrieve meta.
+        """Retrieve meta indicators.
 
         Parameters
         ----------

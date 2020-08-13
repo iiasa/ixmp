@@ -32,15 +32,15 @@ Platform
    The following backend methods are available via Platform too:
 
    .. autosummary::
-      backend.base.Backend.add_model
-      backend.base.Backend.add_scenario
+      backend.base.Backend.add_model_name
+      backend.base.Backend.add_scenario_name
       backend.base.Backend.close_db
       backend.base.Backend.get_doc
       backend.base.Backend.get_meta
-      backend.base.Backend.models
+      backend.base.Backend.get_model_names
+      backend.base.Backend.get_scenario_names
       backend.base.Backend.open_db
       backend.base.Backend.remove_meta
-      backend.base.Backend.scenarios
       backend.base.Backend.set_doc
       backend.base.Backend.set_meta
 

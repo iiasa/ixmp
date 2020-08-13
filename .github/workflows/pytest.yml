@@ -104,7 +104,7 @@ jobs:
       run: |
         install.packages("remotes")
         remotes::install_cran(c("rcmdcheck", "IRkernel"))
-        remotes::install_deps("rixmp", dependencies = TRUE)
+        remotes::install_deps("rixmp", upgrade = "never", dependencies = TRUE)
 
         # commented: for debugging
         # print(reticulate::py_config())
@@ -113,7 +113,11 @@ jobs:
         # For R tutorial notebooks, run via the pytest suite: set up R kernel;
         # actually install the R package
         IRkernel::installspec()
-        remotes::install_local("rixmp", INSTALL_opts = c("--no-multiarch"))
+        remotes::install_local(
+          "rixmp",
+          force = TRUE,
+          INSTALL_opts = c("--no-multiarch"),
+          )
       shell: Rscript {0}
 
     - name: Run test suite using pytest

@@ -131,10 +131,11 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
                     # data was compared in this iteration; advance
                     name[i], data[i] = next(items[i])
             except StopIteration:
-                # No more data for this iterator
-                name[i], data[i] = "(end)", None
+                # No more data for this iterator.
+                # Use "~" because it sorts after all ASCII characters
+                name[i], data[i] = "~ end", None
 
-        if name[0] == name[1] == "(end)":
+        if name[0] == name[1] == "~ end":
             break
 
 

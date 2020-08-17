@@ -35,23 +35,31 @@ def test_check_year():
     assert utils.check_year(y3, s3) is True
 
 
-def test_diff(test_mp):
+def test_diff_identical(test_mp):
+    """diff() of identical Scenarios."""
     scen_a = make_dantzig(test_mp)
     scen_b = make_dantzig(test_mp)
 
-    # Comparison of identical scenarios produces data of same length
+    # Compare identical scenarios: produces data of same length
     for name, df in utils.diff(scen_a, scen_b):
         data_a = utils.maybe_convert_scalar(scen_a.par(name))
         assert len(data_a) == len(df)
 
-    # Comparison of identical data with filters
+    # Compare identical scenarios, with filters
     iterator = utils.diff(scen_a, scen_b, filters=dict(i=["seattle"]))
     for (name, df), (exp_name, N) in zip(iterator, [("a", 1), ("d", 3)]):
         assert exp_name == name and len(df) == N
 
+
+def test_diff_data(test_mp):
+    """diff() when Scenarios contain the same items, but different data."""
+    scen_a = make_dantzig(test_mp)
+    scen_b = make_dantzig(test_mp)
+
     # Modify `scen_a` and `scen_b`
     scen_a.check_out()
     scen_b.check_out()
+
     # Remove elements from "b"
     drop_args = dict(labels=["value", "unit"], axis=1)
     scen_a.remove_par("b", scen_a.par("b").iloc[0:1, :].drop(**drop_args))
@@ -102,6 +110,29 @@ def test_diff(test_mp):
             pdt.assert_frame_equal(
                 exp_d.iloc[[0, 3], :].reset_index(drop=True), df
             )
+
+
+def test_diff_items(test_mp):
+    """diff() when Scenarios contain the different items."""
+    scen_a = make_dantzig(test_mp)
+    scen_b = make_dantzig(test_mp)
+
+    # Modify `scen_a` and `scen_b`
+    scen_a.check_out()
+    scen_b.check_out()
+
+    # Remove items
+    scen_a.remove_par("b")
+    scen_b.remove_par("d")
+
+    # Compare different scenarios without filters
+    for name, df in utils.diff(scen_a, scen_b):
+        pass  # No check on the contents
+
+    # Compare different scenarios with filters
+    iterator = utils.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
+    for name, df in iterator:
+        pass  # No check of the contents
 
 
 m_s = dict(model='m', scenario='s')

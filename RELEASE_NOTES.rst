@@ -6,14 +6,14 @@ All changes
 
 - :pull:`353`: Add meta functionality.
 
-  - :meth:`Platform.add_model` using :meth:`.Backend.add_model`
-  - :meth:`Platform.add_scenario` using :meth:`.Backend.add_scenario`
-  - :meth:`Platform.models` using :meth:`.Backend.models`
-  - :meth:`Platform.scenarios` using :meth:`.Backend.scenarios`
+  - :meth:`Platform.add_model_name` using :meth:`.Backend.add_model_name`
+  - :meth:`Platform.add_scenario_name` using :meth:`.Backend.add_scenario_name`
+  - :meth:`Platform.model_names` using :meth:`.Backend.model_names`
+  - :meth:`Platform.scenario_names` using :meth:`.Backend.scenario_names`
   - :meth:`Platform.get_meta` using :meth:`.Backend.get_meta`
   - :meth:`Platform.set_meta` using :meth:`.Backend.set_meta`
   - :meth:`Platform.remove_meta` using :meth:`.Backend.remove_meta`
-  - :meth:`Scenario.remove_meta` using :meth:`.Backend.remove_scenario_meta`
+  - :meth:`Scenario.remove_meta` using :meth:`.Backend.remove_meta`
   - deprecate :meth:`Scenario.delete_meta`
 
 - :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.

@@ -42,7 +42,6 @@ def test_class():
         get_meta = noop
         get_nodes = noop
         get_scenarios = noop
-        get_scenario_meta = noop
         get_timeslices = noop
         get_units = noop
         has_solution = noop
@@ -64,11 +63,9 @@ def test_class():
         set_geo = noop
         set_meta = noop
         set_node = noop
-        set_scenario_meta = noop
         set_timeslice = noop
         set_unit = noop
         remove_meta = noop
-        remove_scenario_meta = noop
 
     # Complete subclass can be instantiated
     be = BE2()

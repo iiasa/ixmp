@@ -3,7 +3,7 @@ import logging
 
 import pandas as pd
 
-from ixmp.utils import as_str_list
+from ixmp.utils import as_str_list, maybe_check_out, maybe_commit
 from . import ItemType
 
 
@@ -39,13 +39,16 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type, max_row=None):
+def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
     --------
     Scenario.to_excel
     """
+    # Default: empty dict
+    filters = filters or dict()
+
     # Types of items to write
     ix_types = ['set', 'par']
     if ItemType.VAR in item_type:
@@ -69,8 +72,17 @@ def s_write_excel(be, s, path, item_type, max_row=None):
     max_row = min(int(max_row or EXCEL_MAX_ROWS), EXCEL_MAX_ROWS)
 
     for name, ix_type in name_type.items():
+        if ix_type == "par":
+            # Use only the filters corresponding to dimensions of this item
+            item_filters = {
+                k: v for k, v in filters.items()
+                if k in be.item_index(s, name, "names")
+            }
+        else:
+            item_filters = None
+
         # Extract data: dict, pd.Series, or pd.DataFrame
-        data = be.item_get_elements(s, ix_type, name)
+        data = be.item_get_elements(s, ix_type, name, item_filters)
 
         if isinstance(data, dict):
             # Scalar equ/par/var: series with index like 'value', 'unit'.
@@ -251,13 +263,10 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         except KeyError:
             raise ValueError(f'no set {repr(name)}; try init_items=True')
 
-    if commit_steps:
-        s.commit(f'Loaded sets from {path}')
-        s.check_out()
+    maybe_commit(s, commit_steps, f"Loaded sets from {path}")
 
-    if add_units:
-        # List of existing units for reference
-        units = set(be.get_units())
+    # List of existing units for reference
+    units = set(be.get_units())
 
     # Add equ/par/var data
     for name, ix_type in name_type[name_type != 'set'].items():
@@ -268,6 +277,8 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
         # Only parameters beyond this point
 
         df = parse_item_sheets(name)
+
+        maybe_check_out(s)
 
         if add_units:
             # New units appearing in this parameter
@@ -301,7 +312,9 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
 
         s.add_par(name, df)
 
-        if commit_steps:
-            # Commit after every parameter
-            s.commit(f'Loaded {ix_type} {repr(name)} from {path}')
-            s.check_out()
+        # Commit after every parameter
+        maybe_commit(
+            s, commit_steps, f"Loaded {ix_type} {repr(name)} from {path}"
+        )
+
+    maybe_commit(s, not commit_steps, f"Import from {path}")

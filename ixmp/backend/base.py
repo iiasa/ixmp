@@ -406,11 +406,17 @@ class Backend(ABC):
         --------
         read_file
         """
-        s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
+        # Use the "scenario" filter to retrieve the Scenario `s` to be written;
+        # reappend any other filters
+        s, kwargs["filters"] = self._handle_rw_filters(
+            kwargs.pop("filters", {})
+        )
+
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
         if path.suffix == '.xlsx' and item_type in xlsx_types and s:
             s_write_excel(self, s, path, item_type, **kwargs)
         else:
+            # All other combinations of arguments
             raise NotImplementedError
 
     # Methods for ixmp.TimeSeries

@@ -169,6 +169,35 @@ class TestScenario:
         # Units are as expected
         assert df.loc[0, 'unit'] == 'km'
 
+    def test_items(self, scen):
+        # Without filters
+        iterator = scen.items()
+
+        # next() can be called → an iterator was returned
+        next(iterator)
+
+        # Iterator returns the expected parameter names
+        exp = ["a", "b", "d", "f"]
+        for i, (name, data) in enumerate(scen.items()):
+            # Name is correct in the expected order
+            assert exp[i] == name
+            # Data is one of the return types of .par()
+            assert isinstance(data, (pd.DataFrame, dict))
+
+        # Total number of items was correct
+        assert i == 3
+
+        # With filters
+        iterator = scen.items(filters=dict(i=["seattle"]))
+        exp = [("a", 1), ("d", 3)]
+        for i, (name, data) in enumerate(iterator):
+            # Name is correct in the expected order
+            assert exp[i][0] == name
+            # Number of (filtered) rows is as expected
+            assert exp[i][1] == len(data)
+
+        assert i == 1
+
     def test_var(self, scen):
         df = scen.var('x', filters={'i': ['seattle']})
 
@@ -255,6 +284,7 @@ class TestScenario:
         # NB could make a more exact comparison of the Scenarios
 
         # Pre-initialize skipped items 'baz_2' and 'baz_3'
+        scen_empty.check_out()
         scen_empty.init_par('baz_2', ['i'], ['i_dim'])
         scen_empty.init_set('baz_3', ['i', 'i'], ['i', 'i_also'])
 
@@ -263,6 +293,7 @@ class TestScenario:
         scen_empty.read_excel(tmp_path)
 
         # Re-initialize an item with different index names
+        scen_empty.check_out()
         scen_empty.remove_par('d')
         scen_empty.init_par('d', idx_sets=['i', 'j'], idx_names=['I', 'J'])
 

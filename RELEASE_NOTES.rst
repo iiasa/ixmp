@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`354`: Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export``.
 - :pull:`353`: Add meta functionality.
 
   - :meth:`.Platform.add_model_name` using :meth:`.Backend.add_model_name`

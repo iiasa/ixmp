@@ -187,35 +187,30 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     populate_test_platform(test_mp)
     tmp_path /= 'dantzig.xlsx'
 
+    url = (
+        f"ixmp://{test_mp.name}/{models['dantzig']['model']}/"
+        f"{models['dantzig']['scenario']}"
+    )
+
     # Invoke the CLI to export data to Excel
-    cmd = [
-        '--platform', test_mp.name,
-        '--model', models['dantzig']['model'],
-        '--scenario', models['dantzig']['scenario'],
-        'export', str(tmp_path),
-    ]
+    cmd = ["--url", url, "export", str(tmp_path)]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
     # Export with a maximum row limit per sheet
     tmp_path2 = tmp_path.with_name('dantzig2.xlsx')
-    cmd = cmd[:-1] + [str(tmp_path2), '--max-row', 2]
+    cmd = cmd[:-1] + [str(tmp_path2), "--max-row", 2]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
     # Fails without platform/scenario info
-    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
+    assert ixmp_cli.invoke(cmd[2:]).exit_code == UsageError.exit_code
 
     # Invoke the CLI to read data from Excel
-    cmd = [
-        '--platform', test_mp.name,
-        '--model', models['dantzig']['model'],
-        '--scenario', models['dantzig']['scenario'],
-        'import', 'scenario', str(tmp_path),
-    ]
+    cmd = ["--url", url, "import", "scenario", str(tmp_path)]
 
     # Fails without platform/scenario info
-    assert ixmp_cli.invoke(cmd[6:]).exit_code == UsageError.exit_code
+    assert ixmp_cli.invoke(cmd[2:]).exit_code == UsageError.exit_code
 
     # Fails without --discard-solution
     result = ixmp_cli.invoke(cmd)
@@ -223,30 +218,73 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     assert 'This Scenario has a solution' in result.output
 
     # Succeeds with --discard-solution
-    cmd.insert(-1, '--discard-solution')
+    cmd.insert(-1, "--discard-solution")
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
-    # Import into a new model name fails without --init-items
+    # Import into a new model name: fails without --init-items
     cmd = [
-        '--platform', test_mp.name,
-        '--model', 'foo model',
-        '--scenario', 'bar scenario',
-        '--version', 'new',
-        'import', 'scenario', str(tmp_path),
+        "--url",
+        f"ixmp://{test_mp.name}/foo model/bar scenario#new",
+        "import",
+        "scenario",
+        str(tmp_path),
     ]
     result = ixmp_cli.invoke(cmd)
-    assert result.exit_code == 1
+    assert result.exit_code == 1, result.output
 
-    # Succeeds
-    cmd.insert(-1, '--init-items')
+    # Succeeds with --init-items
+    cmd.insert(-1, "--init-items")
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
     # Import from a file that has multiple sheets (due to row limit)
-    cmd[cmd.index(str(tmp_path))] = str(tmp_path2)
+    cmd[-1] = str(tmp_path2)
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
+
+
+def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
+    populate_test_platform(test_mp)
+    tmp_path /= 'dantzig.xlsx'
+
+    url = (
+        f"ixmp://{test_mp.name}/{models['dantzig']['model']}/"
+        f"{models['dantzig']['scenario']}"
+    )
+
+    # Invoke the CLI to export data to Excel, with filters
+    cmd = [
+        "--url",
+        url,
+        "export",
+        str(tmp_path),
+        "--",
+        "i=seattle",
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Import into a new model name
+    url = f"ixmp://{test_mp.name}/foo model/bar scenario#new"
+    cmd = [
+        "--url",
+        url,
+        "import",
+        "scenario",
+        "--init-items",
+        str(tmp_path),
+    ]
+    result = ixmp_cli.invoke(cmd)
+    assert result.exit_code == 0, result.output
+
+    # Load one of the imported parameters
+    scen = ixmp.Scenario(test_mp, "foo model", "bar scenario")
+    d = scen.par("d")
+
+    # Data in (imported from) file has only filtered elements
+    assert set(d["i"].unique()) == {"seattle"}
+    assert len(d) == 3
 
 
 def test_report(ixmp_cli):

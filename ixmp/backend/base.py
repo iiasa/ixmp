@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from copy import copy
+from typing import Generator
 import json
 
 from ixmp.core import TimeSeries, Scenario
@@ -20,6 +21,78 @@ class Backend(ABC):
         for the method name, e.g. 'ts_{method}'.
         """
         return getattr(self, method)(obj, *args, **kwargs)
+
+    # Platform methods
+
+    def set_log_level(self, level):
+        """OPTIONAL: Set logging level for the backend and other code.
+
+        The default implementation has no effect.
+
+        Parameters
+        ----------
+        level : int or Python logging level
+
+        See also
+        --------
+        get_log_level
+        """
+
+    def get_log_level(self):
+        """OPTIONAL: Get logging level for the backend and other code.
+
+        The default implementation has no effect.
+
+        Returns
+        -------
+        str
+            Name of a :py:ref:`Python logging level <levels>`.
+
+        See also
+        --------
+        set_log_level
+        """
+
+    @abstractmethod
+    def set_doc(self, domain, docs):
+        """Save documentation to database
+
+        Parameters
+        ----------
+        domain : str
+            Documentation domain, e.g. model, scenario etc
+        docs : dict or array of tuples
+            Dictionary or tuple array containing mapping between name of domain
+            object (e.g. model name) and string representing fragment
+            of documentation
+        """
+
+    @abstractmethod
+    def get_doc(self, domain, name=None):
+        """ Read documentation from database
+
+        Parameters
+        ----------
+        domain : str
+            Documentation domain, e.g. model, scenario etc
+        name : str, optional
+            Name of domain entity (e.g. model name).
+
+        Returns
+        -------
+        str or dict
+            String representing fragment of documentation if name is passed as
+            parameter or dictionary containing mapping between name of domain
+            object (e.g. model name) and string representing fragment when
+            name parameter is omitted.
+        """
+
+    def open_db(self):
+        """OPTIONAL: (Re-)open database connection(s).
+
+        A backend **may** connect to a database server. This method opens the
+        database connection if it is closed.
+        """
 
     def close_db(self):
         """OPTIONAL: Close database connection(s).
@@ -52,6 +125,33 @@ class Backend(ABC):
             user is authorized for the model.
         """
         return {model: True for model in models}
+
+    @abstractmethod
+    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
+        """Add a node name to the Platform.
+
+        This method **must** have one of two effects, depending on the
+        arguments:
+
+        - With `parent` and `hierarchy`: `name` is added as a child of `parent`
+          in the named `hierarchy`.
+        - With `synonym`: `synonym` is added as an alias for `name`.
+
+        Parameters
+        ----------
+        name : str
+           Node name.
+        parent : str, optional
+           Parent node name.
+        hierarchy : str, optional
+           Node hierarchy ID.
+        synonym : str, optional
+           Synonym for node.
+
+        See also
+        --------
+        get_nodes
+        """
 
     @abstractmethod
     def get_nodes(self):
@@ -117,6 +217,46 @@ class Backend(ABC):
         """
 
     @abstractmethod
+    def add_model_name(self, name: str):
+        """Add (register) new model name.
+
+        Parameters
+        ----------
+        name : str
+            New model name
+        """
+
+    @abstractmethod
+    def add_scenario_name(self, name: str):
+        """Add (register) new scenario name.
+
+        Parameters
+        ----------
+        name : str
+            New scenario name
+        """
+
+    @abstractmethod
+    def get_model_names(self) -> Generator[str, None, None]:
+        """List existing model names.
+
+        Returns
+        -------
+        list of str
+            List of the retrieved model names.
+        """
+
+    @abstractmethod
+    def get_scenario_names(self) -> Generator[str, None, None]:
+        """List existing scenario names.
+
+        Returns
+        -------
+        list of str
+            List of the retrieved scenario names.
+        """
+
+    @abstractmethod
     def get_scenarios(self, default, model, scenario):
         """Iterate over TimeSeries stored on the Platform.
 
@@ -156,116 +296,6 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_units(self):
-        """Return all registered symbols for units of measurement.
-
-        Returns
-        -------
-        list of str
-
-        See also
-        --------
-        set_unit
-        """
-
-    def open_db(self):
-        """OPTIONAL: (Re-)open database connection(s).
-
-        A backend **may** connect to a database server. This method opens the
-        database connection if it is closed.
-        """
-
-    def set_log_level(self, level):
-        """OPTIONAL: Set logging level for the backend and other code.
-
-        The default implementation has no effect.
-
-        Parameters
-        ----------
-        level : int or Python logging level
-
-        See also
-        --------
-        get_log_level
-        """
-
-    def get_log_level(self):
-        """OPTIONAL: Get logging level for the backend and other code.
-
-        The default implementation has no effect.
-
-        Returns
-        -------
-        str
-            Name of a :py:ref:`Python logging level <levels>`.
-
-        See also
-        --------
-        set_log_level
-        """
-
-    @abstractmethod
-    def set_doc(self, domain, docs):
-        """Save documentation to database
-
-        Parameters
-        ----------
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        docs : dict or array of tuples
-            Dictionary or tuple array containing mapping between name of domain
-            object (e.g. model name) and string representing fragment
-            of documentation
-        """
-
-    @abstractmethod
-    def get_doc(self, domain, name=None):
-        """ Read documentation from database
-
-        Parameters
-        ----------
-        domain : str
-            Documentation domain, e.g. model, scenario etc
-        name : str, optional
-            Name of domain entity (e.g. model name).
-
-        Returns
-        -------
-        str or dict
-            String representing fragment of documentation if name is passed as
-            parameter or dictionary containing mapping between name of domain
-            object (e.g. model name) and string representing fragment when
-            name parameter is omitted.
-        """
-
-    @abstractmethod
-    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
-        """Add a node name to the Platform.
-
-        This method **must** have one of two effects, depending on the
-        arguments:
-
-        - With `parent` and `hierarchy`: `name` is added as a child of `parent`
-          in the named `hierarchy`.
-        - With `synonym`: `synonym` is added as an alias for `name`.
-
-        Parameters
-        ----------
-        name : str
-           Node name.
-        parent : str, optional
-           Parent node name.
-        hierarchy : str, optional
-           Node hierarchy ID.
-        synonym : str, optional
-           Synonym for node.
-
-        See also
-        --------
-        get_nodes
-        """
-
-    @abstractmethod
     def set_unit(self, name, comment):
         """Add a unit of measurement to the Platform.
 
@@ -279,6 +309,19 @@ class Backend(ABC):
         See also
         --------
         get_units
+        """
+
+    @abstractmethod
+    def get_units(self):
+        """Return all registered symbols for units of measurement.
+
+        Returns
+        -------
+        list of str
+
+        See also
+        --------
+        set_unit
         """
 
     def read_file(self, path, item_type: ItemType, **kwargs):
@@ -369,24 +412,6 @@ class Backend(ABC):
             s_write_excel(self, s, path, item_type, **kwargs)
         else:
             raise NotImplementedError
-
-    @staticmethod
-    def _handle_rw_filters(filters: dict):
-        """Helper for :meth:`read_file` and :meth:`write_file`.
-
-        The `filters` argument is unpacked if the 'scenarios' key is a single
-        :class:`TimeSeries` object. A 2-tuple is returned of the object (or
-        :obj:`None`) and the remaining filters.
-        """
-        ts = None
-        filters = copy(filters)
-        try:
-            if isinstance(filters['scenario'], TimeSeries):
-                ts = filters.pop('scenario')
-        except KeyError:
-            pass  # Don't modify filters at all
-
-        return ts, filters
 
     # Methods for ixmp.TimeSeries
 
@@ -481,6 +506,82 @@ class Backend(ABC):
         -------
         None
         """
+
+    @abstractmethod
+    def discard_changes(self, ts: TimeSeries):
+        """Discard changes to *ts* since the last :meth:`ts_check_out`.
+
+        Returns
+        -------
+        None
+        """
+
+    @abstractmethod
+    def set_as_default(self, ts: TimeSeries):
+        """Set the current :attr:`.TimeSeries.version` as the default.
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        get
+        is_default
+        """
+
+    @abstractmethod
+    def is_default(self, ts: TimeSeries):
+        """Return :obj:`True` if *ts* is the default version.
+
+        Returns
+        -------
+        bool
+
+        See also
+        --------
+        get
+        set_as_default
+        """
+
+    @abstractmethod
+    def last_update(self, ts: TimeSeries):
+        """Return the date of the last modification of the *ts*.
+
+        Returns
+        -------
+        str or None
+        """
+
+    @abstractmethod
+    def run_id(self, ts: TimeSeries):
+        """Return the run ID for the *ts*.
+
+        Returns
+        -------
+        int
+        """
+
+    def preload(self, ts: TimeSeries):
+        """OPTIONAL: Load *ts* data into memory."""
+
+    @staticmethod
+    def _handle_rw_filters(filters: dict):
+        """Helper for :meth:`read_file` and :meth:`write_file`.
+
+        The `filters` argument is unpacked if the 'scenarios' key is a single
+        :class:`TimeSeries` object. A 2-tuple is returned of the object (or
+        :obj:`None`) and the remaining filters.
+        """
+        ts = None
+        filters = copy(filters)
+        try:
+            if isinstance(filters['scenario'], TimeSeries):
+                ts = filters.pop('scenario')
+        except KeyError:
+            pass  # Don't modify filters at all
+
+        return ts, filters
 
     @abstractmethod
     def get_data(self, ts: TimeSeries, region, variable, unit, year):
@@ -623,64 +724,6 @@ class Backend(ABC):
         -------
         None
         """
-
-    @abstractmethod
-    def discard_changes(self, ts: TimeSeries):
-        """Discard changes to *ts* since the last :meth:`ts_check_out`.
-
-        Returns
-        -------
-        None
-        """
-
-    @abstractmethod
-    def set_as_default(self, ts: TimeSeries):
-        """Set the current :attr:`.TimeSeries.version` as the default.
-
-        Returns
-        -------
-        None
-
-        See also
-        --------
-        get
-        is_default
-        """
-
-    @abstractmethod
-    def is_default(self, ts: TimeSeries):
-        """Return :obj:`True` if *ts* is the default version.
-
-        Returns
-        -------
-        bool
-
-        See also
-        --------
-        get
-        set_as_default
-        """
-
-    @abstractmethod
-    def last_update(self, ts: TimeSeries):
-        """Return the date of the last modification of the *ts*.
-
-        Returns
-        -------
-        str or None
-        """
-
-    @abstractmethod
-    def run_id(self, ts: TimeSeries):
-        """Return the run ID for the *ts*.
-
-        Returns
-        -------
-        int
-        """
-
-    def preload(self, ts: TimeSeries):
-        """OPTIONAL: Load *ts* data into memory."""
 
     # Methods for ixmp.Scenario
 
@@ -888,31 +931,49 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, s: Scenario):
-        """Return all meta.
+    def get_meta(self, model: str, scenario: str, version: int, strict: bool
+                 ) -> dict:
+        """Retrieve meta indicators.
+
+        Parameters
+        ----------
+        model : str, optional
+            filter meta by a model
+        scenario : str, optional
+            filter meta by a scenario
+        version : int or str, optional
+            retrieve meta of a specific model/scenario run version
+        strict : bool, optional
+            only retrieve indicators from the requested model-scenario-version
+            level
 
         Returns
         -------
         dict (str -> any)
-            Mapping from meta keys to values.
+            Mapping from meta category keys to values.
 
-        See also
-        --------
-        s_get_meta
+        Raises
+        ------
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod
-    def set_meta(self, s: Scenario, name_or_dict, value=None):
-        """Set single or multiple meta entries.
+    def set_meta(self, meta: dict, model: str, scenario: str, version: int):
+        """Set meta categories.
 
         Parameters
         ----------
-        name_or_dict : str or dict
-            If the argument is dict, it used as a mapping of meta
-            categories (names) to values. Otherwise, use the argument
-            as the meta attribute name.
-        value : str or number or bool, optional
-            Meta attribute value.
+        meta : dict
+            containing meta key/value category pairs
+        model : str, optional
+            model name that meta should be attached to
+        scenario : str, optional
+            scenario name that meta should be attached to
+        version : int, optional
+            run version that meta should be attached to
 
         Returns
         -------
@@ -920,22 +981,38 @@ class Backend(ABC):
 
         Raises
         ------
-        TypeError
-            If *value* is not a valid type.
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod
-    def delete_meta(self, s, name):
-        """Remove single or multiple meta entries.
+    def remove_meta(self, categories: list, model: str, scenario: str,
+                    version: int):
+        """Remove meta categories.
 
         Parameters
         ----------
-        name : str or list of str
-            Either single meta key or list of keys.
+        categories : list of str
+            meta-category keys to remove
+        model : str, optional
+            only remove meta of a specific model
+        scenario : str, optional
+            only remove meta of a specific scenario
+        version : int, optional
+            only remove meta of a specific model/scenario run version
 
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            On unsupported model-scenario-version combinations.
+            Supported combinations are: (model), (scenario), (model, scenario),
+            (model, scenario, version)
         """
 
     @abstractmethod

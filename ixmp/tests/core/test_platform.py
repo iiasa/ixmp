@@ -1,4 +1,4 @@
-"""Test all functionality of ixmp.Platform."""
+"""Test functionality of ixmp.Platform."""
 from sys import getrefcount
 from weakref import getweakrefcount
 
@@ -192,3 +192,13 @@ def test_weakref():
     assert s.model == 'foo'
 
     # *s* is garbage-collected at this point
+
+
+def test_add_model_name(mp):
+    mp.add_model_name('new_model_name')
+    assert 'new_model_name' in mp.get_model_names()
+
+
+def test_add_scenario_name(mp):
+    mp.add_scenario_name('new_scenario_name')
+    assert 'new_scenario_name' in mp.get_scenario_names()

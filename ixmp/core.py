@@ -57,10 +57,17 @@ class Platform:
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
-        'open_db',
+        'add_model_name',
+        'add_scenario_name',
         'close_db',
         'get_doc',
+        'get_meta',
+        'get_model_names',
+        'get_scenario_names',
+        'open_db',
+        'remove_meta',
         'set_doc',
+        'set_meta',
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -1584,9 +1591,10 @@ class Scenario(TimeSeries):
         Parameters
         ----------
         name : str, optional
-            meta attribute name
+            meta category name
         """
-        all_meta = self._backend('get_meta')
+        all_meta = self.platform._backend.get_meta(self.model, self.scenario,
+                                                   self.version)
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name_or_dict, value=None):
@@ -1597,23 +1605,45 @@ class Scenario(TimeSeries):
         name_or_dict : str or dict
             If the argument is dict, it used as a mapping of meta
             categories (names) to values. Otherwise, use the argument
-            as the meta attribute name.
+            as the meta category name.
         value : str or number or bool, optional
-            Meta attribute value.
+            Meta category value.
         """
-        if type(name_or_dict) == dict:
-            name_or_dict = list(name_or_dict.items())
-        self._backend('set_meta', name_or_dict, value)
+        if not isinstance(name_or_dict, dict):
+            if isinstance(name_or_dict, str):
+                name_or_dict = {name_or_dict: value}
+            else:
+                msg = ('Unsupported parameter type of name_or_dict: %s. '
+                       'Supported parameter types for name_or_dict are '
+                       'String and Dictionary') % type(name_or_dict)
+                raise ValueError(msg)
+        self.platform._backend.set_meta(name_or_dict, self.model,
+                                        self.scenario, self.version)
 
-    def delete_meta(self, name):
-        """Delete scenario meta.
+    def delete_meta(self, *args, **kwargs):
+        """DEPRECATED: Remove scenario meta.
 
         Parameters
         ----------
         name : str or list of str
             Either single meta key or list of keys.
         """
-        self._backend('delete_meta', name)
+        warn('Scenario.delete_meta is deprecated; use Scenario.remove_meta '
+             'instead', DeprecationWarning)
+        self.remove_meta(*args, **kwargs)
+
+    def remove_meta(self, name):
+        """Remove scenario meta.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single meta key or list of keys.
+        """
+        if isinstance(name, str):
+            name = [name]
+        self.platform._backend.remove_meta(name, self.model, self.scenario,
+                                           self.version)
 
     # Input and output
     def to_excel(self, path, items=ItemType.SET | ItemType.PAR, max_row=None):

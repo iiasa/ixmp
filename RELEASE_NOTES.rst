@@ -6,15 +6,15 @@ All changes
 
 - :pull:`353`: Add meta functionality.
 
-  - :meth:`Platform.add_model_name` using :meth:`.Backend.add_model_name`
-  - :meth:`Platform.add_scenario_name` using :meth:`.Backend.add_scenario_name`
-  - :meth:`Platform.model_names` using :meth:`.Backend.model_names`
-  - :meth:`Platform.scenario_names` using :meth:`.Backend.scenario_names`
-  - :meth:`Platform.get_meta` using :meth:`.Backend.get_meta`
-  - :meth:`Platform.set_meta` using :meth:`.Backend.set_meta`
-  - :meth:`Platform.remove_meta` using :meth:`.Backend.remove_meta`
-  - :meth:`Scenario.remove_meta` using :meth:`.Backend.remove_meta`
-  - deprecate :meth:`Scenario.delete_meta`
+  - :meth:`.Platform.add_model_name` using :meth:`.Backend.add_model_name`
+  - :meth:`.Platform.add_scenario_name` using :meth:`.Backend.add_scenario_name`
+  - :meth:`.Platform.get_model_names` using :meth:`.Backend.get_model_names`
+  - :meth:`.Platform.get_scenario_names` using :meth:`.Backend.get_scenario_names`
+  - :meth:`.Platform.get_meta` using :meth:`.Backend.get_meta`
+  - :meth:`.Platform.set_meta` using :meth:`.Backend.set_meta`
+  - :meth:`.Platform.remove_meta` using :meth:`.Backend.remove_meta`
+  - :meth:`.Scenario.remove_meta` using :meth:`.Backend.remove_meta`
+  - deprecate :meth:`.Scenario.delete_meta`
 
 - :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
 - :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.

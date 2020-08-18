@@ -213,6 +213,9 @@ class JDBCBackend(CachingBackend):
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
     jindex = WeakKeyDictionary()
 
+    #: True if TimeSeries objects can be unlocked using set_locked(..., False).
+    _locking = True
+
     def __init__(self, jvmargs=None, **kwargs):
         properties = None
 
@@ -255,6 +258,8 @@ class JDBCBackend(CachingBackend):
 
         log.info('launching ixmp.Platform connected to {}'
                  .format(properties.getProperty('jdbc.url')))
+
+        self._locking = "hsqldb" in properties.getProperty('jdbc.url')
 
         try:
             self.jobj = java.Platform('Python', properties)
@@ -656,8 +661,16 @@ class JDBCBackend(CachingBackend):
 
     def set_locked(self, ts, value):
         if value is True:
+            # ixmp_source does not provide a method to set state
             raise NotImplementedError
         elif value is False:
+            # Not covered by tests, because no test fixtures for a remote DB
+            if not self._locking:  # pragma: no cover
+                raise RuntimeError(
+                    "JDBCBackend only supports unlocking for local "
+                    "(driver='hsqldb') databases. Contact a database "
+                    "administrator to unlock this TimeSeries."
+                )
             self.jobj.unlockRunid(self.run_id(ts))
 
     def last_update(self, ts):

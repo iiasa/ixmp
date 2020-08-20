@@ -264,13 +264,22 @@ class JDBCBackend(CachingBackend):
         except jpype.JException as e:  # pragma: no cover
             # Handle Java exceptions
             jclass = e.__class__.__name__
-            if jclass.endswith('HikariPool.PoolInitializationException'):
+            if jclass.endswith("HikariPool.PoolInitializationException"):
                 redacted = copy(kwargs)
-                redacted.update({'user': '(HIDDEN)', 'password': '(HIDDEN)'})
-                msg = f'unable to connect to database:\n{repr(redacted)}'
-            elif jclass.endswith('FlywayException'):
-                msg = 'when initializing database:'
-            _raise_jexception(e, f'{msg}\n(Java: {jclass})')
+                redacted.update({"user": "(HIDDEN)", "password": "(HIDDEN)"})
+                msg = f"unable to connect to database:\n{repr(redacted)}"
+            elif jclass.endswith("FlywayException"):
+                msg = "when initializing database:"
+                if "applied migration" in e.args[0]:
+                    msg += (
+                        "\n\nThe schema of the database does not match the "
+                        "schema of this version of ixmp. To resolve, either "
+                        "install the version of ixmp used to create the "
+                        "database, or delete it and retry."
+                    )
+            else:
+                _raise_jexception(e)
+            raise RuntimeError(f"{msg}\n(Java: {jclass})")
 
         # Set the log level
         self.set_log_level(log_level)
@@ -334,12 +343,8 @@ class JDBCBackend(CachingBackend):
         """
         try:
             self.jobj.closeDB()
-        except java.IxException as e:
-            if 'Error closing the database connection!' in str(e):
-                log.warning('Database connection could not be closed or was '
-                            'already closed')
-            else:
-                log.warning(str(e))
+        except java.IxException as e:  # pragma: no cover
+            log.warning(str(e))
         except AttributeError:
             pass  # self.jobj is None, e.g. cleanup after __init__ fails
 
@@ -621,7 +626,10 @@ class JDBCBackend(CachingBackend):
         try:
             self.jindex[ts].commit(comment)
         except java.IxException as e:
-            _raise_jexception(e)
+            if "this Scenario is not checked out" in e.args[0]:
+                raise RuntimeError(e.args[0])
+            else:  # pragma: no cover
+                _raise_jexception(e)
         if ts.version == 0:
             ts.version = self.jindex[ts].getVersion()
 
@@ -930,10 +938,14 @@ class JDBCBackend(CachingBackend):
                 # - par: (value, unit, comment)
                 jobj.addElement(*args)
         except java.IxException as e:
-            msg = e.message()
-            if ('does not have an element' in msg) or ('The unit' in msg):
+            if any(
+                s in e.args[0] for s in
+                ("does not have an element", "The unit")
+            ):
                 # Re-raise as Python ValueError
-                raise ValueError(msg) from None
+                raise ValueError(e.args[0]) from None
+            elif "cannot be edited" in e.args[0]:
+                raise RuntimeError(e.args[0])
             else:  # pragma: no cover
                 _raise_jexception(e)
 

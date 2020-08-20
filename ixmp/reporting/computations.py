@@ -286,8 +286,9 @@ def concat(*objs, **kwargs):
     Reporter.
     """
     objs = filter_concat_args(objs)
-    if Quantity.CLASS == 'AttrSeries':
-        kwargs.pop('dim')
+    if Quantity.CLASS == "AttrSeries":
+        # Silently discard any "dim" keyword argument
+        kwargs.pop("dim", None)
         return pd.concat(objs, **kwargs)
     else:
         # Correct fill-values

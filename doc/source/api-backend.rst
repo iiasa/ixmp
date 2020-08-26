@@ -25,10 +25,19 @@ Provided backends
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
    :members: read_file, write_file
 
-   JDBCBackend supports:
+   JDBCBackend **supports**:
 
    - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
    - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
+   - Temporary, in-memory databases using ``driver='hsqldb'`` and the *url* argument.
+     Use the `url` parameter with the format ``jdbc:hsqldb:mem:[NAME]``, where [NAME] is any string::
+
+       mp = ixmp.Platform(
+           backend="jdbc",
+           driver="hsqldb",
+           url="jdbc:hsqldb:mem:temporary platform",
+       )
+
 
    JDBCBackend caches values in memory to improve performance when repeatedly reading data from the same items with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
 
@@ -41,9 +50,16 @@ Provided backends
 
    .. tip:: Modifying an item by adding or deleting elements invalidates its cache.
 
-   JDBCBackend has the following limitations:
+   JDBCBackend has the following **limitations**:
 
    - The `comment` argument to :meth:`Platform.add_unit` is limited to 64 characters.
+
+   JDBCBackend's implementation allows the following kinds of file input and output:
+
+   .. autosummary::
+
+      read_file
+      write_file
 
 .. automethod:: ixmp.backend.jdbc.start_jvm
 

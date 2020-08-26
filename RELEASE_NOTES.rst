@@ -8,17 +8,11 @@ All changes
 - :pull:`363`: Expand documentation and revise installation instructions.
 - :pull:`362`: Raise Python exceptions from :class:`.JDBCBackend`.
 - :pull:`354`: Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export``.
-- :pull:`353`: Add meta functionality.
+- :pull:`353`: Add functionality for storing ‘meta’ (annotations of model names, scenario names, versions, and some combinations thereof).
 
-  - :meth:`.Platform.add_model_name` using :meth:`.Backend.add_model_name`
-  - :meth:`.Platform.add_scenario_name` using :meth:`.Backend.add_scenario_name`
-  - :meth:`.Platform.get_model_names` using :meth:`.Backend.get_model_names`
-  - :meth:`.Platform.get_scenario_names` using :meth:`.Backend.get_scenario_names`
-  - :meth:`.Platform.get_meta` using :meth:`.Backend.get_meta`
-  - :meth:`.Platform.set_meta` using :meth:`.Backend.set_meta`
-  - :meth:`.Platform.remove_meta` using :meth:`.Backend.remove_meta`
-  - :meth:`.Scenario.remove_meta` using :meth:`.Backend.remove_meta`
-  - deprecate :meth:`.Scenario.delete_meta`
+  - Add :meth:`.Backend.add_model_name`, :meth:`~.Backend.add_scenario_name`, :meth:`~.Backend.get_model_names`, :meth:`~.Backend.get_scenario_names`, :meth:`~.Backend.get_meta`, :meth:`~.Backend.set_meta`, :meth:`~.Backend.remove_meta`.
+  - Allow these to be called from :class:`.Platform` instances.
+  - Remove :meth:`.Scenario.delete_meta`.
 
 - :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
 - :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.

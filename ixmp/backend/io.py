@@ -203,7 +203,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False,
             dfs.append(xf.parse(x))
 
         # Concatenate once and return
-        return pd.concat(dfs, axis=1)
+        return pd.concat(dfs, axis=0)
 
     # Add sets in two passes:
     # 1. Index sets, required to initialize other sets.

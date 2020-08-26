@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`345`: Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets.
 - :pull:`363`: Expand documentation and revise installation instructions.
 - :pull:`362`: Raise Python exceptions from :class:`.JDBCBackend`.
 - :pull:`354`: Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export``.

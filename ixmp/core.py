@@ -446,9 +446,9 @@ class TimeSeries:
         elif version and not (version == 'new' or isinstance(version, int)):
             raise ValueError(f'version={repr(version)}')
         elif version == 'new' and annotation is None:
-            log.warning(
-                f'Missing annotation for new {self.__class__.__name__}'
-                f' {model}/{scenario}'
+            log.info(
+                f"Missing annotation for new {self.__class__.__name__}"
+                f" {model}/{scenario}"
             )
             annotation = ''
 

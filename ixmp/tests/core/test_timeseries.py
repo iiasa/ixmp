@@ -93,12 +93,12 @@ def wide(df):
         .rename_axis(columns=None)
 
 
-def prepare_scenario(mp, args_all):
-    scen = TimeSeries(mp, *args_all, version='new', annotation='nk')
-    scen.add_timeseries(DATA[2010])
-    scen.commit('updating timeseries in IAMC format')
-    scen = TimeSeries(mp, *args_all)
-    return scen
+def prepare_ts(mp, args_all):
+    ts = TimeSeries(mp, *args_all, version='new', annotation='nk')
+    ts.add_timeseries(DATA[2010])
+    ts.commit('updating timeseries in IAMC format')
+    # Check out again and return
+    return TimeSeries(mp, *args_all)
 
 
 @contextmanager
@@ -334,7 +334,7 @@ def test_edit_with_region_synonyms(mp, ts, cls):
     ts = cls(mp, **info)
     assert_frame_equal(exp, ts.timeseries())
 
-    ts.check_out(timeseries_only=True)
+    ts.check_out()
     df = wide(DATA[2050]).replace('World', 'Hell')
     ts.preload_timeseries()
     ts.add_timeseries(df)
@@ -501,36 +501,36 @@ def test_new_timeseries_error(test_mp):
 
 
 def test_timeseries_edit(mp):
-    scen = TimeSeries(mp, *test_args)
+    ts = TimeSeries(mp, *test_args)
     df = {'region': ['World'] * 2, 'variable': ['Testing'] * 2,
           'unit': ['???', '???'], 'year': [2010, 2020], 'value': [23.7, 23.8]}
     exp = pd.DataFrame.from_dict(df)
-    obs = scen.timeseries()
+    obs = ts.timeseries()
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
-    scen.check_out(timeseries_only=True)
+    ts.check_out()
     df = {'region': ['World'] * 2,
           'variable': ['Testing'] * 2,
           'unit': ['???', '???'], 'year': [2010, 2020],
           'value': [23.7, 23.8]}
     df = pd.DataFrame.from_dict(df)
-    scen.add_timeseries(df)
-    scen.commit('testing of editing timeseries (same years)')
+    ts.add_timeseries(df)
+    ts.commit('testing of editing timeseries (same years)')
 
-    scen.check_out(timeseries_only=True)
+    ts.check_out()
     df = {'region': ['World'] * 3,
           'variable': ['Testing', 'Testing', 'Testing2'],
           'unit': ['???', '???', '???'], 'year': [2020, 2030, 2030],
           'value': [24.8, 24.9, 25.1]}
     df = pd.DataFrame.from_dict(df)
-    scen.add_timeseries(df)
-    scen.commit('testing of editing timeseries (other years)')
+    ts.add_timeseries(df)
+    ts.commit('testing of editing timeseries (other years)')
     mp.close_db()
 
     mp.open_db()
-    scen = TimeSeries(mp, *test_args)
-    obs = scen.timeseries().sort_values(by=['year'])
+    ts = TimeSeries(mp, *test_args)
+    obs = ts.timeseries().sort_values(by=['year'])
     df = df.append(exp.loc[0]).sort_values(by=['year'])
     npt.assert_array_equal(df[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(df['value'], obs['value'])
@@ -538,8 +538,8 @@ def test_timeseries_edit(mp):
 
 def test_timeseries_edit_iamc(mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
-    scen = prepare_scenario(mp, args_all)
-    obs = scen.timeseries()
+    ts = prepare_ts(mp, args_all)
+    obs = ts.timeseries()
     exp = pd.DataFrame.from_dict({'region': ['World', 'World'],
                                   'variable': ['Testing', 'Testing'],
                                   'unit': ['???', '???'],
@@ -548,7 +548,7 @@ def test_timeseries_edit_iamc(mp):
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
-    scen.check_out(timeseries_only=True)
+    ts.check_out()
     df = pd.DataFrame.from_dict({'region': ['World'],
                                  'variable': ['Testing'],
                                  'unit': ['???'],
@@ -558,8 +558,8 @@ def test_timeseries_edit_iamc(mp):
                                  '2030': [24.7],
                                  '2040': [25.7],
                                  '2050': [25.8]})
-    scen.add_timeseries(df)
-    scen.commit('updating timeseries in IAMC format')
+    ts.add_timeseries(df)
+    ts.commit('updating timeseries in IAMC format')
 
     exp = pd.DataFrame.from_dict(
         {'region': ['World'] * 6,
@@ -567,7 +567,7 @@ def test_timeseries_edit_iamc(mp):
          'unit': ['???'] * 6,
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
-    obs = scen.timeseries()
+    obs = ts.timeseries()
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     mp.close_db()
@@ -576,8 +576,8 @@ def test_timeseries_edit_iamc(mp):
 def test_timeseries_edit_with_region_synonyms(mp):
     args_all = ('Douglas Adams 1', 'test_remove_all')
     mp.add_region_synonym('Hell', 'World')
-    scen = prepare_scenario(mp, args_all)
-    obs = scen.timeseries()
+    ts = prepare_ts(mp, args_all)
+    obs = ts.timeseries()
     exp = pd.DataFrame.from_dict({'region': ['World'] * 2,
                                   'variable': ['Testing'] * 2,
                                   'unit': ['???', '???'],
@@ -586,7 +586,7 @@ def test_timeseries_edit_with_region_synonyms(mp):
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
 
-    scen.check_out(timeseries_only=True)
+    ts.check_out()
     df = pd.DataFrame.from_dict({'region': ['Hell'],
                                  'variable': ['Testing'],
                                  'unit': ['???'],
@@ -596,9 +596,9 @@ def test_timeseries_edit_with_region_synonyms(mp):
                                  '2030': [24.7],
                                  '2040': [25.7],
                                  '2050': [25.8]})
-    scen.preload_timeseries()
-    scen.add_timeseries(df)
-    scen.commit('updating timeseries in IAMC format')
+    ts.preload_timeseries()
+    ts.add_timeseries(df)
+    ts.commit('updating timeseries in IAMC format')
 
     exp = pd.DataFrame.from_dict(
         {'region': ['World'] * 6,
@@ -606,7 +606,7 @@ def test_timeseries_edit_with_region_synonyms(mp):
          'unit': ['???'] * 6,
          'year': [2000, 2010, 2020, 2030, 2040, 2050],
          'value': [21.7, 22.7, 23.7, 24.7, 25.7, 25.8]})
-    obs = scen.timeseries()
+    obs = ts.timeseries()
     npt.assert_array_equal(exp[IDX_COLS], obs[IDX_COLS])
     npt.assert_array_almost_equal(exp['value'], obs['value'])
     mp.close_db()

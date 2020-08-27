@@ -306,6 +306,11 @@ def make_dantzig(mp, solve=False):
     scen = Scenario(mp, **models['dantzig'], version='new', annotation=annot,
                     scheme='dantzig', with_data=True)
 
+    # add timeseries data for testing `clone(keep_solution=False)`
+    # and `remove_solution()`
+    scen.add_timeseries(HIST_DF, meta=True)
+    scen.add_timeseries(INP_DF)
+
     # commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")
 
@@ -315,13 +320,6 @@ def make_dantzig(mp, solve=False):
     if solve:
         # Solve the model using the GAMS code provided in the `tests` folder
         scen.solve(model='dantzig', case='transport_standard')
-
-    # add timeseries data for testing `clone(keep_solution=False)`
-    # and `remove_solution()`
-    scen.check_out(timeseries_only=True)
-    scen.add_timeseries(HIST_DF, meta=True)
-    scen.add_timeseries(INP_DF)
-    scen.commit("Import Dantzig's transport problem for testing.")
 
     return scen
 

@@ -510,7 +510,7 @@ class TimeSeries:
             raise TypeError(f"{value}; bool required")
         self._backend('set_locked', value)
 
-    def check_out(self, timeseries_only=False):
+    def check_out(self, **kwargs):
         """Check out the TimeSeries.
 
         Data in the TimeSeries can only be modified when it is in a checked-out
@@ -520,7 +520,15 @@ class TimeSeries:
         --------
         utils.maybe_check_out
         """
-        self._backend('check_out', timeseries_only)
+        if "timeseries_only" in kwargs:
+            warn("timeseries_only argument to check_out()", DeprecationWarning)
+            kwargs.pop("timeseries_only")
+        if set(kwargs) > {"timeseries_only"}:
+            raise TypeError(
+                f"check_out() takes 0 positional arguments but {len(kwargs)} "
+                "was given"
+            )
+        self._backend("check_out")
 
     def commit(self, comment):
         """Commit all changed data to the database.
@@ -907,7 +915,7 @@ class Scenario(TimeSeries):
         else:
             return scenario, platform
 
-    def check_out(self, timeseries_only=False):
+    def check_out(self, *arg, **kwarg):
         """Check out the Scenario.
 
         Raises
@@ -920,12 +928,17 @@ class Scenario(TimeSeries):
         TimeSeries.check_out
         utils.maybe_check_out
         """
-        if not timeseries_only and self.has_solution():
-            raise ValueError('This Scenario has a solution, '
-                             'use `Scenario.remove_solution()` or '
-                             '`Scenario.clone(..., keep_solution=False)`'
-                             )
-        super().check_out(timeseries_only)
+        if len(arg) or "timeseries_only" in kwarg:
+            warn("timeseries_only argument to check_out()", DeprecationWarning)
+            kwarg.pop("timeseries_only", None)
+        if len(arg) > 1 or set(kwarg) > {"timeseries_only"}:
+            raise TypeError("unrecognized arguments")
+        if self.has_solution():
+            raise ValueError(
+                "Scenario has a solution. Use remove_solution() or "
+                "clone(..., keep_solution=False)"
+            )
+        super().check_out()
 
     def load_scenario_data(self):
         """Load all Scenario data into memory.

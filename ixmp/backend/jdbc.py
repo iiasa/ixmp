@@ -621,9 +621,9 @@ class JDBCBackend(CachingBackend):
         # Aggressively free memory
         self.gc()
 
-    def check_out(self, ts, timeseries_only):
+    def check_out(self, ts):
         try:
-            self.jindex[ts].checkOut(timeseries_only)
+            self.jindex[ts].checkOut()
         except java.IxException as e:
             _raise_jexception(e)
 

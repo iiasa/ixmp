@@ -483,13 +483,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def check_out(self, ts: TimeSeries, timeseries_only):
+    def check_out(self, ts: TimeSeries):
         """Check out *ts* for modification.
-
-        Parameters
-        ----------
-        timeseries_only : bool
-            ???
 
         Returns
         -------

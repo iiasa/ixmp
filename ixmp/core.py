@@ -1663,15 +1663,18 @@ class Scenario(TimeSeries):
                                         self.scenario, self.version)
 
     def delete_meta(self, *args, **kwargs):
-        """DEPRECATED: Remove scenario meta.
+        """Remove scenario meta.
+
+        .. deprecated:: 3.1
+
+           Use :meth:`remove_meta()`.
 
         Parameters
         ----------
         name : str or list of str
             Either single meta key or list of keys.
         """
-        warn('Scenario.delete_meta is deprecated; use Scenario.remove_meta '
-             'instead', DeprecationWarning)
+        warn("Scenario.delete_meta(); use remove_meta()", DeprecationWarning)
         self.remove_meta(*args, **kwargs)
 
     def remove_meta(self, name):

@@ -3,10 +3,8 @@
 Adapting GAMS models for :mod:`ixmp`
 ------------------------------------
 
-The common example optimization from Dantzig :cite:`dantzig-1963`, is available in a GAMS implementation
-`from the GAMS website <https://www.gams.com/mccarl/trnsport.gms>`_.
-The file ``tutorial/transport/transport_ixmp.gms`` illustrates how an
-existing GAMS model can be adapted to work with the |ixmp|.
+The common example optimization from Dantzig :cite:`dantzig-1963` is available in a GAMS implementation `from the GAMS website <https://www.gams.com/mccarl/trnsport.gms>`_.
+The file :file:`tutorial/transport/transport_ixmp.gms` illustrates how an existing GAMS model can be adapted to work with the |ixmp|.
 The same, simple procedure can be applied to any GAMS code.
 
 The steps are:

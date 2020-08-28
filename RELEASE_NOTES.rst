@@ -1,8 +1,10 @@
-Next release
-============
+v3.1.0 (2020-08-28)
+===================
 
 All changes
 -----------
+
+ixmp v3.1.0 coincides with message_ix v3.1.0.
 
 - :pull:`345`: Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets.
 - :pull:`363`: Expand documentation and revise installation instructions.

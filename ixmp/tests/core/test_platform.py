@@ -75,6 +75,29 @@ def test_export_timeseries_data(mp, tmp_path):
     assert_frame_equal(obs, exp)
 
 
+def test_export_timeseries_data_empty(mp, tmp_path):
+    """Dont export data if given models/scenarios do not have any runs."""
+    path = tmp_path / 'export.csv'
+    model = 'model-no-run'
+    scenario = 'scenario-no-run'
+    mp.add_model_name(model)
+    mp.add_scenario_name(scenario)
+
+    mp.export_timeseries_data(path, model=model, unit='???', region='World')
+
+    columns = ['model', 'scenario', 'version', 'variable', 'unit', 'region',
+               'meta', 'subannual', 'year', 'value']
+    csv_dtype = dict(model=str, scenario=str, version=int, variable=str,
+                     unit=str, region=str, year=int, subannual=str, meta=int,
+                     value=float)
+    obs = pd.read_csv(path,
+                      index_col=False,
+                      header=0,
+                      names=columns,
+                      dtype=csv_dtype)
+    assert len(obs.model) == 0
+
+
 def test_unit_list(test_mp):
     units = test_mp.units()
     assert ('cases' in units) is True

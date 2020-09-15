@@ -36,7 +36,6 @@ from collections import namedtuple
 import contextlib
 from contextlib import contextmanager
 from copy import deepcopy
-import io
 from itertools import chain, product
 import logging
 from math import ceil
@@ -48,7 +47,6 @@ except ImportError:
     # Windows
     has_resource_module = False
 import shutil
-import subprocess
 import sys
 
 from click.testing import CliRunner
@@ -332,10 +330,7 @@ nbformat = pytest.importorskip('nbformat')
 
 
 def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
-    """Execute a Jupyter notebook via ``nbconvert`` and collect output.
-
-    Modified from
-    https://blog.thedataincubator.com/2016/06/testing-jupyter-notebooks/
+    """Execute a Jupyter notebook via :mod:`nbclient` and collect output.
 
     Parameters
     ----------
@@ -361,30 +356,40 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
     errors : list
         Any execution errors.
     """
-    # Process arguments
-    env = env or os.environ
-    major_version = sys.version_info[0]
-    kernel = kernel or 'python{}'.format(major_version)
+    import nbformat
+    from nbclient import NotebookClient
 
-    os.chdir(nb_path.parent)
-    fname = tmp_path / 'test.ipynb'
-    args = [
-        "jupyter", "nbconvert", "--to", "notebook", "--execute",
-        "--allow-errors" if allow_errors else "",
-        "--ExecutePreprocessor.timeout=60",
-        "--ExecutePreprocessor.kernel_name={}".format(kernel),
-        "--output", str(fname), str(nb_path)]
-    subprocess.check_call(args, env=env)
+    # Workaround for https://github.com/jupyter/nbclient/issues/85
+    if (
+        sys.version_info[0] == 3
+        and sys.version_info[1] >= 8
+        and sys.platform.startswith("win")
+    ):
+        import asyncio
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    nb = nbformat.read(io.open(fname, encoding='utf-8'),
-                       nbformat.current_nbformat)
+    # Read the notebook
+    with open(nb_path) as f:
+        nb = nbformat.read(f, as_version=4)
 
+    # Create a client and use it to execute the notebook
+    client = NotebookClient(
+        nb,
+        timeout=60,
+        kernel_name=kernel or f"python{sys.version_info[0]}",
+        allow_errors=allow_errors,
+        resources=dict(metadata=dict(path=tmp_path))
+    )
+
+    # Execute the notebook.
+    # `env` is passed from nbclient to jupyter_client.launcher.launch_kernel()
+    client.execute(env=env or os.environ.copy())
+
+    # Retrieve error information from cells
     errors = [
         output for cell in nb.cells if "outputs" in cell
         for output in cell["outputs"] if output.output_type == "error"
     ]
-
-    fname.unlink()
 
     return nb, errors
 

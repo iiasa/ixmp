@@ -369,7 +369,7 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     # Read the notebook
-    with open(nb_path) as f:
+    with open(nb_path, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     # Create a client and use it to execute the notebook

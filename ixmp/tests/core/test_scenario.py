@@ -171,11 +171,19 @@ class TestScenario:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
 
     # Store data
-    def test_add_par(self, scen):
-        # add_par() broadcasts scalar values/units across multiple keys
+    @pytest.mark.parametrize(
+        "args, kwargs",
+        (
+            # Scalar values/units are broadcast across multiple keys
+            (("b", ["new-york", "chicago"]), dict(value=100, unit="cases")),
+            # Empty DataFrame can be added without error
+            (("b", pd.DataFrame(columns=["i", "j", "value", "unit"])), dict()),
+        ),
+    )
+    def test_add_par(self, scen, args, kwargs):
         scen = scen.clone(keep_solution=False)
         scen.check_out()
-        scen.add_par("b", ["new-york", "chicago"], value=100, unit="cases")
+        scen.add_par(*args, **kwargs)
 
     # Retrieve data
     def test_idx(self, scen):

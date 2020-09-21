@@ -194,7 +194,8 @@ def test_unique_meta_scenario(mp, meta):
     scen2.set_meta(meta)
     assert scen2.get_meta() == scen.get_meta()
 
-    expected = ("Meta indicators already contain category")
+    expected = (r"The meta category .* is already used at another level: "
+                r"model canning problem, scenario standard, ")
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG)
     with pytest.raises(Exception, match=expected):

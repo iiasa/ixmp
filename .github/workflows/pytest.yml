@@ -5,6 +5,9 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  schedule:
+  - cron: "0 5 * * *"
+
 
 env:
   GAMS_VERSION: 25.1.1

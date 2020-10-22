@@ -106,7 +106,8 @@ jobs:
       # Without this, reticulate tries to use Python 2.7 in the next step
       if: ${{ contains(matrix.os, 'windows') }}
       run: |
-        Write-Host "::set-env name=RETICULATE_PYTHON::${{ env.PYTHONLOCATION }}\python.exe"
+        echo "RETICULATE_PYTHON=${{ env.PYTHONLOCATION }}\python.exe" >> $GITHUB_ENV
+      shell: bash
 
     - name: Install R package and dependencies
       run: |

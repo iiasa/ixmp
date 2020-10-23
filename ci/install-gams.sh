@@ -60,7 +60,7 @@ fi
 export PATH=$BASE/$DEST:$PATH
 
 # For GitHub Actions
-echo "::add-path::$BASE/$DEST"
+echo "$BASE/$DEST" >> $GITHUB_PATH
 
 # Show location
 which gams

@@ -46,7 +46,7 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }}-py${{ matrix.python-version }}
 
     steps:
     - uses: actions/checkout@v2
@@ -59,6 +59,11 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Set RETICULATE_PYTHON
+      # Use the environment variable set by the setup-python action, above.
+      run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
+      shell: bash
 
     - uses: r-lib/actions/setup-r@master
 
@@ -101,13 +106,6 @@ jobs:
 
     - name: Install Python package and dependencies
       run: pip install .[docs,tests,tutorial]
-
-    - name: Set RETICULATE_PYTHON (Windows only)
-      # Without this, reticulate tries to use Python 2.7 in the next step
-      if: ${{ contains(matrix.os, 'windows') }}
-      run: |
-        echo "RETICULATE_PYTHON=${{ env.PYTHONLOCATION }}\python.exe" >> $GITHUB_ENV
-      shell: bash
 
     - name: Install R package and dependencies
       run: |

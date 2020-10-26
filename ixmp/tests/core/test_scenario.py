@@ -130,7 +130,7 @@ class TestScenario:
             scen.init_set('foo')
 
     def test_init_par(self, scen):
-        scen.remove_solution()
+        scen = scen.clone(keep_solution=False)
         scen.check_out()
 
         # Parameter can be initialized with a tuple (not list) of idx_sets

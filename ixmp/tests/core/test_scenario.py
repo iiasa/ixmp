@@ -344,7 +344,7 @@ class TestScenario:
         exp = test_dict['test_string']
         assert obs == exp
 
-        scen.delete_meta(['test_int', 'test_bool'])
+        scen.remove_meta(['test_int', 'test_bool'])
         obs = scen.get_meta()
         assert len(obs) == 4
         assert set(obs.keys()) == {'test_string', 'test_number',

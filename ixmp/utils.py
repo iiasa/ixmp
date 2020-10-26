@@ -442,6 +442,8 @@ def show_versions(file=sys.stdout):
 
     from xarray.util.print_versions import get_sys_info
 
+    from ixmp.model.gams import gams_version
+
     def _git_log(mod):
         cmd = ['git', 'log', '--oneline', '--no-color', '--decorate', '-n 1']
         try:
@@ -490,6 +492,14 @@ def show_versions(file=sys.stdout):
 
         if module_name == 'jpype':
             info.append(('… JVM path', mod.getDefaultJVMPath()))
+
+    # Also display GAMS version, if any
+    try:
+        version = gams_version()
+    except FileNotFoundError:
+        version = "'gams' executable not in PATH"
+    finally:
+        info.extend([("GAMS", version), (None, None)])
 
     # Use xarray to get system & Python information
     info.extend(get_sys_info()[1:])  # Exclude the commit number

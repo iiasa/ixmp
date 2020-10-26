@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from functools import partial
 from inspect import Parameter, signature
 from pathlib import Path
@@ -35,7 +35,7 @@ def as_str_list(arg, idx_names=None):
     Several types of arguments are handled:
     - None: returned as None.
     - str: returned as a length-1 list of str.
-    - list of values: returned as a list with each value converted to str
+    - sequence of values: returned as a list with each value converted to str
     - dict, with list of idx_names: the idx_names are used to look up values
       in the dict, the resulting list has the corresponding values in the same
       order.
@@ -45,7 +45,7 @@ def as_str_list(arg, idx_names=None):
         return None
     elif idx_names is None:
         # arg must be iterable
-        if isinstance(arg, Iterable) and not isinstance(arg, str):
+        if isinstance(arg, Sequence) and not isinstance(arg, str):
             return list(map(str, arg))
         else:
             return [str(arg)]

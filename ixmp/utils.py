@@ -440,7 +440,7 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
 def show_versions(file=sys.stdout):
     """Print information about ixmp and its dependencies to *file*."""
     import importlib
-    from subprocess import DEVNULL, check_output
+    from subprocess import DEVNULL, CalledProcessError, check_output
 
     from xarray.util.print_versions import get_sys_info
 
@@ -498,7 +498,7 @@ def show_versions(file=sys.stdout):
     # Also display GAMS version, if any
     try:
         version = gams_version()
-    except FileNotFoundError:
+    except (CalledProcessError, FileNotFoundError):
         version = "'gams' executable not in PATH"
     finally:
         info.extend([("GAMS", version), (None, None)])

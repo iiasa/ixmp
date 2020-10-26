@@ -20,6 +20,8 @@ Provided models
 .. autoclass:: ixmp.model.gams.GAMSModel
    :members:
 
+.. automethod:: ixmp.model.gams.gams_version
+
 .. currentmodule:: ixmp.model.dantzig
 
 .. autoclass:: ixmp.model.dantzig.DantzigModel

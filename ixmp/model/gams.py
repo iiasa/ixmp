@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory
@@ -7,6 +8,38 @@ from tempfile import TemporaryDirectory
 from ixmp.backend import ItemType
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
+
+
+def gams_version():
+    """Return the GAMS version as a string, e.g. '24.7.4'."""
+    # NB check_output(['gams'], ...) does not work, because GAMS writes
+    #    directly to the console instead of to stdout.
+    #    check_output(['gams', '-LogOption=3'], ...) does not work, because
+    #    GAMS does not accept options without an input file to execute.
+    import os
+    from tempfile import mkdtemp
+    from subprocess import check_output
+
+    # Create a temporary GAMS program that does nothing
+    tmp_dir = Path(mkdtemp())
+    gms = tmp_dir / "null.gms"
+    gms.write_text("$exit;")
+
+    # Execute, capturing stdout
+    output = check_output(
+        ["gams", "null", "-LogOption=3"],
+        shell=os.name == "nt",
+        cwd=tmp_dir,
+        universal_newlines=True)
+
+    # Clean up
+    gms.unlink()
+    gms.with_suffix(".lst").unlink()
+    tmp_dir.rmdir()
+
+    # Find and return the version string
+    pattern = r"^GAMS ([\d\.]+)\s*Copyright"
+    return re.search(pattern, output, re.MULTILINE).groups()[0]
 
 
 class GAMSModel(Model):

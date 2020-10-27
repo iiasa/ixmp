@@ -12,7 +12,6 @@ from types import SimpleNamespace
 from weakref import WeakKeyDictionary
 
 import jpype
-from jpype import JClass
 import pandas as pd
 
 from ixmp.core import Scenario
@@ -345,8 +344,10 @@ class JDBCBackend(CachingBackend):
             self.jobj.closeDB()
         except java.IxException as e:  # pragma: no cover
             log.warning(str(e))
-        except AttributeError:
-            pass  # self.jobj is None, e.g. cleanup after __init__ fails
+        except (AttributeError, jpype.JVMNotRunning):
+            # - self.jobj is None, e.g. cleanup after __init__ fails
+            # - JVM has already shut down, e.g. on program exit
+            pass
 
     def get_auth(self, user, models, kind):
         return self.jobj.checkModelAccess(user, kind, to_jlist(models))
@@ -1089,7 +1090,7 @@ def start_jvm(jvmargs=None):
     # define auxiliary references to Java classes
     global java
     for class_name in JAVA_CLASSES:
-        setattr(java, class_name.split('.')[-1], JClass(class_name))
+        setattr(java, class_name.split('.')[-1], jpype.JClass(class_name))
 
 
 # Conversion methods

@@ -4,6 +4,10 @@ Next release
 All changes
 -----------
 
+- :pull:`376`: Add a utility method, :func:`.gams_version`, to check the installed version of GAMS.
+  The result is displayed by the ``ixmp show-versions`` CLI command/:func:`.show_versions`.
+- :pull:`376`: :meth:`.init_par` and related methods accept any sequence (not merely :class:`list`) of :class:`str` for the `idx_sets` and `idx_names` arguments.
+
 
 v3.1.0 (2020-08-28)
 ===================

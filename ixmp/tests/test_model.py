@@ -5,6 +5,7 @@ import pytest
 from ixmp import Scenario
 from ixmp.testing import assert_logs, make_dantzig
 from ixmp.model.base import Model
+from ixmp.model.gams import gams_version
 from ixmp.model.dantzig import DantzigModel
 
 
@@ -86,3 +87,8 @@ def test_model_initialize(test_mp, caplog):
     with assert_logs(caplog,
                      "Existing index sets of 'b' ['i'] do not match ['j']"):
         DantzigModel.initialize(s)
+
+
+def test_gams_version():
+    # Returns a version string like X.Y.Z
+    assert len(gams_version().split(".")) == 3

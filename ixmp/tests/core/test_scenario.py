@@ -129,6 +129,16 @@ class TestScenario:
         with pytest.raises(ValueError, match="'foo' already exists"):
             scen.init_set('foo')
 
+    def test_init_par(self, scen):
+        scen = scen.clone(keep_solution=False)
+        scen.check_out()
+
+        # Parameter can be initialized with a tuple (not list) of idx_sets
+        scen.init_par("foo", idx_sets=("i", "j"))
+
+        # Return type of idx_sets is still list
+        assert scen.idx_sets("foo") == ["i", "j"]
+
     def test_init_scalar(self, scen):
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
@@ -334,7 +344,7 @@ class TestScenario:
         exp = test_dict['test_string']
         assert obs == exp
 
-        scen.delete_meta(['test_int', 'test_bool'])
+        scen.remove_meta(['test_int', 'test_bool'])
         obs = scen.get_meta()
         assert len(obs) == 4
         assert set(obs.keys()) == {'test_string', 'test_number',

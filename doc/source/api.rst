@@ -237,7 +237,7 @@ Utilities
 .. currentmodule:: ixmp.utils
 
 .. automodule:: ixmp.utils
-   :members: format_scenario_list, maybe_check_out, maybe_commit, parse_url, update_par
+   :members: format_scenario_list, maybe_check_out, maybe_commit, parse_url, show_versions, update_par
 
 
 Testing utilities

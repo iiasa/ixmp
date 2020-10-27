@@ -109,7 +109,7 @@ class Model(ABC):
                 for key, values in item_info.items():
                     values = values or []
                     existing = getattr(scenario, key)(name)
-                    if existing != values:
+                    if existing != list(values):
                         # The existing index sets or names do not match
                         log.warning(
                             f"Existing index {key.split('_')[-1]} of "

@@ -981,9 +981,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the set.
-        idx_sets : list of str or str, optional
+        idx_sets : sequence of str or str, optional
             Names of other sets that index this set.
-        idx_names : list of str or str, optional
+        idx_names : sequence of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
 
         Raises
@@ -1157,9 +1157,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        idx_sets : list of str or str, optional
+        idx_sets : sequence of str or str, optional
             Names of sets that index this parameter.
-        idx_names : list of str or str, optional
+        idx_names : sequence of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
         idx_sets = as_str_list(idx_sets) or []
@@ -1398,9 +1398,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the variable.
-        idx_sets : list of str or str, optional
+        idx_sets : sequence of str or str, optional
             Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : list of str or str, optional
+        idx_names : sequence of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
         idx_sets = as_str_list(idx_sets) or []
@@ -1430,9 +1430,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the equation.
-        idx_sets : list of str or str, optional
+        idx_sets : sequence of str or str, optional
             Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : list of str or str, optional
+        idx_names : sequence of str or str, optional
             Names of the dimensions indexed by `idx_sets`.
         """
         idx_sets = as_str_list(idx_sets) or []

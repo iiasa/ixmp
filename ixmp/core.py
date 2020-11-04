@@ -184,7 +184,7 @@ class Platform:
 
     def export_timeseries_data(self, path, default=True, model=None,
                                scenario=None, variable=None, unit=None,
-                               region=None):
+                               region=None, export_all_runs=False):
         """Export timeseries data to CSV file across multiple scenarios.
 
         Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
@@ -219,18 +219,26 @@ class Platform:
             Only return data for unit name(s) in this list.
         region: list of str, optional
             Only return data for region(s) in this list.
+        export_all_runs: boolean, optional
+            Export all existing model+scenario run combinations.
+
 
         Returns
         -------
         None
         """
+        if export_all_runs and (model or scenario):
+            raise ValueError('Invalid arguments: '
+                             'export_all_runs cannot be used when providing '
+                             'a model or scenario.')
         filters = {
             'model': as_str_list(model) or [],
             'scenario': as_str_list(scenario) or [],
             'variable': as_str_list(variable) or [],
             'unit': as_str_list(unit) or [],
             'region': as_str_list(region) or [],
-            'default': default
+            'default': default,
+            'export_all_runs': export_all_runs
         }
 
         self._backend.write_file(path, ItemType.TS, filters=filters)

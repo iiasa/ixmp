@@ -515,6 +515,7 @@ class JDBCBackend(CachingBackend):
             units = filters.pop('unit')
             regions = filters.pop('region')
             default = filters.pop('default')
+            export_all_runs = filters.pop('export_all_runs')
 
             scen_list = self.jobj.getScenarioList(default, None, None)
             # TODO: replace with passing list of models/scenarios
@@ -526,7 +527,8 @@ class JDBCBackend(CachingBackend):
                                            to_jlist(variables),
                                            to_jlist(units),
                                            to_jlist(regions),
-                                           str(path))
+                                           str(path),
+                                           export_all_runs)
         else:
             raise NotImplementedError
 

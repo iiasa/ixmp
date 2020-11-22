@@ -1,35 +1,8 @@
-Contributing to *ixmp* development
-==================================
+Contributing to development
+===========================
 
-We appreciate contributions to the code base and development of new features for the platform.
-Please `open a new issue on Github <https://github.com/iiasa/ixmp/issues/new>`_ to raise questions concerning potential bugs or to propose new features.
-`Existing open and resolved/closed issues <https://github.com/iiasa/ixmp/issues?q=is:issue>`_ may already contain a solution.
+The |MESSAGEix| software stack, including :mod:`ixmp` and :mod:`message_ix`, is developed by a single group of contributors in an integrated process.
+The MESSAGEix documentation contains :doc:`complete guidelines <message_ix:contributing>` for contributing to the code base, at: https://docs.messageix.org/en/latest/contributing.html.
+All of these guidelines apply to :mod:`ixmp`.
 
-For contributions to the code base of the platform, please `open a GitHub “pull request,” <https://github.com/iiasa/ixmp/pulls>`_ including a detailed description of the new feature and unit tests to illustrate the intended functionality.
-All pull requests will be reviewed by the ixmp maintainers or developers.
-
-Contributors are required to sign the :doc:`contributor_license` before any pull request can be reviewed.
-This ensures that all future users can benefit from your contribution, and that your contributions do not infringe on anyone else's rights.
-The electronic signature is collected via the `cla-assistant`_ when issuing the pull request.
-
-Coding style
-------------
-
-Code submitted via pull requests must adhere to the following style:
-
-- Python: follow `PEP 8`_.
-- R: follow the style of the existing code base.
-- Jupyter notebooks (``.ipynb``):
-
-  - Commit 'bare' notebooks, with no cell output.
-    Notebooks will be run and rendered when the documentation is generated.
-
-- Documentation (``.rst``, ``.md``):
-
-  - Do not hard-wrap lines. Start each sentence on a new line.
-
-- Other (file names, CLI, etc.): follow the style of the existing code base.
-
-.. _`Contributor License Agreement`: contributor_license.html
-.. _`cla-assistant`: https://github.com/cla-assistant/
-.. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
+Contributors who have signed the contributor license agreement (CLA) for |MESSAGEix| will need to separately sign the (identical) :doc:`CLA for ixmp <contributor_license>` when making their first pull request to :mod:`ixmp`.

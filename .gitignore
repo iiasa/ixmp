@@ -1,4 +1,5 @@
 # GAMS, R, Python-specific auxiliary files
+__pycache__
 *-checkpoint.ipynb
 *.~gm
 *.~op
@@ -25,10 +26,8 @@
 # Apple file system
 .DS_Store
 
-# sphinx
-doc/build
-# Compiled SVG
-doc/source/_static/*.svg
+# Sphinx
+doc/_build
 
 # setuptools
 build
@@ -38,8 +37,8 @@ dist
 !rixmp/source/*.Rproj
 .Rproj.user
 *.Rcheck
-r*ixmp_*.tar.gz
-r*ixmp_*.zip
+rixmp_*.tar.gz
+rixmp_*.zip
 rixmp/source/.Rhistory
 rixmp/source/inst/docum/*.html
 
@@ -47,11 +46,13 @@ rixmp/source/inst/docum/*.html
 .env
 
 # pytest and related
+.benchmarks
 .coverage*
-.pytest_cache/
+.pytest_cache
+.mypy_cache
 *.pid
 coverage.xml
-htmlcov/
+htmlcov
 
 # JetBrains IDEs
 *.iml

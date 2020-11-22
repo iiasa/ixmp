@@ -24,39 +24,33 @@
 #   - The top-level methods pint.Quantity() and pint.Unit() can also be used;
 #     these use the application registry.
 
+import logging
 from functools import partial
 from inspect import signature
 from itertools import chain, repeat
-import logging
 from pathlib import Path
+from typing import Dict, Union
 
 import dask
-
-# FIXME this causes JPype to segfault
-# from dask.threaded import get as dask_get
-from dask import get as dask_get
-from dask.optimization import cull
 import pint
 import yaml
+from dask import get as dask_get  # NB dask.threaded.get causes JPype to segfault
+from dask.optimization import cull
 
 from ixmp.utils import partial_split
+
 from . import computations
 from .describe import describe_recursive
 from .exceptions import ComputationError
 from .key import Key
 from .quantity import Quantity
-from .utils import (
-    REPLACE_UNITS,
-    RENAME_DIMS,
-    dims_for_qty,
-)
-
+from .utils import RENAME_DIMS, REPLACE_UNITS, dims_for_qty
 
 __all__ = [
-    'Key',
-    'Quantity',
-    'Reporter',
-    'configure',
+    "Key",
+    "Quantity",
+    "Reporter",
+    "configure",
 ]
 
 log = logging.getLogger(__name__)
@@ -64,33 +58,34 @@ log = logging.getLogger(__name__)
 
 class KeyExistsError(KeyError):
     def __str__(self):
-        return f'key {repr(self.args[0])} already exists'
+        return f"key {repr(self.args[0])} already exists"
 
 
 class MissingKeyError(KeyError):
     def __str__(self):
-        return f'required keys {repr(self.args)} not defined'
+        return f"required keys {repr(self.args)} not defined"
 
 
 class Reporter:
     """Class for generating reports on :class:`ixmp.Scenario` objects."""
+
     # TODO meet the requirements:
     # A3iii. Interpolation.
 
     #: A dask-format :doc:`graph <graphs>`.
-    graph = {'config': {}}
+    graph: Dict[str, Union[str, dict]] = {"config": {}}
 
     #: The default reporting key.
     default_key = None
 
     # An index of ixmp names -> full keys
-    _index = {}
+    _index: Dict[str, Key] = {}
 
     # Module containing pre-defined computations
     _computations = computations
 
     def __init__(self, **kwargs):
-        self.graph = {'config': {}}
+        self.graph = {"config": {}}
         self._index = {}
         self.configure(**kwargs)
 
@@ -119,16 +114,16 @@ class Reporter:
         rep = cls(**kwargs)
 
         # Add the scenario itself
-        rep.add('scenario', scenario)
+        rep.add("scenario", scenario)
 
         # List of top-level keys
         all_keys = []
 
         # List of parameters, equations, and variables
         quantities = chain(
-            zip(repeat('par'), sorted(scenario.par_list())),
-            zip(repeat('equ'), sorted(scenario.equ_list())),
-            zip(repeat('var'), sorted(scenario.var_list())),
+            zip(repeat("par"), sorted(scenario.par_list())),
+            zip(repeat("equ"), sorted(scenario.equ_list())),
+            zip(repeat("var"), sorted(scenario.var_list())),
         )
 
         for ix_type, name in quantities:
@@ -148,7 +143,7 @@ class Reporter:
             all_keys.extend(c[0] for c in comps)
 
         # Add a key which simply collects all quantities
-        rep.add('all', sorted(all_keys))
+        rep.add("all", sorted(all_keys))
 
         # Add sets
         for name in scenario.set_list():
@@ -191,33 +186,33 @@ class Reporter:
         configure(None, **config)
 
         # Store all configuration in the graph itself
-        self.graph['config'] = config.copy()
+        self.graph["config"] = config.copy()
 
         # Read sections
 
         # Default report
         try:
-            self.default_key = config['default']
+            self.default_key = config["default"]
         except KeyError:
             pass
 
         # Files with exogenous data
-        for item in config.get('files', []):
-            path = Path(item['path'])
+        for item in config.get("files", []):
+            path = Path(item["path"])
             if not path.is_absolute():
                 # Resolve relative paths relative to the directory containing
                 # the configuration file
-                path = config.get('config_dir', Path.cwd()) / path
-            item['path'] = path
+                path = config.get("config_dir", Path.cwd()) / path
+            item["path"] = path
 
             self.add_file(**item)
 
         # Aliases
-        for alias, original in config.get('alias', {}).items():
+        for alias, original in config.get("alias", {}).items():
             self.add(alias, original)
 
         # Filters
-        self.set_filters(**config.get('filters', {}))
+        self.set_filters(**config.get("filters", {}))
 
         return self  # to allow chaining
 
@@ -265,11 +260,11 @@ class Reporter:
             # *data* is the name of a pre-defined computation
             name = data
 
-            if hasattr(self, f'add_{name}'):
+            if hasattr(self, f"add_{name}"):
                 # Use a method on the current class to add. This invokes any
                 # argument-handling conveniences, e.g. Reporter.add_product()
                 # instead of using the bare product() computation directly.
-                return getattr(self, f'add_{name}')(*args, **kwargs)
+                return getattr(self, f"add_{name}")(*args, **kwargs)
             else:
                 # Get the function directly
                 func = getattr(self._computations, name)
@@ -285,7 +280,7 @@ class Reporter:
             # *data* is a key, *args* are the computation
             key, computation = data, args
 
-            if kwargs.pop('sums', False):
+            if kwargs.pop("sums", False):
                 # Convert *key* to a Key object in order to use .iter_sums()
                 key = Key.from_str_or_key(key)
 
@@ -307,7 +302,7 @@ class Reporter:
             # Some other kind of import
             raise ValueError(data)
 
-    def add_queue(self, queue, max_tries=1, fail='raise'):
+    def add_queue(self, queue, max_tries=1, fail="raise"):
         """Add tasks from a list or `queue`.
 
         Parameters
@@ -335,9 +330,11 @@ class Reporter:
                 # Adding failed
 
                 # Information for debugging
-                info = [f'Failed {count} times to add:',
-                        f'    ({repr(args)}, {repr(kwargs)})',
-                        f'    with {repr(exc)}']
+                info = [
+                    f"Failed {count} times to add:",
+                    f"    ({repr(args)}, {repr(kwargs)})",
+                    f"    with {repr(exc)}",
+                ]
 
                 def _log(level):
                     [log.log(level, i) for i in info]
@@ -349,7 +346,7 @@ class Reporter:
                     retry.append((count + 1, (args, kwargs)))
                 else:
                     # More than *max_tries* failures; something
-                    if fail == 'raise':
+                    if fail == "raise":
                         _log(logging.ERROR)
                         raise
                     else:
@@ -397,7 +394,7 @@ class Reporter:
         if index:
             # String equivalent of *key* with all dimensions dropped, but name
             # and tag retained
-            idx = str(Key.from_str_or_key(key, drop=True)).rstrip(':')
+            idx = str(Key.from_str_or_key(key, drop=True)).rstrip(":")
 
             # Add *key* to the index
             self._index[idx] = key
@@ -459,17 +456,17 @@ class Reporter:
             if self.default_key is not None:
                 key = self.default_key
             else:
-                raise ValueError('no default reporting key set')
+                raise ValueError("no default reporting key set")
 
         # Cull the graph, leaving only those needed to compute *key*
         dsk, deps = cull(self.graph, key)
-        log.debug('Cull {} -> {} keys'.format(len(self.graph), len(dsk)))
+        log.debug("Cull {} -> {} keys".format(len(self.graph), len(dsk)))
 
         try:
             # Protect 'config' dict, so that dask schedulers do not try to
             # interpret its contents as further tasks. Workaround for
             # https://github.com/dask/dask/issues/3523
-            dsk['config'] = dask.core.quote(dsk['config'])
+            dsk["config"] = dask.core.quote(dsk["config"])
         except KeyError:
             pass
 
@@ -493,7 +490,7 @@ class Reporter:
             rep.full_key('foo:c')
             # etc.
         """
-        name = str(Key.from_str_or_key(name_or_key, drop=True)).rstrip(':')
+        name = str(Key.from_str_or_key(name_or_key, drop=True)).rstrip(":")
         return self._index[name]
 
     def check_keys(self, *keys):
@@ -534,7 +531,7 @@ class Reporter:
         associated with the key ``'scenario'``. All subsequent processing will
         act on data from this *scenario*.
         """
-        self.graph['scenario'] = scenario
+        self.graph["scenario"] = scenario
 
     def set_filters(self, **filters):
         """Apply *filters* ex ante (before computations occur).
@@ -553,18 +550,18 @@ class Reporter:
 
             If no arguments are provided, *all* filters are cleared.
         """
-        self.graph['config'].setdefault('filters', {})
+        self.graph["config"].setdefault("filters", {})
 
         if len(filters) == 0:
-            self.graph['config']['filters'] = {}
+            self.graph["config"]["filters"] = {}
 
         # Update
-        self.graph['config']['filters'].update(filters)
+        self.graph["config"]["filters"].update(filters)
 
         # Clear
         for key, value in filters.items():
             if value is None:
-                self.graph['config']['filters'].pop(key, None)
+                self.graph["config"]["filters"].pop(key, None)
 
     # ixmp data model manipulations
     def add_product(self, key, *quantities, sums=True):
@@ -586,8 +583,7 @@ class Reporter:
             The full key of the new quantity.
         """
         # Fetch the full key for each quantity
-        base_keys = list(map(Key.from_str_or_key,
-                             self.check_keys(*quantities)))
+        base_keys = list(map(Key.from_str_or_key, self.check_keys(*quantities)))
 
         # Compute a key for the result
         # Parse the name and tag of the target
@@ -596,13 +592,11 @@ class Reporter:
         key = Key.product(key.name, *base_keys, tag=key.tag)
 
         # Add the basic product to the graph and index
-        keys = self.add(key, computations.product, *base_keys, sums=sums,
-                        index=True)
+        keys = self.add(key, computations.product, *base_keys, sums=sums, index=True)
 
         return keys[0]
 
-    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True,
-                  sums=False):
+    def aggregate(self, qty, tag, dims_or_groups, weights=None, keep=True, sums=False):
         """Add a computation that aggregates *qty*.
 
         Parameters
@@ -631,7 +625,7 @@ class Reporter:
         if isinstance(dims_or_groups, dict):
             groups = dims_or_groups
             if len(groups) > 1:
-                raise NotImplementedError('aggregate() along >1 dimension')
+                raise NotImplementedError("aggregate() along >1 dimension")
 
             key = Key.from_str_or_key(qty, tag=tag)
             comp = (computations.aggregate, qty, groups, keep)
@@ -645,7 +639,7 @@ class Reporter:
 
         return self.add(key, comp, strict=True, index=True, sums=sums)
 
-    def disaggregate(self, qty, new_dim, method='shares', args=[]):
+    def disaggregate(self, qty, new_dim, method="shares", args=[]):
         """Add a computation that disaggregates *qty* using *method*.
 
         Parameters
@@ -673,11 +667,11 @@ class Reporter:
         # Get the method
         if isinstance(method, str):
             try:
-                method = getattr(computations,
-                                 'disaggregate_{}'.format(method))
+                method = getattr(computations, "disaggregate_{}".format(method))
             except AttributeError:
-                raise ValueError("No disaggregation method 'disaggregate_{}'"
-                                 .format(method))
+                raise ValueError(
+                    "No disaggregation method 'disaggregate_{}'".format(method)
+                )
         if not callable(method):
             raise ValueError(method)
 
@@ -716,10 +710,10 @@ class Reporter:
         ixmp.reporting.computations.load_file
         """
         path = Path(path)
-        key = key if key else 'file:{}'.format(path.name)
-        return self.add(key,
-                        (partial(computations.load_file, path, **kwargs),),
-                        strict=True)
+        key = key if key else "file:{}".format(path.name)
+        return self.add(
+            key, (partial(computations.load_file, path, **kwargs),), strict=True
+        )
 
     # Use add_file as a helper for computations.load_file
     add_load_file = add_file
@@ -733,14 +727,15 @@ class Reporter:
         """
         if key is None:
             # Sort with 'all' at the end
-            key = tuple(sorted(filter(lambda k: k != 'all',
-                                      self.graph.keys())) + ['all'])
+            key = tuple(
+                sorted(filter(lambda k: k != "all", self.graph.keys())) + ["all"]
+            )
         else:
             key = (key,)
 
         result = describe_recursive(self.graph, key)
         if not quiet:
-            print(result, end='\n')
+            print(result, end="\n")
         return result
 
     def visualize(self, filename, **kwargs):
@@ -793,23 +788,23 @@ def configure(path=None, **config):
     config = _config_args(path, config)
 
     # Units
-    units = config.get('units', {})
+    units = config.get("units", {})
 
     # Define units
     registry = pint.get_application_registry()
     try:
-        registry.define(units['define'].strip())
+        registry.define(units["define"].strip())
     except KeyError:
         pass
     except pint.DefinitionSyntaxError as e:
         log.warning(e)
 
     # Add replacements
-    for old, new in units.get('replace', {}).items():
+    for old, new in units.get("replace", {}).items():
         REPLACE_UNITS[old] = new
 
     # Dimensions to be renamed
-    RENAME_DIMS.update(config.get('rename_dims', {}))
+    RENAME_DIMS.update(config.get("rename_dims", {}))
 
 
 def _config_args(path=None, keys={}):
@@ -819,11 +814,11 @@ def _config_args(path=None, keys={}):
     if path:
         # Load configuration from file
         path = Path(path)
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             result.update(yaml.safe_load(f))
 
         # Also store the directory where the configuration file was located
-        result['config_dir'] = path.parent
+        result["config_dir"] = path.parent
 
     # Update with keys
     result.update(keys)
@@ -837,24 +832,28 @@ def keys_for_quantity(ix_type, name, scenario):
     dims = dims_for_qty(scenario.idx_names(name))
 
     # Column for retrieving data
-    column = 'value' if ix_type == 'par' else 'lvl'
+    column = "value" if ix_type == "par" else "lvl"
 
     # A computation to retrieve the data
     key = Key(name, dims)
-    result = [(
-        key,
-        partial(computations.data_for_quantity, ix_type, name, column),
-        'scenario',
-        'config',
-    )]
+    result = [
+        (
+            key,
+            partial(computations.data_for_quantity, ix_type, name, column),
+            "scenario",
+            "config",
+        )
+    ]
 
     # Add the marginal values at full resolution, but no aggregates
-    if ix_type == 'equ':
-        result.append((
-            Key('{}-margin'.format(name), dims),
-            partial(computations.data_for_quantity, ix_type, name, 'mrg'),
-            'scenario',
-            'config',
-        ))
+    if ix_type == "equ":
+        result.append(
+            (
+                Key("{}-margin".format(name), dims),
+                partial(computations.data_for_quantity, ix_type, name, "mrg"),
+                "scenario",
+                "config",
+            )
+        )
 
     return result

@@ -12,8 +12,9 @@ def test_class():
     class BE1(Backend):
         pass
 
-    with pytest.raises(TypeError, match="Can't instantiate abstract class BE1 "
-                                        "with abstract methods"):
+    with pytest.raises(
+        TypeError, match="Can't instantiate abstract class BE1 " "with abstract methods"
+    ):
         BE1()
 
     # A complete subclass
@@ -72,20 +73,21 @@ def test_class():
 
     # Methods with a default implementation can be called
     with pytest.raises(NotImplementedError):
-        be.read_file(Path('foo'), ItemType.VAR)
+        be.read_file(Path("foo"), ItemType.VAR)
 
     with pytest.raises(NotImplementedError):
-        be.write_file(Path('foo'), ItemType.VAR)
+        be.write_file(Path("foo"), ItemType.VAR)
 
 
 def test_cache_non_hashable():
-    filters = {'s': ['foo', 42, object()]}
+    filters = {"s": ["foo", 42, object()]}
 
     # _cache_key() cannot handle non-hashable object()
     # NB exception message contains single quotes on 'object' on Windows/py3.6
-    with pytest.raises(TypeError, match="Object of type .?object.? is not JSON"
-                                        " serializable"):
-        CachingBackend._cache_key(object(), 'par', 'p', filters)
+    with pytest.raises(
+        TypeError, match="Object of type .?object.? is not JSON" " serializable"
+    ):
+        CachingBackend._cache_key(object(), "par", "p", filters)
 
 
 def test_cache_del_ts(test_mp):
@@ -96,7 +98,7 @@ def test_cache_del_ts(test_mp):
 
     # Load data, thereby adding to the cache
     s = make_dantzig(test_mp)
-    s.par('d')
+    s.par("d")
 
     # Cache size has increased
     assert len(backend._cache) == cache_size_pre + 1

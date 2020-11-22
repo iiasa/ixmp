@@ -1,11 +1,11 @@
-from functools import lru_cache
 import logging
+from functools import lru_cache
+from typing import Dict
 
 import pandas as pd
 import pint
 
 from .key import Key
-
 
 log = logging.getLogger(__name__)
 
@@ -13,12 +13,12 @@ log = logging.getLogger(__name__)
 #: Replacements to apply to quantity units before parsing by
 #: :doc:`pint <pint:index>`. Mapping from original unit -> preferred unit.
 REPLACE_UNITS = {
-    '%': 'percent',
+    "%": "percent",
 }
 
 #: Dimensions to rename when extracting raw data from Scenario objects.
 #: Mapping from Scenario dimension name -> preferred dimension name.
-RENAME_DIMS = {}
+RENAME_DIMS: Dict[str, str] = {}
 
 
 def clean_units(input_string):
@@ -31,7 +31,7 @@ def clean_units(input_string):
       operator; it is translated to 'percent'.
 
     """
-    input_string = input_string.strip('[]')
+    input_string = input_string.strip("[]")
     for old, new in REPLACE_UNITS.items():
         input_string = input_string.replace(old, new)
     return input_string
@@ -42,15 +42,15 @@ def collect_units(*args):
     registry = pint.get_application_registry()
 
     for arg in args:
-        if '_unit' in arg.attrs:
+        if "_unit" in arg.attrs:
             # Convert units if necessary
-            if isinstance(arg.attrs['_unit'], str):
-                arg.attrs['_unit'] = registry.parse_units(arg.attrs['_unit'])
+            if isinstance(arg.attrs["_unit"], str):
+                arg.attrs["_unit"] = registry.parse_units(arg.attrs["_unit"])
         else:
-            log.debug('assuming {} is unitless'.format(arg))
-            arg.attrs['_unit'] = registry.parse_units('')
+            log.debug("assuming {} is unitless".format(arg))
+            arg.attrs["_unit"] = registry.parse_units("")
 
-    return [arg.attrs['_unit'] for arg in args]
+    return [arg.attrs["_unit"] for arg in args]
 
 
 def dims_for_qty(data):
@@ -68,7 +68,7 @@ def dims_for_qty(data):
         dims = list(data)
 
     # Remove columns containing values or units; dimensions are the remainder
-    for col in 'value', 'lvl', 'mrg', 'unit':
+    for col in "value", "lvl", "mrg", "unit":
         try:
             dims.remove(col)
         except ValueError:
@@ -85,7 +85,7 @@ def filter_concat_args(args):
     """
     for arg in args:
         if isinstance(arg, (str, Key)):
-            log.warn('concat() argument {repr(arg)} missing; will be omitted')
+            log.warn("concat() argument {repr(arg)} missing; will be omitted")
             continue
         yield arg
 
@@ -100,27 +100,29 @@ def parse_units(units_series):
     unit = pd.unique(units_series)
 
     if len(unit) > 1:
-        raise ValueError(f'mixed units {list(unit)}')
+        raise ValueError(f"mixed units {list(unit)}")
 
     registry = pint.get_application_registry()
 
     # Helper method to return an intelligible exception
     def invalid(unit):
-        chars = ''.join(c for c in '-?$' if c in unit)
-        msg = (f'unit {repr(unit)} cannot be parsed; contains invalid '
-               f'character(s) {repr(chars)}')
+        chars = "".join(c for c in "-?$" if c in unit)
+        msg = (
+            f"unit {repr(unit)} cannot be parsed; contains invalid "
+            f"character(s) {repr(chars)}"
+        )
         return ValueError(msg)
 
     # Helper method to add unit definitions
     def define_unit_parts(expr):
         # Split possible compound units
-        for part in expr.split('/'):
+        for part in expr.split("/"):
             try:
                 registry.parse_units(part)
             except pint.UndefinedUnitError:
                 # Part was unparseable; define it
-                definition = f'{part} = [{part}]'
-                log.info(f'Add unit definition: {definition}')
+                definition = f"{part} = [{part}]"
+                log.info(f"Add unit definition: {definition}")
 
                 # This line will fail silently for parts like 'G$' containing
                 # characters like '$' that are discarded by pint
@@ -132,7 +134,7 @@ def parse_units(units_series):
         unit = registry.parse_units(unit)
     except IndexError:
         # Quantity has no unit
-        unit = registry.parse_units('')
+        unit = registry.parse_units("")
     except pint.UndefinedUnitError:
         try:
             # Unit(s) do not exist; define them in the UnitRegistry

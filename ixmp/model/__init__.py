@@ -1,6 +1,8 @@
+from typing import Dict, Type
+
 #: Mapping from names to available models. To register additional models,
 #: add elements to this variable.
-MODELS = {}
+MODELS: Dict[str, Type] = {}
 
 
 def get_model(name, **model_options):
@@ -8,4 +10,4 @@ def get_model(name, **model_options):
     try:
         return MODELS[name](**model_options)
     except KeyError:
-        return MODELS['default'](name=name, **model_options)
+        return MODELS["default"](name=name, **model_options)

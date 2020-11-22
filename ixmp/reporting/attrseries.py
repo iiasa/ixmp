@@ -30,7 +30,7 @@ class AttrSeries(pd.Series):
     def __init__(self, data=None, *args, name=None, attrs=None, **kwargs):
         attrs = attrs or dict()
 
-        if hasattr(data, 'attrs'):
+        if hasattr(data, "attrs"):
             # Use attrs from an existing object
             new_attrs = data.attrs.copy()
 
@@ -105,8 +105,7 @@ class AttrSeries(pd.Series):
                     # When using .loc[] to select 1 label on 1 level, pandas
                     # drops the level. Use .xs() to avoid this behaviour unless
                     # drop=True
-                    return AttrSeries(self.xs(key, level=level,
-                                              drop_level=False))
+                    return AttrSeries(self.xs(key, level=level, drop_level=False))
                 else:
                     # No MultiIndex; use .loc with a slice to avoid returning
                     # scalar
@@ -121,7 +120,7 @@ class AttrSeries(pd.Series):
         attrs = None
 
         try:
-            dim = kwargs.pop('dim')
+            dim = kwargs.pop("dim")
         except KeyError:
             dim = list(args)
             args = tuple()
@@ -129,14 +128,15 @@ class AttrSeries(pd.Series):
         if len(dim) == len(self.index.names):
             bad_dims = set(dim) - set(self.index.names)
             if bad_dims:
-                raise ValueError(f'{bad_dims} not found in array dimensions '
-                                 f'{self.index.names}')
+                raise ValueError(
+                    f"{bad_dims} not found in array dimensions " f"{self.index.names}"
+                )
             # Simple sum
             kwargs = {}
         else:
             # pivot and sum across columns
             obj = self.unstack(dim)
-            kwargs['axis'] = 1
+            kwargs["axis"] = 1
             # Result will be DataFrame; re-attach attrs when converted to
             # AttrSeries
             attrs = self.attrs

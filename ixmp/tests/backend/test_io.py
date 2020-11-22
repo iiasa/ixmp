@@ -7,10 +7,10 @@ def test_read_excel_big(test_mp, tmp_path):
 
     https://github.com/iiasa/ixmp/pull/345.
     """
-    tmp_path /= 'output.xlsx'
+    tmp_path /= "output.xlsx"
 
     # Write a 25-element parameter with max_row=10 → split across 3 sheets
-    scen = ixmp.Scenario(test_mp, **models['dantzig'], version="new")
+    scen = ixmp.Scenario(test_mp, **models["dantzig"], version="new")
     add_random_model_data(scen, 25)
     scen.to_excel(tmp_path, items=ixmp.ItemType.MODEL, max_row=10)
 

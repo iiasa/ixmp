@@ -1,17 +1,16 @@
+import logging
+import re
+import sys
 from collections.abc import Iterable
 from functools import partial
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import Iterator, Tuple
+from typing import Dict, Iterator, List, Tuple
 from urllib.parse import urlparse
-import logging
-import re
-import sys
 
 import pandas as pd
 
 from ixmp.backend import ItemType
-
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ def logger():
     if _LOGGER is None:
         logging.basicConfig()
         _LOGGER = logging.getLogger()
-        _LOGGER.setLevel('INFO')
+        _LOGGER.setLevel("INFO")
     return _LOGGER
 
 
@@ -64,7 +63,7 @@ def check_year(y, s):
     """Returns True if y is an int, raises an error if y is not None"""
     if y is not None:
         if not isinstance(y, int):
-            raise ValueError('arg `{}` must be an integer!'.format(s))
+            raise ValueError("arg `{}` must be an integer!".format(s))
         return True
 
 
@@ -87,8 +86,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         b.items(filters=filters, type=ItemType.PAR),
     ]
     # State variables for loop
-    name = [None, None]
-    data = [None, None]
+    name = ["", ""]
+    data: List[pd.DataFrame] = [None, None]
 
     # Elements for first iteration
     name[0], data[0] = next(items[0])
@@ -101,7 +100,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         # Compare the names from `a` and `b` to ensure matching items
         if name[0] == name[1]:
             # Matching items in `a` and `b`
-            current_name, left, right = name[0], *data
+            current_name = name[0]
+            left, right = data
         else:
             # Mismatched; either `a` or `b` has no data for these filters
             current_name = min(*name)
@@ -113,7 +113,9 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         # Either merge on remaining columns; or, for scalars, on the indices
         on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg = dict(on=on) if on else dict(left_index=True, right_index=True)
+        on_arg: Dict[str, object] = (
+            dict(on=on) if on else dict(left_index=True, right_index=True)
+        )
 
         # Merge the data from each side
         yield current_name, pd.merge(
@@ -260,16 +262,16 @@ def parse_url(url):
         For malformed URLs.
     """
     components = urlparse(url)
-    if components.scheme not in ('ixmp', ''):
-        raise ValueError('URL must begin with ixmp:// or //')
+    if components.scheme not in ("ixmp", ""):
+        raise ValueError("URL must begin with ixmp:// or //")
 
     platform_info = dict()
     if components.netloc:
-        platform_info['name'] = components.netloc
+        platform_info["name"] = components.netloc
 
     scenario_info = dict()
 
-    path = components.path.split('/')
+    path = components.path.split("/")
     if len(path):
         # If netloc was given, path begins with '/'; discard
         path = path if len(path[0]) else path[1:]
@@ -277,8 +279,8 @@ def parse_url(url):
         if len(path) < 2:
             raise ValueError("URL path must be 'MODEL/SCENARIO'")
 
-        scenario_info['model'] = path[0]
-        scenario_info['scenario'] = '/'.join(path[1:])
+        scenario_info["model"] = path[0]
+        scenario_info["scenario"] = "/".join(path[1:])
 
     if len(components.query):
         raise ValueError(f"queries ({components.query}) not supported in URLs")
@@ -306,8 +308,10 @@ def partial_split(func, kwargs):
     par_names = signature(func).parameters
     func_args, extra = {}, {}
     for name, value in kwargs.items():
-        if name in par_names and \
-                par_names[name].kind == Parameter.POSITIONAL_OR_KEYWORD:
+        if (
+            name in par_names
+            and par_names[name].kind == Parameter.POSITIONAL_OR_KEYWORD
+        ):
             func_args[name] = value
         else:
             extra[name] = value
@@ -339,8 +343,9 @@ def filtered(df, filters):
     return df[mask]
 
 
-def format_scenario_list(platform, model=None, scenario=None, match=None,
-                         default_only=False, as_url=False):
+def format_scenario_list(
+    platform, model=None, scenario=None, match=None, default_only=False, as_url=False
+):
     """Return a formatted list of TimeSeries on *platform*.
 
     Parameters
@@ -366,7 +371,7 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
     """
 
     try:
-        match = re.compile('.*' + match + '.*')
+        match = re.compile(".*" + match + ".*")
     except TypeError:
         pass
 
@@ -375,64 +380,67 @@ def format_scenario_list(platform, model=None, scenario=None, match=None,
         min = df.version.min()
         max = df.version.max()
 
-        result = dict(N=N, range='')
+        result = dict(N=N, range="")
         if N > 1:
-            result['range'] = '{}–{}'.format(min, max)
+            result["range"] = "{}–{}".format(min, max)
             if N != max:
-                result['range'] += ' ({} versions)'.format(N)
+                result["range"] += " ({} versions)".format(N)
 
         try:
             mask = df.is_default.astype(bool)
-            result['default'] = df.loc[mask, 'version'].iat[0]
+            result["default"] = df.loc[mask, "version"].iat[0]
         except IndexError:
-            result['default'] = max
+            result["default"] = max
 
         return pd.Series(result)
 
-    info = platform.scenario_list(model=model, scen=scenario,
-                                  default=default_only) \
-        .groupby(['model', 'scenario']) \
-        .apply(describe) \
+    info = (
+        platform.scenario_list(model=model, scen=scenario, default=default_only)
+        .groupby(["model", "scenario"])
+        .apply(describe)
         .reset_index()
+    )
 
     if not len(info):
         # No results; re-create a minimal empty data frame
-        info = pd.DataFrame([], columns=['model', 'scenario', 'default', 'N'])
+        info = pd.DataFrame([], columns=["model", "scenario", "default", "N"])
 
-    info['scenario'] = info['scenario'] \
-        .str.cat(info['default'].astype(str), sep='#')
+    info["scenario"] = info["scenario"].str.cat(info["default"].astype(str), sep="#")
 
     if match:
-        info = info[info['model'].str.match(match)
-                    | info['scenario'].str.match(match)]
+        info = info[info["model"].str.match(match) | info["scenario"].str.match(match)]
 
     lines = []
 
     if as_url:
-        info['url'] = 'ixmp://{}'.format(platform.name)
-        urls = info['url'].str.cat([info['model'], info['scenario']], sep='/')
+        info["url"] = "ixmp://{}".format(platform.name)
+        urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")
         lines = urls.tolist()
     else:
-        width = 0 if not len(info) else info['scenario'].str.len().max()
-        info['scenario'] = info['scenario'].str.ljust(width)
+        width = 0 if not len(info) else info["scenario"].str.len().max()
+        info["scenario"] = info["scenario"].str.ljust(width)
 
-        for model, m_info in info.groupby(['model']):
-            lines.extend([
-                '',
-                model + '/',
-                '  ' + '\n  '.join(m_info['scenario'].str.cat(m_info['range']))
-            ])
+        for model, m_info in info.groupby(["model"]):
+            lines.extend(
+                [
+                    "",
+                    model + "/",
+                    "  " + "\n  ".join(m_info["scenario"].str.cat(m_info["range"])),
+                ]
+            )
 
-        lines.append('')
+        lines.append("")
 
     # Summary information
     if not as_url:
-        lines.extend([
-            str(len(info['model'].unique())) + ' model name(s)',
-            str(len(info['scenario'].unique())) + ' scenario name(s)',
-            str(len(info)) + ' (model, scenario) combination(s)',
-            str(info['N'].sum()) + ' total scenarios',
-        ])
+        lines.extend(
+            [
+                str(len(info["model"].unique())) + " model name(s)",
+                str(len(info["scenario"].unique())) + " scenario name(s)",
+                str(len(info)) + " (model, scenario) combination(s)",
+                str(info["N"].sum()) + " total scenarios",
+            ]
+        )
 
     return lines
 
@@ -447,36 +455,51 @@ def show_versions(file=sys.stdout):
     from ixmp.model.gams import gams_version
 
     def _git_log(mod):
-        cmd = ['git', 'log', '--oneline', '--no-color', '--decorate', '-n 1']
+        cmd = ["git", "log", "--oneline", "--no-color", "--decorate", "-n 1"]
         try:
             cwd = Path(mod.__file__).parent
-            info = check_output(cmd, cwd=cwd, encoding='utf-8', stderr=DEVNULL)
+            info = check_output(cmd, cwd=cwd, encoding="utf-8", stderr=DEVNULL)
         except Exception:
             # Occurs if "git log" fails; or if mod.__file__ is None (#338)
-            return ''
+            return ""
         else:
-            return f'\n     {info.rstrip()}'
+            return f"\n     {info.rstrip()}"
 
     deps = [
         None,  # Prints a separator
-
         # ixmp stack
-        'ixmp', 'message_ix', 'message_data', None,
-
+        "ixmp",
+        "message_ix",
+        "message_data",
+        None,
         # ixmp dependencies
-        'click', 'dask', 'graphviz', 'jpype', 'pandas', 'pint', 'xarray',
-        'xlrd', 'xlsxwriter', 'yaml', None,
-
+        "click",
+        "dask",
+        "graphviz",
+        "jpype",
+        "pandas",
+        "pint",
+        "xarray",
+        "xlrd",
+        "xlsxwriter",
+        "yaml",
+        None,
         # Optional dependencies, dependencies of message_ix and message_data
-        'iam_units', 'jupyter', 'matplotlib', 'plotnine', 'pyam', None,
+        "iam_units",
+        "jupyter",
+        "matplotlib",
+        "plotnine",
+        "pyam",
+        None,
     ]
 
     info = []
     for module_name in deps:
         try:
             # Import the module
-            mod = sys.modules.get(module_name, None) \
-                or importlib.import_module(module_name)
+            mod = sys.modules.get(module_name, None) or importlib.import_module(
+                module_name
+            )
         except Exception:
             # Couldn't import
             info.append((module_name, None))
@@ -488,12 +511,12 @@ def show_versions(file=sys.stdout):
             version = mod.__version__
         except Exception:
             # __version__ not available
-            version = 'installed'
+            version = "installed"
         finally:
             info.append((module_name, version + gl))
 
-        if module_name == 'jpype':
-            info.append(('… JVM path', mod.getDefaultJVMPath()))
+        if module_name == "jpype":
+            info.append(("… JVM path", mod.getDefaultJVMPath()))
 
     # Also display GAMS version, if any
     try:
@@ -509,7 +532,7 @@ def show_versions(file=sys.stdout):
     for k, stat in info:
         if (k, stat) == (None, None):
             # Separator line
-            print('', file=file)
+            print("", file=file)
         else:
             print(f"{k + ':':12} {stat}", file=file)
 
@@ -520,7 +543,7 @@ def update_par(scenario, name, data):
     Only values which do not already appear in the parameter data are added.
     """
     tmp = pd.concat([scenario.par(name), data])
-    columns = list(filter(lambda c: c != 'value', tmp.columns))
+    columns = list(filter(lambda c: c != "value", tmp.columns))
     tmp = tmp.drop_duplicates(subset=columns, keep=False)
 
     if len(tmp):

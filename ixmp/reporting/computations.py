@@ -2,8 +2,8 @@
 # Notes:
 # - To avoid ambiguity, computations should not have default arguments. Define
 #   default values for the corresponding methods on the Reporter class.
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from warnings import filterwarnings
 
@@ -13,36 +13,36 @@ import pint
 from .quantity import Quantity, assert_quantity
 from .utils import (
     RENAME_DIMS,
-    dims_for_qty,
     collect_units,
+    dims_for_qty,
     filter_concat_args,
     get_reversed_rename_dims,
     parse_units,
 )
 
 __all__ = [
-    'aggregate',
-    'apply_units',
-    'concat',
-    'data_for_quantity',
-    'disaggregate_shares',
-    'load_file',
-    'product',
-    'ratio',
-    'select',
-    'sum',
-    'write_report',
+    "aggregate",
+    "apply_units",
+    "concat",
+    "data_for_quantity",
+    "disaggregate_shares",
+    "load_file",
+    "product",
+    "ratio",
+    "select",
+    "sum",
+    "write_report",
 ]
 
 
 # sparse 0.9.1, numba 0.49.0, triggered by xarray import
-for msg in ["No direct replacement for 'numba.targets' available",
-            "An import was requested from a module that has moved location."]:
-    filterwarnings(action='ignore', message=msg,
-                   module='sparse._coo.numba_extension')
+for msg in [
+    "No direct replacement for 'numba.targets' available",
+    "An import was requested from a module that has moved location.",
+]:
+    filterwarnings(action="ignore", message=msg, module="sparse._coo.numba_extension")
 
 import xarray as xr  # noqa: E402
-
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def add(*quantities, fill_value=0.0):
 
     # Iterate over remaining entries
     for q in items:
-        if Quantity.CLASS == 'AttrSeries':
+        if Quantity.CLASS == "AttrSeries":
             result = result.add(q, fill_value=fill_value).dropna()
         else:
             result = result + q
@@ -87,8 +87,8 @@ def apply_units(qty, units, quiet=False):
     """
     registry = pint.get_application_registry()
 
-    existing = qty.attrs.get('_unit', None)
-    existing_dims = getattr(existing, 'dimensionality', {})
+    existing = qty.attrs.get("_unit", None)
+    existing_dims = getattr(existing, "dimensionality", {})
     new_units = registry.parse_units(units)
 
     if len(existing_dims):
@@ -106,7 +106,7 @@ def apply_units(qty, units, quiet=False):
         # No units, or dimensionless
         result = qty.copy()
 
-    result.attrs['_unit'] = new_units
+    result.attrs["_unit"] = new_units
 
     return result
 
@@ -136,13 +136,13 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     :class:`Quantity`
         Data for *name*.
     """
-    log.debug(f'{name}: retrieve data')
+    log.debug(f"{name}: retrieve data")
 
     registry = pint.get_application_registry()
 
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
-    filters = config.get('filters', None)
+    filters = config.get("filters", None)
     if filters:
         # Dimensions of the object
         dims = dims_for_qty(idx_names)
@@ -170,59 +170,61 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     #      values are returned.
     if len(data) == 0:
         log.warning(
-            f'0 values for {ix_type} {repr(name)} using filters:\n'
-            f'  {repr(filters)}\n  Subsequent computations may fail.'
+            f"0 values for {ix_type} {repr(name)} using filters:\n"
+            f"  {repr(filters)}\n  Subsequent computations may fail."
         )
 
     # Convert columns with categorical dtype to str
-    data = data.astype({
-        dt[0]: str for dt in data.dtypes.items()
-        if isinstance(dt[1], pd.CategoricalDtype)
-    })
+    data = data.astype(
+        {
+            dt[0]: str
+            for dt in data.dtypes.items()
+            if isinstance(dt[1], pd.CategoricalDtype)
+        }
+    )
 
     # List of the dimensions
     dims = dims_for_qty(data)
 
     # Remove the unit from the DataFrame
     try:
-        attrs = {'_unit': parse_units(data.pop('unit'))}
+        attrs = {"_unit": parse_units(data.pop("unit"))}
     except KeyError:
         # 'equ' are returned without units
         attrs = {}
     except ValueError as e:
-        if 'mixed units' in e.args[0]:
+        if "mixed units" in e.args[0]:
             # Discard mixed units
-            log.warning(f'{name}: {e.args[0]} discarded')
-            attrs = {'_unit': registry.Unit('')}
+            log.warning(f"{name}: {e.args[0]} discarded")
+            attrs = {"_unit": registry.Unit("")}
         else:
             # Raise all other ValueErrors
             raise
 
     # Apply units
     try:
-        new_unit = config['units']['apply'][name]
+        new_unit = config["units"]["apply"][name]
     except KeyError:
         pass
     else:
-        log.info(f"{name}: replace units {attrs.get('_unit', '(none)')} with "
-                 f"{new_unit}")
-        attrs['_unit'] = registry.Unit(new_unit)
+        log.info(
+            f"{name}: replace units {attrs.get('_unit', '(none)')} with " f"{new_unit}"
+        )
+        attrs["_unit"] = registry.Unit(new_unit)
 
     # Set index if 1 or more dimensions
     if len(dims):
         # First rename, then set index
-        data = data.rename(columns=RENAME_DIMS) \
-                   .set_index(dims)
+        data = data.rename(columns=RENAME_DIMS).set_index(dims)
 
     # Convert to a Quantity, assign attrbutes and name
     qty = Quantity(
-        data[column],
-        name=name + ('-margin' if column == 'mrg' else ''),
-        attrs=attrs)
+        data[column], name=name + ("-margin" if column == "mrg" else ""), attrs=attrs
+    )
 
     try:
         # Remove length-1 dimensions for scalars
-        qty = qty.squeeze('index', drop=True)
+        qty = qty.squeeze("index", drop=True)
     except (KeyError, ValueError):
         # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
@@ -258,10 +260,10 @@ def aggregate(quantity, groups, keep):
 
         # Aggregate each group
         for group, members in dim_groups.items():
-            agg = quantity.sel({dim: members}) \
-                          .sum(dim=dim) \
-                          .assign_coords(**{dim: group})
-            if Quantity.CLASS == 'AttrSeries':
+            agg = (
+                quantity.sel({dim: members}).sum(dim=dim).assign_coords(**{dim: group})
+            )
+            if Quantity.CLASS == "AttrSeries":
                 # .transpose() is necesary for AttrSeries
                 agg = agg.transpose(*quantity.dims)
             else:
@@ -298,7 +300,7 @@ def concat(*objs, **kwargs):
 def disaggregate_shares(quantity, shares):
     """Disaggregate *quantity* by *shares*."""
     result = quantity * shares
-    result.attrs['_unit'] = collect_units(quantity)[0]
+    result.attrs["_unit"] = collect_units(quantity)[0]
     return result
 
 
@@ -312,14 +314,14 @@ def product(*quantities):
 
     # Iterate over remaining entries
     for q, u in items:
-        if Quantity.CLASS == 'AttrSeries':
+        if Quantity.CLASS == "AttrSeries":
             # Work around pandas-dev/pandas#25760; see attrseries.py
             result = (result * q.align_levels(result)).dropna()
         else:
             result = result * q
         u_result *= u
 
-    result.attrs['_unit'] = u_result
+    result.attrs["_unit"] = u_result
 
     return result
 
@@ -336,9 +338,9 @@ def ratio(numerator, denominator):
     u_num, u_denom = collect_units(numerator, denominator)
 
     result = numerator / denominator
-    result.attrs['_unit'] = u_num / u_denom
+    result.attrs["_unit"] = u_num / u_denom
 
-    if Quantity.CLASS == 'AttrSeries':
+    if Quantity.CLASS == "AttrSeries":
         result.dropna(inplace=True)
 
     return result
@@ -359,8 +361,9 @@ def select(qty, indexers, inverse=False):
     if inverse:
         new_indexers = {}
         for dim, labels in indexers.items():
-            new_indexers[dim] = list(filter(lambda l: l not in labels,
-                                            qty.coords[dim].data))
+            new_indexers[dim] = list(
+                filter(lambda l: l not in labels, qty.coords[dim].data)
+            )
         indexers = new_indexers
 
     return qty.sel(indexers)
@@ -385,7 +388,7 @@ def sum(quantity, weights=None, dimensions=None):
         w_total = weights.sum(dim=dimensions)
 
     result = (quantity * weights).sum(dim=dimensions) / w_total
-    result.attrs['_unit'] = collect_units(quantity)[0]
+    result.attrs["_unit"] = collect_units(quantity)[0]
 
     return result
 
@@ -415,27 +418,29 @@ def load_file(path, dims={}, units=None):
     """
     # TODO optionally cache: if the same Reporter is used repeatedly, then the
     #      file will be read each time; instead cache the contents in memory.
-    if path.suffix == '.csv':
-        data = pd.read_csv(path, comment='#')
+    if path.suffix == ".csv":
+        data = pd.read_csv(path, comment="#")
 
         # Index columns
         index_columns = data.columns.tolist()
-        index_columns.remove('value')
+        index_columns.remove("value")
 
         try:
             # Retrieve the unit column from the file
-            units_col = data.pop('unit').unique()
-            index_columns.remove('unit')
+            units_col = data.pop("unit").unique()
+            index_columns.remove("unit")
         except KeyError:
             pass  # No such column; use None or argument value
         else:
             # Use a unique value for units of the quantity
             if len(units_col) > 1:
-                raise ValueError(f'Cannot load {path} with non-unique units '
-                                 + repr(units_col))
+                raise ValueError(
+                    f"Cannot load {path} with non-unique units " + repr(units_col)
+                )
             elif units and units not in units_col:
-                raise ValueError(f'Explicit units {units} do not match '
-                                 f'{units_col[0]} in {path}')
+                raise ValueError(
+                    f"Explicit units {units} do not match " f"{units_col[0]} in {path}"
+                )
             units = units_col[0]
 
         if len(dims):
@@ -446,15 +451,16 @@ def load_file(path, dims={}, units=None):
 
             # - Drop columns not mentioned in *dims*
             # - Rename columns according to *dims*
-            data = data.drop(columns=set(index_columns) - set(dims.keys())) \
-                       .rename(columns=dims)
+            data = data.drop(columns=set(index_columns) - set(dims.keys())).rename(
+                columns=dims
+            )
             index_columns = list(dims.values())
 
-        return Quantity(data.set_index(index_columns)['value'], units=units)
-    elif path.suffix in ('.xls', '.xlsx'):
+        return Quantity(data.set_index(index_columns)["value"], units=units)
+    elif path.suffix in (".xls", ".xlsx"):
         # TODO define expected Excel data input format
         raise NotImplementedError  # pragma: no cover
-    elif path.suffix == '.yaml':
+    elif path.suffix == ".yaml":
         # TODO define expected YAML data input format
         raise NotImplementedError  # pragma: no cover
     else:
@@ -472,9 +478,9 @@ def write_report(quantity, path):
     """
     path = Path(path)
 
-    if path.suffix == '.csv':
+    if path.suffix == ".csv":
         quantity.to_dataframe().to_csv(path)
-    elif path.suffix == '.xlsx':
+    elif path.suffix == ".xlsx":
         quantity.to_dataframe().to_excel(path, merge_cells=False)
     else:
         path.write_text(quantity)

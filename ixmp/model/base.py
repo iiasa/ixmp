@@ -1,15 +1,14 @@
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
 
 from ixmp.utils import maybe_check_out, maybe_commit
-
 
 log = logging.getLogger(__name__)
 
 
 class Model(ABC):
     #: Name of the model.
-    name = 'base'
+    name = "base"
 
     @abstractmethod
     def __init__(self, name, **kwargs):
@@ -43,9 +42,7 @@ class Model(ABC):
         --------
         initialize_items
         """
-        log.debug(
-            f'No initialization for {repr(scenario.scheme)}-scheme Scenario'
-        )
+        log.debug(f"No initialization for {repr(scenario.scheme)}-scheme Scenario")
 
     @classmethod
     def initialize_items(cls, scenario, items):
@@ -95,11 +92,11 @@ class Model(ABC):
             item_info = item_info.copy()
 
             # Check that the item exists
-            ix_type = item_info.pop('ix_type')
+            ix_type = item_info.pop("ix_type")
 
             if ix_type not in existing_items:
                 # Store a list of items of *ix_type*
-                method = getattr(scenario, f'{ix_type}_list')
+                method = getattr(scenario, f"{ix_type}_list")
                 existing_items[ix_type] = method()
 
             # Item must be initialized if it does not exist
@@ -134,14 +131,15 @@ class Model(ABC):
                 return
 
             # Get the appropriate method, e.g. init_set, and add the item
-            log.info(f'Initialize {ix_type} {repr(name)} as {item_info}')
-            getattr(scenario, f'init_{ix_type}')(name=name, **item_info)
+            log.info(f"Initialize {ix_type} {repr(name)} as {item_info}")
+            getattr(scenario, f"init_{ix_type}")(name=name, **item_info)
 
             # Record
             items_initialized.append(name)
 
-        maybe_commit(scenario, len(items_initialized),
-                     f'{cls.__name__}.initialize_items')
+        maybe_commit(
+            scenario, len(items_initialized), f"{cls.__name__}.initialize_items"
+        )
 
         if len(items_initialized) and not checkout:
             # Scenario was originally in a checked out state; restore

@@ -34,9 +34,7 @@ from typing import Dict, Union
 import dask
 import pint
 import yaml
-# FIXME this causes JPype to segfault
-# from dask.threaded import get as dask_get
-from dask import get as dask_get
+from dask import get as dask_get  # NB dask.threaded.get causes JPype to segfault
 from dask.optimization import cull
 
 from ixmp.utils import partial_split

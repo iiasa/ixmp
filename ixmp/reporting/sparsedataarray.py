@@ -116,9 +116,11 @@ class SparseDataArray(xr.DataArray):
                 )
             return result
         else:
-            return super().sel(
-                indexers=indexers, method=method, tolerance=tolerance, drop=drop
-            )._sda.convert()
+            return (
+                super()
+                .sel(indexers=indexers, method=method, tolerance=tolerance, drop=drop)
+                ._sda.convert()
+            )
 
     def to_dataframe(self, name=None):
         """Convert this array and its coords into a :class:`~xarray.DataFrame`.

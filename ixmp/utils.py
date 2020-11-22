@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from functools import partial
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import Dict, Iterator, List, Tuple, Union
+from typing import Dict, Iterator, List, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -113,7 +113,9 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         # Either merge on remaining columns; or, for scalars, on the indices
         on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg: Dict[str, object] = dict(on=on) if on else dict(left_index=True, right_index=True)
+        on_arg: Dict[str, object] = (
+            dict(on=on) if on else dict(left_index=True, right_index=True)
+        )
 
         # Merge the data from each side
         yield current_name, pd.merge(

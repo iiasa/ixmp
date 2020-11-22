@@ -1,4 +1,4 @@
-.. include:: ../../tutorial/README.rst
+.. include:: ../tutorial/README.rst
 
 Adapting GAMS models for :mod:`ixmp`
 ------------------------------------

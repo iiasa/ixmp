@@ -140,5 +140,8 @@ jobs:
         )
       shell: Rscript {0}
 
+    - name: Test documentation build using Sphinx
+      run: make --directory=doc html
+
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v1

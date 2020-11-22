@@ -4,7 +4,6 @@ from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
-
 from ixmp.backend import ItemType
 from ixmp.model.base import Model
 from ixmp.utils import as_str_list
@@ -17,8 +16,8 @@ def gams_version():
     #    check_output(['gams', '-LogOption=3'], ...) does not work, because
     #    GAMS does not accept options without an input file to execute.
     import os
-    from tempfile import mkdtemp
     from subprocess import check_output
+    from tempfile import mkdtemp
 
     # Create a temporary GAMS program that does nothing
     tmp_dir = Path(mkdtemp())
@@ -30,7 +29,8 @@ def gams_version():
         ["gams", "null", "-LogOption=3"],
         shell=os.name == "nt",
         cwd=tmp_dir,
-        universal_newlines=True)
+        universal_newlines=True,
+    )
 
     # Clean up
     gms.unlink()
@@ -104,23 +104,22 @@ class GAMSModel(Model):
     """  # noqa: E501
 
     #: Model name.
-    name = 'default'
+    name = "default"
 
     #: Default model options.
     defaults = {
-        'model_file': '{model_name}.gms',
-        'case': "{scenario.model}_{scenario.scenario}",
-        'in_file': str(Path('{temp_dir}', '{model_name}_in.gdx')),
-        'out_file': str(Path('{temp_dir}', '{model_name}_out.gdx')),
-        'solve_args': ['--in="{in_file}"', '--out="{out_file}"'],
-
+        "model_file": "{model_name}.gms",
+        "case": "{scenario.model}_{scenario.scenario}",
+        "in_file": str(Path("{temp_dir}", "{model_name}_in.gdx")),
+        "out_file": str(Path("{temp_dir}", "{model_name}_out.gdx")),
+        "solve_args": ['--in="{in_file}"', '--out="{out_file}"'],
         # Not formatted
-        'gams_args': ['LogOption=4'],
-        'check_solution': True,
-        'comment': None,
-        'equ_list': None,
-        'var_list': None,
-        'use_temp_dir': True,
+        "gams_args": ["LogOption=4"],
+        "check_solution": True,
+        "comment": None,
+        "equ_list": None,
+        "var_list": None,
+        "use_temp_dir": True,
     }
 
     def __init__(self, name=None, **model_options):
@@ -149,41 +148,45 @@ class GAMSModel(Model):
                 return value
 
         # Process args in order
-        command = ['gams']
+        command = ["gams"]
 
-        model_file = Path(format('model_file'))
+        model_file = Path(format("model_file"))
         command.append('"{}"'.format(model_file))
 
-        self.case = format('case').replace(' ', '_')
-        self.in_file = Path(format('in_file'))
-        self.out_file = Path(format('out_file'))
+        self.case = format("case").replace(" ", "_")
+        self.in_file = Path(format("in_file"))
+        self.out_file = Path(format("out_file"))
 
         for arg in self.solve_args:
             command.append(arg.format(**self.__dict__))
 
         command.extend(self.gams_args)
 
-        if os.name == 'nt':
-            command = ' '.join(command)
+        if os.name == "nt":
+            command = " ".join(command)
 
         s_arg = dict(filters=dict(scenario=scenario))
         try:
             # Write model data to file
-            backend.write_file(self.in_file, ItemType.SET | ItemType.PAR,
-                               **s_arg)
+            backend.write_file(self.in_file, ItemType.SET | ItemType.PAR, **s_arg)
         except NotImplementedError:  # pragma: no cover
             # Currently there is no such Backend
-            raise NotImplementedError('GAMSModel requires a Backend that can '
-                                      'write to GDX files, e.g. JDBCBackend')
+            raise NotImplementedError(
+                "GAMSModel requires a Backend that can "
+                "write to GDX files, e.g. JDBCBackend"
+            )
 
         # Invoke GAMS
         cwd = self.temp_dir if self.use_temp_dir else model_file.parent
-        check_call(command, shell=os.name == 'nt', cwd=cwd)
+        check_call(command, shell=os.name == "nt", cwd=cwd)
 
         # Read model solution
-        backend.read_file(self.out_file, ItemType.MODEL, **s_arg,
-                          check_solution=self.check_solution,
-                          comment=self.comment or '',
-                          equ_list=as_str_list(self.equ_list) or [],
-                          var_list=as_str_list(self.var_list) or [],
-                          )
+        backend.read_file(
+            self.out_file,
+            ItemType.MODEL,
+            **s_arg,
+            check_solution=self.check_solution,
+            comment=self.comment or "",
+            equ_list=as_str_list(self.equ_list) or [],
+            var_list=as_str_list(self.var_list) or [],
+        )

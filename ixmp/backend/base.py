@@ -1,11 +1,12 @@
+import json
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import Generator
-import json
 
-from ixmp.core import TimeSeries, Scenario
+from ixmp.core import Scenario, TimeSeries
+
 from . import ItemType
-from .io import ts_read_file, s_read_excel, s_write_excel
+from .io import s_read_excel, s_write_excel, ts_read_file
 
 
 class Backend(ABC):
@@ -69,7 +70,7 @@ class Backend(ABC):
 
     @abstractmethod
     def get_doc(self, domain, name=None):
-        """ Read documentation from database
+        """Read documentation from database
 
         Parameters
         ----------
@@ -365,10 +366,10 @@ class Backend(ABC):
         --------
         write_file
         """
-        s, filters = self._handle_rw_filters(kwargs.pop('filters', {}))
-        if path.suffix in ('.csv', '.xlsx') and item_type is ItemType.TS and s:
+        s, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
+        if path.suffix in (".csv", ".xlsx") and item_type is ItemType.TS and s:
             ts_read_file(s, path, **kwargs)
-        elif path.suffix == '.xlsx' and item_type is ItemType.MODEL and s:
+        elif path.suffix == ".xlsx" and item_type is ItemType.MODEL and s:
             s_read_excel(self, s, path, **kwargs)
         else:
             raise NotImplementedError
@@ -408,12 +409,10 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written;
         # reappend any other filters
-        s, kwargs["filters"] = self._handle_rw_filters(
-            kwargs.pop("filters", {})
-        )
+        s, kwargs["filters"] = self._handle_rw_filters(kwargs.pop("filters", {}))
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
-        if path.suffix == '.xlsx' and item_type in xlsx_types and s:
+        if path.suffix == ".xlsx" and item_type in xlsx_types and s:
             s_write_excel(self, s, path, item_type, **kwargs)
         else:
             # All other combinations of arguments
@@ -582,8 +581,8 @@ class Backend(ABC):
         ts = None
         filters = copy(filters)
         try:
-            if isinstance(filters['scenario'], TimeSeries):
-                ts = filters.pop('scenario')
+            if isinstance(filters["scenario"], TimeSeries):
+                ts = filters.pop("scenario")
         except KeyError:
             pass  # Don't modify filters at all
 
@@ -643,8 +642,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_data(self, ts: TimeSeries,
-                 region, variable, data, unit, subannual, meta):
+    def set_data(self, ts: TimeSeries, region, variable, data, unit, subannual, meta):
         """Store *data*.
 
         Parameters
@@ -664,8 +662,9 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_geo(self, ts: TimeSeries, region, variable, subannual, year, value,
-                unit, meta):
+    def set_geo(
+        self, ts: TimeSeries, region, variable, subannual, year, value, unit, meta
+    ):
         """Store time-series 'geodata'.
 
         Parameters
@@ -709,8 +708,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete_geo(self, ts: TimeSeries, region, variable, subannual, years,
-                   unit):
+    def delete_geo(self, ts: TimeSeries, region, variable, subannual, years, unit):
         """Remove 'geodata' values.
 
         Parameters
@@ -734,8 +732,16 @@ class Backend(ABC):
     # Methods for ixmp.Scenario
 
     @abstractmethod
-    def clone(self, s: Scenario, platform_dest, model, scenario, annotation,
-              keep_solution, first_model_year=None):
+    def clone(
+        self,
+        s: Scenario,
+        platform_dest,
+        model,
+        scenario,
+        annotation,
+        keep_solution,
+        first_model_year=None,
+    ):
         """Clone *s*.
 
         Parameters
@@ -937,8 +943,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, model: str, scenario: str, version: int, strict: bool
-                 ) -> dict:
+    def get_meta(self, model: str, scenario: str, version: int, strict: bool) -> dict:
         """Retrieve meta indicators.
 
         Parameters
@@ -994,8 +999,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def remove_meta(self, categories: list, model: str, scenario: str,
-                    version: int):
+    def remove_meta(self, categories: list, model: str, scenario: str, version: int):
         """Remove meta categories.
 
         Parameters

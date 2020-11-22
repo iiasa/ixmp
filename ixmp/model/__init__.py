@@ -8,4 +8,4 @@ def get_model(name, **model_options):
     try:
         return MODELS[name](**model_options)
     except KeyError:
-        return MODELS['default'](name=name, **model_options)
+        return MODELS["default"](name=name, **model_options)

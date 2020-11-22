@@ -19,12 +19,11 @@
 import ixmp
 import ixmp.testing
 
-
 # -- Project information -----------------------------------------------------
 
-project = 'ix modeling platform'
-copyright = '2020, IIASA Energy Program'
-author = 'ixmp Developers'
+project = "ix modeling platform"
+copyright = "2020, IIASA Energy Program"
+author = "ixmp Developers"
 
 
 # -- General configuration ---------------------------------------------------
@@ -33,25 +32,25 @@ author = 'ixmp Developers'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.coverage',
-    'sphinx.ext.doctest',
-    'sphinx.ext.extlinks',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.todo',
-    'sphinxcontrib.bibtex',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.coverage",
+    "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.todo",
+    "sphinxcontrib.bibtex",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # A string of reStructuredText that will be included at the beginning of every
 # source file that is read.
@@ -67,44 +66,46 @@ rst_prolog = r"""
 
 .. role:: underline
 
-""".format(version)
+""".format(
+    version
+)
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # A list of CSS files.
 html_css_files = ["custom.css"]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '_static/logo_white.png'
+html_logo = "_static/logo_white.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 
 # -- Options for sphinx.ext.extlinks ------------------------------------------
 
 extlinks = {
-    'pull': ("https://github.com/iiasa/ixmp/pull/%s", 'PR #'),
+    "pull": ("https://github.com/iiasa/ixmp/pull/%s", "PR #"),
 }
 
 # -- Options for sphinx.ext.intersphinx ---------------------------------------
 
 intersphinx_mapping = {
-    'dask': ('https://docs.dask.org/en/stable/', None),
-    'jpype': ('https://jpype.readthedocs.io/en/latest', None),
-    'message_ix': ('https://docs.messageix.org/en/latest/', None),
-    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
-    'pint': ('https://pint.readthedocs.io/en/stable/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'sparse': ('https://sparse.pydata.org/en/stable/', None),
-    'xarray': ('https://xarray.pydata.org/en/stable/', None),
+    "dask": ("https://docs.dask.org/en/stable/", None),
+    "jpype": ("https://jpype.readthedocs.io/en/latest", None),
+    "message_ix": ("https://docs.messageix.org/en/latest/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "pint": ("https://pint.readthedocs.io/en/stable/", None),
+    "python": ("https://docs.python.org/3/", None),
+    "sparse": ("https://sparse.pydata.org/en/stable/", None),
+    "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
 # -- Options for sphinx.tex.todo ----------------------------------------------

@@ -1,11 +1,6 @@
-from itertools import chain
 import logging
-from traceback import (
-    TracebackException,
-    format_exception_only,
-    format_list,
-)
-
+from itertools import chain
+from traceback import TracebackException, format_exception_only, format_list
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +13,7 @@ class ComputationError(Exception):
     - Gives the key in the Reporter.graph and the computation task that
       caused the exception.
     """
+
     def __init__(self, exc):
         self._exc = exc
 
@@ -32,8 +28,9 @@ class ComputationError(Exception):
             return self._format()
         except Exception as format_exc:
             # Something went wrong during _format()
-            log.error(f'Exception raised while formatting {self._exc}:\n'
-                      + repr(format_exc))
+            log.error(
+                f"Exception raised while formatting {self._exc}:\n" + repr(format_exc)
+            )
             # Fall back to printing the underlying exception
             return str(self._exc)
 
@@ -41,19 +38,21 @@ class ComputationError(Exception):
         key, task, frames = process_dask_tb(self._exc)
 
         # Assemble the exception printout
-        return ''.join(chain(
-            # Reporter information for debugging
-            [
-                f'computing {key} using:\n\n' if key else '',
-                f'{task}\n\n' if task else '',
-                'Use Reporter.describe(...) to trace the computation.\n\n',
-                'Computation traceback:\n',
-            ],
-            # Traceback; omitting a few dask internal calls below execute_task
-            format_list(frames),
-            # Type and message of the original exception
-            format_exception_only(self._exc.__class__, self._exc)
-        ))
+        return "".join(
+            chain(
+                # Reporter information for debugging
+                [
+                    f"computing {key} using:\n\n" if key else "",
+                    f"{task}\n\n" if task else "",
+                    "Use Reporter.describe(...) to trace the computation.\n\n",
+                    "Computation traceback:\n",
+                ],
+                # Traceback; omitting a few dask internal calls below execute_task
+                format_list(frames),
+                # Type and message of the original exception
+                format_exception_only(self._exc.__class__, self._exc),
+            )
+        )
 
 
 def process_dask_tb(exc):
@@ -80,14 +79,14 @@ def process_dask_tb(exc):
     # Initial frames are internal to dask
     dask_internal = True
     for frame in tbe.stack:
-        if frame.name == 'execute_task':
+        if frame.name == "execute_task":
             # Current frame is the dask internal call to execute a task
             try:
                 # Retrieve information about the key/task that triggered the
                 # exception. These are not the raw values of variables, but
                 # their string repr().
-                key = frame.locals['key']
-                task = frame.locals['task']
+                key = frame.locals["key"]
+                task = frame.locals["task"]
             except (TypeError, KeyError):  # pragma: no cover
                 # No locals, or 'key' or 'task' not present
                 pass

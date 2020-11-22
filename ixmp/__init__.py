@@ -1,6 +1,6 @@
 import logging
 
-from pkg_resources import get_distribution, DistributionNotFound
+from pkg_resources import DistributionNotFound, get_distribution
 
 from ._config import config
 from .backend import BACKENDS, ItemType
@@ -13,15 +13,15 @@ from .reporting import Reporter
 from .utils import show_versions
 
 __all__ = [
-    'IAMC_IDX',
-    'ItemType',
-    'Platform',
-    'Reporter',
-    'Scenario',
-    'TimeSeries',
-    'config',
-    'log',
-    'show_versions',
+    "IAMC_IDX",
+    "ItemType",
+    "Platform",
+    "Reporter",
+    "Scenario",
+    "TimeSeries",
+    "config",
+    "log",
+    "show_versions",
 ]
 
 try:
@@ -31,14 +31,16 @@ except DistributionNotFound:
     __version__ = "999"
 
 # Register Backends provided by ixmp
-BACKENDS['jdbc'] = JDBCBackend
+BACKENDS["jdbc"] = JDBCBackend
 
 # Register Models provided by ixmp
-MODELS.update({
-    'default': GAMSModel,
-    'gams': GAMSModel,
-    'dantzig': DantzigModel,
-})
+MODELS.update(
+    {
+        "default": GAMSModel,
+        "gams": GAMSModel,
+        "dantzig": DantzigModel,
+    }
+)
 
 
 # Configure the 'ixmp' logger: write messages to std out, defaulting to level

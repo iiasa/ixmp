@@ -1,17 +1,26 @@
 from enum import IntFlag
 
-
 #: Lists of field names for tuples returned by Backend API methods.
 FIELDS = {
-    'get_nodes': ('region', 'mapped_to', 'parent', 'hierarchy'),
-    'get_timeslices': ('name', 'category', 'duration'),
-    'get_scenarios': ('model', 'scenario', 'scheme', 'is_default',
-                      'is_locked', 'cre_user', 'cre_date', 'upd_user',
-                      'upd_date', 'lock_user', 'lock_date', 'annotation',
-                      'version'),
-    'ts_get': ('region', 'variable', 'unit', 'subannual', 'year', 'value'),
-    'ts_get_geo': ('region', 'variable', 'subannual', 'year', 'value', 'unit',
-                   'meta'),
+    "get_nodes": ("region", "mapped_to", "parent", "hierarchy"),
+    "get_timeslices": ("name", "category", "duration"),
+    "get_scenarios": (
+        "model",
+        "scenario",
+        "scheme",
+        "is_default",
+        "is_locked",
+        "cre_user",
+        "cre_date",
+        "upd_user",
+        "upd_date",
+        "lock_user",
+        "lock_date",
+        "annotation",
+        "version",
+    ),
+    "ts_get": ("region", "variable", "unit", "subannual", "year", "value"),
+    "ts_get_geo": ("region", "variable", "subannual", "year", "value", "unit", "meta"),
 }
 
 
@@ -22,6 +31,7 @@ BACKENDS = {}
 
 class ItemType(IntFlag):
     """Type of data items in :class:`.TimeSeries` and :class:`.Scenario`."""
+
     # NB the docstring comments ('#:') are placed as they are to ensure the
     #    output is readable.
 

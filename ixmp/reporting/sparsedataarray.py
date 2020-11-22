@@ -5,13 +5,14 @@ import xarray as xr
 from xarray.core.utils import either_dict_or_kwargs
 
 
-@xr.register_dataarray_accessor('_sda')
+@xr.register_dataarray_accessor("_sda")
 class SparseAccessor:
     """:mod:`xarray` accessor to help :class:`SparseDataArray`.
 
     See the xarray accessor documentation, e.g.
     :func:`~xarray.register_dataarray_accessor`.
     """
+
     def __init__(self, obj):
         self.da = obj
 
@@ -69,6 +70,7 @@ class SparseDataArray(xr.DataArray):
     supported by :mod:`sparse`, and to avoid exhausting memory for some
     operations that require dense data.
     """
+
     __slots__ = tuple()
 
     @classmethod
@@ -95,23 +97,26 @@ class SparseDataArray(xr.DataArray):
         """
         return self._sda.dense_super.loc
 
-    def sel(self, indexers=None, method=None, tolerance=None, drop=False,
-            **indexers_kwargs) -> 'SparseDataArray':
+    def sel(
+        self, indexers=None, method=None, tolerance=None, drop=False, **indexers_kwargs
+    ) -> "SparseDataArray":
         """Return a new array by selecting labels along the specified dim(s).
 
         Overrides :meth:`~xarray.DataArray.sel` to handle >1-D indexers with
         sparse data.
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         if isinstance(indexers, dict) and len(indexers) > 1:
             result = self
             for k, v in indexers.items():
-                result = result.sel({k: v}, method=method, tolerance=tolerance,
-                                    drop=drop)
+                result = result.sel(
+                    {k: v}, method=method, tolerance=tolerance, drop=drop
+                )
             return result
         else:
-            return super().sel(indexers=indexers, method=method,
-                               tolerance=tolerance, drop=drop)
+            return super().sel(
+                indexers=indexers, method=method, tolerance=tolerance, drop=drop
+            )
 
     def to_dataframe(self, name=None):
         """Convert this array and its coords into a :class:`~xarray.DataFrame`.
@@ -131,6 +136,7 @@ class SparseDataArray(xr.DataArray):
         # pd.Series
 
         # Construct a pd.MultiIndex without using .from_product
-        index = pd.MultiIndex.from_arrays(self.data.coords, names=self.dims) \
-                  .set_levels([self.coords[d].values for d in self.dims])
+        index = pd.MultiIndex.from_arrays(self.data.coords, names=self.dims).set_levels(
+            [self.coords[d].values for d in self.dims]
+        )
         return pd.Series(self.data.data, index=index, name=self.name)

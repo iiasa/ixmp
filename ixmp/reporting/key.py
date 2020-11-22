@@ -4,6 +4,7 @@ from itertools import chain, compress
 
 class Key:
     """A hashable key for a quantity that includes its dimensionality."""
+
     def __init__(self, name, dims=[], tag=None):
         self._name = name
         self._dims = tuple(dims)
@@ -34,15 +35,15 @@ class Key:
             base = value
         else:
             # Parse a string
-            name, *dims = value.split(':')
+            name, *dims = value.split(":")
             _tag = dims[1] if len(dims) == 2 else None
-            dims = dims[0].split('-') if len(dims) else []
+            dims = dims[0].split("-") if len(dims) else []
             base = cls(name, dims, _tag)
 
         # Drop and append dimensions; add tag
-        return base.drop(*([drop] if drop is True else drop)) \
-                   .append(*append) \
-                   .add_tag(tag)
+        return (
+            base.drop(*([drop] if drop is True else drop)).append(*append).add_tag(tag)
+        )
 
     @classmethod
     def product(cls, new_name, *keys, tag=None):
@@ -68,7 +69,7 @@ class Key:
 
     def __repr__(self):
         """Representation of the Key, e.g. '<name:dim1-dim2-dim3:tag>."""
-        return f'<{self}>'
+        return f"<{self}>"
 
     def __str__(self):
         """Representation of the Key, e.g. 'name:dim1-dim2-dim3:tag'."""
@@ -77,8 +78,10 @@ class Key:
         # key be immutable.
         @lru_cache(1)
         def _():
-            return ':'.join([self._name, '-'.join(self._dims)]
-                            + ([self._tag] if self._tag else []))
+            return ":".join(
+                [self._name, "-".join(self._dims)] + ([self._tag] if self._tag else [])
+            )
+
         return _()
 
     def __hash__(self):
@@ -127,8 +130,7 @@ class Key:
 
     def add_tag(self, tag):
         """Return a new Key with *tag* appended."""
-        return Key(self.name, self.dims,
-                   '+'.join(filter(None, [self.tag, tag])))
+        return Key(self.name, self.dims, "+".join(filter(None, [self.tag, tag])))
 
     def iter_sums(self):
         """Generate (key, task) for all possible partial sums of the Key."""
@@ -145,7 +147,7 @@ class Key:
 def combo_partition(iterable):
     """Yield pairs of lists with all possible subsets of *iterable*."""
     # Format string for binary conversion, e.g. '04b'
-    fmt = '0{}b'.format(len(iterable))
+    fmt = "0{}b".format(len(iterable))
     for n in range(2 ** len(iterable) - 1):
         # Two binary lists
         a, b = zip(*[(v, not v) for v in map(int, format(n, fmt))])

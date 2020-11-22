@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ixmp._config import KEYS, _JSONEncoder, Config, _locate
+from ixmp._config import KEYS, Config, _JSONEncoder, _locate
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def cfg():
 def test_encoder():
     # Custom encoder properly raises TypeError for unhandled value
     with pytest.raises(TypeError):
-        _JSONEncoder().encode({'foo': range(10)})
+        _JSONEncoder().encode({"foo": range(10)})
 
 
 def test_locate(cfg):
@@ -27,67 +27,67 @@ def test_locate(cfg):
         pass
 
     with pytest.raises(FileNotFoundError):
-        _locate('nonexistent')
+        _locate("nonexistent")
 
 
 def test_set_get(cfg):
     # ixmp has no string keys by default, so we insert a fake one
-    KEYS['test key'] = (str, None)
-    cfg.values['test key'] = 'foo'
+    KEYS["test key"] = (str, None)
+    cfg.values["test key"] = "foo"
 
     # get() works
-    assert cfg.get('test key') == 'foo'
+    assert cfg.get("test key") == "foo"
 
     # set() changes the value
-    cfg.set('test key', 'bar')
-    assert cfg.get('test key') == 'bar'
+    cfg.set("test key", "bar")
+    assert cfg.get("test key") == "bar"
 
     # set() with None makes no change
-    cfg.set('test key', None)
-    assert cfg.get('test key') == 'bar'
+    cfg.set("test key", None)
+    assert cfg.get("test key") == "bar"
 
     # set() with invalid type raises exception
-    KEYS['test key'] = (int, None)
+    KEYS["test key"] = (int, None)
     with pytest.raises(TypeError):
-        cfg.set('test key', 'foo')
+        cfg.set("test key", "foo")
 
 
 def test_register(cfg):
     # New key can be registered
-    cfg.register('new key', int, 42)
+    cfg.register("new key", int, 42)
 
     # Default value is set on the instance
-    assert cfg.get('new key') == 42
+    assert cfg.get("new key") == 42
 
     # Can't re-register an existing key
     with pytest.raises(KeyError):
-        cfg.register('new key', int, 43)
+        cfg.register("new key", int, 43)
 
     # Register a key with type Path
-    cfg.register('new key 2', Path)
+    cfg.register("new key 2", Path)
 
     # The key can be with a string value, automatically converted to Path
-    cfg.set('new key 2', '/foo/bar/baz')
-    assert isinstance(cfg.get('new key 2'), Path)
+    cfg.set("new key 2", "/foo/bar/baz")
+    assert isinstance(cfg.get("new key 2"), Path)
 
 
 def test_config_platform(cfg):
     # Default platform is 'local'
-    assert cfg.values['platform']['default'] == 'local'
+    assert cfg.values["platform"]["default"] == "local"
 
     # Set another platform as the default
-    cfg.add_platform('dummy', 'jdbc', 'oracle', 'url', 'user', 'password')
-    cfg.add_platform('default', 'dummy')
+    cfg.add_platform("dummy", "jdbc", "oracle", "url", "user", "password")
+    cfg.add_platform("default", "dummy")
 
     # Now the default platform is 'dummy'
-    assert cfg.values['platform']['default'] == 'dummy'
+    assert cfg.values["platform"]["default"] == "dummy"
 
     # Same info is retrieved for 'default' and the actual name
-    assert cfg.get_platform_info('default') == cfg.get_platform_info('dummy')
+    assert cfg.get_platform_info("default") == cfg.get_platform_info("dummy")
 
     # Invalid calls
     with pytest.raises(ValueError):
-        cfg.add_platform('invalid', 'notabackend', 'other', 'args')
+        cfg.add_platform("invalid", "notabackend", "other", "args")
 
     with pytest.raises(ValueError):
-        cfg.get_platform_info('nonexistent')
+        cfg.get_platform_info("nonexistent")

@@ -1,6 +1,6 @@
+import logging
 from functools import partial
 from itertools import repeat, zip_longest
-import logging
 from pathlib import Path
 from warnings import warn
 from weakref import ProxyType, proxy
@@ -11,19 +11,13 @@ import pandas as pd
 from ._config import config
 from .backend import BACKENDS, FIELDS, ItemType
 from .model import get_model
-from .utils import (
-    as_str_list,
-    check_year,
-    logger,
-    parse_url,
-    year_list
-)
+from .utils import as_str_list, check_year, logger, parse_url, year_list
 
 log = logging.getLogger(__name__)
 
 # %% default settings for column headers
 
-IAMC_IDX = ['model', 'scenario', 'region', 'variable', 'unit']
+IAMC_IDX = ["model", "scenario", "region", "variable", "unit"]
 
 
 class Platform:
@@ -57,31 +51,31 @@ class Platform:
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
-        'add_model_name',
-        'add_scenario_name',
-        'close_db',
-        'get_doc',
-        'get_meta',
-        'get_model_names',
-        'get_scenario_names',
-        'open_db',
-        'remove_meta',
-        'set_doc',
-        'set_meta',
+        "add_model_name",
+        "add_scenario_name",
+        "close_db",
+        "get_doc",
+        "get_meta",
+        "get_model_names",
+        "get_scenario_names",
+        "open_db",
+        "remove_meta",
+        "set_doc",
+        "set_meta",
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
         if name is None:
             if backend is None and not len(backend_args):
                 # No arguments given: use the default platform config
-                name = 'default'
+                name = "default"
             elif backend is None:
                 # Only backend_args given
-                log.info('Using default JDBC backend')
-                kwargs = {'class': 'jdbc'}
+                log.info("Using default JDBC backend")
+                kwargs = {"class": "jdbc"}
             else:
                 # Backend and maybe backend_args were given
-                kwargs = {'class': backend}
+                kwargs = {"class": backend}
 
         if name:
             # Using a named platform config; retrieve it
@@ -92,11 +86,11 @@ class Platform:
 
         # Retrieve the Backend class
         try:
-            backend_class = kwargs.pop('class')
+            backend_class = kwargs.pop("class")
             backend_class = BACKENDS[backend_class]
         except KeyError:
             raise ValueError(
-                f'backend class {repr(backend_class)} not among '
+                f"backend class {repr(backend_class)} not among "
                 + str(sorted(BACKENDS.keys()))
             )
 
@@ -120,15 +114,15 @@ class Platform:
         """
         if not (level in dir(logging) or isinstance(level, int)):
             raise ValueError(
-                f'{repr(level)} is not a valid Python logger level, see '
-                'https://docs.python.org/3/library/logging.html#logging-level'
+                f"{repr(level)} is not a valid Python logger level, see "
+                "https://docs.python.org/3/library/logging.html#logging-level"
             )
 
         # Set the level for the 'ixmp' logger
         # NB this may produce unexpected results when multiple Platforms exist
         #    and different log levels are set. To fix, could use a sub-logger
         #    per Platform instance.
-        logging.getLogger('ixmp').setLevel(level)
+        logging.getLogger("ixmp").setLevel(level)
 
         # Set the level for the 'ixmp.backend.*' logger. For JDBCBackend, this
         # also has the effect of setting the level for Java log messages that
@@ -179,12 +173,22 @@ class Platform:
               lock time.
             - ``annotation``: description of the Scenario or changelog.
         """
-        return pd.DataFrame(self._backend.get_scenarios(default, model, scen),
-                            columns=FIELDS['get_scenarios'])
+        return pd.DataFrame(
+            self._backend.get_scenarios(default, model, scen),
+            columns=FIELDS["get_scenarios"],
+        )
 
-    def export_timeseries_data(self, path, default=True, model=None,
-                               scenario=None, variable=None, unit=None,
-                               region=None, export_all_runs=False):
+    def export_timeseries_data(
+        self,
+        path,
+        default=True,
+        model=None,
+        scenario=None,
+        variable=None,
+        unit=None,
+        region=None,
+        export_all_runs=False,
+    ):
         """Export timeseries data to CSV file across multiple scenarios.
 
         Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
@@ -228,22 +232,24 @@ class Platform:
         None
         """
         if export_all_runs and (model or scenario):
-            raise ValueError('Invalid arguments: '
-                             'export_all_runs cannot be used when providing '
-                             'a model or scenario.')
+            raise ValueError(
+                "Invalid arguments: "
+                "export_all_runs cannot be used when providing "
+                "a model or scenario."
+            )
         filters = {
-            'model': as_str_list(model) or [],
-            'scenario': as_str_list(scenario) or [],
-            'variable': as_str_list(variable) or [],
-            'unit': as_str_list(unit) or [],
-            'region': as_str_list(region) or [],
-            'default': default,
-            'export_all_runs': export_all_runs
+            "model": as_str_list(model) or [],
+            "scenario": as_str_list(scenario) or [],
+            "variable": as_str_list(variable) or [],
+            "unit": as_str_list(unit) or [],
+            "region": as_str_list(region) or [],
+            "default": default,
+            "export_all_runs": export_all_runs,
         }
 
         self._backend.write_file(path, ItemType.TS, filters=filters)
 
-    def add_unit(self, unit, comment='None'):
+    def add_unit(self, unit, comment="None"):
         """Define a unit.
 
         Parameters
@@ -255,7 +261,7 @@ class Platform:
             database user and timestamp are appended automatically.
         """
         if unit in self.units():
-            msg = 'unit `{}` is already defined in the platform instance'
+            msg = "unit `{}` is already defined in the platform instance"
             logger().info(msg.format(unit))
             return
 
@@ -278,8 +284,7 @@ class Platform:
         -------
         :class:`pandas.DataFrame`
         """
-        return pd.DataFrame(self._backend.get_nodes(),
-                            columns=FIELDS['get_nodes'])
+        return pd.DataFrame(self._backend.get_nodes(), columns=FIELDS["get_nodes"])
 
     def _existing_node(self, name):
         """Check whether the node *name* has been defined.
@@ -291,18 +296,15 @@ class Platform:
                 continue
 
             log.warning(
-                f'region {repr(name)} is already defined on the Platform'
-                + (
-                    f' as a synonym for {repr(r.mapped_to)}' if r.mapped_to
-                    else ''
-                )
-                + (f' under parent {repr(r.parent)}' if r.parent else '')
+                f"region {repr(name)} is already defined on the Platform"
+                + (f" as a synonym for {repr(r.mapped_to)}" if r.mapped_to else "")
+                + (f" under parent {repr(r.parent)}" if r.parent else "")
             )
             return True
 
         return False
 
-    def add_region(self, region, hierarchy, parent='World'):
+    def add_region(self, region, hierarchy, parent="World"):
         """Define a region including a hierarchy level and a 'parent' region.
 
         .. tip::
@@ -365,8 +367,9 @@ class Platform:
         :class:`pandas.DataFrame`
             DataFrame of timeslices, categories and duration
         """
-        return pd.DataFrame(self._backend.get_timeslices(),
-                            columns=FIELDS['get_timeslices'])
+        return pd.DataFrame(
+            self._backend.get_timeslices(), columns=FIELDS["get_timeslices"]
+        )
 
     def add_timeslice(self, name, category, duration):
         """Define a subannual timeslice including a category and duration.
@@ -382,9 +385,9 @@ class Platform:
         duration : float
             Duration of timeslice as fraction of year.
         """
-        slices = self.timeslices().set_index('name')
+        slices = self.timeslices().set_index("name")
         if name in slices.index:
-            msg = 'timeslice `{}` already defined with duration {}'
+            msg = "timeslice `{}` already defined with duration {}"
             existing_duration = slices.loc[name].duration
             if not np.isclose(duration, existing_duration):
                 raise ValueError(msg.format(name, existing_duration))
@@ -392,7 +395,7 @@ class Platform:
         else:
             self._backend.set_timeslice(name, category, duration)
 
-    def check_access(self, user, models, access='view'):
+    def check_access(self, user, models, access="view"):
         """Check access to specific models.
 
         Parameters
@@ -437,6 +440,7 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+
     #: Name of the model associated with the TimeSeries
     model = None
 
@@ -446,23 +450,22 @@ class TimeSeries:
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
 
-    def __init__(self, mp, model, scenario, version=None, annotation=None,
-                 **kwargs):
+    def __init__(self, mp, model, scenario, version=None, annotation=None, **kwargs):
         # Check arguments
         if not isinstance(mp, Platform):
-            raise TypeError('mp is not a valid `ixmp.Platform` instance')
-        elif version and not (version == 'new' or isinstance(version, int)):
-            raise ValueError(f'version={repr(version)}')
-        elif version == 'new' and annotation is None:
+            raise TypeError("mp is not a valid `ixmp.Platform` instance")
+        elif version and not (version == "new" or isinstance(version, int)):
+            raise ValueError(f"version={repr(version)}")
+        elif version == "new" and annotation is None:
             log.info(
                 f"Missing annotation for new {self.__class__.__name__}"
                 f" {model}/{scenario}"
             )
-            annotation = ''
+            annotation = ""
 
         # scheme= keyword argument only passed from Scenario.__init__;
         # otherwise must be None
-        scheme = kwargs.get('scheme', None)
+        scheme = kwargs.get("scheme", None)
         if scheme:
             if self.__class__ is TimeSeries:
                 raise TypeError("'scheme' argument to TimeSeries()")
@@ -478,13 +481,13 @@ class TimeSeries:
         # this TimeSeries object lives.
         self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)
 
-        if version == 'new':
+        if version == "new":
             # Initialize a new object
-            self._backend('init', annotation)
+            self._backend("init", annotation)
         else:
             # Retrieve an existing object
             self.version = version
-            self._backend('get')
+            self._backend("get")
 
     def _backend(self, method, *args, **kwargs):
         """Convenience for calling *method* on the backend.
@@ -497,7 +500,7 @@ class TimeSeries:
     def __del__(self):
         # Instruct the back end to free memory associated with the TimeSeries
         try:
-            self._backend('del_ts')
+            self._backend("del_ts")
         except ReferenceError:
             pass  # The Platform has already been garbage-collected
 
@@ -517,7 +520,7 @@ class TimeSeries:
         --------
         utils.maybe_check_out
         """
-        self._backend('check_out', timeseries_only)
+        self._backend("check_out", timeseries_only)
 
     def commit(self, comment):
         """Commit all changed data to the database.
@@ -535,34 +538,33 @@ class TimeSeries:
         --------
         utils.maybe_commit
         """
-        self._backend('commit', comment)
+        self._backend("commit", comment)
 
     def discard_changes(self):
         """Discard all changes and reload from the database."""
-        self._backend('discard_changes')
+        self._backend("discard_changes")
 
     def set_as_default(self):
         """Set the current :attr:`version` as the default."""
-        self._backend('set_as_default')
+        self._backend("set_as_default")
 
     def is_default(self):
         """Return :obj:`True` if the :attr:`version` is the default version."""
-        return self._backend('is_default')
+        return self._backend("is_default")
 
     def last_update(self):
         """Get the timestamp of the last update/edit of this TimeSeries."""
-        return self._backend('last_update')
+        return self._backend("last_update")
 
     def run_id(self):
         """Get the run id of this TimeSeries."""
-        return self._backend('run_id')
+        return self._backend("run_id")
 
     # functions for importing and retrieving timeseries data
 
     def preload_timeseries(self):
-        """Preload timeseries data to in-memory cache. Useful for bulk updates.
-        """
-        self._backend('preload')
+        """Preload timeseries data to in-memory cache. Useful for bulk updates."""
+        self._backend("preload")
 
     def add_timeseries(self, df, meta=False, year_lim=(None, None)):
         """Add data to the TimeSeries.
@@ -602,20 +604,22 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_layout(df)
 
-        if 'value' in df.columns:
+        if "value" in df.columns:
             # Long format; pivot to wide
-            all_cols = [i for i in df.columns if i not in ['year', 'value']]
-            df = pd.pivot_table(df, values='value', index=all_cols,
-                                columns=['year']).reset_index()
-        df.set_index(['region', 'variable', 'unit', 'subannual'], inplace=True)
+            all_cols = [i for i in df.columns if i not in ["year", "value"]]
+            df = pd.pivot_table(
+                df, values="value", index=all_cols, columns=["year"]
+            ).reset_index()
+        df.set_index(["region", "variable", "unit", "subannual"], inplace=True)
 
         # Discard non-numeric columns, e.g. 'model', 'scenario',
         # write warning about non-expected cols to log
         year_cols = year_list(df.columns)
-        other_cols = [i for i in df.columns
-                      if i not in ['model', 'scenario'] + year_cols]
+        other_cols = [
+            i for i in df.columns if i not in ["model", "scenario"] + year_cols
+        ]
         if len(other_cols) > 0:
-            logger().warning(f'dropping index columns {other_cols} from data')
+            logger().warning(f"dropping index columns {other_cols} from data")
 
         df = df.loc[:, year_cols]
 
@@ -634,11 +638,17 @@ class TimeSeries:
         # Add one time series per row
         for (r, v, u, sa), data in df.iterrows():
             # Values as float; exclude NA
-            self._backend('set_data', r, v, data.astype(float).dropna(), u, sa,
-                          meta)
+            self._backend("set_data", r, v, data.astype(float).dropna(), u, sa, meta)
 
-    def timeseries(self, region=None, variable=None, unit=None, year=None,
-                   iamc=False, subannual='auto'):
+    def timeseries(
+        self,
+        region=None,
+        variable=None,
+        unit=None,
+        year=None,
+        iamc=False,
+        subannual="auto",
+    ):
         """Retrieve timeseries data.
 
         Parameters
@@ -671,32 +681,37 @@ class TimeSeries:
             Specified data.
         """
         # Retrieve data, convert to pandas.DataFrame
-        df = pd.DataFrame(self._backend('get_data',
-                                        as_str_list(region) or [],
-                                        as_str_list(variable) or [],
-                                        as_str_list(unit) or [],
-                                        as_str_list(year) or []),
-                          columns=FIELDS['ts_get'])
-        df['model'] = self.model
-        df['scenario'] = self.scenario
+        df = pd.DataFrame(
+            self._backend(
+                "get_data",
+                as_str_list(region) or [],
+                as_str_list(variable) or [],
+                as_str_list(unit) or [],
+                as_str_list(year) or [],
+            ),
+            columns=FIELDS["ts_get"],
+        )
+        df["model"] = self.model
+        df["scenario"] = self.scenario
 
         # drop `subannual` column if not requested (False) or required ('auto')
         if subannual is not True:
-            has_subannual = not all(df['subannual'] == 'Year')
+            has_subannual = not all(df["subannual"] == "Year")
             if subannual is False and has_subannual:
-                msg = ("timeseries data has subannual values, ",
-                       "use `subannual=True or 'auto'`")
+                msg = (
+                    "timeseries data has subannual values, ",
+                    "use `subannual=True or 'auto'`",
+                )
                 raise ValueError(msg)
             if not has_subannual:
-                df.drop('subannual', axis=1, inplace=True)
+                df.drop("subannual", axis=1, inplace=True)
 
         if iamc:
             # Convert to wide format
             index = IAMC_IDX
-            if 'subannual' in df.columns:
-                index = index + ['subannual']
-            df = df.pivot_table(index=index, columns='year')['value'] \
-                   .reset_index()
+            if "subannual" in df.columns:
+                index = index + ["subannual"]
+            df = df.pivot_table(index=index, columns="year")["value"].reset_index()
             df.columns.names = [None]
 
         return df
@@ -717,16 +732,14 @@ class TimeSeries:
         # Ensure consistent column names
         df = to_iamc_layout(df)
 
-        id_cols = ['region', 'variable', 'unit', 'subannual']
-        if 'year' not in df.columns:
+        id_cols = ["region", "variable", "unit", "subannual"]
+        if "year" not in df.columns:
             # Reshape from wide to long format
-            df = pd.melt(df,
-                         id_vars=id_cols,
-                         var_name='year', value_name='value')
+            df = pd.melt(df, id_vars=id_cols, var_name="year", value_name="value")
 
         # Remove all years for a given (r, v, u) combination at once
         for (r, v, u, t), data in df.groupby(id_cols):
-            self._backend('delete', r, v, t, data['year'].tolist(), u)
+            self._backend("delete", r, v, t, data["year"].tolist(), u)
 
     def add_geodata(self, df):
         """Add geodata (layers) to the TimeSeries.
@@ -744,9 +757,17 @@ class TimeSeries:
             - `value`
             - `meta`
         """
-        for _, row in df.astype({'year': int, 'meta': int}).iterrows():
-            self._backend('set_geo', row.region, row.variable, row.subannual,
-                          row.year, row.value, row.unit, row.meta)
+        for _, row in df.astype({"year": int, "meta": int}).iterrows():
+            self._backend(
+                "set_geo",
+                row.region,
+                row.variable,
+                row.subannual,
+                row.year,
+                row.value,
+                row.unit,
+                row.meta,
+            )
 
     def remove_geodata(self, df):
         """Remove geodata from the TimeSeries instance.
@@ -763,9 +784,10 @@ class TimeSeries:
             - `year`
         """
         # Remove all years for a given (r, v, t, u) combination at once
-        for (r, v, t, u), data in df.groupby(['region', 'variable',
-                                              'subannual', 'unit']):
-            self._backend('delete_geo', r, v, t, data['year'].tolist(), u)
+        for (r, v, t, u), data in df.groupby(
+            ["region", "variable", "subannual", "unit"]
+        ):
+            self._backend("delete_geo", r, v, t, data["year"].tolist(), u)
 
     def get_geodata(self):
         """Fetch geodata and return it as dataframe.
@@ -776,10 +798,11 @@ class TimeSeries:
             Specified data.
         """
         # TODO remove astype here; this is the responsibility of Backend
-        return pd.DataFrame(self._backend('get_geo'),
-                            columns=FIELDS['ts_get_geo']) \
-                 .reset_index(drop=True) \
-                 .astype({'meta': 'int64', 'year': 'int64'})
+        return (
+            pd.DataFrame(self._backend("get_geo"), columns=FIELDS["ts_get_geo"])
+            .reset_index(drop=True)
+            .astype({"meta": "int64", "year": "int64"})
+        )
 
     def read_file(self, path, firstyear=None, lastyear=None):
         """Read time series data from a CSV or Microsoft Excel file.
@@ -820,20 +843,32 @@ class Scenario(TimeSeries):
         :class:`.Model` subclass in :data:`.MODELS` is used to initialize items
         in the Scenario.
     """
+
     #: Scheme of the Scenario.
     scheme = None
 
-    def __init__(self, mp, model, scenario, version=None, scheme=None,
-                 annotation=None, **model_init_args):
+    def __init__(
+        self,
+        mp,
+        model,
+        scenario,
+        version=None,
+        scheme=None,
+        annotation=None,
+        **model_init_args,
+    ):
         # Check arguments
-        if version == 'new' and scheme is None:
-            log.info(f'No scheme for new Scenario {model}/{scenario}')
-            scheme = ''
+        if version == "new" and scheme is None:
+            log.info(f"No scheme for new Scenario {model}/{scenario}")
+            scheme = ""
 
-        if 'cache' in model_init_args:
-            warn('Scenario(..., cache=...) is deprecated; use Platform(..., '
-                 'cache=...) instead', DeprecationWarning)
-            model_init_args.pop('cache')
+        if "cache" in model_init_args:
+            warn(
+                "Scenario(..., cache=...) is deprecated; use Platform(..., "
+                "cache=...) instead",
+                DeprecationWarning,
+            )
+            model_init_args.pop("cache")
 
         # Call the parent constructor
         super().__init__(
@@ -845,10 +880,12 @@ class Scenario(TimeSeries):
             annotation=annotation,
         )
 
-        if self.scheme == 'MESSAGE' and self.__class__ is Scenario:
+        if self.scheme == "MESSAGE" and self.__class__ is Scenario:
             # Loaded scenario has an improper scheme
-            raise RuntimeError(f'{model}/{scenario} is a MESSAGE-scheme '
-                               'scenario; use message_ix.Scenario().')
+            raise RuntimeError(
+                f"{model}/{scenario} is a MESSAGE-scheme "
+                "scenario; use message_ix.Scenario()."
+            )
 
         # Retrieve the Model class correlating to the *scheme*
         model_class = get_model(self.scheme).__class__
@@ -857,7 +894,7 @@ class Scenario(TimeSeries):
         model_class.initialize(self, **model_init_args)
 
     @classmethod
-    def from_url(cls, url, errors='warn'):
+    def from_url(cls, url, errors="warn"):
         """Instantiate a Scenario given an ixmp-scheme URL.
 
         The following are equivalent::
@@ -885,7 +922,7 @@ class Scenario(TimeSeries):
         scenario, platform : 2-tuple of (Scenario, :class:`Platform`)
             The Scenario and Platform referred to by the URL.
         """
-        assert errors in ('warn', 'raise'), "errors= must be 'warn' or 'raise'"
+        assert errors in ("warn", "raise"), "errors= must be 'warn' or 'raise'"
 
         platform_info, scenario_info = parse_url(url)
         platform = Platform(**platform_info)
@@ -893,10 +930,10 @@ class Scenario(TimeSeries):
         try:
             scenario = cls(platform, **scenario_info)
         except Exception as e:
-            if errors == 'warn':
+            if errors == "warn":
                 log.warning(
-                    f'{e.__class__.__name__}: {e.args[0]}\n'
-                    f'when loading Scenario from url: {repr(url)}'
+                    f"{e.__class__.__name__}: {e.args[0]}\n"
+                    f"when loading Scenario from url: {repr(url)}"
                 )
                 return None, platform
             else:
@@ -918,10 +955,11 @@ class Scenario(TimeSeries):
         utils.maybe_check_out
         """
         if not timeseries_only and self.has_solution():
-            raise ValueError('This Scenario has a solution, '
-                             'use `Scenario.remove_solution()` or '
-                             '`Scenario.clone(..., keep_solution=False)`'
-                             )
+            raise ValueError(
+                "This Scenario has a solution, "
+                "use `Scenario.remove_solution()` or "
+                "`Scenario.clone(..., keep_solution=False)`"
+            )
         super().check_out(timeseries_only)
 
     def load_scenario_data(self):
@@ -932,13 +970,13 @@ class Scenario(TimeSeries):
         ValueError
             If the Scenario was instantiated with ``cache=False``.
         """
-        if not getattr(self.platform._backend, 'cache_enabled', False):
-            raise ValueError('Cache must be enabled to load scenario data')
+        if not getattr(self.platform._backend, "cache_enabled", False):
+            raise ValueError("Cache must be enabled to load scenario data")
 
-        for ix_type in 'equ', 'par', 'set', 'var':
-            logger().info('Caching {} data'.format(ix_type))
+        for ix_type in "equ", "par", "set", "var":
+            logger().info("Caching {} data".format(ix_type))
             get_func = getattr(self, ix_type)
-            for name in getattr(self, '{}_list'.format(ix_type))():
+            for name in getattr(self, "{}_list".format(ix_type))():
                 get_func(name)
 
     def idx_sets(self, name):
@@ -949,7 +987,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return self._backend('item_index', name, 'sets')
+        return self._backend("item_index", name, "sets")
 
     def idx_names(self, name):
         """Return the list of index names for an item (set, par, var, equ).
@@ -959,24 +997,22 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return self._backend('item_index', name, 'names')
+        return self._backend("item_index", name, "names")
 
     def _keys(self, name, key_or_keys):
         if isinstance(key_or_keys, (list, pd.Series)):
             return as_str_list(key_or_keys)
         elif isinstance(key_or_keys, (pd.DataFrame, dict)):
             if isinstance(key_or_keys, dict):
-                key_or_keys = pd.DataFrame.from_dict(key_or_keys,
-                                                     orient='columns')
+                key_or_keys = pd.DataFrame.from_dict(key_or_keys, orient="columns")
             idx_names = self.idx_names(name)
-            return [as_str_list(row, idx_names)
-                    for _, row in key_or_keys.iterrows()]
+            return [as_str_list(row, idx_names) for _, row in key_or_keys.iterrows()]
         else:
             return [str(key_or_keys)]
 
     def set_list(self):
         """List all defined sets."""
-        return self._backend('list_items', 'set')
+        return self._backend("list_items", "set")
 
     def has_set(self, name):
         """Check whether the scenario has a set *name*."""
@@ -1004,7 +1040,7 @@ class Scenario(TimeSeries):
         """
         idx_sets = as_str_list(idx_sets) or []
         idx_names = as_str_list(idx_names)
-        return self._backend('init_item', 'set', name, idx_sets, idx_names)
+        return self._backend("init_item", "set", name, idx_sets, idx_names)
 
     def set(self, name, filters=None, **kwargs):
         """Return the (filtered) elements of a set.
@@ -1023,7 +1059,7 @@ class Scenario(TimeSeries):
         -------
         :class:`pandas.DataFrame`
         """
-        return self._backend('item_get_elements', 'set', name, filters)
+        return self._backend("item_get_elements", "set", name, filters)
 
     def add_set(self, name, key, comment=None):
         """Add elements to an existing set.
@@ -1061,7 +1097,7 @@ class Scenario(TimeSeries):
             # Basic set. Keys must be strings.
             if isinstance(key, (dict, pd.DataFrame)):
                 raise ValueError(
-                    'dict, DataFrame keys invalid for basic set {repr(name)}'
+                    "dict, DataFrame keys invalid for basic set {repr(name)}"
                 )
 
             # Ensure keys is a list of str
@@ -1070,32 +1106,29 @@ class Scenario(TimeSeries):
             # Set defined over 1+ other sets
 
             # Check for ambiguous arguments
-            if comment and isinstance(key, (dict, pd.DataFrame)) and \
-                    'comment' in key:
-                raise ValueError("ambiguous; both key['comment'] and comment "
-                                 "given")
+            if comment and isinstance(key, (dict, pd.DataFrame)) and "comment" in key:
+                raise ValueError("ambiguous; both key['comment'] and comment " "given")
 
             if isinstance(key, pd.DataFrame):
                 # DataFrame of key values and perhaps comments
                 try:
                     # Pop a 'comment' column off the DataFrame, convert to list
-                    comment = key.pop('comment').to_list()
+                    comment = key.pop("comment").to_list()
                 except KeyError:
                     pass
 
                 # Convert key to list of list of key values
                 keys = []
-                for row in key.to_dict(orient='records'):
+                for row in key.to_dict(orient="records"):
                     keys.append(as_str_list(row, idx_names=idx_names))
             elif isinstance(key, dict):
                 # Dict of lists of key values
 
                 # Pop a 'comment' list from the dict
-                comment = key.pop('comment', None)
+                comment = key.pop("comment", None)
 
                 # Convert to list of list of key values
-                keys = list(map(as_str_list,
-                                zip(*[key[i] for i in idx_names])))
+                keys = list(map(as_str_list, zip(*[key[i] for i in idx_names])))
             elif isinstance(key[0], str):
                 # List of key values; wrap
                 keys = [as_str_list(key)]
@@ -1120,18 +1153,18 @@ class Scenario(TimeSeries):
         for e, c in to_add:
             # Check for sentinel values
             if e is False:
-                raise ValueError(f'Comment {repr(c)} without matching key')
+                raise ValueError(f"Comment {repr(c)} without matching key")
             elif c is False:
-                raise ValueError(f'Key {repr(e)} without matching comment')
+                raise ValueError(f"Key {repr(e)} without matching comment")
             elif len(idx_names) and len(idx_names) != len(e):
                 raise ValueError(
-                    f'{len(e)}-D key {repr(e)} invalid for '
-                    f'{len(idx_names)}-D set {name}{repr(idx_names)}'
+                    f"{len(e)}-D key {repr(e)} invalid for "
+                    f"{len(idx_names)}-D set {name}{repr(idx_names)}"
                 )
 
         # Send to backend
         elements = ((kc[0], None, None, kc[1]) for kc in to_add)
-        self._backend('item_set_elements', 'set', name, elements)
+        self._backend("item_set_elements", "set", name, elements)
 
     def remove_set(self, name, key=None):
         """Delete set elements or an entire set.
@@ -1145,14 +1178,13 @@ class Scenario(TimeSeries):
             Elements to be removed from set `name`.
         """
         if key is None:
-            self._backend('delete_item', 'set', name)
+            self._backend("delete_item", "set", name)
         else:
-            self._backend('item_delete_elements', 'set', name,
-                          self._keys(name, key))
+            self._backend("item_delete_elements", "set", name, self._keys(name, key))
 
     def par_list(self):
         """List all defined parameters."""
-        return self._backend('list_items', 'par')
+        return self._backend("list_items", "par")
 
     def has_par(self, name):
         """Check whether the scenario has a parameter with that name."""
@@ -1172,7 +1204,7 @@ class Scenario(TimeSeries):
         """
         idx_sets = as_str_list(idx_sets) or []
         idx_names = as_str_list(idx_names)
-        return self._backend('init_item', 'par', name, idx_sets, idx_names)
+        return self._backend("init_item", "par", name, idx_sets, idx_names)
 
     def par(self, name, filters=None, **kwargs):
         """Return parameter data.
@@ -1192,7 +1224,7 @@ class Scenario(TimeSeries):
             raise DeprecationWarning(
                 "ignored kwargs to Scenario.par(); will raise TypeError in 4.0"
             )
-        return self._backend('item_get_elements', 'par', name, filters)
+        return self._backend("item_get_elements", "par", name, filters)
 
     def items(self, type=ItemType.PAR, filters=None):
         """Iterate over model data items.
@@ -1228,12 +1260,11 @@ class Scenario(TimeSeries):
 
             # Retrieve the data, reducing the filters to only the dimensions of
             # the item
-            yield name, self.par(name, filters={
-                k: v for k, v in filters.items() if k in idx_names
-            })
+            yield name, self.par(
+                name, filters={k: v for k, v in filters.items() if k in idx_names}
+            )
 
-    def add_par(self, name, key_or_data=None, value=None, unit=None,
-                comment=None):
+    def add_par(self, name, key_or_data=None, value=None, unit=None, comment=None):
         """Set the values of a parameter.
 
         Parameters
@@ -1257,11 +1288,11 @@ class Scenario(TimeSeries):
         # Convert valid forms of arguments to pd.DataFrame
         if isinstance(key_or_data, dict):
             # dict containing data
-            data = pd.DataFrame.from_dict(key_or_data, orient='columns')
+            data = pd.DataFrame.from_dict(key_or_data, orient="columns")
         elif isinstance(key_or_data, pd.DataFrame):
             data = key_or_data.copy()
-            if 'value' in data.columns and value is not None:
-                raise ValueError('both key_or_data.value and value supplied')
+            if "value" in data.columns and value is not None:
+                raise ValueError("both key_or_data.value and value supplied")
         else:
             # One or more keys; convert to a list of strings
             if isinstance(key_or_data, range):
@@ -1283,49 +1314,50 @@ class Scenario(TimeSeries):
                 # Multiple values
                 values = value
 
-            data = pd.DataFrame(zip(keys, values), columns=['key', 'value'])
+            data = pd.DataFrame(zip(keys, values), columns=["key", "value"])
             if data.isna().any(axis=None):
-                raise ValueError('Length mismatch between keys and values')
+                raise ValueError("Length mismatch between keys and values")
 
         # Column types
         types = {
-            'key': str if N_dim == 1 else object,
-            'value': float,
-            'unit': str,
-            'comment': str,
+            "key": str if N_dim == 1 else object,
+            "value": float,
+            "unit": str,
+            "comment": str,
         }
 
         # Further handle each column
-        if 'key' not in data.columns:
+        if "key" not in data.columns:
             # Form the 'key' column from other columns
             if N_dim > 1:
-                data['key'] = data.apply(partial(as_str_list,
-                                                 idx_names=idx_names),
-                                         axis=1)
+                data["key"] = data.apply(
+                    partial(as_str_list, idx_names=idx_names), axis=1
+                )
             else:
-                data['key'] = data[idx_names[0]]
+                data["key"] = data[idx_names[0]]
 
-        if 'unit' not in data.columns:
+        if "unit" not in data.columns:
             # Broadcast single unit across all values. pandas raises ValueError
             # if *unit* is iterable but the wrong length
-            data['unit'] = unit or '???'
+            data["unit"] = unit or "???"
 
-        if 'comment' not in data.columns:
+        if "comment" not in data.columns:
             if comment:
                 # Broadcast single comment across all values. pandas raises
                 # ValueError if *comment* is iterable but the wrong length
-                data['comment'] = comment
+                data["comment"] = comment
             else:
                 # Store a 'None' comment
-                data['comment'] = None
-                types.pop('comment')
+                data["comment"] = None
+                types.pop("comment")
 
         # Convert types, generate tuples
-        elements = ((e.key, e.value, e.unit, e.comment)
-                    for e in data.astype(types).itertuples())
+        elements = (
+            (e.key, e.value, e.unit, e.comment) for e in data.astype(types).itertuples()
+        )
 
         # Store
-        self._backend('item_set_elements', 'par', name, elements)
+        self._backend("item_set_elements", "par", name, elements)
 
     def init_scalar(self, name, val, unit, comment=None):
         """Initialize a new scalar.
@@ -1356,7 +1388,7 @@ class Scenario(TimeSeries):
         -------
         {'value': value, 'unit': unit}
         """
-        return self._backend('item_get_elements', 'par', name, None)
+        return self._backend("item_get_elements", "par", name, None)
 
     def change_scalar(self, name, val, unit, comment=None):
         """Set the value and unit of a scalar.
@@ -1372,8 +1404,9 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the change.
         """
-        self._backend('item_set_elements', 'par', name,
-                      [(None, float(val), unit, comment)])
+        self._backend(
+            "item_set_elements", "par", name, [(None, float(val), unit, comment)]
+        )
 
     def remove_par(self, name, key=None):
         """Remove parameter values or an entire parameter.
@@ -1386,14 +1419,13 @@ class Scenario(TimeSeries):
             elements to be removed
         """
         if key is None:
-            self._backend('delete_item', 'par', name)
+            self._backend("delete_item", "par", name)
         else:
-            self._backend('item_delete_elements', 'par', name,
-                          self._keys(name, key))
+            self._backend("item_delete_elements", "par", name, self._keys(name, key))
 
     def var_list(self):
         """List all defined variables."""
-        return self._backend('list_items', 'var')
+        return self._backend("list_items", "var")
 
     def has_var(self, name):
         """Check whether the scenario has a variable with that name."""
@@ -1413,7 +1445,7 @@ class Scenario(TimeSeries):
         """
         idx_sets = as_str_list(idx_sets) or []
         idx_names = as_str_list(idx_names)
-        return self._backend('init_item', 'var', name, idx_sets, idx_names)
+        return self._backend("init_item", "var", name, idx_sets, idx_names)
 
     def var(self, name, filters=None, **kwargs):
         """Return a dataframe of (filtered) elements for a specific variable.
@@ -1425,11 +1457,11 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._backend('item_get_elements', 'var', name, filters)
+        return self._backend("item_get_elements", "var", name, filters)
 
     def equ_list(self):
         """List all defined equations."""
-        return self._backend('list_items', 'equ')
+        return self._backend("list_items", "equ")
 
     def init_equ(self, name, idx_sets=None, idx_names=None):
         """Initialize a new equation.
@@ -1445,7 +1477,7 @@ class Scenario(TimeSeries):
         """
         idx_sets = as_str_list(idx_sets) or []
         idx_names = as_str_list(idx_names)
-        return self._backend('init_item', 'equ', name, idx_sets, idx_names)
+        return self._backend("init_item", "equ", name, idx_sets, idx_names)
 
     def has_equ(self, name):
         """Check whether the scenario has an equation with that name."""
@@ -1461,10 +1493,17 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._backend('item_get_elements', 'equ', name, filters)
+        return self._backend("item_get_elements", "equ", name, filters)
 
-    def clone(self, model=None, scenario=None, annotation=None,
-              keep_solution=True, shift_first_model_year=None, platform=None):
+    def clone(
+        self,
+        model=None,
+        scenario=None,
+        annotation=None,
+        keep_solution=True,
+        shift_first_model_year=None,
+        platform=None,
+    ):
         """Clone the current scenario and return the clone.
 
         If the (`model`, `scenario`) given already exist on the
@@ -1501,8 +1540,9 @@ class Scenario(TimeSeries):
         """
         if shift_first_model_year is not None:
             if keep_solution:
-                logger().warning('Overriding keep_solution=True for '
-                                 'shift_first_model_year')
+                logger().warning(
+                    "Overriding keep_solution=True for " "shift_first_model_year"
+                )
                 keep_solution = False
 
         platform = platform or self.platform
@@ -1510,17 +1550,17 @@ class Scenario(TimeSeries):
         scenario = scenario or self.scenario
 
         args = [platform, model, scenario, annotation, keep_solution]
-        if check_year(shift_first_model_year, 'first_model_year'):
+        if check_year(shift_first_model_year, "first_model_year"):
             args.append(shift_first_model_year)
 
-        return self._backend('clone', *args)
+        return self._backend("clone", *args)
 
     def has_solution(self):
         """Return :obj:`True` if the Scenario has been solved.
 
         If ``has_solution() == True``, model solution data exists in the db.
         """
-        return self._backend('has_solution')
+        return self._backend("has_solution")
 
     def remove_solution(self, first_model_year=None):
         """Remove the solution from the scenario
@@ -1541,10 +1581,10 @@ class Scenario(TimeSeries):
             If Scenario has no solution or if `first_model_year` is not `int`.
         """
         if self.has_solution():
-            check_year(first_model_year, 'first_model_year')
-            self._backend('clear_solution', first_model_year)
+            check_year(first_model_year, "first_model_year")
+            self._backend("clear_solution", first_model_year)
         else:
-            raise ValueError('This Scenario does not have a solution!')
+            raise ValueError("This Scenario does not have a solution!")
 
     def solve(self, model=None, callback=None, cb_kwargs={}, **model_options):
         """Solve the model and store output.
@@ -1595,15 +1635,17 @@ class Scenario(TimeSeries):
             If the Scenario has already been solved.
         """
         if self.has_solution():
-            raise ValueError('This Scenario has already been solved, ',
-                             'use `remove_solution()` first!')
+            raise ValueError(
+                "This Scenario has already been solved, ",
+                "use `remove_solution()` first!",
+            )
 
         # Instantiate a model
         model = get_model(model or self.scheme, **model_options)
 
         # Validate *callback* argument
         if callback is not None and not callable(callback):
-            raise ValueError(f'callback={repr(callback)} is not callable')
+            raise ValueError(f"callback={repr(callback)} is not callable")
         elif callback is None:
             # Make the callback a no-op
             def callback(scenario, **kwargs):
@@ -1617,7 +1659,7 @@ class Scenario(TimeSeries):
             model.run(self)
 
             # Store an iteration number to help the callback
-            if not hasattr(self, 'iteration'):
+            if not hasattr(self, "iteration"):
                 self.iteration = 0
 
             self.iteration += 1
@@ -1626,8 +1668,10 @@ class Scenario(TimeSeries):
             cb_result = callback(self, **cb_kwargs)
 
             if cb_result is None and warn_none:
-                warn('solve(callback=...) argument returned None; will loop '
-                     'indefinitely unless True is returned.')
+                warn(
+                    "solve(callback=...) argument returned None; will loop "
+                    "indefinitely unless True is returned."
+                )
                 # Don't repeat the warning
                 warn_none = False
 
@@ -1643,8 +1687,9 @@ class Scenario(TimeSeries):
         name : str, optional
             meta category name
         """
-        all_meta = self.platform._backend.get_meta(self.model, self.scenario,
-                                                   self.version)
+        all_meta = self.platform._backend.get_meta(
+            self.model, self.scenario, self.version
+        )
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name_or_dict, value=None):
@@ -1663,12 +1708,15 @@ class Scenario(TimeSeries):
             if isinstance(name_or_dict, str):
                 name_or_dict = {name_or_dict: value}
             else:
-                msg = ('Unsupported parameter type of name_or_dict: %s. '
-                       'Supported parameter types for name_or_dict are '
-                       'String and Dictionary') % type(name_or_dict)
+                msg = (
+                    "Unsupported parameter type of name_or_dict: %s. "
+                    "Supported parameter types for name_or_dict are "
+                    "String and Dictionary"
+                ) % type(name_or_dict)
                 raise ValueError(msg)
-        self.platform._backend.set_meta(name_or_dict, self.model,
-                                        self.scenario, self.version)
+        self.platform._backend.set_meta(
+            name_or_dict, self.model, self.scenario, self.version
+        )
 
     def delete_meta(self, *args, **kwargs):
         """Remove scenario meta.
@@ -1695,16 +1743,13 @@ class Scenario(TimeSeries):
         """
         if isinstance(name, str):
             name = [name]
-        self.platform._backend.remove_meta(name, self.model, self.scenario,
-                                           self.version)
+        self.platform._backend.remove_meta(
+            name, self.model, self.scenario, self.version
+        )
 
     # Input and output
     def to_excel(
-        self,
-        path,
-        items=ItemType.SET | ItemType.PAR,
-        filters=None,
-        max_row=None
+        self, path, items=ItemType.SET | ItemType.PAR, filters=None, max_row=None
     ):
         """Write Scenario to a Microsoft Excel file.
 
@@ -1741,8 +1786,7 @@ class Scenario(TimeSeries):
             Path(path), items, filters=filters, max_row=max_row
         )
 
-    def read_excel(self, path, add_units=False, init_items=False,
-                   commit_steps=False):
+    def read_excel(self, path, add_units=False, init_items=False, commit_steps=False):
         """Read a Microsoft Excel file into the Scenario.
 
         Parameters
@@ -1802,16 +1846,16 @@ def to_iamc_layout(df):
 
     # Rename columns in lower case, and transform 'node' to 'region'
     cols = {c: str(c).lower() for c in df.columns}
-    cols.update(node='region')
+    cols.update(node="region")
     df = df.rename(columns=cols)
 
-    required_cols = ['region', 'variable', 'unit']
+    required_cols = ["region", "variable", "unit"]
     missing = list(set(required_cols) - set(df.columns))
     if len(missing):
-        raise ValueError(f'missing required columns {repr(missing)}')
+        raise ValueError(f"missing required columns {repr(missing)}")
 
     # Add a column 'subannual' with the default value
-    if 'subannual' not in df.columns:
-        df['subannual'] = 'Year'
+    if "subannual" not in df.columns:
+        df["subannual"] = "Year"
 
     return df

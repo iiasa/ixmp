@@ -1,46 +1,50 @@
 from pathlib import Path
-from pandas.testing import assert_frame_equal
+
+import pandas as pd
+import pytest
 from click.exceptions import BadParameter, UsageError
+from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.cli import VersionType
 from ixmp.testing import models, populate_test_platform
-import pandas as pd
-import pytest
 
 
 def test_versiontype():
     vt = VersionType()
     # str converts to int
-    assert vt.convert('1', None, None) == 1
-    assert vt.convert('-1', None, None) == -1
+    assert vt.convert("1", None, None) == 1
+    assert vt.convert("-1", None, None) == -1
 
     # str 'new' is passes through
-    assert vt.convert('new', None, None) == 'new'
+    assert vt.convert("new", None, None) == "new"
 
     # int passes through
     assert vt.convert(1, None, None) == 1
 
     with pytest.raises(BadParameter, match="'xx' must be an integer or 'new'"):
-        vt.convert('xx', None, None)
+        vt.convert("xx", None, None)
 
 
 def test_main(ixmp_cli, test_mp, tmp_path):
     # Name of a temporary file that doesn't exist
-    tmp_path /= 'temp.properties'
+    tmp_path /= "temp.properties"
 
     # Giving --dbprops and a nonexistent file is an invalid argument
     cmd = [
-        '--platform', 'pname',
-        '--dbprops', str(tmp_path),
-        'platform', 'list',  # Doesn't get executed; fails in cli.main()
+        "--platform",
+        "pname",
+        "--dbprops",
+        str(tmp_path),
+        "platform",
+        "list",  # Doesn't get executed; fails in cli.main()
     ]
     result = ixmp_cli.invoke(cmd)
     # Check against click's default exit code for the exception
     assert result.exit_code == UsageError.exit_code
 
     # Create the file
-    tmp_path.write_text('')
+    tmp_path.write_text("")
 
     # Giving both --platform and --dbprops is bad option usage
     result = ixmp_cli.invoke(cmd)
@@ -49,100 +53,107 @@ def test_main(ixmp_cli, test_mp, tmp_path):
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
     result = ixmp_cli.invoke(cmd[2:])
-    assert 'Config file contains no database URL' in result.exception.args[0]
+    assert "Config file contains no database URL" in result.exception.args[0]
 
     # --url argument can be given
-    cmd = ['--url', 'ixmp://{}/Douglas Adams/Hitchhiker'.format(test_mp.name),
-           'platform', 'list']
+    cmd = [
+        "--url",
+        "ixmp://{}/Douglas Adams/Hitchhiker".format(test_mp.name),
+        "platform",
+        "list",
+    ]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0
 
     # --url and other Platform/Scenario specifiers are bad option usage
-    result = ixmp_cli.invoke(['--platform', 'foo'] + cmd)
+    result = ixmp_cli.invoke(["--platform", "foo"] + cmd)
     assert result.exit_code == UsageError.exit_code
 
 
 def test_config(ixmp_cli):
     # ixmp has no string keys by default, so we insert a fake one
-    ixmp.config.register('test key', str)
-    ixmp.config.values['test key'] = 'foo'
+    ixmp.config.register("test key", str)
+    ixmp.config.values["test key"] = "foo"
 
     # get() works
-    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'foo\n'
+    assert ixmp_cli.invoke(["config", "get", "test key"]).output == "foo\n"
 
     # set() changes the value
-    result = ixmp_cli.invoke(['config', 'set', 'test key', 'bar'])
+    result = ixmp_cli.invoke(["config", "set", "test key", "bar"])
     assert result.exit_code == 0
-    assert ixmp_cli.invoke(['config', 'get', 'test key']).output == 'bar\n'
+    assert ixmp_cli.invoke(["config", "get", "test key"]).output == "bar\n"
 
     # get() with a value is an invalid call
-    result = ixmp_cli.invoke(['config', 'get', 'test key', 'BADVALUE'])
+    result = ixmp_cli.invoke(["config", "get", "test key", "BADVALUE"])
     assert result.exit_code != 0
 
 
 def test_list(ixmp_cli, test_mp):
-    cmd = ['list', '--match', 'foo']
+    cmd = ["list", "--match", "foo"]
 
     # 'list' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == UsageError.exit_code
 
     # CLI works; nothing returned with a --match option that matches nothing
-    result = ixmp_cli.invoke(['--platform', test_mp.name] + cmd)
+    result = ixmp_cli.invoke(["--platform", test_mp.name] + cmd)
     assert result.exit_code == 0, (result.exception, result.output)
-    assert result.output == """
+    assert (
+        result.output
+        == """
 0 model name(s)
 0 scenario name(s)
 0 (model, scenario) combination(s)
 0 total scenarios
 """
+    )
 
 
 def test_platform(ixmp_cli, tmp_path):
     """Test 'platform' command."""
+
     def call(*args, exit_0=True):
-        result = ixmp_cli.invoke(['platform'] + list(map(str, args)))
+        result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
         assert not exit_0 or result.exit_code == 0
         return result
 
     # The default platform is 'local'
-    r = call('list')
-    assert 'default local\n' in r.output
+    r = call("list")
+    assert "default local\n" in r.output
 
     # JBDC Oracle platform can be added
-    r = call('add', 'p1', 'jdbc', 'oracle', 'HOSTNAME', 'USER', 'PASSWORD')
+    r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
 
     # Default platform can be changed
-    r = call('add', 'default', 'p1')
-    r = call('list')
-    assert 'default p1\n' in r.output
+    r = call("add", "default", "p1")
+    r = call("list")
+    assert "default p1\n" in r.output
     # Reset to avoid disturbing other tests
-    call('add', 'default', 'local')
+    call("add", "default", "local")
 
     # Setting the default using a non-existent platform fails
-    r = call('add', 'default', 'nonexistent', exit_0=False)
+    r = call("add", "default", "nonexistent", exit_0=False)
     assert r.exit_code == 1
 
     # JDBC HSQLDB platform can be added with absolute path
-    r = call('add', 'p2', 'jdbc', 'hsqldb', tmp_path)
-    assert ixmp.config.get_platform_info('p2')[1]['path'] == tmp_path
+    r = call("add", "p2", "jdbc", "hsqldb", tmp_path)
+    assert ixmp.config.get_platform_info("p2")[1]["path"] == tmp_path
 
     # JDBC HSQLDB platform can be added with relative path
-    rel = './foo'
-    r = call('add', 'p3', 'jdbc', 'hsqldb', rel)
-    assert Path(rel).resolve() == \
-        ixmp.config.get_platform_info('p3')[1]['path']
+    rel = "./foo"
+    r = call("add", "p3", "jdbc", "hsqldb", rel)
+    assert Path(rel).resolve() == ixmp.config.get_platform_info("p3")[1]["path"]
 
     # Platform can be removed
-    r = call('remove', 'p3')
+    r = call("remove", "p3")
     assert r.output == "Removed platform config for 'p3'\n"
 
     # Non-existent platform can't be removed
-    r = call('remove', 'p3', exit_0=False)  # Already removed
+    r = call("remove", "p3", exit_0=False)  # Already removed
     assert r.exit_code == 1
 
     # Extra args to 'remove' are invalid
-    r = call('remove', 'p2', 'BADARG', exit_0=False)
+    r = call("remove", "p2", "BADARG", exit_0=False)
     assert r.exit_code == 1
 
 
@@ -151,41 +162,52 @@ def test_import_ts(ixmp_cli, test_mp, test_data_path):
     populate_test_platform(test_mp)
 
     # Invoke the CLI to import data to version 1 of the TimeSeries
-    result = ixmp_cli.invoke([
-        '--platform', test_mp.name,
-        '--model', models['dantzig']['model'],
-        '--scenario', models['dantzig']['scenario'],
-        '--version', '1',
-        'import', 'timeseries',
-        '--firstyear', '2020',
-        '--lastyear', '2200',
-        str(test_data_path / 'timeseries_canning.csv'),
-    ])
+    result = ixmp_cli.invoke(
+        [
+            "--platform",
+            test_mp.name,
+            "--model",
+            models["dantzig"]["model"],
+            "--scenario",
+            models["dantzig"]["scenario"],
+            "--version",
+            "1",
+            "import",
+            "timeseries",
+            "--firstyear",
+            "2020",
+            "--lastyear",
+            "2200",
+            str(test_data_path / "timeseries_canning.csv"),
+        ]
+    )
     assert result.exit_code == 0, result.output
 
     # Expected data
-    exp = pd.DataFrame.from_dict({
-        'region': ['World'],
-        'variable': ['Testing'],
-        'unit': ['???'],
-        'year': [2020],
-        'value': [28.3],
-        'model': ['canning problem'],
-        'scenario': ['standard'],
-    })
+    exp = pd.DataFrame.from_dict(
+        {
+            "region": ["World"],
+            "variable": ["Testing"],
+            "unit": ["???"],
+            "year": [2020],
+            "value": [28.3],
+            "model": ["canning problem"],
+            "scenario": ["standard"],
+        }
+    )
 
     # The specified TimeSeries version contains the expected data
-    scen = ixmp.Scenario(test_mp, **models['dantzig'], version=1)
-    assert_frame_equal(scen.timeseries(variable=['Testing']), exp)
+    scen = ixmp.Scenario(test_mp, **models["dantzig"], version=1)
+    assert_frame_equal(scen.timeseries(variable=["Testing"]), exp)
 
     # The data is not present in other versions
-    scen = ixmp.Scenario(test_mp, **models['dantzig'], version=2)
-    assert len(scen.timeseries(variable=['Testing'])) == 0
+    scen = ixmp.Scenario(test_mp, **models["dantzig"], version=2)
+    assert len(scen.timeseries(variable=["Testing"])) == 0
 
 
 def test_excel_io(ixmp_cli, test_mp, tmp_path):
     populate_test_platform(test_mp)
-    tmp_path /= 'dantzig.xlsx'
+    tmp_path /= "dantzig.xlsx"
 
     url = (
         f"ixmp://{test_mp.name}/{models['dantzig']['model']}/"
@@ -198,7 +220,7 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == 0, result.output
 
     # Export with a maximum row limit per sheet
-    tmp_path2 = tmp_path.with_name('dantzig2.xlsx')
+    tmp_path2 = tmp_path.with_name("dantzig2.xlsx")
     cmd = cmd[:-1] + [str(tmp_path2), "--max-row", 2]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
@@ -215,7 +237,7 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     # Fails without --discard-solution
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 1
-    assert 'This Scenario has a solution' in result.output
+    assert "This Scenario has a solution" in result.output
 
     # Succeeds with --discard-solution
     cmd.insert(-1, "--discard-solution")
@@ -246,7 +268,7 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
 
 def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
     populate_test_platform(test_mp)
-    tmp_path /= 'dantzig.xlsx'
+    tmp_path /= "dantzig.xlsx"
 
     url = (
         f"ixmp://{test_mp.name}/{models['dantzig']['model']}/"
@@ -289,52 +311,60 @@ def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
 
 def test_report(ixmp_cli):
     # 'report' without specifying a platform/scenario is a UsageError
-    result = ixmp_cli.invoke(['report', 'key'])
+    result = ixmp_cli.invoke(["report", "key"])
     assert result.exit_code == UsageError.exit_code
 
 
-@pytest.mark.usefixtures('protect_pint_app_registry')
+@pytest.mark.usefixtures("protect_pint_app_registry")
 def test_show_versions(ixmp_cli):
-    result = ixmp_cli.invoke(['show-versions'])
+    result = ixmp_cli.invoke(["show-versions"])
     assert result.exit_code == 0, result.output
 
 
 def test_solve(ixmp_cli, test_mp):
     populate_test_platform(test_mp)
     cmd = [
-        '--platform', test_mp.name,
-        '--model', models['dantzig']['model'],
-        '--scenario', models['dantzig']['scenario'],
-        'solve', '--remove-solution'
+        "--platform",
+        test_mp.name,
+        "--model",
+        models["dantzig"]["model"],
+        "--scenario",
+        models["dantzig"]["scenario"],
+        "solve",
+        "--remove-solution",
     ]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
     # test failing solving without solution removal
     cmd = [
-        '--platform', test_mp.name,
-        '--model', models['dantzig']['model'],
-        '--scenario', models['dantzig']['scenario'],
-        'solve'
+        "--platform",
+        test_mp.name,
+        "--model",
+        models["dantzig"]["model"],
+        "--scenario",
+        models["dantzig"]["scenario"],
+        "solve",
     ]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 1, result.output
 
     # missing scenario
     cmd = [
-        '--platform', test_mp.name,
-        '--model', 'non-existing',
-        '--scenario', models['dantzig']['scenario'],
-        'solve'
+        "--platform",
+        test_mp.name,
+        "--model",
+        "non-existing",
+        "--scenario",
+        models["dantzig"]["scenario"],
+        "solve",
     ]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 1, result.output
     assert "Error: model='non-existing'" in result.output
 
     # no platform/scenario provided
-    cmd = [
-        'solve'
-    ]
+    cmd = ["solve"]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code != 0, result.output
     assert "Error: give --url before command solve" in result.output

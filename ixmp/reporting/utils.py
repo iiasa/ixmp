@@ -1,5 +1,6 @@
 import logging
 from functools import lru_cache
+from typing import Dict
 
 import pandas as pd
 import pint
@@ -17,7 +18,7 @@ REPLACE_UNITS = {
 
 #: Dimensions to rename when extracting raw data from Scenario objects.
 #: Mapping from Scenario dimension name -> preferred dimension name.
-RENAME_DIMS = {}
+RENAME_DIMS: Dict[str, str] = {}
 
 
 def clean_units(input_string):

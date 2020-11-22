@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from functools import partial
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import Iterator, Tuple
+from typing import Dict, Iterator, List, Tuple, Union
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -86,8 +86,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         b.items(filters=filters, type=ItemType.PAR),
     ]
     # State variables for loop
-    name = [None, None]
-    data = [None, None]
+    name = ["", ""]
+    data: List[pd.DataFrame] = [None, None]
 
     # Elements for first iteration
     name[0], data[0] = next(items[0])
@@ -100,7 +100,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         # Compare the names from `a` and `b` to ensure matching items
         if name[0] == name[1]:
             # Matching items in `a` and `b`
-            current_name, left, right = name[0], *data
+            current_name = name[0]
+            left, right = data
         else:
             # Mismatched; either `a` or `b` has no data for these filters
             current_name = min(*name)
@@ -112,7 +113,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         # Either merge on remaining columns; or, for scalars, on the indices
         on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg = dict(on=on) if on else dict(left_index=True, right_index=True)
+        on_arg: Dict[str, object] = dict(on=on) if on else dict(left_index=True, right_index=True)
 
         # Merge the data from each side
         yield current_name, pd.merge(

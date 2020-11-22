@@ -3,6 +3,7 @@ import logging
 import os
 from copy import copy, deepcopy
 from pathlib import Path
+from typing import Dict
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class Config:
     path = None
 
     # Configuration values
-    values = dict()
+    values: Dict[str, object] = dict()
 
     def __init__(self, read=True):
         # Default values

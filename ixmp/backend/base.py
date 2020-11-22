@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Generator
+from typing import Dict, Generator
 
 from ixmp.core import Scenario, TimeSeries
 
@@ -1099,11 +1099,11 @@ class CachingBackend(Backend):
 
     #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on
     #: the subclass' usage of the cache.
-    _cache = {}
+    _cache: Dict[str, object] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
     #: using :meth:`cache_get`.
-    _cache_hit = {}
+    _cache_hit: Dict[str, int] = {}
 
     # Backend API methods
 

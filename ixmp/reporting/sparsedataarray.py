@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import sparse  # NB warnings from sparse are filtered in computations.py
@@ -71,7 +73,7 @@ class SparseDataArray(xr.DataArray):
     operations that require dense data.
     """
 
-    __slots__ = tuple()
+    __slots__: Tuple = tuple()
 
     @classmethod
     def from_series(cls, obj, sparse=True):
@@ -116,7 +118,7 @@ class SparseDataArray(xr.DataArray):
         else:
             return super().sel(
                 indexers=indexers, method=method, tolerance=tolerance, drop=drop
-            )
+            )._sda.convert()
 
     def to_dataframe(self, name=None):
         """Convert this array and its coords into a :class:`~xarray.DataFrame`.

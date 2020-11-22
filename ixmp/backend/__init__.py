@@ -1,4 +1,5 @@
 from enum import IntFlag
+from typing import Dict, Type
 
 #: Lists of field names for tuples returned by Backend API methods.
 FIELDS = {
@@ -26,7 +27,7 @@ FIELDS = {
 
 #: Mapping from names to available backends. To register additional backends,
 #: add elements to this variable.
-BACKENDS = {}
+BACKENDS: Dict[str, Type] = {}
 
 
 class ItemType(IntFlag):

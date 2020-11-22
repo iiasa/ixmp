@@ -29,6 +29,7 @@ from functools import partial
 from inspect import signature
 from itertools import chain, repeat
 from pathlib import Path
+from typing import Dict, Union
 
 import dask
 import pint
@@ -74,13 +75,13 @@ class Reporter:
     # A3iii. Interpolation.
 
     #: A dask-format :doc:`graph <graphs>`.
-    graph = {"config": {}}
+    graph: Dict[str, Union[str, dict]] = {"config": {}}
 
     #: The default reporting key.
     default_key = None
 
     # An index of ixmp names -> full keys
-    _index = {}
+    _index: Dict[str, Key] = {}
 
     # Module containing pre-defined computations
     _computations = computations

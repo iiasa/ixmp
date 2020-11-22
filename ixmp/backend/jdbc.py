@@ -8,7 +8,7 @@ from copy import copy
 from itertools import chain
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator
+from typing import Generator, Mapping
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -203,11 +203,11 @@ class JDBCBackend(CachingBackend):
     #    - s_clone() is only supported when target_backend is JDBCBackend.
 
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object
-    jobj = None
+    jobj: jpype.JObject = None
 
     #: Mapping from ixmp.TimeSeries object to the underlying
     #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
-    jindex = WeakKeyDictionary()
+    jindex: Mapping[object, jpype.JObject] = WeakKeyDictionary()
 
     def __init__(self, jvmargs=None, **kwargs):
         properties = None

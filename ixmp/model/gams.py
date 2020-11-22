@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory
+from typing import Mapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model
@@ -107,7 +108,7 @@ class GAMSModel(Model):
     name = "default"
 
     #: Default model options.
-    defaults = {
+    defaults: Mapping[str, object] = {
         "model_file": "{model_name}.gms",
         "case": "{scenario.model}_{scenario.scenario}",
         "in_file": str(Path("{temp_dir}", "{model_name}_in.gdx")),

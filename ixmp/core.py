@@ -2,6 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
+from typing import List, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -17,7 +18,7 @@ log = logging.getLogger(__name__)
 
 # %% default settings for column headers
 
-IAMC_IDX = ["model", "scenario", "region", "variable", "unit"]
+IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
 
 class Platform:

@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`367`: Add a parameter for exporting all model+scenario run versions to :meth:`.Platform.export_timeseries_data`, and fix a bug where exporting all runs happens uninteneded.
 - :pull:`378`: Silence noisy output from ignored exceptions on JDBCBackend/JVM shutdown.
 - :pull:`376`: Add a utility method, :func:`.gams_version`, to check the installed version of GAMS.
   The result is displayed by the ``ixmp show-versions`` CLI command/:func:`.show_versions`.

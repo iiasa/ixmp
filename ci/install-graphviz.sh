@@ -9,7 +9,8 @@ case $CI_OS in
     brew install graphviz
     ;;
   windows*)
-    choco install --no-progress graphviz
+    # Temporary; see https://github.com/iiasa/ixmp/pull/387
+    choco install --no-progress --version 2.38.0.20190211 graphviz
     ;;
 esac
 

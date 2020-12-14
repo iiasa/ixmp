@@ -63,7 +63,7 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
         name_type.update({n: ix_type for n in names})
 
     # Open file
-    writer = pd.ExcelWriter(path, engine="xlsxwriter")
+    writer = pd.ExcelWriter(path)
 
     omitted = set()
     empty_sets = []
@@ -182,7 +182,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False, commit_steps=Fa
     log.info(f"Read data from {path}")
 
     # Get item name -> ixmp type mapping as a pd.Series
-    xf = pd.ExcelFile(path)
+    xf = pd.ExcelFile(path, engine="openpyxl")
     name_type = xf.parse("ix_type_mapping", index_col="item")["ix_type"]
 
     # Queue of (set name, data) to add

@@ -477,11 +477,10 @@ def show_versions(file=sys.stdout):
         "dask",
         "graphviz",
         "jpype",
+        "openpyxl",
         "pandas",
         "pint",
         "xarray",
-        "xlrd",
-        "xlsxwriter",
         "yaml",
         None,
         # Optional dependencies, dependencies of message_ix and message_data

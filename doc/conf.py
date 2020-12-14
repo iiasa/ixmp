@@ -1,14 +1,13 @@
 # Configuration file for the Sphinx documentation builder.
 #
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+# This file only contains a selection of the most common options. For a full list see
+# the documentation: https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+# If extensions (or modules to document with autodoc) are in another directory, add
+# these directories to sys.path here. If the directory is relative to the documentation
+# root, use os.path.abspath to make it absolute, like shown here.
 #
 # import os
 # import sys
@@ -19,14 +18,14 @@
 import ixmp
 import ixmp.testing
 
-# -- Project information -----------------------------------------------------
+# -- Project information ---------------------------------------------------------------
 
 project = "ix modeling platform"
 copyright = "2020, IIASA Energy Program"
 author = "ixmp Developers"
 
 
-# -- General configuration ---------------------------------------------------
+# -- General configuration -------------------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -70,7 +69,7 @@ rst_prolog = r"""
     version
 )
 
-# -- Options for HTML output -------------------------------------------------
+# -- Options for HTML output -----------------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -89,13 +88,13 @@ html_logo = "_static/logo_white.png"
 html_static_path = ["_static"]
 
 
-# -- Options for sphinx.ext.extlinks ------------------------------------------
+# -- Options for sphinx.ext.extlinks ---------------------------------------------------
 
 extlinks = {
     "pull": ("https://github.com/iiasa/ixmp/pull/%s", "PR #"),
 }
 
-# -- Options for sphinx.ext.intersphinx ---------------------------------------
+# -- Options for sphinx.ext.intersphinx ------------------------------------------------
 
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
@@ -108,7 +107,11 @@ intersphinx_mapping = {
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
-# -- Options for sphinx.tex.todo ----------------------------------------------
+# -- Options for sphinx.ext.todo -------------------------------------------------------
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+# -- Options for sphinxcontrib.bibtext -------------------------------------------------
+
+bibtex_bibfiles = ["references.bib"]

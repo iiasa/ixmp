@@ -78,3 +78,10 @@ Multiple dimensions indexed by the same set
           idx_sets=['foo', 'foo'],
           idx_names=['foo', 'another_dimension'])
       new_scenario.read_excel('file.xlsx', init_items=True)
+
+.. _excel-formats:
+
+File formats other than :file:`.xlsx`
+   The :file:`.xlsx` (Office Open XML) file format is preferred for input and output.
+   :mod:`ixmp` uses `openpyxl <https://openpyxl.readthedocs.io>`_ and :mod:`pandas` in order to read and write this format.
+   For other Excel file formats, including :file:`.xls` and :file:`.xlsb`, see the :pandas:ref:`Pandas documentation <io.excel>`.

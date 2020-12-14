@@ -28,6 +28,8 @@ __pycache__
 
 # Sphinx
 doc/_build
+# Generated index
+doc/bibtex.json
 
 # setuptools
 build

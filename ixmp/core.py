@@ -1265,7 +1265,14 @@ class Scenario(TimeSeries):
                 name, filters={k: v for k, v in filters.items() if k in idx_names}
             )
 
-    def add_par(self, name, key_or_data=None, value=None, unit=None, comment=None):
+    def add_par(
+        self,
+        name: str,
+        key_or_data=None,
+        value=None,
+        unit: str = None,
+        comment: str = None,
+    ):
         """Set the values of a parameter.
 
         Parameters
@@ -1292,8 +1299,11 @@ class Scenario(TimeSeries):
             data = pd.DataFrame.from_dict(key_or_data, orient="columns")
         elif isinstance(key_or_data, pd.DataFrame):
             data = key_or_data.copy()
-            if "value" in data.columns and value is not None:
-                raise ValueError("both key_or_data.value and value supplied")
+            if value is not None:
+                if "value" in data.columns:
+                    raise ValueError("both key_or_data.value and value supplied")
+                else:
+                    data["value"] = value
         else:
             # One or more keys; convert to a list of strings
             if isinstance(key_or_data, range):
@@ -1330,12 +1340,15 @@ class Scenario(TimeSeries):
         # Further handle each column
         if "key" not in data.columns:
             # Form the 'key' column from other columns
-            if N_dim > 1:
+            if N_dim > 1 and len(data):
                 data["key"] = data.apply(
                     partial(as_str_list, idx_names=idx_names), axis=1
                 )
             else:
                 data["key"] = data[idx_names[0]]
+
+        if "value" not in data.columns:
+            raise ValueError("no parameter values supplied")
 
         if "unit" not in data.columns:
             # Broadcast single unit across all values. pandas raises ValueError
@@ -1353,8 +1366,9 @@ class Scenario(TimeSeries):
                 types.pop("comment")
 
         # Convert types, generate tuples
-        elements = (
-            (e.key, e.value, e.unit, e.comment) for e in data.astype(types).itertuples()
+        elements = map(
+            lambda e: (e.key, e.value, e.unit, e.comment),
+            data.astype(types).itertuples(),
         )
 
         # Store

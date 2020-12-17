@@ -171,11 +171,39 @@ class TestScenario:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
 
     # Store data
-    def test_add_par(self, scen):
-        # add_par() broadcasts scalar values/units across multiple keys
+    @pytest.mark.parametrize(
+        "args, kwargs",
+        (
+            # Scalar values/units are broadcast across multiple keys
+            (("b", ["new-york", "chicago"]), dict(value=100, unit="cases")),
+            # Empty DataFrame can be added without error
+            (("b", pd.DataFrame(columns=["i", "j", "value", "unit"])), dict()),
+            # Exceptions
+            pytest.param(
+                ("b", pd.DataFrame(columns=["i", "j", "value", "unit"])),
+                dict(value=1.0),
+                marks=pytest.mark.xfail(
+                    raises=ValueError, match="both key_or_data.value and value supplied"
+                ),
+            ),
+            pytest.param(
+                ("b", pd.DataFrame(columns=["i", "j", "unit"])),
+                dict(),
+                marks=pytest.mark.xfail(raises=ValueError, match="no parameter values"),
+            ),
+        ),
+    )
+    def test_add_par(self, scen, args, kwargs):
         scen = scen.clone(keep_solution=False)
         scen.check_out()
-        scen.add_par("b", ["new-york", "chicago"], value=100, unit="cases")
+        scen.add_par(*args, **kwargs)
+
+    def test_add_par2(self, scen):
+        scen = scen.clone(keep_solution=False)
+        scen.check_out()
+        # Create a parameter with duplicate indices
+        scen.init_par("foo", idx_sets=["i", "i", "j"], idx_names=["i0", "i1", "j"])
+        scen.add_par("foo", pd.DataFrame(columns=["i0", "i1", "j"]), value=1.0)
 
     # Retrieve data
     def test_idx(self, scen):

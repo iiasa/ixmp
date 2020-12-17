@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`374`: Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data.
 - :pull:`389`: Depend on :mod:`openpyxl` instead of :mod:`xlrd` and :mod:`xlsxwriter` for Excel I/O; :mod:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx`.
 - :pull:`367`: Add a parameter for exporting all model+scenario run versions to :meth:`.Platform.export_timeseries_data`, and fix a bug where exporting all runs happens uninteneded.
 - :pull:`378`: Silence noisy output from ignored exceptions on JDBCBackend/JVM shutdown.

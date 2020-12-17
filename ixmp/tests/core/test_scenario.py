@@ -185,6 +185,13 @@ class TestScenario:
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
+    def test_add_par2(self, scen):
+        scen = scen.clone(keep_solution=False)
+        scen.check_out()
+        # Create a parameter with duplicate indices
+        scen.init_par("foo", idx_sets=["i", "i", "j"], idx_names=["i0", "i1", "j"])
+        scen.add_par("foo", pd.DataFrame(columns=["i0", "i1", "j"]))
+
     # Retrieve data
     def test_idx(self, scen):
         assert scen.idx_sets("d") == ["i", "j"]

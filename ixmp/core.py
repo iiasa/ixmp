@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
-from typing import List, Union
+from typing import Optional, List, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -1265,7 +1265,14 @@ class Scenario(TimeSeries):
                 name, filters={k: v for k, v in filters.items() if k in idx_names}
             )
 
-    def add_par(self, name, key_or_data=None, value=None, unit=None, comment=None):
+    def add_par(
+        self,
+        name: str,
+        key_or_data=None,
+        value=None,
+        unit: str = None,
+        comment: str = None,
+    ):
         """Set the values of a parameter.
 
         Parameters

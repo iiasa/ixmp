@@ -178,7 +178,14 @@ class TestScenario:
             (("b", ["new-york", "chicago"]), dict(value=100, unit="cases")),
             # Empty DataFrame can be added without error
             (("b", pd.DataFrame(columns=["i", "j", "value", "unit"])), dict()),
-            # Empty DataFrame can be added without error
+            # Exceptions
+            pytest.param(
+                ("b", pd.DataFrame(columns=["i", "j", "value", "unit"])),
+                dict(value=1.0),
+                marks=pytest.mark.xfail(
+                    raises=ValueError, match="both key_or_data.value and value supplied"
+                ),
+            ),
             pytest.param(
                 ("b", pd.DataFrame(columns=["i", "j", "unit"])),
                 dict(),

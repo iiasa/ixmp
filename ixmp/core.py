@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import List, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 

@@ -266,7 +266,11 @@ def test_get(ts, fmt):
 
     # Data can be retrieved and has the expected value
     obs = ts.timeseries(**args)
-    assert_frame_equal(exp, obs, check_like=True)
+
+    # NB this included check_like=True to be tolerant of JDBCBackend returning columns
+    #    in unpredictable order. In pandas 1.2.0, this caused an exception; see
+    #    pandas-dev/pandas#39168. Removed until the upstream bug is fixed.
+    assert_frame_equal(exp, obs)
 
 
 @pytest.mark.parametrize("fmt", ["long", "wide"])

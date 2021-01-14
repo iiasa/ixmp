@@ -21,7 +21,7 @@ examples for a generic model instance based on Dantzig's transport problem.
 
 ## License
 
-Copyright © 2017–2020 IIASA Energy Program
+Copyright © 2017–2021 IIASA Energy, Climate, and Environment (ECE) program
 
 The platform package is licensed under the Apache License, Version 2.0 (the
 "License"); you may not use the files in this repository except in compliance

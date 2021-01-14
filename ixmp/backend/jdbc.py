@@ -1114,7 +1114,15 @@ def start_jvm(jvmargs=None):
     log.debug(f"jpype.getDefaultJVMPath: {jpype.getDefaultJVMPath()}")
     log.debug(f"args to startJVM: {args} {kwargs}")
 
-    jpype.startJVM(*args, **kwargs)
+    try:
+        jpype.startJVM(*args, **kwargs)
+    except FileNotFoundError as e:  # pragma: no cover
+        # Not covered by tests. jpype.getDefaultJVMPath() tries an extensive set of
+        # methods to find the JVM; it would require excessive effort to defeat these.
+        raise FileNotFoundError(
+            "This error may occur because you have not installed or configured a Java"
+            "Runtime Environment. See the install documentation."
+        ) from e
 
     # define auxiliary references to Java classes
     global java

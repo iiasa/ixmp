@@ -5,7 +5,7 @@
 . /opt/python3/bin/activate
 
 # Install
-pip install --editable .[tests]
+pip install .[tests]
 
 # Run tests
 # NB add options like --trace-config, --trace-gc here to debug

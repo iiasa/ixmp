@@ -47,6 +47,7 @@ Documentation of ixmp and the MESSAGEix framework is available in two forms:
 
 The online documentation is built automatically from the contents of the
 [ixmp Github repository](https://github.com/iiasa/ixmp).
+For documentation of a specific release, e.g. `v3.2.0`, use the chooser in the sidebar.
 
 For offline use, the documentation can be built from the source code.
 See [`doc/README.rst`](doc/README.rst) for further details.

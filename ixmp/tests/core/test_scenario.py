@@ -183,13 +183,16 @@ class TestScenario:
                 ("b", pd.DataFrame(columns=["i", "j", "value", "unit"])),
                 dict(value=1.0),
                 marks=pytest.mark.xfail(
-                    raises=ValueError, match="both key_or_data.value and value supplied"
+                    raises=ValueError,
+                    reason="both key_or_data.value and value supplied",
                 ),
             ),
             pytest.param(
                 ("b", pd.DataFrame(columns=["i", "j", "unit"])),
                 dict(),
-                marks=pytest.mark.xfail(raises=ValueError, match="no parameter values"),
+                marks=pytest.mark.xfail(
+                    raises=ValueError, reason="no parameter values"
+                ),
             ),
         ),
     )

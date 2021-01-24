@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`394`: Increase JPype minimum version to 1.2.1.
 - :pull:`391`: Adjust test suite for pandas v1.2.0.
 - :pull:`374`: Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data.
 - :pull:`389`: Depend on :mod:`openpyxl` instead of :mod:`xlrd` and :mod:`xlsxwriter` for Excel I/O; :mod:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx`.

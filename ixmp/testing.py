@@ -523,7 +523,7 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
 
 
 # Data structure for memory information used by :meth:`memory_usage`.
-_MemInfo = namedtuple(
+MemInfo = namedtuple(
     "MemInfo",
     [
         "profiled",
@@ -536,11 +536,11 @@ _MemInfo = namedtuple(
 )
 
 
-def MemInfo(arr, cls=float):
+def format_meminfo(arr, cls=float):
     """Return a namedtuple for *array*, with values as *cls*."""
     # Format strings
     cls = "{: >7.2f}".format if cls is str else cls
-    return _MemInfo(*map(cls, arr))
+    return MemInfo(*map(cls, arr))
 
 
 # Variables for memory_usage
@@ -642,14 +642,14 @@ def memory_usage(message="", reset=False):
     msg = "\n".join(
         [
             f"{_COUNT:3d} {message}",
-            repr(MemInfo(result, str)),
-            repr(MemInfo(delta, str)),
+            repr(format_meminfo(result, str)),
+            repr(format_meminfo(delta, str)),
         ]
     )
     log.debug(msg)
 
     # Return the current result
-    return MemInfo(result)
+    return format_meminfo(result)
 
 
 def random_ts_data(length):

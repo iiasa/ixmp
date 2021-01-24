@@ -1,6 +1,7 @@
 import gc
 import logging
 from sys import getrefcount
+from typing import Tuple
 
 import jpype
 import pytest
@@ -126,7 +127,7 @@ def test_write_file(test_mp, tmp_path):
 
 # This variable formerly had 'warns' as the third element in some tuples, to
 # test for deprecation warnings.
-INIT_PARAMS = (
+INIT_PARAMS: Tuple[Tuple, ...] = (
     # Handled in JDBCBackend:
     (
         ["nonexistent.properties"],

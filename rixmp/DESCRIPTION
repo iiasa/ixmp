@@ -1,7 +1,7 @@
 Package: rixmp
 Type: Package
 Title: R Interface to the IX Modeling Platform
-Version: 3.1.0.9000
+Version: 3.2.0
 Authors@R: c(
     person("Adriano", "Vinca", email = "vinca@iiasa.ac.at",
            role = c("aut", "cre")),

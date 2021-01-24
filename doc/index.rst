@@ -7,21 +7,13 @@ The |ixmp|
 
    Key features of the |ixmp| (source: :cite:`huppmann_messageix_2018`)
 
-The |ixmp| (ixmp) is a data warehouse for high-powered numerical scenario
-analysis.
-It is designed to provide an effective framework for integrated and
-cross-cutting analysis (hence the abbreviation *ix*).
+The |ixmp| (ixmp) is a data warehouse for high-powered numerical scenario analysis.
+It is designed to provide an effective framework for integrated and cross-cutting analysis (hence the abbreviation *ix*).
 
-The platform allows an efficient workflow between original input data sources
-and implementations of mathematical models, via application programming
-interfaces (API) with the scientific programming languages Python and R.
-The platform also includes an API with the mathematical programming
-software `GAMS`_.
+The platform allows an efficient workflow between original input data sources and implementations of mathematical models, via application programming interfaces (API) with the scientific programming languages Python and R.
+The platform also includes an API with the mathematical programming software `GAMS <https://gams.com>`_.
 
-.. _`GAMS` : http://www.gams.com
-
-For the scientific reference, see Huppmann et al. (2019)
-:cite:`huppmann_messageix_2018`.
+For the scientific reference, see Huppmann et al. (2019) :cite:`huppmann_messageix_2018`.
 
 .. figure:: _static/ix_components.png
 
@@ -74,10 +66,7 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
 Help & reference
 ----------------
 
-The community mailing list for questions and discussions on new features is hosted using Google Groups.
-Please join at `groups.google.com/d/forum/message_ix`_ and use <message_ix@googlegroups.com> to send an email to the |MESSAGEix| user community.
-
-.. _`groups.google.com/d/forum/message_ix` : https://groups.google.com/d/forum/message_ix
+See the index page of the :doc:`MESSAGEix documentation <message_ix:index>` for a complete overview of different sources of help.
 
 .. toctree::
    :caption: Help & reference

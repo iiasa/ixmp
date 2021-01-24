@@ -105,7 +105,7 @@ jobs:
       run: python -m pip install --upgrade pip wheel setuptools-scm
 
     - name: Install Python package and dependencies
-      run: pip install .[docs,tests,tutorial]
+      run: pip install .[tests]
 
     - name: Install R package and dependencies
       run: |

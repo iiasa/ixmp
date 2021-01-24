@@ -13,8 +13,8 @@ This problem finds a least cost shipping schedule that meets demand requirements
 The tutorials are provided as Jupyter notebooks for both Python and R, and are identical as far as possible.
 
 - Tutorial 1:
-  in `Python <https://github.com/iiasa/ixmp/blob/v3.2.0/tutorial/transport/py_transport.ipynb>`__,
-  or in `R <https://github.com/iiasa/ixmp/blob/v3.2.0/tutorial/transport/R_transport.ipynb>`__.
+  in `Python <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/py_transport.ipynb>`__,
+  or in `R <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/R_transport.ipynb>`__.
 
   This tutorial walks through the following steps:
 
@@ -25,7 +25,7 @@ The tutorials are provided as Jupyter notebooks for both Python and R, and are i
   5. Display the solution (variables and equation).
 
 - Tutorial 2:
-  in `Python <https://github.com/iiasa/ixmp/blob/v3.2.0/tutorial/transport/py_transport_scenario.ipynb>`__,
-  or in `R <https://github.com/iiasa/ixmp/blob/v3.2.0/tutorial/transport/R_transport_scenario.ipynb>`__.
+  in `Python <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/py_transport_scenario.ipynb>`__,
+  or in `R <https://github.com/iiasa/ixmp/blob/master/tutorial/transport/R_transport_scenario.ipynb>`__.
 
   This tutorial creates an alternate or ‘counterfactual’ scenario of the transport problem; solves it; and compares the results to the original or reference scenario.

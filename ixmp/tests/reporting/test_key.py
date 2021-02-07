@@ -1,4 +1,4 @@
-from ixmp.reporting.key import Key
+from ixmp.reporting import Key
 
 
 def test_key():

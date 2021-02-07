@@ -4,12 +4,12 @@ import numpy as np
 import pint
 import pytest
 import xarray as xr
+from genno.testing import assert_qty_equal, random_qty
 from pandas.testing import assert_series_equal
 
 import ixmp
 from ixmp.reporting import Quantity, Reporter, computations
-from ixmp.reporting.testing import random_qty
-from ixmp.testing import assert_logs, assert_qty_equal
+from ixmp.testing import assert_logs
 
 from . import add_test_data
 

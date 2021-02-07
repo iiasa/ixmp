@@ -60,7 +60,6 @@ from . import cli
 from . import config as ixmp_config
 from .core import IAMC_IDX, Platform, Scenario, TimeSeries
 from .reporting import Quantity
-from .reporting.testing import assert_qty_allclose, assert_qty_equal  # noqa: F401
 
 log = logging.getLogger(__name__)
 

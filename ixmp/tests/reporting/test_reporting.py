@@ -2,6 +2,7 @@
 import logging
 import os
 
+from genno.testing import assert_qty_allclose, assert_qty_equal
 import numpy as np
 import pandas as pd
 import pint
@@ -23,8 +24,6 @@ from ixmp.reporting import (
 )
 from ixmp.testing import (
     assert_logs,
-    assert_qty_allclose,
-    assert_qty_equal,
     make_dantzig,
 )
 

@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from genno.core.attrseries import AttrSeries
+from genno.core.sparsedataarray import SparseDataArray
+from genno.testing import assert_qty_allclose, assert_qty_equal
 from xarray.testing import assert_equal as assert_xr_equal
 
 from ixmp import Reporter, Scenario
 from ixmp.reporting import Quantity, computations
-from ixmp.reporting.attrseries import AttrSeries
-from ixmp.reporting.sparsedataarray import SparseDataArray
-from ixmp.testing import assert_qty_allclose, assert_qty_equal
 
 
 @pytest.mark.usefixtures("parametrize_quantity_class")

@@ -41,16 +41,19 @@ def collect_units(*args):
     """Return an list of '_unit' attributes for *args*."""
     registry = pint.get_application_registry()
 
+    result = []
     for arg in args:
-        if "_unit" in arg.attrs:
-            # Convert units if necessary
-            if isinstance(arg.attrs["_unit"], str):
-                arg.attrs["_unit"] = registry.parse_units(arg.attrs["_unit"])
-        else:
+        # Ensure units are from the same, application registry
+        unit = arg.attrs.get("_unit")
+        if not unit:
             log.debug("assuming {} is unitless".format(arg))
-            arg.attrs["_unit"] = registry.parse_units("")
+            unit = registry.dimensionless
 
-    return [arg.attrs["_unit"] for arg in args]
+        # Store the value (possibly converted from str, possibly new) on the Quantity
+        arg.attrs["_unit"] = registry.Unit(unit)
+        result.append(unit)
+
+    return result
 
 
 def dims_for_qty(data):

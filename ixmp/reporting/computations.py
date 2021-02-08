@@ -338,7 +338,12 @@ def ratio(numerator, denominator):
     u_num, u_denom = collect_units(numerator, denominator)
 
     result = numerator / denominator
-    result.attrs["_unit"] = u_num / u_denom
+
+    # This shouldn't be necessary; would instead prefer:
+    # result.attrs["_unit"] = u_num / u_denom
+    # … but is necessary to avoid an issue when the operands are different Unit classes
+    ureg = pint.get_application_registry()
+    result.attrs["_unit"] = ureg.Unit(u_num) / ureg.Unit(u_denom)
 
     if Quantity.CLASS == "AttrSeries":
         result.dropna(inplace=True)

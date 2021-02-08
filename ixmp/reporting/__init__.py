@@ -1,5 +1,3 @@
-import logging
-
 import genno.config
 from genno import (
     ComputationError,
@@ -13,8 +11,6 @@ from genno import (
 
 from .reporter import Reporter
 from .util import RENAME_DIMS
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     # ixmp-specific
@@ -34,3 +30,8 @@ __all__ = [
 def rename_dims(c: Computer, info):
     """Handle one entry from the ``rename_dims:`` config section."""
     RENAME_DIMS.update(info)
+
+
+@genno.config.handles("units", apply=False, keep=True)
+def units(c: Computer, info):
+    genno.config.units(c, info)

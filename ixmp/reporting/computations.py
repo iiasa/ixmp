@@ -106,7 +106,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         pass
     else:
         log.info(
-            f"{name}: replace units {attrs.get('_unit', '(none)')} with " f"{new_unit}"
+            f"{name}: replace units {attrs.get('_unit', '(none)')} with {new_unit}"
         )
         attrs["_unit"] = registry.Unit(new_unit)
 

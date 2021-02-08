@@ -1,14 +1,14 @@
 import logging
 
 from genno import ComputationError, configure
-from genno.testing import add_test_data, assert_logs
+from genno.testing import add_test_data
 import pint
 import pytest
 
 import ixmp
 from ixmp.reporting.reporter import Reporter
 from ixmp.reporting.util import RENAME_DIMS
-from ixmp.testing import make_dantzig
+from ixmp.testing import assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 

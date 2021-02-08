@@ -4,7 +4,7 @@ Next release
 All changes
 -----------
 
-
+- :pull:`396`: Fix two minor bugs in reporting.
 
 v3.2.0 (2021-01-24)
 ===================

@@ -64,13 +64,11 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         data = pd.DataFrame.from_records([data])
 
     # Warn if no values are returned.
-    # TODO construct an empty Quantity with the correct dimensions *even if* no
-    #      values are returned.
+    # TODO construct an empty Quantity with the correct dimensions *even if* no values
+    #      are returned.
     if len(data) == 0:
-        log.warning(
-            f"0 values for {ix_type} {repr(name)} using filters:\n"
-            f"  {repr(filters)}\n  Subsequent computations may fail."
-        )
+        log.debug(f"0 values for {ix_type} {repr(name)} using filters: {repr(filters)}")
+        log.debug("May be the cause of subsequent errors.")
 
     # Convert columns with categorical dtype to str
     data = data.astype(

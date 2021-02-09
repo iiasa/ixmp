@@ -1,10 +1,10 @@
 import logging
 from itertools import zip_longest
 
-from genno.core.quantity import Quantity
-from genno.util import parse_units
 import pandas as pd
 import pint
+from genno.core.quantity import Quantity
+from genno.util import parse_units
 
 from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
 
@@ -186,7 +186,7 @@ def update_scenario(scenario, *quantities, params=[]):
             # Convert a Quantity to a DataFrame
             par_name = qty.name
             new = qty.to_series().reset_index().rename(columns={par_name: "value"})
-            new["unit"] = "{:~}".format(qty.attrs["_unit"])
+            new["unit"] = "{:~}".format(qty.attrs["_unit"])  # type: ignore [str-format]
             qty = new
 
         # Add the data

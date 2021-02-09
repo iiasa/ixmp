@@ -1,8 +1,8 @@
 import logging
 
-from genno import ComputationError, configure
 import pint
 import pytest
+from genno import ComputationError, configure
 
 import ixmp
 from ixmp.reporting.reporter import Reporter

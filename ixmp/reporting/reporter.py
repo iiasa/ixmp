@@ -3,7 +3,6 @@ from functools import partial
 from itertools import chain, repeat
 
 import dask
-
 from genno.core.computer import Computer
 from genno.core.key import Key
 

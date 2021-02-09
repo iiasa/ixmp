@@ -1,14 +1,15 @@
 import logging
 from functools import partial
 
-from genno import Quantity
-from genno.testing import assert_qty_equal
 import pandas as pd
 import pytest
+from genno import Computer, Quantity
+from genno.testing import assert_qty_equal
+from pandas.testing import assert_frame_equal
 
-from ixmp import Scenario, Reporter
+from ixmp.model.dantzig import DATA
 from ixmp.reporting.computations import map_as_qty, update_scenario
-from ixmp.testing import assert_logs
+from ixmp.testing import assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
@@ -39,64 +40,54 @@ def test_map_as_qty():
     assert_qty_equal(exp, result)
 
 
-@pytest.mark.skip(reason="TODO update to use only ixmp features")
 def test_update_scenario(request, caplog, test_mp):
-    scen = Scenario(test_mp, model="update_scenario", scenario="update_scenario")
+    scen = make_dantzig(test_mp)
+    scen.check_out()
+    scen.add_set("j", "toronto")
+    scen.commit("Add j=toronto")
 
-    # Number of rows in the 'demand' parameter
-    N_before = len(scen.par("demand"))
+    # Number of rows in the 'd' parameter
+    N_before = len(scen.par("d"))
+    assert 6 == N_before
 
-    # A Reporter used as calculation engine
-    calc = Reporter()
+    # A Computer used as calculation engine
+    c = Computer()
 
     # Target Scenario for updating data
-    calc.add("target", scen)
+    c.add("target", scen)
 
     # Create a pd.DataFrame suitable for Scenario.add_par()
-    units = "GWa"
-    demand = make_df(
-        "demand",
-        node="World",
-        commodity="electr",
-        level="secondary",
-        year=ScenarioInfo(scen).Y[:10],
-        time="year",
-        value=1.0,
-        unit=units,
-    )
+    data = DATA["d"].query("j == 'chicago'").assign(j="toronto")
+    data["value"] += 1.0
 
     # Add to the Reporter
-    calc.add("input", demand)
+    c.add("input", data)
 
     # Task to update the scenario with the data
-    calc.add("test 1", (partial(update_scenario, params=["demand"]), "target", "input"))
+    c.add("test 1", (partial(update_scenario, params=["d"]), "target", "input"))
 
     # Trigger the computation that results in data being added
-    with assert_logs(caplog, "'demand' ← 10 rows", at_level=logging.DEBUG):
+    with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
         # Returns nothing
-        assert calc.get("test 1") is None
+        assert c.get("test 1") is None
 
     # Rows were added to the parameter
-    assert len(scen.par("demand")) == N_before + len(demand)
+    assert len(scen.par("d")) == N_before + len(data)
 
     # Modify the data
-    demand["value"] = 2.0
-    demand = demand.iloc[:5]
-    # Convert to a Quantity object
-    input = Quantity(
-        demand.set_index("node commodity level year time".split())["value"],
-        name="demand",
-        units=units,
-    )
-    # Re-add
-    calc.add("input", input)
+    data = pd.concat([DATA["d"], data]).reset_index(drop=True)
+    data["value"] *= 2.0
 
-    # Revise the task; the parameter name ('demand')
-    calc.add("test 2", (update_scenario, "target", "input"))
+    # Convert to a Quantity object and re-add
+    q = Quantity(data.set_index(["i", "j"])["value"], name="d", units="km")
+    c.add("input", q)
+
+    # Revise the task; the parameter name ('demand') is read from the Quantity
+    c.add("test 2", (update_scenario, "target", "input"))
 
     # Trigger the computation
-    with assert_logs(caplog, "'demand' ← 5 rows"):
-        calc.get("test 2")
+    with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
+        c.get("test 2")
 
-    # Only half the rows have been updated
-    assert scen.par("demand")["value"].mean() == 1.5
+    # All the rows have been updated
+    assert_frame_equal(scen.par("d"), data)

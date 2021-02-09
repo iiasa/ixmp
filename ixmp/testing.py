@@ -317,7 +317,7 @@ def populate_test_platform(platform):
     s4.set_as_default()
 
 
-def make_dantzig(mp, solve=False):
+def make_dantzig(mp: Platform, solve=False) -> Scenario:
     """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters

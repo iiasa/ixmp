@@ -1,14 +1,13 @@
 import logging
 
 from genno import ComputationError, configure
-from genno.testing import add_test_data
 import pint
 import pytest
 
 import ixmp
 from ixmp.reporting.reporter import Reporter
 from ixmp.reporting.util import RENAME_DIMS
-from ixmp.testing import assert_logs, make_dantzig
+from ixmp.testing import add_test_data, assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
@@ -236,12 +235,12 @@ def test_filters(test_mp, tmp_path, caplog):
     rep.set_filters(**removed)
 
     # A warning is logged
-    msg = "\n  ".join(
-        [
-            "0 values for par 'x' using filters:",
-            repr(removed),
-            "Subsequent computations may fail.",
-        ]
-    )
-    with assert_logs(caplog, msg):
+    with assert_logs(
+        caplog,
+        (
+            f"0 values for par 'x' using filters: {repr(removed)}",
+            "May be the cause of subsequent errors",
+        ),
+        at_level=logging.DEBUG,
+    ):
         rep.get(x_key)

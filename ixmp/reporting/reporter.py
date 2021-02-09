@@ -1,13 +1,11 @@
 import logging
-from functools import partial
 from itertools import chain, repeat
 
 import dask
 from genno.core.computer import Computer
-from genno.core.key import Key
 
 from . import computations as ixmp_computations
-from .util import RENAME_DIMS, dims_for_qty
+from .util import RENAME_DIMS, keys_for_quantity
 
 log = logging.getLogger(__name__)
 
@@ -138,36 +136,3 @@ class Reporter(Computer):
         for key, value in filters.items():
             if value is None:
                 self.graph["config"]["filters"].pop(key, None)
-
-
-def keys_for_quantity(ix_type, name, scenario):
-    """Return keys for *name* in *scenario*."""
-    # Retrieve names of the indices of the ixmp item, without loading the data
-    dims = dims_for_qty(scenario.idx_names(name))
-
-    # Column for retrieving data
-    column = "value" if ix_type == "par" else "lvl"
-
-    # A computation to retrieve the data
-    key = Key(name, dims)
-    result = [
-        (
-            key,
-            partial(ixmp_computations.data_for_quantity, ix_type, name, column),
-            "scenario",
-            "config",
-        )
-    ]
-
-    # Add the marginal values at full resolution, but no aggregates
-    if ix_type == "equ":
-        result.append(
-            (
-                Key("{}-margin".format(name), dims),
-                partial(ixmp_computations.data_for_quantity, ix_type, name, "mrg"),
-                "scenario",
-                "config",
-            )
-        )
-
-    return result

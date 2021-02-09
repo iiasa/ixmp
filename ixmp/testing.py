@@ -15,8 +15,6 @@ These include:
 
   .. autosummary::
      assert_logs
-     assert_qty_allclose
-     assert_qty_equal
 
 - Methods for setting up and populating test ixmp databases:
 

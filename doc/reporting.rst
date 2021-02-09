@@ -24,31 +24,23 @@ Others:
    :members:
    :exclude-members: graph, add, add_load_file, apply
 
-   A Reporter is used to postprocess data from from one or more
-   :class:`ixmp.Scenario` objects. The :meth:`get` method can be used to:
+   A Reporter is used to postprocess data from from one or more :class:`ixmp.Scenario` objects.
+   The :meth:`get` method can be used to:
 
-   - Retrieve individual **quantities**. A quantity has zero or more
-     dimensions and optional units. Quantities include the ‘parameters’,
-     ‘variables’, ‘equations’, and ‘scalars’ available in an
-     :class:`ixmp.Scenario`.
+   - Retrieve individual **quantities**. A quantity has zero or more dimensions and optional units. Quantities include the ‘parameters’, ‘variables’, ‘equations’, and ‘scalars’ available in an :class:`ixmp.Scenario`.
 
-   - Generate an entire **report** composed of multiple quantities. A report
-     may:
+   - Generate an entire **report** composed of multiple quantities.
+     A report may:
 
-       - Read in non-model or exogenous data,
-       - Trigger output to files(s) or a database, or
-       - Execute user-defined methods.
+     - Read in non-model or exogenous data,
+     - Trigger output to files(s) or a database, or
+     - Execute user-defined methods.
 
-   Every report and quantity (including the results of intermediate steps) is
-   identified by a :class:`.Key`; all the keys in a Reporter can be listed with
-   :meth:`keys`.
+   Every report and quantity (including the results of intermediate steps) is identified by a :class:`.Key`; all the keys in a Reporter can be listed with :meth:`keys`.
 
-   Reporter uses a :doc:`graph <graphs>` data structure to keep track of
-   **computations**, the atomic steps in postprocessing: for example, a single
-   calculation that multiplies two quantities to create a third. The graph
-   allows :meth:`get` to perform *only* the requested computations. Advanced
-   users may manipulate the graph directly; but common reporting tasks can be
-   handled by using Reporter methods:
+   Reporter uses a :doc:`graph <graphs>` data structure to keep track of **computations**, the atomic steps in postprocessing: for example, a single calculation that multiplies two quantities to create a third.
+   The graph allows :meth:`get` to perform *only* the requested computations.
+   Advanced users may manipulate the graph directly; but common reporting tasks can be handled by using Reporter methods:
 
    .. autosummary::
       add
@@ -211,55 +203,17 @@ Computations
 .. automodule:: ixmp.reporting.computations
    :members:
 
-   Unless otherwise specified, these methods accept and return
-   :class:`Quantity <ixmp.reporting.utils.Quantity>` objects for data
-   arguments/return values.
+   Basic computations are defined by :mod:`genno.computations`.
 
-   Calculations:
+   Unless otherwise specified, these methods accept and return :class:`.Quantity>` objects for data arguments/return values.
 
    .. autosummary::
-      add
-      aggregate
-      apply_units
-      disaggregate_shares
-      product
-      ratio
-      select
-      sum
-
-   Input and output:
-
-   .. autosummary::
-      load_file
-      write_report
-
-   Data manipulation:
-
-   .. autosummary::
-      concat
-
-
-Internal format for reporting quantities
-========================================
-
-.. currentmodule:: ixmp.reporting.quantity
-
-.. automodule:: ixmp.reporting.quantity
-   :members: assert_quantity
-
-.. currentmodule:: ixmp.reporting.attrseries
-
-.. automodule:: ixmp.reporting.attrseries
-   :members:
-
-.. currentmodule:: ixmp.reporting.sparsedataarray
-
-.. automodule:: ixmp.reporting.sparsedataarray
-   :members: SparseDataArray, SparseAccessor
-
+      data_for_quantity
+      map_as_qty
+      update_scenario
 
 Utilities
 =========
 
-.. automodule:: ixmp.reporting.utils
+.. automodule:: ixmp.reporting.util
    :members:

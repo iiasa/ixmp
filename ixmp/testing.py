@@ -19,8 +19,9 @@ These include:
 - Methods for setting up and populating test ixmp databases:
 
   .. autosummary::
-     make_dantzig
+     add_test_data
      create_test_platform
+     make_dantzig
      populate_test_platform
 
 - Methods to run and retrieve values from Jupyter notebooks:
@@ -51,7 +52,9 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pint
 import pytest
+import xarray as xr
 from click.testing import CliRunner
 
 from . import cli
@@ -182,6 +185,37 @@ def bool_param_id(name):
 
 
 # Create and populate ixmp databases
+
+
+def add_test_data(scen: Scenario):
+    # New sets
+    t_foo = ["foo{}".format(i) for i in (1, 2, 3)]
+    t_bar = ["bar{}".format(i) for i in (4, 5, 6)]
+    t = t_foo + t_bar
+    y = list(map(str, range(2000, 2051, 10)))
+
+    # Add to scenario
+    scen.init_set("t")
+    scen.add_set("t", t)
+    scen.init_set("y")
+    scen.add_set("y", y)
+
+    # Data
+    ureg = pint.get_application_registry()
+    x = Quantity(
+        xr.DataArray(np.random.rand(len(t), len(y)), coords=[("t", t), ("y", y)]),
+        units=ureg.kg,
+    )
+
+    # As a pd.DataFrame with units
+    x_df = x.to_series().rename("value").reset_index()
+    x_df["unit"] = "kg"
+
+    scen.init_par("x", ["t", "y"])
+    scen.add_par("x", x_df)
+
+    return t, t_foo, t_bar, x
+
 
 MODEL = "canning problem"
 SCENARIO = "standard"

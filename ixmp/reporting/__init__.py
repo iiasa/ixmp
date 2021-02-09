@@ -26,12 +26,33 @@ __all__ = [
 ]
 
 
+@genno.config.handles("filters", apply=False)
+def filters(c: Computer, filters: dict):
+    """Handle the entire ``filters:`` config section."""
+    # Ensure a filters dict exists
+    c.graph["config"].setdefault("filters", dict())
+
+    if len(filters):
+        # Store the new filters
+        c.graph["config"]["filters"].update(filters)
+    else:
+        # Empty dictionary → clear all
+        c.graph["config"]["filters"].clear()
+
+    # Clear filters for specific dimensions only
+    for key, value in filters.items():
+        if value is None:
+            c.graph["config"]["filters"].pop(key, None)
+
+
 @genno.config.handles("rename_dims", type_=dict, apply=False)
-def rename_dims(c: Computer, info):
-    """Handle one entry from the ``rename_dims:`` config section."""
+def rename_dims(c: Computer, info: dict):
+    """Handle the entire ``rename_dims:`` config section."""
     RENAME_DIMS.update(info)
 
 
+# keep=True is different vs. genno.config
 @genno.config.handles("units", apply=False, keep=True)
-def units(c: Computer, info):
+def units(c: Computer, info: dict):
+    """Handle the entire ``units:`` config section."""
     genno.config.units(c, info)

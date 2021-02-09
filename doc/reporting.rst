@@ -1,7 +1,13 @@
+Reporting API
+*************
+
 .. currentmodule:: ixmp.reporting
 
-Reporting
-*********
+:mod:`ixmp.reporting` is built on the :mod:`genno` package.
+This page provides only API documentation.
+
+- For an introduction and basic concepts, see :doc:`genno:usage` in the :mod:`genno` documentation.
+- For automatic reporting of :class:`message_ix.Scenario`, see :doc:`message_ix:reporting`.
 
 .. contents::
    :local:
@@ -10,15 +16,19 @@ Reporting
 Top-level classes and functions
 ===============================
 
-:mod:`ixmp.reporting` is built on the :mod:`genno` package.
+.. automodule:: ixmp.reporting
+
 The following top-level objects from :mod:`genno` may also be imported from
 :mod:`ixmp.reporting`.
 
 .. autosummary::
 
-   ~genno.config.configure
+   ~genno.core.exceptions.ComputationError
    ~genno.core.key.Key
+   ~genno.core.exceptions.KeyExistsError
+   ~genno.core.exceptions.MissingKeyError
    ~genno.core.quantity.Quantity
+   ~genno.config.configure
 
 :mod:`ixmp.reporting` additionally defines:
 
@@ -63,24 +73,52 @@ The following top-level objects from :mod:`genno` may also be imported from
       ~genno.core.computer.Computer.visualize
       ~genno.core.computer.Computer.write
 
-   .. autoattribute:: graph
 
 Configuration
 =============
 
-:mod:`ixmp.reporting` adds a ``rename_dims:`` configuration file section.
+:mod:`ixmp.reporting` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
+
+.. automethod:: ixmp.reporting.filters
+
+   Reporter-specific configuration.
+
+   Affects data loaded from a Scenario using :func:`.data_for_quantity`, which filters the data before any other computation takes place.
+   Filters are stored at ``Reporter.graph["config"]["filters"]``.
+
+   If no arguments are provided, *all* filters are cleared.
+   Otherwise, `filters` is a mapping of :class:`str` → (:class:`list` of :class:`str` or :obj:`None`.
+   Keys are dimension IDs.
+   Values are either lists of allowable labels along the respective dimension or :obj:`None` to clear any existing filters for that dimension.
+
+   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`.Reporter.configure`, or in a configuration file:
+
+   .. code-block:: yaml
+
+      filters:
+        # Exclude a label "x2" on the "x" dimension, etc.
+        x: [x1, x3, x4]
+        technology: [coal_ppl, wind_ppl]
+        # Clear existing filters for the "commodity" dimension
+        commodity: null
 
 .. automethod:: ixmp.reporting.rename_dims
 
-Computer-specific configuration.
+   Reporter-specific configuration.
 
-Affects data loaded from a Scenario using :func:`.data_for_quantity`.
-Native dimension names are mapped; in the example below, the dimension "i" is present in the Reporter as "i_renamed" on all quantities/keys in which it appears.
+   Affects data loaded from a Scenario using :func:`.data_for_quantity`.
+   Native dimension names are mapped; in the example below, the dimension "i" is present in the Reporter as "i_renamed" on all quantities/keys in which it appears.
 
-.. code-block:: yaml
+   .. code-block:: yaml
 
-    rename_dims:
-      i: i_renamed
+       rename_dims:
+         i: i_renamed
+
+.. automethod:: ixmp.reporting.units
+
+   The only difference from :func:`genno.config.units` is that this handler keeps the configuration values stored in ``Reporter.graph["config"]``.
+   This is so that :func:`.data_for_quantity` can make use of ``["units"]["apply"]``
+
 
 Computations
 ============

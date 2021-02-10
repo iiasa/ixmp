@@ -9,7 +9,17 @@ assignees: ''
 
 #### Code sample or context
 
-<!-- What did you do? -->
+<!-- What did you do?
+
+If possible, provide a minimal, working code example, formatted like:
+
+```python
+
+import ixmp
+
+# ...your code
+```
+-->
 
 #### Expected result
 
@@ -25,9 +35,9 @@ assignees: ''
 
 ```
 <!--
-  Run one of the following and paste the results here:
-  - 'ixmp show-versions' in a terminal, or
-  - 'import ixmp; ixmp.show_versions()' in a Python interpreter.
+Run one of the following and paste the results here:
+- 'ixmp show-versions' in a terminal, or
+- 'import ixmp; ixmp.show_versions()' in a Python interpreter.
 -->
 ```
 

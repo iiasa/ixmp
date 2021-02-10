@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 
-@genno.config.handles("filters", apply=False)
+@genno.config.handles("filters", iterate=False)
 def filters(c: Computer, filters: dict):
     """Handle the entire ``filters:`` config section."""
     # Ensure a filters dict exists
@@ -45,14 +45,14 @@ def filters(c: Computer, filters: dict):
             c.graph["config"]["filters"].pop(key, None)
 
 
-@genno.config.handles("rename_dims", type_=dict, apply=False)
+@genno.config.handles("rename_dims", iterate=False)
 def rename_dims(c: Computer, info: dict):
     """Handle the entire ``rename_dims:`` config section."""
     RENAME_DIMS.update(info)
 
 
 # keep=True is different vs. genno.config
-@genno.config.handles("units", apply=False, keep=True)
+@genno.config.handles("units", iterate=False, discard=False)
 def units(c: Computer, info: dict):
     """Handle the entire ``units:`` config section."""
     genno.config.units(c, info)

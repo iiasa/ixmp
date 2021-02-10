@@ -2,8 +2,6 @@ import logging
 import re
 import sys
 from collections.abc import Iterable
-from functools import partial
-from inspect import Parameter, signature
 from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 from urllib.parse import urlparse
@@ -297,26 +295,6 @@ def parse_url(url):
             scenario_info["version"] = version
 
     return platform_info, scenario_info
-
-
-def partial_split(func, kwargs):
-    """Forgiving version of :func:`functools.partial`.
-
-    Returns a partial object and leftover kwargs not applicable to `func`.
-    """
-    # Names of parameters to
-    par_names = signature(func).parameters
-    func_args, extra = {}, {}
-    for name, value in kwargs.items():
-        if (
-            name in par_names
-            and par_names[name].kind == Parameter.POSITIONAL_OR_KEYWORD
-        ):
-            func_args[name] = value
-        else:
-            extra[name] = value
-
-    return partial(func, **func_args), extra
 
 
 def year_list(x):

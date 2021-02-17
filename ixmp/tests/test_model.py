@@ -29,7 +29,7 @@ def test_base_model():
     ],
     ids=["null-comment", "null-list", "empty-list"],
 )
-def test_GAMSModel(test_mp, test_data_path, kwargs):
+def test_GAMSModel_solve(test_mp, test_data_path, kwargs):
     s = make_dantzig(test_mp)
     s.solve(model="dantzig", **kwargs)
 
@@ -111,3 +111,20 @@ def test_model_initialize(test_mp, caplog):
 def test_gams_version():
     # Returns a version string like X.Y.Z
     assert len(gams_version().split(".")) == 3
+
+
+class TestGAMSModel:
+    @pytest.fixture(scope="class")
+    def dantzig(self, test_mp):
+        yield make_dantzig(test_mp)
+
+    @pytest.mark.parametrize("char", r'<>"/\|?*')
+    def test_filename_invalid_char(self, dantzig, char):
+        """Model can be solved with invalid character names."""
+        name = f"foo{char}bar"
+        s = dantzig.clone(model=name, scenario=name)
+
+        # Indirectly test backend.write_file("….gdx")
+        # This name_ keyword argument ends up received to GAMSModel.__init__ and sets
+        # the GAMSModel.model_name attribute, and in turn the GDX file names used.
+        s.solve(name_=name)

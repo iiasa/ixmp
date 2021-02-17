@@ -123,8 +123,9 @@ class GAMSModel(Model):
         "use_temp_dir": True,
     }
 
-    def __init__(self, name=None, **model_options):
-        self.model_name = name or self.name
+    def __init__(self, name_=None, **model_options):
+        self.model_name = name_ or self.name
+
         for arg_name, default in self.defaults.items():
             setattr(self, arg_name, model_options.get(arg_name, default))
 
@@ -164,6 +165,7 @@ class GAMSModel(Model):
         command.extend(self.gams_args)
 
         if os.name == "nt":
+            # Join the commands to a single string
             command = " ".join(command)
 
         s_arg = dict(filters=dict(scenario=scenario))

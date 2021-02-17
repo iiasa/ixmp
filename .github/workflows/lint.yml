@@ -63,7 +63,7 @@ jobs:
       run: |
         pip install mypy
         # Also install packages that contain type stubs
-        pip install pytest xarray
+        pip install pytest genno xarray
         mypy .
 
     - name: Test package build

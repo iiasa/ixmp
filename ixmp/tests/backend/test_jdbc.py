@@ -260,15 +260,14 @@ def test_del_ts():
     assert len(mp._backend.jindex) == N_obj
 
 
+# NB coverage is omitted because this test is not included in the standard suite
 @pytest.mark.performance
-def test_gc_lowmem(request):  # prama: no cover
+def test_gc_lowmem(request):  # pragma: no cover
     """Test Java-side garbage collection (GC).
 
-    By default, this test limits the JVM memory to 7 MiB. To change this limit,
-    use the command-line option --jvm-mem-limit=7.
+    By default, this test limits the JVM memory to 7 MiB. To change this limit, use the
+    command-line option --jvm-mem-limit=7.
     """
-    # NB coverage is omitted because this test is not included in the standard
-    #    suite
 
     # Create a platform with a small memory limit (default 7 MiB)
     mp = ixmp.Platform(

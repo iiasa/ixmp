@@ -1,208 +1,123 @@
+Reporting API
+*************
+
 .. currentmodule:: ixmp.reporting
 
-Reporting
-*********
+:mod:`ixmp.reporting` is built on the :mod:`genno` package.
+This page provides only API documentation.
 
-Top-level methods and classes:
-
-.. autosummary::
-
-   configure
-   Reporter
-   Key
-   Quantity
-
-Others:
+- For an introduction and basic concepts, see :doc:`genno:usage` in the :mod:`genno` documentation.
+- For automatic reporting of :class:`message_ix.Scenario`, see :doc:`message_ix:reporting`.
 
 .. contents::
    :local:
    :depth: 3
 
-.. automethod:: ixmp.reporting.configure
+Top-level classes and functions
+===============================
+
+.. automodule:: ixmp.reporting
+
+The following top-level objects from :mod:`genno` may also be imported from
+:mod:`ixmp.reporting`.
+
+.. autosummary::
+
+   ~genno.core.exceptions.ComputationError
+   ~genno.core.key.Key
+   ~genno.core.exceptions.KeyExistsError
+   ~genno.core.exceptions.MissingKeyError
+   ~genno.core.quantity.Quantity
+   ~genno.config.configure
+
+:mod:`ixmp.reporting` additionally defines:
+
+.. autosummary::
+
+   Reporter
 
 .. autoclass:: ixmp.reporting.Reporter
    :members:
-   :exclude-members: graph, add, add_load_file, apply
+   :exclude-members: add_load_file
 
-   A Reporter is used to postprocess data from from one or more
-   :class:`ixmp.Scenario` objects. The :meth:`get` method can be used to:
+   A Reporter extends a :class:`genno.Computer` to postprocess data from one or more :class:`ixmp.Scenario` objects.
 
-   - Retrieve individual **quantities**. A quantity has zero or more
-     dimensions and optional units. Quantities include the ‘parameters’,
-     ‘variables’, ‘equations’, and ‘scalars’ available in an
-     :class:`ixmp.Scenario`.
+   Using the :meth:`.from_scenario`, a Reporter is automatically populated with:
 
-   - Generate an entire **report** composed of multiple quantities. A report
-     may:
-
-       - Read in non-model or exogenous data,
-       - Trigger output to files(s) or a database, or
-       - Execute user-defined methods.
-
-   Every report and quantity (including the results of intermediate steps) is
-   identified by a :class:`.Key`; all the keys in a Reporter can be listed with
-   :meth:`keys`.
-
-   Reporter uses a :doc:`graph <graphs>` data structure to keep track of
-   **computations**, the atomic steps in postprocessing: for example, a single
-   calculation that multiplies two quantities to create a third. The graph
-   allows :meth:`get` to perform *only* the requested computations. Advanced
-   users may manipulate the graph directly; but common reporting tasks can be
-   handled by using Reporter methods:
+   - :class:`Keys <.Key>` that retrieve the data for every :mod:`ixmp` item (parameter, variable, equation, or scalar) available in the Scenario.
 
    .. autosummary::
-      add
-      add_file
-      add_product
-      add_queue
-      add_single
-      aggregate
-      apply
-      check_keys
-      configure
-      describe
-      disaggregate
       finalize
-      full_key
-      get
-      keys
+      from_scenario
       set_filters
-      visualize
-      write
 
-   .. autoattribute:: graph
+   The Computer class provides the following methods:
 
-   .. automethod:: add
+   .. autosummary::
+      ~genno.core.computer.Computer.add
+      ~genno.core.computer.Computer.add_file
+      ~genno.core.computer.Computer.add_product
+      ~genno.core.computer.Computer.add_queue
+      ~genno.core.computer.Computer.add_single
+      ~genno.core.computer.Computer.aggregate
+      ~genno.core.computer.Computer.apply
+      ~genno.core.computer.Computer.check_keys
+      ~genno.core.computer.Computer.configure
+      ~genno.core.computer.Computer.convert_pyam
+      ~genno.core.computer.Computer.describe
+      ~genno.core.computer.Computer.disaggregate
+      ~genno.core.computer.Computer.full_key
+      ~genno.core.computer.Computer.get
+      ~genno.core.computer.Computer.infer_keys
+      ~genno.core.computer.Computer.keys
+      ~genno.core.computer.Computer.visualize
+      ~genno.core.computer.Computer.write
 
-      :meth:`add` may be called with:
 
-      - :class:`list` : `data` is a list of computations like ``[(list(args1), dict(kwargs1)), (list(args2), dict(kwargs2)), ...]`` that are added one-by-one.
-      - the name of a function in :mod:`.computations` (e.g. 'select'): A computation is added with key ``args[0]``, applying the named function to ``args[1:]`` and `kwargs`.
-      - :class:`str`, the name of a :class:`Reporter` method (e.g. 'apply'): the corresponding method (e.g. :meth:`apply`) is called with the `args` and `kwargs`.
-      - Any other :class:`str` or :class:`.Key`: the arguments are passed to :meth:`add_single`.
+Configuration
+=============
 
-      :meth:`add` may also be used to:
+:mod:`ixmp.reporting` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
 
-      - Provide an alias from one *key* to another:
+.. automethod:: ixmp.reporting.filters
 
-        >>> from message_ix.reporting import Reporter
-        >>> rep = Reporter()  # Create a new Reporter object
-        >>> rep.add('aliased name', 'original name')
+   Reporter-specific configuration.
 
-      - Define an arbitrarily complex computation in a Python function that
-        operates directly on the :class:`ixmp.Scenario`:
+   Affects data loaded from a Scenario using :func:`.data_for_quantity`, which filters the data before any other computation takes place.
+   Filters are stored at ``Reporter.graph["config"]["filters"]``.
 
-        >>> def my_report(scenario):
-        >>>     # many lines of code
-        >>>     return 'foo'
-        >>> rep.add('my report', (my_report, 'scenario'))
-        >>> rep.finalize(scenario)
-        >>> rep.get('my report')
-        foo
+   If no arguments are provided, *all* filters are cleared.
+   Otherwise, `filters` is a mapping of :class:`str` → (:class:`list` of :class:`str` or :obj:`None`.
+   Keys are dimension IDs.
+   Values are either lists of allowable labels along the respective dimension or :obj:`None` to clear any existing filters for that dimension.
 
-      .. note::
-         Use care when adding literal ``str()`` values as a *computation*
-         argument for :meth:`add`; these may conflict with keys that
-         identify the results of other computations.
+   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`.Reporter.configure`, or in a configuration file:
 
-   .. automethod:: apply
+   .. code-block:: yaml
 
-      The `generator` may have a type annotation for Reporter on its first positional argument.
-      In this case, a reference to the Reporter is supplied, and `generator` may use the Reporter methods to add computations:
+      filters:
+        # Exclude a label "x2" on the "x" dimension, etc.
+        x: [x1, x3, x4]
+        technology: [coal_ppl, wind_ppl]
+        # Clear existing filters for the "commodity" dimension
+        commodity: null
 
-      .. code-block:: python
+.. automethod:: ixmp.reporting.rename_dims
 
-         def gen0(r: ixmp.Reporter, **kwargs):
-             r.load_file('file0.txt', **kwargs)
-             r.load_file('file1.txt', **kwargs)
+   Reporter-specific configuration.
 
-         # Use the generator to add several computations
-         rep.apply(my_gen, units='kg')
+   Affects data loaded from a Scenario using :func:`.data_for_quantity`.
+   Native dimension names are mapped; in the example below, the dimension "i" is present in the Reporter as "i_renamed" on all quantities/keys in which it appears.
 
-      Or, `generator` may ``yield`` a sequence (0 or more) of (`key`, `computation`), which are added to the :attr:`graph`:
+   .. code-block:: yaml
 
-      .. code-block:: python
+       rename_dims:
+         i: i_renamed
 
-         def gen1(**kwargs):
-             op = partial(computations.load_file, **kwargs)
-             yield from (f'file:{i}', op, 'file{i}.txt') for i in range(2)
+.. automethod:: ixmp.reporting.units
 
-         rep.apply(my_gen, units='kg')
-
-.. autoclass:: ixmp.reporting.Key
-   :members:
-
-   Quantities in a :class:`Scenario` can be indexed by one or more dimensions.
-   A Key refers to a quantity using three components:
-
-   1. a string :attr:`name`,
-   2. zero or more ordered :attr:`dims`, and
-   3. an optional :attr:`tag`.
-
-   For example, an ixmp parameter with three dimensions can be initialized
-   with:
-
-   >>> scenario.init_par('foo', ['a', 'b', 'c'], ['apple', 'bird', 'car'])
-
-   Key allows a specific, explicit reference to various forms of “foo”:
-
-   - in its full resolution, i.e. indexed by a, b, and c:
-
-     >>> k1 = Key('foo', ['a', 'b', 'c'])
-     >>> k1 == 'foo:a-b-c'
-     True
-
-     Notice that a Key has the same hash, and compares equal (`==`) to its ``str()``.
-
-   - in a partial sum over one dimension, e.g. summed along c with dimensions
-     a and b:
-
-     >>> k2 = k1.drop('c')
-     >>> k2 == 'foo:a-b'
-     True
-
-   - in a partial sum over multiple dimensions, etc.:
-
-     >>> k1.drop('a', 'c') == k2.drop('a') == 'foo:b'
-     True
-
-   .. note::
-        Some remarks:
-
-        - ``repr(key)`` prints the Key in angle brackets ('<>') to signify it is a Key object.
-
-          >>> repr(k1)
-          <foo:a-b-c>
-
-        - Keys are *immutable*: the properties :attr:`name`, :attr:`dims`, and :attr:`tag` are read-only, and the methods :meth:`append`, :meth:`drop`, and :meth:`add_tag` return *new* Key objects.
-
-        - Keys may be generated concisely by defining a convenience method:
-
-          >>> def foo(dims):
-          >>>     return Key('foo', dims.split())
-          >>> foo('a b c')
-          foo:a-b-c
-
-.. autodata:: ixmp.reporting.Quantity(data, *args, **kwargs)
-   :annotation:
-
-The :data:`.Quantity` constructor converts its arguments to an internal, :class:`xarray.DataArray`-like data format:
-
-.. code-block:: python
-
-   # Existing data
-   data = pd.Series(...)
-
-   # Convert to a Quantity for use in reporting calculations
-   qty = Quantity(data, name="Quantity name", units="kg")
-   rep.add("new_qty", qty)
-
-Common :mod:`ixmp.reporting` usage, e.g. in :mod:`message_ix`, creates large, sparse data frames (billions of possible elements, but <1% populated); :class:`~xarray.DataArray`'s default, 'dense' storage format would be too large for available memory.
-
-- Currently, Quantity is :class:`.AttrSeries`, a wrapped :class:`pandas.Series` that behaves like a :class:`~xarray.DataArray`.
-- In the future, :mod:`ixmp.reporting` will use :class:`.SparseDataArray`, and eventually :class:`~xarray.DataArray` backed by sparse data, directly.
-
-The goal is that reporting code, including built-in and user computations, can treat quantity arguments as if they were :class:`~xarray.DataArray`.
+   The only difference from :func:`genno.config.units` is that this handler keeps the configuration values stored in ``Reporter.graph["config"]``.
+   This is so that :func:`.data_for_quantity` can make use of ``["units"]["apply"]``
 
 
 Computations
@@ -211,55 +126,35 @@ Computations
 .. automodule:: ixmp.reporting.computations
    :members:
 
-   Unless otherwise specified, these methods accept and return
-   :class:`Quantity <ixmp.reporting.utils.Quantity>` objects for data
-   arguments/return values.
-
-   Calculations:
+   :mod:`ixmp.reporting` defines these computations:
 
    .. autosummary::
-      add
-      aggregate
-      apply_units
-      disaggregate_shares
-      product
-      ratio
-      select
-      sum
+      data_for_quantity
+      map_as_qty
+      update_scenario
 
-   Input and output:
+   Basic computations are defined by :mod:`genno.computation`; and its compatibility modules; see there for details:
 
    .. autosummary::
-      load_file
-      write_report
-
-   Data manipulation:
-
-   .. autosummary::
-      concat
-
-
-Internal format for reporting quantities
-========================================
-
-.. currentmodule:: ixmp.reporting.quantity
-
-.. automodule:: ixmp.reporting.quantity
-   :members: assert_quantity
-
-.. currentmodule:: ixmp.reporting.attrseries
-
-.. automodule:: ixmp.reporting.attrseries
-   :members:
-
-.. currentmodule:: ixmp.reporting.sparsedataarray
-
-.. automodule:: ixmp.reporting.sparsedataarray
-   :members: SparseDataArray, SparseAccessor
-
+      ~genno.compat.plotnine.Plot
+      ~genno.computations.add
+      ~genno.computations.aggregate
+      ~genno.computations.apply_units
+      ~genno.compat.pyam.computations.as_pyam
+      ~genno.computations.broadcast_map
+      ~genno.computations.combine
+      ~genno.computations.concat
+      ~genno.computations.disaggregate_shares
+      ~genno.computations.group_sum
+      ~genno.computations.load_file
+      ~genno.computations.product
+      ~genno.computations.ratio
+      ~genno.computations.select
+      ~genno.computations.sum
+      ~genno.computations.write_report
 
 Utilities
 =========
 
-.. automodule:: ixmp.reporting.utils
+.. automodule:: ixmp.reporting.util
    :members:

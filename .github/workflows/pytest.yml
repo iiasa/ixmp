@@ -49,6 +49,11 @@ jobs:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}
 
     steps:
+    - name: Cancel previous runs that have not completed
+      uses: styfle/cancel-workflow-action@0.7.0
+      with:
+        access_token: ${{ github.token }}
+
     - uses: actions/checkout@v2
       with:
         fetch-depth: ${{ env.depth }}

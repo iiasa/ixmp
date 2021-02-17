@@ -1,114 +1,14 @@
-"""Elementary computations for reporting."""
-# Notes:
-# - To avoid ambiguity, computations should not have default arguments. Define
-#   default values for the corresponding methods on the Reporter class.
 import logging
-from collections.abc import Mapping
-from pathlib import Path
-from warnings import filterwarnings
+from itertools import zip_longest
 
 import pandas as pd
 import pint
+from genno.core.quantity import Quantity
+from genno.util import parse_units
 
-from .quantity import Quantity, assert_quantity
-from .utils import (
-    RENAME_DIMS,
-    collect_units,
-    dims_for_qty,
-    filter_concat_args,
-    get_reversed_rename_dims,
-    parse_units,
-)
-
-__all__ = [
-    "aggregate",
-    "apply_units",
-    "concat",
-    "data_for_quantity",
-    "disaggregate_shares",
-    "load_file",
-    "product",
-    "ratio",
-    "select",
-    "sum",
-    "write_report",
-]
-
-
-# sparse 0.9.1, numba 0.49.0, triggered by xarray import
-for msg in [
-    "No direct replacement for 'numba.targets' available",
-    "An import was requested from a module that has moved location.",
-]:
-    filterwarnings(action="ignore", message=msg, module="sparse._coo.numba_extension")
-
-import xarray as xr  # noqa: E402
+from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
 
 log = logging.getLogger(__name__)
-
-# Carry unit attributes automatically
-xr.set_options(keep_attrs=True)
-
-
-def add(*quantities, fill_value=0.0):
-    """Sum across multiple *quantities*."""
-    # TODO check units
-    assert_quantity(*quantities)
-
-    if Quantity.CLASS == "SparseDataArray":
-        quantities = map(Quantity, xr.broadcast(*quantities))
-
-    # Initialize result values with first entry
-    items = iter(quantities)
-    result = next(items)
-
-    # Iterate over remaining entries
-    for q in items:
-        if Quantity.CLASS == "AttrSeries":
-            result = result.add(q, fill_value=fill_value).dropna()
-        else:
-            result = result + q
-
-    return result
-
-
-def apply_units(qty, units, quiet=False):
-    """Simply apply *units* to *qty*.
-
-    Logs on level ``WARNING`` if *qty* already has existing units.
-
-    Parameters
-    ----------
-    qty : .Quantity
-    units : str or pint.Unit
-        Units to apply to *qty*
-    quiet : bool, optional
-        If :obj:`True` log on level ``DEBUG``.
-    """
-    registry = pint.get_application_registry()
-
-    existing = qty.attrs.get("_unit", None)
-    existing_dims = getattr(existing, "dimensionality", {})
-    new_units = registry.parse_units(units)
-
-    if len(existing_dims):
-        # Some existing dimensions: log a message either way
-        if existing_dims == new_units.dimensionality:
-            log.debug(f"Convert '{existing}' to '{new_units}'")
-            # NB use a factor because pint.Quantity cannot wrap AttrSeries
-            factor = registry.Quantity(1.0, existing).to(new_units).magnitude
-            result = qty * factor
-        else:
-            msg = f"Replace '{existing}' with incompatible '{new_units}'"
-            log.warning(msg)
-            result = qty.copy()
-    else:
-        # No units, or dimensionless
-        result = qty.copy()
-
-    result.attrs["_unit"] = new_units
-
-    return result
 
 
 def data_for_quantity(ix_type, name, column, scenario, config):
@@ -121,15 +21,14 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     name : str
         Name of the ixmp object.
     column : 'mrg' or 'lvl' or 'value'
-        Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,
-        and 'level' otherwise.
+        Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,and
+        'level' otherwise.
     scenario : ixmp.Scenario
         Scenario containing data to be retrieved.
     config : dict of (str -> dict)
-        The key 'filters' may contain a mapping from dimensions to iterables
-        of allowed values along each dimension.
-        The key 'units'/'apply' may contain units to apply to the quantity; any
-        such units overwrite existing units, without conversion.
+        The key 'filters' may contain a mapping from dimensions to iterables of allowed
+        values along each dimension. The key 'units'/'apply' may contain units to apply
+        to the quantity; any such units overwrite existing units, without conversion.
 
     Returns
     -------
@@ -162,17 +61,15 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     data = getattr(scenario, ix_type)(name, filters)
 
     # ixmp/GAMS scalar is not returned as pd.DataFrame
-    if isinstance(data, dict):
+    if isinstance(data, dict):  # pragma: no cover
         data = pd.DataFrame.from_records([data])
 
     # Warn if no values are returned.
-    # TODO construct an empty Quantity with the correct dimensions *even if* no
-    #      values are returned.
+    # TODO construct an empty Quantity with the correct dimensions *even if* no values
+    #      are returned.
     if len(data) == 0:
-        log.warning(
-            f"0 values for {ix_type} {repr(name)} using filters:\n"
-            f"  {repr(filters)}\n  Subsequent computations may fail."
-        )
+        log.debug(f"0 values for {ix_type} {repr(name)} using filters: {repr(filters)}")
+        log.debug("May be the cause of subsequent errors.")
 
     # Convert columns with categorical dtype to str
     data = data.astype(
@@ -189,7 +86,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     # Remove the unit from the DataFrame
     try:
         attrs = {"_unit": parse_units(data.pop("unit"))}
-    except KeyError:
+    except KeyError:  # pragma: no cover
         # 'equ' are returned without units
         attrs = {}
     except ValueError as e:
@@ -208,7 +105,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
         pass
     else:
         log.info(
-            f"{name}: replace units {attrs.get('_unit', '(none)')} with " f"{new_unit}"
+            f"{name}: replace units {attrs.get('_unit', '(none)')} with {new_unit}"
         )
         attrs["_unit"] = registry.Unit(new_unit)
 
@@ -232,260 +129,68 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     return qty
 
 
-def aggregate(quantity, groups, keep):
-    """Aggregate *quantity* by *groups*.
+def map_as_qty(set_df: pd.DataFrame, full_set):
+    """Convert *set_df* to a :class:`.Quantity`.
+
+    For the MESSAGE sets named ``cat_*`` (see :ref:`message_ix:mapping-sets`)
+    :meth:`ixmp.Scenario.set` returns a :class:`~pandas.DataFrame` with two columns:
+    the *category* set (S1) elements and the *category member* set (S2, also required
+    as the argument `full_set`) elements.
+
+    map_as_qty converts such a DataFrame (*set_df*) into a Quantity with two
+    dimensions. At the coordinates *(s₁, s₂)*, the value is 1 if *s₂* is mapped from
+    *s₁*; otherwise 0.
+
+    A category named 'all', containing all elements of `full_set`, is added
+    automatically.
+
+    See also
+    --------
+    .broadcast_map
+    """
+    set_from, set_to = set_df.columns
+    names = [RENAME_DIMS.get(c, c) for c in set_df.columns]
+
+    # Add an 'all' mapping
+    set_df = pd.concat(
+        [set_df, pd.DataFrame([("all", e) for e in full_set], columns=set_df.columns)]
+    )
+
+    # Add a value column
+    set_df["value"] = 1
+
+    return (
+        set_df.set_index([set_from, set_to])["value"]
+        .rename_axis(index=names)
+        .pipe(Quantity)
+    )
+
+
+def update_scenario(scenario, *quantities, params=[]):
+    """Update *scenario* with computed data from reporting *quantities*.
 
     Parameters
     ----------
-    quantity : :class:`Quantity <ixmp.reporting.utils.Quantity>`
-    groups: dict of dict
-        Top-level keys are the names of dimensions in `quantity`. Second-level
-        keys are group names; second-level values are lists of labels along the
-        dimension to sum into a group.
-    keep : bool
-        If True, the members that are aggregated into a group are returned with
-        the group sums. If False, they are discarded.
-
-    Returns
-    -------
-    :class:`Quantity <ixmp.reporting.utils.Quantity>`
-        Same dimensionality as `quantity`.
-
+    scenario : .Scenario
+    quantities : .Quantity or pd.DataFrame
+        If DataFrame, must be valid input to :meth:`.Scenario.add_par`.
+    params : list of str, optional
+        For every element of `quantities` that is a pd.DataFrame, the element of
+        `params` at the same index gives the name of the parameter to update.
     """
-    attrs = quantity.attrs.copy()
+    log.info("Update '{0.model}/{0.scenario}#{0.version}'".format(scenario))
+    scenario.check_out()
 
-    for dim, dim_groups in groups.items():
-        # Optionally keep the original values
-        values = [quantity] if keep else []
+    for order, (qty, par_name) in enumerate(zip_longest(quantities, params)):
+        if not isinstance(qty, pd.DataFrame):
+            # Convert a Quantity to a DataFrame
+            par_name = qty.name
+            new = qty.to_series().reset_index().rename(columns={par_name: "value"})
+            new["unit"] = "{:~}".format(qty.attrs["_unit"])  # type: ignore [str-format]
+            qty = new
 
-        # Aggregate each group
-        for group, members in dim_groups.items():
-            agg = (
-                quantity.sel({dim: members}).sum(dim=dim).assign_coords(**{dim: group})
-            )
-            if Quantity.CLASS == "AttrSeries":
-                # .transpose() is necesary for AttrSeries
-                agg = agg.transpose(*quantity.dims)
-            else:
-                # Restore fill_value=NaN for compatibility
-                agg = agg._sda.convert()
-            values.append(agg)
+        # Add the data
+        log.info(f"  {repr(par_name)} ← {len(qty)} rows")
+        scenario.add_par(par_name, qty)
 
-        # Reassemble to a single dataarray
-        quantity = concat(*values, dim=dim)
-
-    # Preserve attrs
-    quantity.attrs = attrs
-
-    return quantity
-
-
-def concat(*objs, **kwargs):
-    """Concatenate Quantity *objs*.
-
-    Any strings included amongst *args* are discarded, with a logged warning;
-    these usually indicate that a quantity is referenced which is not in the
-    Reporter.
-    """
-    objs = filter_concat_args(objs)
-    if Quantity.CLASS == "AttrSeries":
-        # Silently discard any "dim" keyword argument
-        kwargs.pop("dim", None)
-        return pd.concat(objs, **kwargs)
-    else:
-        # Correct fill-values
-        return xr.concat(objs, **kwargs)._sda.convert()
-
-
-def disaggregate_shares(quantity, shares):
-    """Disaggregate *quantity* by *shares*."""
-    result = quantity * shares
-    result.attrs["_unit"] = collect_units(quantity)[0]
-    return result
-
-
-def product(*quantities):
-    """Return the product of any number of *quantities*."""
-    # Iterator over (quantity, unit) tuples
-    items = zip(quantities, collect_units(*quantities))
-
-    # Initialize result values with first entry
-    result, u_result = next(items)
-
-    # Iterate over remaining entries
-    for q, u in items:
-        if Quantity.CLASS == "AttrSeries":
-            # Work around pandas-dev/pandas#25760; see attrseries.py
-            result = (result * q.align_levels(result)).dropna()
-        else:
-            result = result * q
-        u_result *= u
-
-    result.attrs["_unit"] = u_result
-
-    return result
-
-
-def ratio(numerator, denominator):
-    """Return the ratio *numerator* / *denominator*.
-
-    Parameters
-    ----------
-    numerator : .Quantity
-    denominator : .Quantity
-    """
-    # Handle units
-    u_num, u_denom = collect_units(numerator, denominator)
-
-    result = numerator / denominator
-
-    # This shouldn't be necessary; would instead prefer:
-    # result.attrs["_unit"] = u_num / u_denom
-    # … but is necessary to avoid an issue when the operands are different Unit classes
-    ureg = pint.get_application_registry()
-    result.attrs["_unit"] = ureg.Unit(u_num) / ureg.Unit(u_denom)
-
-    if Quantity.CLASS == "AttrSeries":
-        result.dropna(inplace=True)
-
-    return result
-
-
-def select(qty, indexers, inverse=False):
-    """Select from *qty* based on *indexers*.
-
-    Parameters
-    ----------
-    qty : .Quantity
-    indexers : dict (str -> list of str)
-        Elements to be selected from *qty*. Mapping from dimension names to
-        labels along each dimension.
-    inverse : bool, optional
-        If :obj:`True`, *remove* the items in indexers instead of keeping them.
-    """
-    if inverse:
-        new_indexers = {}
-        for dim, labels in indexers.items():
-            new_indexers[dim] = list(
-                filter(lambda l: l not in labels, qty.coords[dim].data)
-            )
-        indexers = new_indexers
-
-    return qty.sel(indexers)
-
-
-def sum(quantity, weights=None, dimensions=None):
-    """Sum *quantity* over *dimensions*, with optional *weights*.
-
-    Parameters
-    ----------
-    quantity : .Quantity
-    weights : .Quantity, optional
-        If *dimensions* is given, *weights* must have at least these
-        dimensions. Otherwise, any dimensions are valid.
-    dimensions : list of str, optional
-        If not provided, sum over all dimensions. If provided, sum over these
-        dimensions.
-    """
-    if weights is None:
-        weights, w_total = 1, 1
-    else:
-        w_total = weights.sum(dim=dimensions)
-
-    result = (quantity * weights).sum(dim=dimensions) / w_total
-    result.attrs["_unit"] = collect_units(quantity)[0]
-
-    return result
-
-
-# Input and output
-def load_file(path, dims={}, units=None):
-    """Read the file at *path* and return its contents as a :class:`.Quantity`.
-
-    Some file formats are automatically converted into objects for direct use
-    in reporting code:
-
-    :file:`.csv`:
-       Converted to :class:`.Quantity`. CSV files must have a 'value' column;
-       all others are treated as indices, except as given by `dims`. Lines
-       beginning with '#' are ignored.
-
-    Parameters
-    ----------
-    path : pathlib.Path
-        Path to the file to read.
-    dims : collections.abc.Collection or collections.abc.Mapping, optional
-        If a collection of names, other columns besides these and 'value' are
-        discarded. If a mapping, the keys are the column labels in `path`, and
-        the values are the target dimension names.
-    units : str or pint.Unit
-        Units to apply to the loaded Quantity.
-    """
-    # TODO optionally cache: if the same Reporter is used repeatedly, then the
-    #      file will be read each time; instead cache the contents in memory.
-    if path.suffix == ".csv":
-        data = pd.read_csv(path, comment="#")
-
-        # Index columns
-        index_columns = data.columns.tolist()
-        index_columns.remove("value")
-
-        try:
-            # Retrieve the unit column from the file
-            units_col = data.pop("unit").unique()
-            index_columns.remove("unit")
-        except KeyError:
-            pass  # No such column; use None or argument value
-        else:
-            # Use a unique value for units of the quantity
-            if len(units_col) > 1:
-                raise ValueError(
-                    f"Cannot load {path} with non-unique units " + repr(units_col)
-                )
-            elif units and units not in units_col:
-                raise ValueError(
-                    f"Explicit units {units} do not match " f"{units_col[0]} in {path}"
-                )
-            units = units_col[0]
-
-        if len(dims):
-            # Use specified dimensions
-            if not isinstance(dims, Mapping):
-                # Convert a list, set, etc. to a dict
-                dims = {d: d for d in dims}
-
-            # - Drop columns not mentioned in *dims*
-            # - Rename columns according to *dims*
-            data = data.drop(columns=set(index_columns) - set(dims.keys())).rename(
-                columns=dims
-            )
-            index_columns = list(dims.values())
-
-        return Quantity(data.set_index(index_columns)["value"], units=units)
-    elif path.suffix in (".xls", ".xlsx"):
-        # TODO define expected Excel data input format
-        raise NotImplementedError  # pragma: no cover
-    elif path.suffix == ".yaml":
-        # TODO define expected YAML data input format
-        raise NotImplementedError  # pragma: no cover
-    else:
-        # Default
-        return open(path).read()
-
-
-def write_report(quantity, path):
-    """Write a quantity to a file.
-
-    Parameters
-    ----------
-    path : str or Path
-        Path to the file to be written.
-    """
-    path = Path(path)
-
-    if path.suffix == ".csv":
-        quantity.to_dataframe().to_csv(path)
-    elif path.suffix == ".xlsx":
-        quantity.to_dataframe().to_excel(path, merge_cells=False)
-    else:
-        path.write_text(quantity)
+    scenario.commit(f"Data added using {__name__}")

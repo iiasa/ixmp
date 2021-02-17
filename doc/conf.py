@@ -98,6 +98,7 @@ extlinks = {
 
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
+    "genno": ("https://genno.readthedocs.io/en/latest", None),
     "jpype": ("https://jpype.readthedocs.io/en/latest", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),

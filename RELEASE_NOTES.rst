@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- :pull:`397`: Adjust :mod:`ixmp.reporting` to use :mod:`genno`.
 - :pull:`396`: Fix two minor bugs in reporting.
 
 v3.2.0 (2021-01-24)

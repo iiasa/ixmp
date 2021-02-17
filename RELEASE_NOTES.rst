@@ -4,6 +4,10 @@ Next release
 All changes
 -----------
 
+- :pull:`398`:
+
+  - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows.
+  - Format user-friendly exceptions when GAMSModel errors (:issue:`383`).
 - :pull:`397`: Adjust :mod:`ixmp.reporting` to use :mod:`genno`.
 - :pull:`396`: Fix two minor bugs in reporting.
 

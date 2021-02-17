@@ -8,6 +8,10 @@ from ixmp.utils import maybe_check_out, maybe_commit
 log = logging.getLogger(__name__)
 
 
+class ModelError(Exception):
+    """Error in model code, e.g. :meth:`.Model.run`."""
+
+
 class Model(ABC):
     #: Name of the model.
     name = "base"

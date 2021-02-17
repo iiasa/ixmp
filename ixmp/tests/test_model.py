@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from ixmp import Scenario
-from ixmp.model.base import Model
+from ixmp.model.base import Model, ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import gams_version
 from ixmp.testing import assert_logs, make_dantzig
@@ -18,20 +18,6 @@ def test_base_model():
         TypeError, match="Can't instantiate abstract class M1 " "with abstract methods"
     ):
         M1()
-
-
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        dict(comment=None),
-        dict(equ_list=None, var_list=["x"]),
-        dict(equ_list=["demand", "supply"], var_list=[]),
-    ],
-    ids=["null-comment", "null-list", "empty-list"],
-)
-def test_GAMSModel_solve(test_mp, test_data_path, kwargs):
-    s = make_dantzig(test_mp)
-    s.solve(model="dantzig", **kwargs)
 
 
 def test_model_initialize(test_mp, caplog):
@@ -128,3 +114,32 @@ class TestGAMSModel:
         # This name_ keyword argument ends up received to GAMSModel.__init__ and sets
         # the GAMSModel.model_name attribute, and in turn the GDX file names used.
         s.solve(name_=name)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(comment=None),
+            dict(equ_list=None, var_list=["x"]),
+            dict(equ_list=["demand", "supply"], var_list=[]),
+        ],
+        ids=["null-comment", "null-list", "empty-list"],
+    )
+    def test_GAMSModel_solve(test_data_path, dantzig, kwargs):
+        dantzig.clone().solve(**kwargs)
+
+    def test_error_message(self, test_data_path, test_mp):
+        """GAMSModel.solve() displays a user-friendly message on error."""
+        # Empty Scenario
+        s = Scenario(test_mp, model="foo", scenario="bar", version="new")
+        s.commit("Initial commit")
+
+        with pytest.raises(
+            ModelError,
+            match=f"""GAMS errored with return code 2:
+    There was a compilation error
+
+For details, see the terminal output above, plus:
+Listing   : {test_data_path}/_abort.lst
+Input data: {test_data_path}/default_in.gdx""",
+        ):
+            s.solve(model_file=test_data_path / "_abort.gms", use_temp_dir=False)

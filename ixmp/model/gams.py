@@ -1,5 +1,6 @@
 import os
 import re
+from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_call
 from tempfile import TemporaryDirectory
@@ -168,6 +169,7 @@ class GAMSModel(Model):
     def __init__(self, name_=None, **model_options):
         self.model_name = self.clean_path(name_ or self.name)
 
+        # Store options from `model_options`, otherwise from `defaults`
         for arg_name, default in self.defaults.items():
             setattr(self, arg_name, model_options.get(arg_name, default))
 
@@ -209,7 +211,8 @@ class GAMSModel(Model):
         if self.use_temp_dir:
             # Create a temp directory; automatically deleted at the end of this method
             _temp_dir = TemporaryDirectory()
-            self.temp_dir = _temp_dir.name
+            self.temp_dir = Path(_temp_dir.name)
+            print(self.temp_dir)
 
         # Process args in order to assemble the full command
         command = ["gams"]
@@ -233,6 +236,7 @@ class GAMSModel(Model):
         if os.name == "nt":
             # Windows: join the commands to a single string
             command = " ".join(command)
+            print(command)
 
         # Common argument for write_file and read_file
         s_arg = dict(filters=dict(scenario=scenario))

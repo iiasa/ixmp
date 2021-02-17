@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pytest
 
@@ -133,13 +134,21 @@ class TestGAMSModel:
         s = Scenario(test_mp, model="foo", scenario="bar", version="new")
         s.commit("Initial commit")
 
+        # Expected paths for error message
+        paths = map(
+            lambda name: re.escape(str(test_data_path.joinpath(name))),
+            ["_abort.lst", "default_in.gdx"],
+        )
+
         with pytest.raises(
             ModelError,
-            match=f"""GAMS errored with return code 2:
+            match="""GAMS errored with return code 2:
     There was a compilation error
 
 For details, see the terminal output above, plus:
-Listing   : {test_data_path}/_abort.lst
-Input data: {test_data_path}/default_in.gdx""",
+Listing   : {}
+Input data: {}""".format(
+                *paths
+            ),
         ):
             s.solve(model_file=test_data_path / "_abort.gms", use_temp_dir=False)

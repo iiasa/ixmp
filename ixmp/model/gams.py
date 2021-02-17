@@ -124,7 +124,7 @@ class GAMSModel(Model):
     }
 
     def __init__(self, name_=None, **model_options):
-        self.model_name = name_ or self.name
+        self.model_name = self.clean_path(name_ or self.name)
 
         for arg_name, default in self.defaults.items():
             setattr(self, arg_name, model_options.get(arg_name, default))
@@ -181,6 +181,7 @@ class GAMSModel(Model):
 
         # Invoke GAMS
         cwd = self.temp_dir if self.use_temp_dir else model_file.parent
+        print(command)
         check_call(command, shell=os.name == "nt", cwd=cwd)
 
         # Read model solution

@@ -1,14 +1,17 @@
+import logging
 import os
 import re
-from copy import copy
+import shutil
+import tempfile
 from pathlib import Path
 from subprocess import CalledProcessError, check_call
-from tempfile import TemporaryDirectory
 from typing import Mapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError
 from ixmp.utils import as_str_list
+
+log = logging.getLogger(__name__)
 
 
 def gams_version():
@@ -196,57 +199,78 @@ class GAMSModel(Model):
         return self.format(getattr(self, name))
 
     def format(self, value):
-        """Helper for recursive formatting of model options."""
+        """Helper for recursive formatting of model options.
+
+        `value` is formatted with replacements from the attributes of `self`.
+        """
         try:
             return value.format(**self.__dict__)
         except AttributeError:
             # Something like a Path; don't format it
             return value
 
+    def remove_temp_dir(self, msg="after run()"):
+        """Remove the temporary directory, if any."""
+        try:
+            if self.use_temp_dir and self.cwd.exists():
+                shutil.rmtree(self.cwd)
+        except AttributeError:
+            pass  # No .cwd, e.g. in a subclass
+        except PermissionError as e:
+            log.debug(f"Could not delete {repr(self.cwd)} {msg}")
+            log.debug(str(e))
+
+    def __del__(self):
+        # Try once more to remove the temporary directory.
+        # This appears to still fail on Windows.
+        self.remove_temp_dir("at GAMSModel teardown")
+
     def run(self, scenario):
         """Execute the model."""
         # Store the scenario so its attributes can be referenced by format()
         self.scenario = scenario
 
-        if self.use_temp_dir:
-            # Create a temp directory; automatically deleted at the end of this method
-            _temp_dir = TemporaryDirectory()
-            self.temp_dir = Path(_temp_dir.name)
-            print(self.temp_dir)
-
-        # Process args in order to assemble the full command
-        command = ["gams"]
-
+        # Format or retrieve the model file option
         model_file = Path(self.format_option("model_file"))
-        command.append(f'"{model_file}"')
 
-        # Now can determine the current working directory
-        self.cwd = self.temp_dir if self.use_temp_dir else model_file.parent
+        # Determine working directory for the GAMS call, possibly a temporary directory
+        self.cwd = Path(tempfile.mkdtemp()) if self.use_temp_dir else model_file.parent
         # The "case" name
         self.case = self.format_option("case").replace(" ", "_")
         # Input and output file names
         self.in_file = Path(self.format_option("in_file"))
         self.out_file = Path(self.format_option("out_file"))
 
-        # Add model-specific arguments
-        command.extend(self.format(arg) for arg in self.solve_args)
-        # General GAMS arguments
-        command.extend(self.gams_args)
+        # Assemble the full command: executable, model file, model-specific arguments,
+        # and general GAMS arguments
+        command = (
+            ["gams", f'"{model_file}"']
+            + [self.format(arg) for arg in self.solve_args]
+            + self.gams_args
+        )
 
         if os.name == "nt":
             # Windows: join the commands to a single string
             command = " ".join(command)
-            print(command)
+
+        # Remove stored reference to the Scenario to allow it to be GC'd later
+        delattr(self, "scenario")
 
         # Common argument for write_file and read_file
         s_arg = dict(filters=dict(scenario=scenario))
+
         try:
             # Write model data to file
             scenario.platform._backend.write_file(
                 self.in_file, ItemType.SET | ItemType.PAR, **s_arg
             )
         except NotImplementedError:  # pragma: no cover
-            # Currently there is no such Backend
+            # No coverage because there currently is no such Backend that doesn't
+            # support GDX
+
+            # Remove the temporary directory, which should be empty
+            self.remove_temp_dir()
+
             raise NotImplementedError(
                 "GAMSModel requires a Backend that can write to GDX files, e.g. "
                 "JDBCBackend"
@@ -256,6 +280,7 @@ class GAMSModel(Model):
             # Invoke GAMS
             check_call(command, shell=os.name == "nt", cwd=self.cwd)
         except CalledProcessError as exc:
+            # Do not remove self.temp_dir; the user may want to inspect the GDX file
             raise self.format_exception(exc, model_file) from None
 
         # Read model solution
@@ -268,3 +293,6 @@ class GAMSModel(Model):
             equ_list=as_str_list(self.equ_list) or [],
             var_list=as_str_list(self.var_list) or [],
         )
+
+        # Finished: remove the temporary directory, if any
+        self.remove_temp_dir()

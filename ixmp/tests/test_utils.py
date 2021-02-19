@@ -135,6 +135,11 @@ def test_diff_items(test_mp):
         pass  # No check of the contents
 
 
+def test_logger_deprecated():
+    with pytest.warns(DeprecationWarning):
+        utils.logger()
+
+
 m_s = dict(model="m", scenario="s")
 
 URLS = [

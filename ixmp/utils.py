@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 from urllib.parse import urlparse
+from warnings import warn
 
 import pandas as pd
 
@@ -31,6 +32,11 @@ def logger():
           # Example: set the level to INFO
           ixmp_logger.setLevel(logging.INFO)
     """
+    warn(
+        "ixmp.utils.logger() is deprecated as of 3.3.0, and will be removed in ixmp "
+        '5.0. Use logging.getLogger("ixmp").',
+        DeprecationWarning,
+    )
     return logging.getLogger("ixmp")
 
 

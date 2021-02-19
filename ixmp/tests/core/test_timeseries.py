@@ -246,9 +246,7 @@ def test_add_timeseries_with_extra_col(caplog, ts, fmt):
     ts.add_timeseries(data)
     # TODO: add check that warning message is displayed
     ts.commit("")
-    assert ["dropping index columns ['climate_model'] from data"] == [
-        rec.message for rec in caplog.records
-    ]
+    assert ["Dropped extra column(s) ['climate_model'] from data"] == caplog.messages
 
 
 @pytest.mark.parametrize("fmt", ["long", "wide"])

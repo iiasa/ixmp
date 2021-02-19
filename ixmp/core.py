@@ -619,7 +619,7 @@ class TimeSeries:
             i for i in df.columns if i not in ["model", "scenario"] + year_cols
         ]
         if len(other_cols) > 0:
-            log.warning(f"Dropping index columns {other_cols} from data")
+            log.warning(f"Dropped extra column(s) {other_cols} from data")
 
         df = df.loc[:, year_cols]
 

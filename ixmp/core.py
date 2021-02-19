@@ -501,7 +501,7 @@ class TimeSeries:
         # Instruct the back end to free memory associated with the TimeSeries
         try:
             self._backend("del_ts")
-        except ReferenceError:
+        except (AttributeError, ReferenceError):
             pass  # The Platform has already been garbage-collected
 
     # Transactions and versioning

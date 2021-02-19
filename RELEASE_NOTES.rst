@@ -4,6 +4,8 @@ Next release
 All changes
 -----------
 
+- Deprecate :func:`.utils.logger` (:pull:`399`).
+- Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
 - :pull:`398`:
 
   - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows.

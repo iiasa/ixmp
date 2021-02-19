@@ -262,8 +262,7 @@ class Platform:
             database user and timestamp are appended automatically.
         """
         if unit in self.units():
-            msg = "unit `{}` is already defined in the platform instance"
-            logger().info(msg.format(unit))
+            log.info(f"unit `{unit}` is already defined in the platform instance")
             return
 
         self._backend.set_unit(unit, comment)

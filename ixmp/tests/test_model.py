@@ -1,9 +1,10 @@
 import logging
+import re
 
 import pytest
 
 from ixmp import Scenario
-from ixmp.model.base import Model
+from ixmp.model.base import Model, ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import gams_version
 from ixmp.testing import assert_logs, make_dantzig
@@ -18,20 +19,6 @@ def test_base_model():
         TypeError, match="Can't instantiate abstract class M1 " "with abstract methods"
     ):
         M1()
-
-
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        dict(comment=None),
-        dict(equ_list=None, var_list=["x"]),
-        dict(equ_list=["demand", "supply"], var_list=[]),
-    ],
-    ids=["null-comment", "null-list", "empty-list"],
-)
-def test_GAMSModel(test_mp, test_data_path, kwargs):
-    s = make_dantzig(test_mp)
-    s.solve(model="dantzig", **kwargs)
 
 
 def test_model_initialize(test_mp, caplog):
@@ -111,3 +98,57 @@ def test_model_initialize(test_mp, caplog):
 def test_gams_version():
     # Returns a version string like X.Y.Z
     assert len(gams_version().split(".")) == 3
+
+
+class TestGAMSModel:
+    @pytest.fixture(scope="class")
+    def dantzig(self, test_mp):
+        yield make_dantzig(test_mp)
+
+    @pytest.mark.parametrize("char", r'<>"/\|?*')
+    def test_filename_invalid_char(self, dantzig, char):
+        """Model can be solved with invalid character names."""
+        name = f"foo{char}bar"
+        s = dantzig.clone(model=name, scenario=name)
+
+        # Indirectly test backend.write_file("….gdx")
+        # This name_ keyword argument ends up received to GAMSModel.__init__ and sets
+        # the GAMSModel.model_name attribute, and in turn the GDX file names used.
+        s.solve(name_=name)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(comment=None),
+            dict(equ_list=None, var_list=["x"]),
+            dict(equ_list=["demand", "supply"], var_list=[]),
+        ],
+        ids=["null-comment", "null-list", "empty-list"],
+    )
+    def test_GAMSModel_solve(test_data_path, dantzig, kwargs):
+        dantzig.clone().solve(**kwargs)
+
+    def test_error_message(self, test_data_path, test_mp):
+        """GAMSModel.solve() displays a user-friendly message on error."""
+        # Empty Scenario
+        s = Scenario(test_mp, model="foo", scenario="bar", version="new")
+        s.commit("Initial commit")
+
+        # Expected paths for error message
+        paths = map(
+            lambda name: re.escape(str(test_data_path.joinpath(name))),
+            ["_abort.lst", "default_in.gdx"],
+        )
+
+        with pytest.raises(
+            ModelError,
+            match="""GAMS errored with return code 2:
+    There was a compilation error
+
+For details, see the terminal output above, plus:
+Listing   : {}
+Input data: {}""".format(
+                *paths
+            ),
+        ):
+            s.solve(model_file=test_data_path / "_abort.gms", use_temp_dir=False)

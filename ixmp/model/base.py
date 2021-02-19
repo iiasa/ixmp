@@ -1,9 +1,15 @@
 import logging
+import os
+import re
 from abc import ABC, abstractmethod
 
 from ixmp.utils import maybe_check_out, maybe_commit
 
 log = logging.getLogger(__name__)
+
+
+class ModelError(Exception):
+    """Error in model code, e.g. :meth:`.Model.run`."""
 
 
 class Model(ABC):
@@ -21,6 +27,12 @@ class Model(ABC):
 
             Model subclasses MUST document acceptable option values.
         """
+
+    @classmethod
+    def clean_path(cls, value: str) -> str:
+        """Subtitute invalid characters in `value` with "_"."""
+        chars = r'<>"/\|?*' + (":" if os.name == "nt" else "")
+        return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
     @classmethod
     def initialize(cls, scenario):

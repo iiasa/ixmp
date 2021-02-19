@@ -91,6 +91,7 @@ html_static_path = ["_static"]
 # -- Options for sphinx.ext.extlinks ---------------------------------------------------
 
 extlinks = {
+    "issue": ("https://github.com/iiasa/ixmp/issue/%s", "#"),
     "pull": ("https://github.com/iiasa/ixmp/pull/%s", "PR #"),
 }
 

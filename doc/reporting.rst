@@ -73,6 +73,7 @@ The following top-level objects from :mod:`genno` may also be imported from
       ~genno.core.computer.Computer.visualize
       ~genno.core.computer.Computer.write
 
+.. _reporting-config:
 
 Configuration
 =============

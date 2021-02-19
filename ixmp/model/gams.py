@@ -158,7 +158,7 @@ class GAMSModel(Model):
     #: Model name.
     name = "default"
 
-    #: Default model options:
+    #: Default values and format strings for options.
     defaults: Mapping[str, object] = {
         "model_file": "{model_name}.gms",
         "case": "{scenario.model}_{scenario.scenario}",

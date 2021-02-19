@@ -45,8 +45,8 @@ MODELS.update(
 )
 
 
-# Configure the 'ixmp' logger: write messages to std out, defaulting to level
-# WARNING and above
+# Configure the 'ixmp' logger: write messages to stdout, defaulting to level WARNING
+# and above
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.WARNING)

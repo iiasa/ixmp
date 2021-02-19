@@ -495,9 +495,8 @@ def get_cell_output(nb, name_or_index, kind="data"):
 def assert_logs(caplog, message_or_messages=None, at_level=None):
     """Assert that *message_or_messages* appear in logs.
 
-    Use assert_logs as a context manager for a statement that is expected to
-    trigger certain log messages. assert_logs checks that these messages are
-    generated.
+    Use assert_logs as a context manager for a statement that is expected to trigger
+    certain log messages. assert_logs checks that these messages are generated.
 
     Example
     -------
@@ -513,8 +512,7 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
     message_or_messages : str or list of str
         String(s) that must appear in log messages.
     at_level : int, optional
-        Messages must appear on 'ixmp' or a sub-logger with at least this
-        level.
+        Messages must appear on 'ixmp' or a sub-logger with at least this level.
     """
     # Wrap a string in a list
     expected = (

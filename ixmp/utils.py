@@ -12,18 +12,26 @@ from ixmp.backend import ItemType
 
 log = logging.getLogger(__name__)
 
-# globally accessible logger
+# Globally accessible logger.
+# TODO remove when :func:`logger` is removed.
 _LOGGER = None
 
 
 def logger():
-    """Access global logger"""
-    global _LOGGER
-    if _LOGGER is None:
-        logging.basicConfig()
-        _LOGGER = logging.getLogger()
-        _LOGGER.setLevel("INFO")
-    return _LOGGER
+    """Access global logger.
+
+    .. deprecated:: 3.3
+       To control logging from ixmp, instead use :mod:`logging` to retrieve it:
+
+       .. code-block:: python
+
+          import logging
+          ixmp_logger = logging.getLogger("ixmp")
+
+          # Example: set the level to INFO
+          ixmp_logger.setLevel(logging.INFO)
+    """
+    return logging.getLogger("ixmp")
 
 
 def as_str_list(arg, idx_names=None):

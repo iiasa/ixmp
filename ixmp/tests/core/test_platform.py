@@ -343,16 +343,16 @@ def test_weakref():
     # Make a local reference to the backend
     backend = mp._backend
 
-    # Delete the Platform. Note that this only has an effect if there are no
-    # existing references to it
+    # Delete the Platform. Note that this only has an effect if there are no existing
+    # references to it
     del mp
 
     # s.platform is a dead weak reference, so it can't be accessed
     with pytest.raises(ReferenceError):
         s.platform._backend
 
-    # There is only one remaining reference to the backend: the *backend* name
-    # in the local scope
+    # There is only one remaining reference to the backend: the *backend* name in the
+    # local scope
     assert getrefcount(backend) - 1 == 1
 
     # The backend is garbage-collected at this point

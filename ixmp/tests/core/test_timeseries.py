@@ -10,8 +10,8 @@ from ixmp import Scenario, TimeSeries
 from ixmp.core import IAMC_IDX
 
 # Test data.
-# NB the columns are in a specific order; model and scenario come last in the
-#    data returned by ixmp.
+# NB the columns are in a specific order; model and scenario come last in the data
+#    returned by ixmp.
 # TODO fix this; model and scenario should come first, matching the IAMC order.
 DATA = {
     0: pd.DataFrame.from_dict(
@@ -56,8 +56,8 @@ DATA = {
             scenario="scenario name",
         )
     ),
-    # NB the columns for geodata methods are inconsistent with those for time-
-    #    series data
+    # NB the columns for geodata methods are inconsistent with those for time-series
+    #    data
     "geo": pd.DataFrame.from_dict(
         dict(
             region="World",
@@ -132,10 +132,9 @@ def transact(ts, condition=True, commit_message=""):
 
 # Tests of ixmp.TimeSeries.
 #
-# Since Scenario is a subclass of TimeSeries, all TimeSeries functionality
-# should work exactly the same way on Scenario instances. The *ts* fixture is
-# parametrized to yield both TimeSeries and Scenario objects, so every test
-# is run on each type.
+# Since Scenario is a subclass of TimeSeries, all TimeSeries functionality should work
+# exactly the same way on Scenario instances. The *ts* fixture is parametrized to yield
+# both TimeSeries and Scenario objects, so every test is run on each type.
 
 
 @pytest.fixture(scope="function", params=[TimeSeries, Scenario])

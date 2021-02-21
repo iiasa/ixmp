@@ -343,24 +343,23 @@ class Platform:
     def timeslices(self):
         """Return all subannual timeslices defined in this Platform instance.
 
-        Timeslices are a way to represent subannual temporal resolution in
-        timeseries data. A timeslice consists of a **name** (e.g., 'january',
-        'summer'), a **category** (e.g., 'months', 'seasons'), and a
-        **duration** given relative to a full year.
+        Timeslices are a way to represent subannual temporal resolution in timeseries
+        data. A timeslice consists of a **name** (e.g., 'january', 'summer'), a
+        **category** (e.g., 'months', 'seasons'), and a **duration** given relative to a
+        full year.
 
-        The category and duration do not have any functional relevance within
-        the ixmp framework, but they may be useful for pre- or post-processing.
-        For example, they can be used to filter all timeslices of a certain
-        category (e.g., all months) from the :class:`pandas.DataFrame` returned
-        by this function or to aggregate subannual data to full-year results.
+        The category and duration do not have any functional relevance within the ixmp
+        framework, but they may be useful for pre- or post-processing.  For example,
+        they can be used to filter all timeslices of a certain category (e.g., all
+        months) from the :class:`pandas.DataFrame` returned by this function or to
+        aggregate subannual data to full-year results.
 
-        A timeslice is related to the index set 'time'
-        in a :class:`message_ix.Scenario` to indicate a subannual temporal
-        dimension. Alas, timeslices and set elements of time have to be
-        initialized/defined independently.
+        A timeslice is related to the index set 'time' in a :class:`message_ix.Scenario`
+        to indicate a subannual temporal dimension. Alas, timeslices and set elements of
+        time have to be initialized/defined independently.
 
-        See :meth:`add_timeslice` to initialize additional timeslices in the
-        Platform instance.
+        See :meth:`add_timeslice` to initialize additional timeslices in the Platform
+        instance.
 
         Returns
         -------

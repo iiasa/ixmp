@@ -1,4 +1,5 @@
 import logging
+import pickle
 from operator import itemgetter
 from typing import Any, Dict, Generator, Tuple
 
@@ -125,9 +126,71 @@ class DatabaseBackend(CachingBackend):
         cur.execute("SELECT last_insert_rowid()")
 
         # Store the ID
-        self._index[ts] = cur.fetchone()
+        self._index[ts] = cur.fetchone()[0]
 
         self.conn.commit()
+
+    # Methods for ixmp.Scenario
+
+    def list_items(self, s, type):
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT i.name FROM timeseries AS ts
+            JOIN item as i ON ts.id == i.timeseries
+            WHERE ts.id = ? AND i.type = ?
+            """,
+            (self._index[s], type),
+        )
+        return list(map(itemgetter(0), cur.fetchall()))
+
+    def init_item(self, s, type, name, idx_sets, idx_names):
+        idx_names = idx_names or idx_sets
+        dimensions = {n: s for n, s in zip(idx_names, idx_sets)}
+
+        cur = self.conn.cursor()
+
+        cur.execute(
+            "INSERT INTO item (timeseries, type, name, dims) VALUES (?, ?, ?, ?)",
+            (self._index[s], type, name, repr(dimensions)),
+        )
+
+    def item_index(self, s, name, sets_or_names):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            "SELECT dims FROM item AS i WHERE i.timeseries = ? AND i.name = ?",
+            (self._index[s], name),
+        )
+        dims = eval(cur.fetchone()[0])
+        return list(dims.keys() if sets_or_names == "names" else dims.values())
+
+    def item_set_elements(self, s, type, name, elements):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            SELECT i.id, value FROM item AS i LEFT JOIN item_data
+            ON i.id == item_data.item WHERE i.timeseries = ? AND i.name = ?
+            """,
+            (self._index[s], name),
+        )
+        id, data = cur.fetchone() or (None, None)
+
+        if data is not None:
+            raise NotImplementedError("update existing items")
+        elif type == "set":
+            data = []
+        else:
+            raise NotImplementedError("item_set_elements() with type != 'set'")
+
+        for e in elements:
+            data.append(e[0])
+
+        cur.execute(
+            "INSERT OR REPLACE INTO item_data (item, value) VALUES (?, ?)",
+            (id, pickle.dumps(data)),
+        )
 
     # Internal
 
@@ -181,14 +244,10 @@ class DatabaseBackend(CachingBackend):
     get_meta = nie
     get_scenarios = nie
     has_solution = nie
-    init_item = nie
     is_default = nie
     item_delete_elements = nie
     item_get_elements = nie
-    item_index = nie
-    item_set_elements = nie
     last_update = nie
-    list_items = nie
     remove_meta = nie
     run_id = nie
     set_as_default = nie
@@ -216,6 +275,16 @@ SCHEMA = """
         id INTEGER PRIMARY KEY, class, model_name, scenario_name, version INTEGER,
         UNIQUE (model_name, scenario_name, version)
     );
+    CREATE TABLE item (
+        id INTEGER PRIMARY KEY, timeseries INTEGER, name VARCHAR, type VARCHAR,
+        dims TEXT,
+        FOREIGN KEY (timeseries) REFERENCES timeseries(id),
+        UNIQUE (timeseries, name)
+    );
+    CREATE TABLE item_data (
+        item INTEGER, value BLOB, FOREIGN KEY (item) REFERENCES item(id)
+    );
+
 """
 
 

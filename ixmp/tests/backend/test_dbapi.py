@@ -3,6 +3,7 @@ import pandas.testing as pdt
 import pytest
 
 from ixmp import Platform, TimeSeries, config as ixmp_config
+from ixmp.testing import make_dantzig
 
 
 @pytest.fixture(scope="class")
@@ -85,3 +86,9 @@ class TestDatabaseBackend:
 
         s1 = TimeSeries(mp, **args)
         assert 2 == s1.version
+
+    @pytest.mark.xfail(
+        raises=NotImplementedError, reason="item_get_elements() is not implemented"
+    )
+    def test_make_dantzig(self, mp):
+        make_dantzig(mp)

@@ -12,7 +12,7 @@ import pandas as pd
 from ._config import config
 from .backend import BACKENDS, FIELDS, ItemType
 from .model import get_model
-from .utils import as_str_list, check_year, logger, parse_url, year_list
+from .utils import as_str_list, check_year, parse_url, year_list
 
 log = logging.getLogger(__name__)
 
@@ -120,14 +120,14 @@ class Platform:
             )
 
         # Set the level for the 'ixmp' logger
-        # NB this may produce unexpected results when multiple Platforms exist
-        #    and different log levels are set. To fix, could use a sub-logger
-        #    per Platform instance.
+        # NB this may produce unexpected results when multiple Platforms exist and
+        #    different log levels are set. To fix, could use a sub-logger per Platform
+        #    instance.
         logging.getLogger("ixmp").setLevel(level)
 
-        # Set the level for the 'ixmp.backend.*' logger. For JDBCBackend, this
-        # also has the effect of setting the level for Java log messages that
-        # are printed to stdout.
+        # Set the level for the 'ixmp.backend.*' logger. For JDBCBackend, this also has
+        # the effect of setting the level for Java log messages that are printed to
+        # stdout.
         self._backend.set_log_level(level)
 
     def get_log_level(self):
@@ -262,8 +262,7 @@ class Platform:
             database user and timestamp are appended automatically.
         """
         if unit in self.units():
-            msg = "unit `{}` is already defined in the platform instance"
-            logger().info(msg.format(unit))
+            log.info(f"unit `{unit}` is already defined in the platform instance")
             return
 
         self._backend.set_unit(unit, comment)
@@ -344,24 +343,23 @@ class Platform:
     def timeslices(self):
         """Return all subannual timeslices defined in this Platform instance.
 
-        Timeslices are a way to represent subannual temporal resolution in
-        timeseries data. A timeslice consists of a **name** (e.g., 'january',
-        'summer'), a **category** (e.g., 'months', 'seasons'), and a
-        **duration** given relative to a full year.
+        Timeslices are a way to represent subannual temporal resolution in timeseries
+        data. A timeslice consists of a **name** (e.g., 'january', 'summer'), a
+        **category** (e.g., 'months', 'seasons'), and a **duration** given relative to a
+        full year.
 
-        The category and duration do not have any functional relevance within
-        the ixmp framework, but they may be useful for pre- or post-processing.
-        For example, they can be used to filter all timeslices of a certain
-        category (e.g., all months) from the :class:`pandas.DataFrame` returned
-        by this function or to aggregate subannual data to full-year results.
+        The category and duration do not have any functional relevance within the ixmp
+        framework, but they may be useful for pre- or post-processing.  For example,
+        they can be used to filter all timeslices of a certain category (e.g., all
+        months) from the :class:`pandas.DataFrame` returned by this function or to
+        aggregate subannual data to full-year results.
 
-        A timeslice is related to the index set 'time'
-        in a :class:`message_ix.Scenario` to indicate a subannual temporal
-        dimension. Alas, timeslices and set elements of time have to be
-        initialized/defined independently.
+        A timeslice is related to the index set 'time' in a :class:`message_ix.Scenario`
+        to indicate a subannual temporal dimension. Alas, timeslices and set elements of
+        time have to be initialized/defined independently.
 
-        See :meth:`add_timeslice` to initialize additional timeslices in the
-        Platform instance.
+        See :meth:`add_timeslice` to initialize additional timeslices in the Platform
+        instance.
 
         Returns
         -------
@@ -392,7 +390,7 @@ class Platform:
             existing_duration = slices.loc[name].duration
             if not np.isclose(duration, existing_duration):
                 raise ValueError(msg.format(name, existing_duration))
-            logger().info(msg.format(name, duration))
+            log.info(msg.format(name, duration))
         else:
             self._backend.set_timeslice(name, category, duration)
 
@@ -502,7 +500,7 @@ class TimeSeries:
         # Instruct the back end to free memory associated with the TimeSeries
         try:
             self._backend("del_ts")
-        except ReferenceError:
+        except (AttributeError, ReferenceError):
             pass  # The Platform has already been garbage-collected
 
     # Transactions and versioning
@@ -613,14 +611,14 @@ class TimeSeries:
             ).reset_index()
         df.set_index(["region", "variable", "unit", "subannual"], inplace=True)
 
-        # Discard non-numeric columns, e.g. 'model', 'scenario',
-        # write warning about non-expected cols to log
+        # Discard non-numeric columns, e.g. 'model', 'scenario', write warning about
+        # non-expected cols to log
         year_cols = year_list(df.columns)
         other_cols = [
             i for i in df.columns if i not in ["model", "scenario"] + year_cols
         ]
         if len(other_cols) > 0:
-            logger().warning(f"dropping index columns {other_cols} from data")
+            log.warning(f"Dropped extra column(s) {other_cols} from data")
 
         df = df.loc[:, year_cols]
 
@@ -975,7 +973,7 @@ class Scenario(TimeSeries):
             raise ValueError("Cache must be enabled to load scenario data")
 
         for ix_type in "equ", "par", "set", "var":
-            logger().info("Caching {} data".format(ix_type))
+            log.debug(f"Cache {repr(ix_type)} data")
             get_func = getattr(self, ix_type)
             for name in getattr(self, "{}_list".format(ix_type))():
                 get_func(name)
@@ -1555,9 +1553,7 @@ class Scenario(TimeSeries):
         """
         if shift_first_model_year is not None:
             if keep_solution:
-                logger().warning(
-                    "Overriding keep_solution=True for " "shift_first_model_year"
-                )
+                log.warning("Override keep_solution=True for shift_first_model_year")
                 keep_solution = False
 
         platform = platform or self.platform

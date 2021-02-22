@@ -317,17 +317,21 @@ def populate_test_platform(platform):
     s4.set_as_default()
 
 
-def make_dantzig(mp: Platform, solve=False) -> Scenario:
+def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scenario:
     """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters
     ----------
-    mp : ixmp.Platform
+    mp : .Platform
         Platform on which to create the scenario.
-    solve : bool or os.PathLike
-        If not :obj:`False`, then *solve* is interpreted as a path to a
-        directory, and the model ``transport_ixmp.gms`` in the directory is run
-        for the scenario.
+    solve : bool, optional
+        If :obj:`True`. then solve the scenario before returning. Default :obj:`False`.
+    quiet : bool, optional
+        If :obj:`True`, suppress console output when solving.
+
+    Returns
+    -------
+    .Scenario
 
     See also
     --------
@@ -361,7 +365,7 @@ def make_dantzig(mp: Platform, solve=False) -> Scenario:
 
     if solve:
         # Solve the model using the GAMS code provided in the `tests` folder
-        scen.solve(model="dantzig", case="transport_standard")
+        scen.solve(model="dantzig", case="transport_standard", quiet=quiet)
 
     # add timeseries data for testing `clone(keep_solution=False)`
     # and `remove_solution()`
@@ -419,13 +423,12 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     # Read the notebook
-    with open(nb_path, encoding="utf-8") as f:
-        nb = nbformat.read(f, as_version=4)
+    nb = nbformat.read(nb_path, as_version=4)
 
     # Create a client and use it to execute the notebook
     client = NotebookClient(
         nb,
-        timeout=60,
+        timeout=10,
         kernel_name=kernel or f"python{sys.version_info[0]}",
         allow_errors=allow_errors,
         resources=dict(metadata=dict(path=tmp_path)),
@@ -492,9 +495,8 @@ def get_cell_output(nb, name_or_index, kind="data"):
 def assert_logs(caplog, message_or_messages=None, at_level=None):
     """Assert that *message_or_messages* appear in logs.
 
-    Use assert_logs as a context manager for a statement that is expected to
-    trigger certain log messages. assert_logs checks that these messages are
-    generated.
+    Use assert_logs as a context manager for a statement that is expected to trigger
+    certain log messages. assert_logs checks that these messages are generated.
 
     Example
     -------
@@ -510,8 +512,7 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
     message_or_messages : str or list of str
         String(s) that must appear in log messages.
     at_level : int, optional
-        Messages must appear on 'ixmp' or a sub-logger with at least this
-        level.
+        Messages must appear on 'ixmp' or a sub-logger with at least this level.
     """
     # Wrap a string in a list
     expected = (

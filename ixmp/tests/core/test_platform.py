@@ -1,4 +1,6 @@
 """Test functionality of ixmp.Platform."""
+import logging
+import re
 from sys import getrefcount
 from weakref import getweakrefcount
 
@@ -8,11 +10,12 @@ from pandas.testing import assert_frame_equal
 from pytest import raises
 
 import ixmp
+from ixmp.testing import assert_logs
 
 
 def test_init():
     with pytest.raises(
-        ValueError, match="backend class 'foo' not among " r"\['jdbc'\]"
+        ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
     ):
         ixmp.Platform(backend="foo")
 
@@ -304,13 +307,17 @@ def test_add_timeslice(test_mp):
     assert all([list(obs.iloc[0]) == ["January, 1st", "Days", 1.0 / 366]])
 
 
-def test_add_timeslice_duplicate_raise(test_mp):
+def test_add_timeslice_duplicate(caplog, test_mp):
     test_mp.add_timeslice("foo_slice", "foo_category", 0.2)
-    # adding same name with different duration raises an error
-    with raises(
-        ValueError, match="timeslice `foo_slice` already defined with " "duration 0.2"
-    ):
+
+    # Adding same name with different duration raises an error
+    msg = "timeslice `foo_slice` already defined with duration 0.2"
+    with raises(ValueError, match=re.escape(msg)):
         test_mp.add_timeslice("foo_slice", "bar_category", 0.3)
+
+    # Re-adding with the same duration only logs a message
+    with assert_logs(caplog, msg, at_level=logging.INFO):
+        test_mp.add_timeslice("foo_slice", "bar_category", 0.2)
 
 
 def test_weakref():
@@ -336,16 +343,16 @@ def test_weakref():
     # Make a local reference to the backend
     backend = mp._backend
 
-    # Delete the Platform. Note that this only has an effect if there are no
-    # existing references to it
+    # Delete the Platform. Note that this only has an effect if there are no existing
+    # references to it
     del mp
 
     # s.platform is a dead weak reference, so it can't be accessed
     with pytest.raises(ReferenceError):
         s.platform._backend
 
-    # There is only one remaining reference to the backend: the *backend* name
-    # in the local scope
+    # There is only one remaining reference to the backend: the *backend* name in the
+    # local scope
     assert getrefcount(backend) - 1 == 1
 
     # The backend is garbage-collected at this point

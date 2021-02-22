@@ -100,6 +100,6 @@ class Reporter(Computer):
     def set_filters(self, **filters) -> None:
         """Apply `filters` ex ante (before computations occur).
 
-        See the description of :func:`.filters` under :ref:`config-ixmp`.
+        See the description of :func:`.filters` under :ref:`reporting-config`.
         """
         self.configure(filters=filters)

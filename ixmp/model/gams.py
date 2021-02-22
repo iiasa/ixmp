@@ -137,7 +137,12 @@ class GAMSModel(Model):
         control solver options or behaviour. See the `GAMS Documentation <https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters>`_.
         For example:
 
-        - ``'LogOption=4'`` prints output to stdout (not console) and the log file.
+        - ``["iterLim=10"]`` limits the solver to 10 iterations.
+    quiet: bool, optional
+        If :obj:`True`, add "LogOption=2" to `gams_args` to redirect most console
+        output during the model run to the log file. Default :obj:`False`, so
+        "LogOption=4" is added. Any "LogOption" value provided explicitly via
+        `gams_args` takes precedence.
     check_solution : bool, optional
         If :obj:`True`, raise an exception if the GAMS solver did not reach optimality.
         (Only for MESSAGE-scheme Scenarios.)
@@ -153,7 +158,7 @@ class GAMSModel(Model):
     #: Model name.
     name = "default"
 
-    #: Default model options:
+    #: Default values and format strings for options.
     defaults: Mapping[str, object] = {
         "model_file": "{model_name}.gms",
         "case": "{scenario.model}_{scenario.scenario}",
@@ -161,11 +166,12 @@ class GAMSModel(Model):
         "out_file": str(Path("{cwd}", "{model_name}_out.gdx")),
         "solve_args": ['--in="{in_file}"', '--out="{out_file}"'],
         # Not formatted
-        "gams_args": ["LogOption=4"],
+        "gams_args": [],
         "check_solution": True,
         "comment": None,
         "equ_list": None,
         "var_list": None,
+        "quiet": False,
         "use_temp_dir": True,
     }
 
@@ -175,6 +181,11 @@ class GAMSModel(Model):
         # Store options from `model_options`, otherwise from `defaults`
         for arg_name, default in self.defaults.items():
             setattr(self, arg_name, model_options.get(arg_name, default))
+
+        # Check whether a subclass or user already set LogOption in `gams_args`
+        if not any("LogOption" in arg for arg in self.gams_args):
+            # Not set; use `quiet` to determine the value
+            self.gams_args.append(f"LogOption={'4' if self.quiet else '2'}")
 
     def format_exception(self, exc, model_file):
         """Format a user-friendly exception when GAMS errors."""

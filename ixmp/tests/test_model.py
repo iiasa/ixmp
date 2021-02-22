@@ -114,7 +114,7 @@ class TestGAMSModel:
         # Indirectly test backend.write_file("….gdx")
         # This name_ keyword argument ends up received to GAMSModel.__init__ and sets
         # the GAMSModel.model_name attribute, and in turn the GDX file names used.
-        s.solve(name_=name)
+        s.solve(name_=name, quiet=True)
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -126,7 +126,8 @@ class TestGAMSModel:
         ids=["null-comment", "null-list", "empty-list"],
     )
     def test_GAMSModel_solve(test_data_path, dantzig, kwargs):
-        dantzig.clone().solve(**kwargs)
+        """Options to GAMSModel are handled without error."""
+        dantzig.clone().solve(**kwargs, quiet=True)
 
     def test_error_message(self, test_data_path, test_mp):
         """GAMSModel.solve() displays a user-friendly message on error."""

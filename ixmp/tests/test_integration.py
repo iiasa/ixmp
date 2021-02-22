@@ -12,7 +12,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_clone(test_mp, caplog):
+def test_run_clone(caplog, test_mp):
     caplog.set_level(logging.WARNING)
 
     # this test is designed to cover the full functionality of the GAMS API
@@ -37,7 +37,7 @@ def test_run_clone(test_mp, caplog):
     # cloning with `keep_solution=True` and `first_model_year` raises a warning
     scen.clone(keep_solution=True, shift_first_model_year=2005)
     assert (
-        "Overriding keep_solution=True for shift_first_model_year"
+        "Override keep_solution=True for shift_first_model_year"
         == caplog.records[-1].message
     )
 

@@ -3,15 +3,18 @@ import pickle
 from operator import itemgetter
 from typing import Any, Dict, Generator, Tuple
 
+import pandas as pd
 import sqlite3
 
-from ixmp.backend.base import CachingBackend
+from ixmp.backend.base import Backend
 
 log = logging.getLogger(__name__)
 
 
-class DatabaseBackend(CachingBackend):
+class DatabaseBackend(Backend):
     """Backend based on Python DB API 2.0."""
+
+    # TODO use CachingBackend as the base class
 
     # Database connection object.
     conn = None
@@ -38,6 +41,8 @@ class DatabaseBackend(CachingBackend):
             pass  # Already closed
         else:
             self.conn = None
+
+    # Methods for ixmp.Platform
 
     def set_node(self, name, parent=None, hierarchy=None, synonym=None):
         if synonym:
@@ -130,6 +135,13 @@ class DatabaseBackend(CachingBackend):
 
         self.conn.commit()
 
+    def commit(self, ts, comment):
+        log.warning("commit() has no effect")
+        log.info(comment)
+
+    def set_as_default(self, ts):
+        raise NotImplementedError
+
     # Methods for ixmp.Scenario
 
     def list_items(self, s, type):
@@ -165,7 +177,7 @@ class DatabaseBackend(CachingBackend):
         dims = eval(cur.fetchone()[0])
         return list(dims.keys() if sets_or_names == "names" else dims.values())
 
-    def item_set_elements(self, s, type, name, elements):
+    def _item_data(self, s, name):
         cur = self.conn.cursor()
 
         cur.execute(
@@ -175,17 +187,57 @@ class DatabaseBackend(CachingBackend):
             """,
             (self._index[s], name),
         )
-        id, data = cur.fetchone() or (None, None)
+        result = cur.fetchone() or (None, None)
+
+        return result
+
+    def item_get_elements(self, s, type, name, filters):
+        id, data = self._item_data(s, name)
+
+        cur = self.conn.cursor()
+        if data is None:
+            cur.execute("SELECT dims from item WHERE id = ?", (id,))
+            dims = eval(cur.fetchone()[0])
+            idx_names, idx_sets = list(zip(*dims.items()))
+            data = tuple()
+
+        if len(idx_sets):
+            # Mapping set or multi-dimensional equation, parameter, or variable
+            columns = list(idx_names)
+
+            # Prepare dtypes for index columns
+            dtypes = {}
+            for idx_name, idx_set in zip(columns, idx_sets):
+                dtypes[idx_name] = str
+
+            # Prepare dtypes for additional columns
+            if type == "par":
+                columns.extend(["value", "unit"])
+                dtypes["value"] = float
+                dtypes["unit"] = str
+            elif type in ("equ", "var"):
+                columns.extend(["lvl", "mrg"])
+                dtypes.update({"lvl": float, "mrg": float})
+
+            # Create data frame
+            result = pd.DataFrame(data, columns=columns).astype(dtypes)
+        else:
+            raise NotImplementedError("non-indexed items")
+
+        return result
+
+    def item_set_elements(self, s, type, name, elements):
+        cur = self.conn.cursor()
+
+        id, data = self._item_data(s, name)
 
         if data is not None:
             raise NotImplementedError("update existing items")
-        elif type == "set":
-            data = []
-        else:
-            raise NotImplementedError("item_set_elements() with type != 'set'")
+
+        data = []
 
         for e in elements:
-            data.append(e[0])
+            data.append(e[0] if type == "set" else e)
 
         cur.execute(
             "INSERT OR REPLACE INTO item_data (item, value) VALUES (?, ?)",
@@ -231,7 +283,6 @@ class DatabaseBackend(CachingBackend):
     check_out = nie
     clear_solution = nie
     clone = nie
-    commit = nie
     delete = nie
     delete_geo = nie
     delete_item = nie
@@ -246,11 +297,9 @@ class DatabaseBackend(CachingBackend):
     has_solution = nie
     is_default = nie
     item_delete_elements = nie
-    item_get_elements = nie
     last_update = nie
     remove_meta = nie
     run_id = nie
-    set_as_default = nie
     set_data = nie
     set_doc = nie
     set_geo = nie

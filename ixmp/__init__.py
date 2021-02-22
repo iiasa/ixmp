@@ -4,6 +4,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from ._config import config
 from .backend import BACKENDS, ItemType
+from .backend.dbapi import DatabaseBackend
 from .backend.jdbc import JDBCBackend
 from .core import IAMC_IDX, Platform, Scenario, TimeSeries
 from .model import MODELS
@@ -33,6 +34,7 @@ except DistributionNotFound:
     __version__ = "999"
 
 # Register Backends provided by ixmp
+BACKENDS["dbapi"] = DatabaseBackend
 BACKENDS["jdbc"] = JDBCBackend
 
 # Register Models provided by ixmp

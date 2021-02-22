@@ -12,8 +12,10 @@ log = logging.getLogger(__name__)
 class DatabaseBackend(CachingBackend):
     """Backend based on Python DB API 2.0."""
 
-    #: Database connection object.
+    # Database connection object.
     conn = None
+
+    _index = {}
 
     def __init__(self, **kwargs):
         self._db_path = kwargs.pop("path")
@@ -92,7 +94,43 @@ class DatabaseBackend(CachingBackend):
     def get_units(self):
         return list(map(itemgetter(0), self._select_codes("unit")))
 
+    # Methods for ixmp.TimeSeries
+
+    def init(self, ts, annotation):
+        # Identifiers for `ts`
+        info = [ts.__class__.__name__, ts.model, ts.scenario]
+        cur = self.conn.cursor()
+
+        # Identify the maximum previous version matching these identifiers
+        cur.execute(
+            """
+            SELECT max(version) FROM timeseries WHERE class = ? AND model_name = ?
+            AND scenario_name = ?
+            """,
+            info,
+        )
+        previous_version = cur.fetchone()[0] or 0
+
+        # Use the next available version
+        ts.version = previous_version + 1
+
+        # Insert
+        cur.execute(
+            """
+            INSERT INTO timeseries (class, model_name, scenario_name, version)
+            VALUES (?, ?, ?, ?)
+            """,
+            info + [ts.version],
+        )
+        cur.execute("SELECT last_insert_rowid()")
+
+        # Store the ID
+        self._index[ts] = cur.fetchone()
+
+        self.conn.commit()
+
     # Internal
+
     def _select_codes(self, codelist):
         cur = self.conn.cursor()
         cur.execute("SELECT id FROM code WHERE codelist == ?", (codelist,))
@@ -143,7 +181,6 @@ class DatabaseBackend(CachingBackend):
     get_meta = nie
     get_scenarios = nie
     has_solution = nie
-    init = nie
     init_item = nie
     is_default = nie
     item_delete_elements = nie
@@ -170,6 +207,18 @@ class DatabaseBackend(CachingBackend):
         return info
 
 
+SCHEMA = """
+    CREATE TABLE schema (key, value);
+    INSERT INTO schema VALUES ('version', '1.0');
+    CREATE TABLE code (codelist, id, parent);
+    CREATE TABLE annotation (obj_class, obj_id, id, value);
+    CREATE TABLE timeseries (
+        id INTEGER PRIMARY KEY, class, model_name, scenario_name, version INTEGER,
+        UNIQUE (model_name, scenario_name, version)
+    );
+"""
+
+
 def init_schema(conn):
     """Check or initialize the database schema in `conn`."""
     cur = conn.cursor()
@@ -187,8 +236,5 @@ def init_schema(conn):
             return  # Already initialized
 
     # Initialize the database
-    cur.execute("CREATE TABLE schema (key, value)")
-    cur.execute("INSERT INTO schema VALUES ('version', '1.0')")
-    cur.execute("CREATE TABLE code (codelist, id, parent)")
-    cur.execute("CREATE TABLE annotation (obj_class, obj_id, id, value)")
+    cur.executescript(SCHEMA)
     conn.commit()

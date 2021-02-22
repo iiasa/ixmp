@@ -2,7 +2,7 @@ import pandas as pd
 import pandas.testing as pdt
 import pytest
 
-from ixmp import Platform, config as ixmp_config
+from ixmp import Platform, TimeSeries, config as ixmp_config
 
 
 @pytest.fixture(scope="class")
@@ -30,7 +30,7 @@ def mp(request, tmp_env, tmp_path_factory):
 
 
 class TestDatabaseBackend:
-    def test_init(self, mp):
+    def test_init_backend(self, mp):
         """A Platform backed by DatabaseBackend can be initialized."""
 
     @pytest.mark.parametrize("kind", ("model", "scenario"))
@@ -76,3 +76,12 @@ class TestDatabaseBackend:
             mp.add_timeslice(**item)
 
         pdt.assert_frame_equal(pd.DataFrame(items), mp.timeslices())
+
+    def test_init_ts(self, mp):
+        """Test Backend.init through TimeSeries.__init__."""
+        args = dict(model="Foo model", scenario="Baz scenario", version="new")
+        s0 = TimeSeries(mp, **args)
+        assert 1 == s0.version
+
+        s1 = TimeSeries(mp, **args)
+        assert 2 == s1.version

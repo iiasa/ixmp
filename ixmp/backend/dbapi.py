@@ -7,6 +7,7 @@ import pandas as pd
 import sqlite3
 
 from ixmp.backend.base import Backend
+from ixmp.core import TimeSeries
 
 log = logging.getLogger(__name__)
 
@@ -135,12 +136,33 @@ class DatabaseBackend(Backend):
 
         self.conn.commit()
 
+    def check_out(self, ts, timeseries_only):
+        if timeseries_only:
+            log.info("timeseries_only=True ignored")
+        log.warning("check_out() has no effect")
+
     def commit(self, ts, comment):
         log.warning("commit() has no effect")
         log.info(comment)
 
     def set_as_default(self, ts):
-        raise NotImplementedError
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            SELECT * FROM timeseries AS ts
+            JOIN annotation AS a ON a.obj_id == ts.id
+            WHERE ts.model_name = ? AND ts.scenario_name = ?
+            AND a.obj_class == 'timeseries'
+            """,
+            (ts.model, ts.scenario),
+        )
+        existing_default = cur.fetchone()
+
+        if existing_default:
+            raise NotImplementedError("set_as_default() with a default already set")
+
+        self._annotate(ts, "__ixmp_default_version", None)
 
     # Methods for ixmp.Scenario
 
@@ -243,6 +265,7 @@ class DatabaseBackend(Backend):
             "INSERT OR REPLACE INTO item_data (item, value) VALUES (?, ?)",
             (id, pickle.dumps(data)),
         )
+        self.conn.commit()
 
     # Internal
 
@@ -258,6 +281,18 @@ class DatabaseBackend(Backend):
     def _insert_code(self, codelist, id, parent=None):
         self.conn.execute(
             "INSERT OR ABORT INTO code VALUES (?, ?, ?)", (codelist, id, parent)
+        )
+        self.conn.commit()
+
+    def _annotate(self, obj, anno_id, value):
+        if isinstance(obj, TimeSeries):
+            data = ["timeseries", str(self._index[obj])]
+        else:
+            raise NotImplementedError
+
+        self.conn.execute(
+            "INSERT OR ABORT INTO annotation VALUES (?, ?, ?, ?)",
+            data + [anno_id, value],
         )
         self.conn.commit()
 
@@ -280,7 +315,6 @@ class DatabaseBackend(Backend):
     cat_get_elements = nie
     cat_list = nie
     cat_set_elements = nie
-    check_out = nie
     clear_solution = nie
     clone = nie
     delete = nie
@@ -319,7 +353,12 @@ SCHEMA = """
     CREATE TABLE schema (key, value);
     INSERT INTO schema VALUES ('version', '1.0');
     CREATE TABLE code (codelist, id, parent);
-    CREATE TABLE annotation (obj_class, obj_id, id, value);
+    CREATE TABLE annotation (
+        obj_class VARCHAR NOT NULL,
+        obj_id NOT NULL,
+        id VARCHAR NOT NULL,
+        value
+    );
     CREATE TABLE timeseries (
         id INTEGER PRIMARY KEY, class, model_name, scenario_name, version INTEGER,
         UNIQUE (model_name, scenario_name, version)

@@ -88,7 +88,8 @@ class TestDatabaseBackend:
         assert 2 == s1.version
 
     @pytest.mark.xfail(
-        raises=NotImplementedError, reason="item_get_elements() is not implemented"
+        raises=NotImplementedError,
+        reason="set_data() not implemented, among others",
     )
     def test_make_dantzig(self, mp):
         make_dantzig(mp)

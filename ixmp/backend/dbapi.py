@@ -422,7 +422,6 @@ class DatabaseBackend(Backend):
     get_geo = nie
     get_meta = nie
     get_scenarios = nie
-    has_solution = nie
     item_delete_elements = nie
     last_update = nie
     remove_meta = nie

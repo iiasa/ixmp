@@ -1571,7 +1571,21 @@ class Scenario(TimeSeries):
 
         If ``has_solution() == True``, model solution data exists in the db.
         """
-        return self._backend("has_solution")
+        try:
+            return self._backend("has_solution")
+        except NotImplementedError:
+            # Fallback implementation if the backend does not define the optional
+            # method
+
+            for ix_type in "equ", "var":
+                for name in self._backend("list_items", ix_type):
+                    if len(
+                        self._backend("item_get_elements", ix_type, name, filters=None)
+                    ):
+                        # At least one 'equ' or 'var' item has data === a "solution"
+                        return True
+
+            return False
 
     def remove_solution(self, first_model_year=None):
         """Remove the solution from the scenario

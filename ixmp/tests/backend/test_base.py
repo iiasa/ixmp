@@ -47,7 +47,6 @@ def test_class():
         get_scenario_names = noop
         get_timeslices = noop
         get_units = noop
-        has_solution = noop
         init = noop
         init_item = noop
         is_default = noop

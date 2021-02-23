@@ -766,12 +766,12 @@ class Backend(ABC):
             The cloned Scenario.
         """
 
-    @abstractmethod
     def has_solution(self, s: Scenario):
-        """Return `True` if Scenario *s* has been solved.
+        """OPTIONAL: Return `True` if Scenario *s* has been solved.
 
         If :obj:`True`, model solution data is available from the Backend.
         """
+        raise NotImplementedError
 
     @abstractmethod
     def list_items(self, s: Scenario, type):

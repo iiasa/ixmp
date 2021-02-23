@@ -87,9 +87,5 @@ class TestDatabaseBackend:
         s1 = TimeSeries(mp, **args)
         assert 2 == s1.version
 
-    @pytest.mark.xfail(
-        raises=NotImplementedError,
-        reason="set_data() not implemented, among others",
-    )
     def test_make_dantzig(self, mp):
         make_dantzig(mp)

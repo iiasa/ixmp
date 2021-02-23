@@ -1,5 +1,7 @@
+import json
 import logging
 import pickle
+from hashlib import sha1
 from operator import itemgetter
 from typing import Any, Dict, Generator, Tuple
 
@@ -124,7 +126,7 @@ class DatabaseBackend(Backend):
         # Insert
         cur.execute(
             """
-            INSERT INTO timeseries (class, model_name, scenario_name, version)
+            INSERT OR ABORT INTO timeseries (class, model_name, scenario_name, version)
             VALUES (?, ?, ?, ?)
             """,
             info + [ts.version],
@@ -164,6 +166,46 @@ class DatabaseBackend(Backend):
 
         self._annotate(ts, "__ixmp_default_version", None)
 
+    def _hash(self, identifiers):
+        return sha1(json.dumps(identifiers).encode()).hexdigest()
+
+    def set_data(self, ts, region, variable, data, unit, subannual, meta):
+        cur = self.conn.cursor()
+
+        identifiers = dict(
+            region=region,
+            variable=variable,
+            subannual=subannual,
+            unit=unit,
+            meta=meta,
+        )
+
+        # Compute a unique name for this combination of identifiers
+        name = self._hash(identifiers)
+        log.debug(f"hash {name} for {identifiers}")
+
+        # Create the entry in the database
+        self.init_item(ts, "tsdata", name, ["year"], ["year"])
+
+        # Retrieve any existing data
+        id, existing = self._item_data(ts, name)
+
+        if existing:
+            raise NotImplementedError("set_data() with existing data")
+
+        all_data = identifiers.copy()
+        all_data["data"] = data
+
+        # Dump the data
+        cur.execute(
+            "INSERT OR REPLACE INTO item_data (item, value) VALUES (?, ?)",
+            (id, pickle.dumps(all_data)),
+        )
+        self.conn.commit()
+
+        # Store an annotation with the identifiers
+        self._annotate(("item", name), "__ixmp_ts_info", repr(identifiers))
+
     # Methods for ixmp.Scenario
 
     def list_items(self, s, type):
@@ -185,7 +227,10 @@ class DatabaseBackend(Backend):
         cur = self.conn.cursor()
 
         cur.execute(
-            "INSERT INTO item (timeseries, type, name, dims) VALUES (?, ?, ?, ?)",
+            """
+            INSERT OR ABORT INTO item (timeseries, type, name, dims)
+            VALUES (?, ?, ?, ?)
+            """,
             (self._index[s], type, name, repr(dimensions)),
         )
 
@@ -287,6 +332,8 @@ class DatabaseBackend(Backend):
     def _annotate(self, obj, anno_id, value):
         if isinstance(obj, TimeSeries):
             data = ["timeseries", str(self._index[obj])]
+        elif isinstance(obj, tuple):
+            data = list(obj)
         else:
             raise NotImplementedError
 
@@ -334,7 +381,6 @@ class DatabaseBackend(Backend):
     last_update = nie
     remove_meta = nie
     run_id = nie
-    set_data = nie
     set_doc = nie
     set_geo = nie
     set_meta = nie
@@ -352,27 +398,35 @@ class DatabaseBackend(Backend):
 SCHEMA = """
     CREATE TABLE schema (key, value);
     INSERT INTO schema VALUES ('version', '1.0');
+
     CREATE TABLE code (codelist, id, parent);
+
     CREATE TABLE annotation (
-        obj_class VARCHAR NOT NULL,
-        obj_id NOT NULL,
-        id VARCHAR NOT NULL,
-        value
+        obj_class VARCHAR NOT NULL, obj_id NOT NULL, id VARCHAR NOT NULL, value
     );
+
     CREATE TABLE timeseries (
-        id INTEGER PRIMARY KEY, class, model_name, scenario_name, version INTEGER,
+        id INTEGER PRIMARY KEY,
+        class,
+        model_name,
+        scenario_name,
+        version INTEGER,
         UNIQUE (model_name, scenario_name, version)
     );
+
     CREATE TABLE item (
-        id INTEGER PRIMARY KEY, timeseries INTEGER, name VARCHAR, type VARCHAR,
+        id INTEGER PRIMARY KEY,
+        timeseries INTEGER,
+        name VARCHAR,
+        type VARCHAR,
         dims TEXT,
         FOREIGN KEY (timeseries) REFERENCES timeseries(id),
         UNIQUE (timeseries, name)
     );
+
     CREATE TABLE item_data (
         item INTEGER, value BLOB, FOREIGN KEY (item) REFERENCES item(id)
     );
-
 """
 
 

@@ -187,18 +187,23 @@ class DatabaseBackend(Backend):
     def set_as_default(self, ts):
         cur = self.conn.cursor()
 
+        cond = "a.obj_class == 'timeseries' AND a.id == '__ixmp_default_version'"
+
         cur.execute(
-            """
-            SELECT * FROM timeseries AS ts JOIN annotation AS a ON a.obj_id == ts.id
-            WHERE ts.model_name = ? AND ts.scenario_name = ?
-            AND a.obj_class == 'timeseries'
+            f"""
+            SELECT ts.id FROM timeseries AS ts JOIN annotation AS a ON a.obj_id == ts.id
+            WHERE ts.model_name = ? AND ts.scenario_name = ? AND {cond}
             """,
             (ts.model, ts.scenario),
         )
         existing_default = cur.fetchone()
 
         if existing_default:
-            raise NotImplementedError("set_as_default() with a default already set")
+            # Delete the existing default
+            cur.execute(
+                f"DELETE FROM annotation AS a WHERE a.obj_id = ? AND {cond}",
+                existing_default,
+            )
 
         self._annotate(ts, "__ixmp_default_version", None)
 

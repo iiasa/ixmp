@@ -99,5 +99,18 @@ class TestDatabaseBackend:
         assert 2 == ts2.version
         assert ts2.is_default()
 
-    def test_make_dantzig(self, mp):
-        make_dantzig(mp)
+    @pytest.mark.parametrize(
+        "solve",
+        (
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason=".backend.io.s_write_gdx() is not implemented",
+                ),
+            ),
+        ),
+    )
+    def test_make_dantzig(self, mp, solve):
+        make_dantzig(mp, solve=solve)

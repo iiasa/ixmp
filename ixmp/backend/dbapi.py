@@ -301,9 +301,11 @@ class DatabaseBackend(Backend):
             """,
             (self._index[s], name),
         )
-        result = cur.fetchone() or (None, None)
-
-        return result
+        result = cur.fetchone()
+        if result[1]:
+            return result[0], pickle.loads(result[1])
+        else:
+            return result[0], None
 
     def item_get_elements(self, s, type, name, filters):
         id, data = self._item_data(s, name)

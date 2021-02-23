@@ -193,6 +193,9 @@ class DatabaseBackend(Backend):
     def is_default(self, ts):
         return self._select_anno(ts, "__ixmp_default_version") is not None
 
+    def run_id(self, ts):
+        return self._jindex[ts]
+
     def _hash(self, identifiers):
         return sha1(json.dumps(identifiers).encode()).hexdigest()
 
@@ -423,7 +426,6 @@ class DatabaseBackend(Backend):
     item_delete_elements = nie
     last_update = nie
     remove_meta = nie
-    run_id = nie
     set_doc = nie
     set_geo = nie
     set_meta = nie

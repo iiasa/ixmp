@@ -314,7 +314,9 @@ class DatabaseBackend(Backend):
         if data is None:
             cur.execute("SELECT dims from item WHERE id = ?", (id,))
             dims = eval(cur.fetchone()[0])
-            idx_names, idx_sets = list(zip(*dims.items()))
+            idx_names, idx_sets = (
+                list(zip(*dims.items())) if len(dims) else (tuple(), tuple())
+            )
             data = tuple()
 
         if len(idx_sets):
@@ -337,7 +339,11 @@ class DatabaseBackend(Backend):
 
             # Create data frame
             result = pd.DataFrame(data, columns=columns).astype(dtypes)
+        elif type in ("equ", "var"):
+            # Scalar equations and variables
+            result = dict(zip(("lvl", "mrg"), data))
         else:
+            print(s, type, name, filters, data, idx_names, idx_sets)
             raise NotImplementedError("non-indexed items")
 
         return result

@@ -39,6 +39,11 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
+def s_write_gdx(be, s, path):
+    """Write `s` to a GAMS Data Exchange (:file:`.gdx`) file at `path`."""
+    raise NotImplementedError
+
+
 def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     """Write *s* to a Microsoft Excel file at *path*.
 

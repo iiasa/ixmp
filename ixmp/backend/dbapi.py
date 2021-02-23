@@ -8,7 +8,9 @@ from typing import Any, Dict, Generator, Tuple
 import pandas as pd
 import sqlite3
 
+from ixmp.backend import ItemType
 from ixmp.backend.base import Backend
+from ixmp.backend.io import s_write_gdx
 from ixmp.core import TimeSeries
 
 log = logging.getLogger(__name__)
@@ -102,6 +104,16 @@ class DatabaseBackend(Backend):
 
     def get_units(self):
         return list(map(itemgetter(0), self._select_codes("unit")))
+
+    def write_file(self, path, item_type, **kwargs):
+        # TODO move this code to the parent class. s_write_gdx() works with any
+        #      backend, so it should be for any class that *doesn't* overload it
+        s, kwargs["filters"] = self._handle_rw_filters(kwargs.pop("filters", {}))
+
+        if path.suffix == ".gdx" and item_type is ItemType.MODEL and s:
+            s_write_gdx(self, s, path, **kwargs)
+        else:
+            super().write_file(path, item_type, **kwargs)
 
     # Methods for ixmp.TimeSeries
 

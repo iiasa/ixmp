@@ -78,14 +78,26 @@ class TestDatabaseBackend:
 
         pdt.assert_frame_equal(pd.DataFrame(items), mp.timeslices())
 
-    def test_init_ts(self, mp):
-        """Test Backend.init through TimeSeries.__init__."""
+    def test_ts(self, mp):
+        """Test Backend.{init,set_as_default,is_default}."""
         args = dict(model="Foo model", scenario="Baz scenario", version="new")
-        s0 = TimeSeries(mp, **args)
-        assert 1 == s0.version
+        ts0 = TimeSeries(mp, **args)
+        assert 1 == ts0.version
 
-        s1 = TimeSeries(mp, **args)
-        assert 2 == s1.version
+        ts1 = TimeSeries(mp, **args)
+        assert 2 == ts1.version
+
+        ts1.set_as_default()
+        assert ts1.is_default()
+
+        assert not ts0.is_default()
+
+        del ts0, ts1
+
+        args.pop("version")
+        ts2 = TimeSeries(mp, **args)
+        assert 2 == ts2.version
+        assert ts2.is_default()
 
     def test_make_dantzig(self, mp):
         make_dantzig(mp)

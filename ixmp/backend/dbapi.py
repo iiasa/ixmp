@@ -138,6 +138,31 @@ class DatabaseBackend(Backend):
 
         self.conn.commit()
 
+    def get(self, ts):
+        args = [ts.model, ts.scenario]
+        if ts.version:
+            query = """
+                SELECT ts.id, ts.version FROM timeseries AS ts WHERE model_name = ?
+                AND scenario_name = ? AND version = ?
+            """
+            args.append(ts.version)
+        else:
+            query = """
+                SELECT ts.id, ts.version FROM timeseries AS ts JOIN annotation AS a
+                ON a.obj_id == ts.id WHERE ts.model_name = ? AND ts.scenario_name = ?
+                AND a.obj_class == 'timeseries' AND a.id == '__ixmp_default_version'
+            """
+
+        cur = self.conn.cursor()
+        cur.execute(query, (ts.model, ts.scenario))
+
+        id, version = cur.fetchone()
+
+        ts.version = ts.version or version
+        assert ts.version == version  # Sanity check
+
+        self._index[ts] = id
+
     def check_out(self, ts, timeseries_only):
         if timeseries_only:
             log.info("timeseries_only=True ignored")
@@ -152,8 +177,7 @@ class DatabaseBackend(Backend):
 
         cur.execute(
             """
-            SELECT * FROM timeseries AS ts
-            JOIN annotation AS a ON a.obj_id == ts.id
+            SELECT * FROM timeseries AS ts JOIN annotation AS a ON a.obj_id == ts.id
             WHERE ts.model_name = ? AND ts.scenario_name = ?
             AND a.obj_class == 'timeseries'
             """,
@@ -165,6 +189,9 @@ class DatabaseBackend(Backend):
             raise NotImplementedError("set_as_default() with a default already set")
 
         self._annotate(ts, "__ixmp_default_version", None)
+
+    def is_default(self, ts):
+        return self._select_anno(ts, "__ixmp_default_version") is not None
 
     def _hash(self, identifiers):
         return sha1(json.dumps(identifiers).encode()).hexdigest()
@@ -314,6 +341,24 @@ class DatabaseBackend(Backend):
 
     # Internal
 
+    def _select_anno(self, obj, anno_id):
+        if isinstance(obj, TimeSeries):
+            data = ["timeseries", str(self._index[obj])]
+        elif isinstance(obj, tuple):
+            data = list(obj)
+        else:
+            raise NotImplementedError
+
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT * FROM annotation WHERE annotation.obj_class = ?
+            AND annotation.obj_id = ? AND annotation.id = ?
+            """,
+            data + [anno_id],
+        )
+        return cur.fetchone()
+
     def _select_codes(self, codelist):
         cur = self.conn.cursor()
         cur.execute("SELECT id FROM code WHERE codelist == ?", (codelist,))
@@ -369,14 +414,12 @@ class DatabaseBackend(Backend):
     delete_item = nie
     delete_meta = nie
     discard_changes = nie
-    get = nie
     get_data = nie
     get_doc = nie
     get_geo = nie
     get_meta = nie
     get_scenarios = nie
     has_solution = nie
-    is_default = nie
     item_delete_elements = nie
     last_update = nie
     remove_meta = nie

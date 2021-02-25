@@ -61,25 +61,6 @@ jobs:
     - name: Fetch tags (for setuptools-scm)
       run: git fetch --tags --depth=${{ env.depth }}
 
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Set RETICULATE_PYTHON
-      # Use the environment variable set by the setup-python action, above.
-      run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
-      shell: bash
-
-    - uses: r-lib/actions/setup-r@master
-
-    - name: Use OpenJDK 14 (macOS only)
-      # Using the default OpenJDK 1.8 on the macos-latest runner produces
-      # "Abort trap: 6" when JPype1 starts the JVM
-      if: ${{ startsWith(matrix.os, 'macos') }}
-      uses: actions/setup-java@v1
-      with:
-        java-version: '14'
-
     - name: Cache GAMS installer, Python packages, and R packages
       uses: actions/cache@v2
       with:
@@ -102,9 +83,24 @@ jobs:
         ci/install-graphviz.sh
       shell: bash
 
-    - name: Check GAMS
-      run: gams
+    - uses: r-lib/actions/setup-r@master
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set RETICULATE_PYTHON
+      # Use the environment variable set by the setup-python action, above.
+      run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
+
+    - name: Use OpenJDK 14 (macOS only)
+      # Using the default OpenJDK 1.8 on the macos-latest runner produces
+      # "Abort trap: 6" when JPype1 starts the JVM
+      if: ${{ startsWith(matrix.os, 'macos') }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: '14'
 
     - name: Upgrade pip, wheel, setuptools-scm
       run: python -m pip install --upgrade pip wheel setuptools-scm

@@ -291,7 +291,10 @@ class JDBCBackend(CachingBackend):
     def gc(cls):
         if _GC_AGGRESSIVE:
             # log.debug('Collect garbage')
-            java.System.gc()
+            try:
+                java.System.gc()
+            except jpype.JVMNotRunning:
+                pass
             gc.collect()
         # else:
         #     log.debug('Skip garbage collection')

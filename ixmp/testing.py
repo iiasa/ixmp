@@ -99,17 +99,6 @@ def ixmp_cli(tmp_env):
     yield Runner()
 
 
-@pytest.fixture(params=["AttrSeries", "SparseDataArray"])
-def parametrize_quantity_class(request):
-    """Fixture to run tests twice, for both reporting Quantity classes."""
-    pre = Quantity.CLASS
-
-    Quantity.CLASS = request.param
-    yield
-
-    Quantity.CLASS = pre
-
-
 @pytest.fixture
 def protect_pint_app_registry():
     """Protect pint's application registry.
@@ -294,7 +283,7 @@ def populate_test_platform(platform):
     - 1 version of a TimeSeries with model name 'Douglas Adams' and scenario
       name 'Hitchhiker', containing 2 values.
     """
-    s1 = make_dantzig(platform, solve=True)
+    s1 = make_dantzig(platform, solve=True, quiet=True)
 
     s2 = s1.clone()
     s2.set_as_default()

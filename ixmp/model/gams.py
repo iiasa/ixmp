@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import tempfile
+from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_call
 from typing import Mapping
@@ -16,10 +17,10 @@ log = logging.getLogger(__name__)
 
 def gams_version():
     """Return the GAMS version as a string, e.g. '24.7.4'."""
-    # NB check_output(['gams'], ...) does not work, because GAMS writes
-    #    directly to the console instead of to stdout.
-    #    check_output(['gams', '-LogOption=3'], ...) does not work, because
-    #    GAMS does not accept options without an input file to execute.
+    # NB check_output(['gams'], ...) does not work, because GAMS writes directly to the
+    #    console instead of to stdout. check_output(['gams', '-LogOption=3'], ...) does
+    #    not work, because GAMS does not accept options without an input file to
+    #    execute.
     import os
     from subprocess import check_output
     from tempfile import mkdtemp
@@ -180,12 +181,12 @@ class GAMSModel(Model):
 
         # Store options from `model_options`, otherwise from `defaults`
         for arg_name, default in self.defaults.items():
-            setattr(self, arg_name, model_options.get(arg_name, default))
+            setattr(self, arg_name, model_options.get(arg_name, copy(default)))
 
         # Check whether a subclass or user already set LogOption in `gams_args`
         if not any("LogOption" in arg for arg in self.gams_args):
             # Not set; use `quiet` to determine the value
-            self.gams_args.append(f"LogOption={'4' if self.quiet else '2'}")
+            self.gams_args.append(f"LogOption={'2' if self.quiet else '4'}")
 
     def format_exception(self, exc, model_file):
         """Format a user-friendly exception when GAMS errors."""

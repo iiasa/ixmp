@@ -584,7 +584,7 @@ def test_solve_callback(test_mp):
     scen = make_dantzig(test_mp)
 
     # Solve the scenario as configured
-    solve_args = dict(model="dantzig", gams_args=["LogOption=2"])
+    solve_args = dict(model="dantzig", quiet=True)
     scen.solve(**solve_args)
 
     # Store the expected value of the decision variable, x

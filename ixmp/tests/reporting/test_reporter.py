@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pint
 import pytest
@@ -160,17 +161,19 @@ def test_cli(ixmp_cli, test_mp, test_data_path):
     # TODO warning should be logged
 
     # Reporting produces the expected command-line output
-    assert result.output.endswith(
+
+    assert re.match(
         "i          j       "  # Trailing whitespace
-        """
-san-diego  chicago     1.8
-           new-york    2.5
-           topeka      1.4
-seattle    chicago     1.7
-           new-york    2.5
-           topeka      1.8
-Name: value, dtype: float64
-"""
+        r"""
+san-diego  chicago     1\.8
+           new-york    2\.5
+           topeka      1\.4
+seattle    chicago     1\.7
+           new-york    2\.5
+           topeka      1\.8
+(Name: value, )?dtype: float64
+""",
+        result.output,
     )
 
 

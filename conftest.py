@@ -1,4 +1,4 @@
-pytest_plugins = ("ixmp.testing",)
+pytest_plugins = ("genno.testing", "ixmp.testing")
 
 
 # Hooks

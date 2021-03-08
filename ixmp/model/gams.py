@@ -185,7 +185,7 @@ class GAMSModel(Model):
         # Check whether a subclass or user already set LogOption in `gams_args`
         if not any("LogOption" in arg for arg in self.gams_args):
             # Not set; use `quiet` to determine the value
-            self.gams_args.append(f"LogOption={'4' if self.quiet else '2'}")
+            self.gams_args.append(f"LogOption={'2' if self.quiet else '4'}")
 
     def format_exception(self, exc, model_file):
         """Format a user-friendly exception when GAMS errors."""

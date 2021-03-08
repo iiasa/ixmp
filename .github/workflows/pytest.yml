@@ -1,4 +1,4 @@
-name: pytest
+name: Test
 
 on:
   push:
@@ -132,6 +132,8 @@ jobs:
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
 
     - name: Run R CMD check
+      # Temporarily disabled: see https://github.com/iiasa/ixmp/issues/403
+      if: false
       run: |
         rcmdcheck::rcmdcheck(
             "rixmp",

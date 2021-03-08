@@ -283,7 +283,7 @@ def populate_test_platform(platform):
     - 1 version of a TimeSeries with model name 'Douglas Adams' and scenario
       name 'Hitchhiker', containing 2 values.
     """
-    s1 = make_dantzig(platform, solve=True)
+    s1 = make_dantzig(platform, solve=True, quiet=True)
 
     s2 = s1.clone()
     s2.set_as_default()

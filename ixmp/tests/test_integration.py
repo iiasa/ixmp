@@ -22,7 +22,7 @@ def test_run_clone(caplog, test_mp):
     # - reads back the solution from the output
     # - performs the test on the objective value and the timeseries data
     mp = test_mp
-    scen = make_dantzig(mp, solve=True)
+    scen = make_dantzig(mp, solve=True, quiet=True)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
     assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
 
@@ -58,7 +58,7 @@ def test_run_clone(caplog, test_mp):
 def test_run_remove_solution(test_mp):
     # create a new instance of the transport problem and solve it
     mp = test_mp
-    scen = make_dantzig(mp, solve=True)
+    scen = make_dantzig(mp, solve=True, quiet=True)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists
@@ -96,7 +96,7 @@ def get_distance(scen):
 def test_multi_db_run(tmpdir):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1, solve=True)
+    scen1 = make_dantzig(mp1, solve=True, quiet=True)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     # add other unit to make sure that the mapping is correct during clone

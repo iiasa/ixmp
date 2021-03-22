@@ -248,7 +248,7 @@ class GAMSModel(Model):
         # Determine working directory for the GAMS call, possibly a temporary directory
         self.cwd = Path(tempfile.mkdtemp()) if self.use_temp_dir else model_file.parent
         # The "case" name
-        self.case = self.format_option("case").replace(" ", "_")
+        self.case = self.clean_path(self.format_option("case").replace(" ", "_"))
         # Input and output file names
         self.in_file = Path(self.format_option("in_file"))
         self.out_file = Path(self.format_option("out_file"))

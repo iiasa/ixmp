@@ -13,7 +13,7 @@ RUN apt-get update &&\
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install GAMS
-# NB see also ci/env.sh and try to keep version in sync.
+# NB see also .github/workflows/pytest.yml and try to keep version in sync.
 ARG GAMS_VERSION=27.3.0
 
 RUN curl -O https://d37drm4t2jghv5.cloudfront.net/distributions/$GAMS_VERSION/linux/linux_x64_64_sfx.exe &&\

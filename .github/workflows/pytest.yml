@@ -10,7 +10,6 @@ on:
 
 
 env:
-  GAMS_VERSION: 25.1.1
   # See description in lint.yml
   depth: 100
 
@@ -75,13 +74,11 @@ jobs:
           ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-
           ${{ matrix.os }}-
 
-    - name: Install GAMS and Graphviz
-      env:
-        CI_OS: ${{ matrix.os }}
-      run: |
-        ci/install-gams.sh
-        ci/install-graphviz.sh
-      shell: bash
+    - uses: iiasa/actions/setup-gams@main
+      with:
+        version: 25.1.1
+
+    - uses: ts-graphviz/setup-graphviz@v1
 
     - uses: r-lib/actions/setup-r@master
 

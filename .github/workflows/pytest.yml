@@ -80,14 +80,6 @@ jobs:
 
     - uses: ts-graphviz/setup-graphviz@v1
 
-    - name: Install GAMS and Graphviz
-      env:
-        CI_OS: ${{ matrix.os }}
-      run: |
-        ci/install-gams.sh
-        ci/install-graphviz.sh
-      shell: bash
-
     - uses: r-lib/actions/setup-r@master
 
     - uses: actions/setup-python@v2

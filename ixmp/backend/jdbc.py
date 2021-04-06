@@ -569,24 +569,6 @@ class JDBCBackend(CachingBackend):
 
             ts.scheme = s
 
-    def _validate_meta_args(self, model, scenario, version):
-        """Validate arguments for getting/setting/deleting meta"""
-        valid = False
-        if model and not scenario and version is None:
-            valid = True
-        elif scenario and not model and version is None:
-            valid = True
-        elif model and scenario and version is None:
-            valid = True
-        elif model and scenario and version is not None:
-            valid = True
-        if not valid:
-            msg = (
-                "Invalid arguments. Valid combinations are: (model), "
-                "(scenario), (model, scenario), (model, scenario, version)"
-            )
-            raise ValueError(msg)
-
     def init(self, ts, annotation):
         klass = ts.__class__.__name__
 
@@ -996,7 +978,6 @@ class JDBCBackend(CachingBackend):
         version: int = None,
         strict: bool = False,
     ) -> dict:
-        self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
         meta = self.jobj.getMeta(model, scenario, version, strict)
@@ -1005,7 +986,6 @@ class JDBCBackend(CachingBackend):
     def set_meta(
         self, meta: dict, model: str = None, scenario: str = None, version: int = None
     ) -> None:
-        self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
 
@@ -1017,7 +997,6 @@ class JDBCBackend(CachingBackend):
     def remove_meta(
         self, categories, model: str = None, scenario: str = None, version: int = None
     ):
-        self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
         return self.jobj.removeMeta(model, scenario, version, to_jlist(categories))

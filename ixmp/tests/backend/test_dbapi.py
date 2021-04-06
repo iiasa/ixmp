@@ -229,7 +229,7 @@ def test_unique_meta(mp_, meta):
     mp.set_meta(meta, model=DANTZIG["model"])
     expected = (
         r"The meta category .* is already used at another level: "
-        r"model canning problem, scenario null, version null"
+        r"model 'canning problem', scenario None, version None"
     )
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
@@ -242,7 +242,7 @@ def test_unique_meta(mp_, meta):
     meta["sample_entry"] = "test-string"
     expected = (
         r"The meta category .* is already used at another level: "
-        r"model canning problem, scenario standard, version null"
+        r"model 'canning problem', scenario 'standard', version None"
     )
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG, version=scenario.version)
@@ -395,7 +395,7 @@ def test_unique_meta_scenario(mp_, meta):
 
     expected = (
         r"The meta category .* is already used at another level: "
-        r"model canning problem, scenario standard, "
+        r"model 'canning problem', scenario 'standard', "
     )
     with pytest.raises(Exception, match=expected):
         mp.set_meta(meta, **DANTZIG)

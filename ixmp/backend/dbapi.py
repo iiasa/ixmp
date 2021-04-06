@@ -8,12 +8,19 @@ from typing import Any, Dict, Generator, Tuple
 import pandas as pd
 import sqlite3
 
-from ixmp.backend import ItemType
+from ixmp.backend import FIELDS, ItemType
 from ixmp.backend.base import Backend
 from ixmp.backend.io import s_write_gdx
 from ixmp.core import TimeSeries
+from ixmp.utils import as_str_list
 
 log = logging.getLogger(__name__)
+
+
+def _filters_match(identifiers, **filters):
+    return all(
+        (len(v) == 0 or identifiers.get(k, None) in v) for k, v in filters.items()
+    )
 
 
 class DatabaseBackend(Backend):
@@ -216,6 +223,27 @@ class DatabaseBackend(Backend):
     def _hash(self, identifiers):
         return sha1(json.dumps(identifiers).encode()).hexdigest()
 
+    def get_data(self, ts, region, variable, unit, year):
+        filters = dict(
+            region=as_str_list(region),
+            variable=as_str_list(variable),
+            unit=as_str_list(unit),
+            year=as_str_list(year),
+        )
+
+        # Loop over all "tsdata" items
+        for name, *info in self._iter_items(ts, "tsdata"):
+            id, item = self._item_data(ts, name)
+
+            if not _filters_match(item, **filters):
+                # Doesn't match the filters
+                continue
+
+            for year, value in item["data"].items():
+                item["year"] = int(year)
+                item["value"] = float(value)
+                yield tuple(item[f] for f in FIELDS["ts_get"])
+
     def set_data(self, ts, region, variable, data, unit, subannual, meta):
         cur = self.conn.cursor()
 
@@ -255,7 +283,7 @@ class DatabaseBackend(Backend):
 
     # Methods for ixmp.Scenario
 
-    def list_items(self, s, type):
+    def _iter_items(self, s, type):
         cur = self.conn.cursor()
         cur.execute(
             """
@@ -265,7 +293,14 @@ class DatabaseBackend(Backend):
             """,
             (self._index[s], type),
         )
-        return list(map(itemgetter(0), cur.fetchall()))
+        while True:
+            result = cur.fetchone()
+            if result is None:
+                return
+            yield result
+
+    def list_items(self, s, type):
+        return list(map(itemgetter(0), self._iter_items(s, type)))
 
     def init_item(self, s, type, name, idx_sets, idx_names):
         idx_names = idx_names or idx_sets
@@ -292,6 +327,15 @@ class DatabaseBackend(Backend):
         return list(dims.keys() if sets_or_names == "names" else dims.values())
 
     def _item_data(self, s, name):
+        """Retrieve and unpickle data for item `name` in TimeSeries `s`.
+
+        Returns
+        -------
+        int
+            integer ID of the item.
+        object
+            item data.
+        """
         cur = self.conn.cursor()
 
         cur.execute(
@@ -442,7 +486,6 @@ class DatabaseBackend(Backend):
     delete_item = nie
     delete_meta = nie
     discard_changes = nie
-    get_data = nie
     get_doc = nie
     get_geo = nie
     get_meta = nie
@@ -471,7 +514,10 @@ SCHEMA = """
     CREATE TABLE code (codelist, id, parent);
 
     CREATE TABLE annotation (
-        obj_class VARCHAR NOT NULL, obj_id NOT NULL, id VARCHAR NOT NULL, value
+        obj_class VARCHAR NOT NULL,
+        obj_id NOT NULL,
+        id VARCHAR NOT NULL,
+        value
     );
 
     CREATE TABLE timeseries (
@@ -494,7 +540,9 @@ SCHEMA = """
     );
 
     CREATE TABLE item_data (
-        item INTEGER, value BLOB, FOREIGN KEY (item) REFERENCES item(id)
+        item INTEGER,
+        value BLOB,
+        FOREIGN KEY (item) REFERENCES item(id)
     );
 """
 

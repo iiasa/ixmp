@@ -4,6 +4,7 @@ import pytest
 
 from ixmp import Platform, TimeSeries, config as ixmp_config
 from ixmp.testing import make_dantzig
+from ixmp.tests.core.test_timeseries import DATA, expected, wide
 
 
 @pytest.fixture(scope="class")
@@ -98,6 +99,34 @@ class TestDatabaseBackend:
         ts2 = TimeSeries(mp, **args)
         assert 2 == ts2.version
         assert ts2.is_default()
+
+    @pytest.mark.parametrize("fmt", ["long", "wide"])
+    def test_tsdata(self, mp, fmt):
+        args = dict(model="Foo model", scenario="Baz scenario", version="new")
+        ts = TimeSeries(mp, **args)
+
+        # Copied from core.test_timeseries.test_add_timeseries
+        data = DATA[0] if fmt == "long" else wide(DATA[0])
+
+        # Data added
+        ts.add_timeseries(data)
+        ts.commit("")
+
+        # Error: column 'unit' is missing
+        with pytest.raises(ValueError):
+            ts.add_timeseries(DATA[0].drop("unit", axis=1))
+
+        # Copied from core.test_timeseries.test_get
+        exp = expected(data, ts)
+        args = {}
+
+        if fmt == "wide":
+            args["iamc"] = True
+
+        # Data can be retrieved and has the expected value
+        obs = ts.timeseries(**args)
+
+        pdt.assert_frame_equal(exp, obs)
 
     @pytest.mark.parametrize(
         "solve",

@@ -622,7 +622,8 @@ SCHEMA = """
         obj_class VARCHAR NOT NULL,
         obj_id NOT NULL,
         id VARCHAR NOT NULL,
-        value
+        value,
+        UNIQUE (obj_class, obj_id, id)
     );
 
     CREATE TABLE timeseries (

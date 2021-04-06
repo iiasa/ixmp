@@ -157,14 +157,14 @@ class DatabaseBackend(Backend):
 
         self.conn.commit()
 
-    def get(self, ts):
-        args = [ts.model, ts.scenario]
-        if ts.version:
+    def _get(self, model, scenario, version):
+        args = [model, scenario]
+        if version:
             query = """
                 SELECT ts.id, ts.version FROM timeseries AS ts WHERE model_name = ?
                 AND scenario_name = ? AND version = ?
             """
-            args.append(ts.version)
+            args.append(version)
         else:
             query = """
                 SELECT ts.id, ts.version FROM timeseries AS ts JOIN annotation AS a
@@ -173,9 +173,16 @@ class DatabaseBackend(Backend):
             """
 
         cur = self.conn.cursor()
-        cur.execute(query, (ts.model, ts.scenario))
+        cur.execute(query, args)
 
-        id, version = cur.fetchone()
+        result = cur.fetchone()
+        if result is None:
+            raise ValueError(f"model={model}, scenario={scenario}")
+        else:
+            return result
+
+    def get(self, ts):
+        id, version = self._get(ts.model, ts.scenario, ts.version)
 
         ts.version = ts.version or version
         assert ts.version == version  # Sanity check

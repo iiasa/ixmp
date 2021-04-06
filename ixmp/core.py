@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, Mapping, List, Optional, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -56,13 +56,11 @@ class Platform:
         "add_scenario_name",
         "close_db",
         "get_doc",
-        "get_meta",
         "get_model_names",
         "get_scenario_names",
         "open_db",
         "remove_meta",
         "set_doc",
-        "set_meta",
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -339,6 +337,34 @@ class Platform:
         """
         if not self._existing_node(region):
             self._backend.set_node(region, synonym=mapped_to)
+
+    def get_meta(
+        self,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
+        strict: bool = False,
+    ) -> Dict:
+        """Retrieve metadata.
+
+        .. todo:: Complete docstring before merging.
+        """
+        validate_meta_args(model, scenario, version)
+        return self._backend.get_meta(model, scenario, version, strict)
+
+    def set_meta(
+        self,
+        data: Mapping,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
+    ):
+        """Store metadata.
+
+        .. todo:: Complete docstring before merging.
+        """
+        validate_meta_args(model, scenario, version)
+        self._backend.set_meta(data, model, scenario, version)
 
     def timeslices(self):
         """Return all subannual timeslices defined in this Platform instance.
@@ -1713,7 +1739,7 @@ class Scenario(TimeSeries):
             meta category name
         """
         all_meta = self.platform._backend.get_meta(
-            self.model, self.scenario, self.version
+            self.model, self.scenario, self.version, strict=False
         )
         return all_meta[name] if name else all_meta
 
@@ -1884,3 +1910,15 @@ def to_iamc_layout(df):
         df["subannual"] = "Year"
 
     return df
+
+
+def validate_meta_args(
+    model: Optional[str], scenario: Optional[str], version: Optional[str]
+):
+    """Helper for :meth:`.Platform.set_meta` and :meth:`.Platform.get_meta`."""
+    mask = (model is not None, scenario is not None, version is not None)
+    if mask not in [(1, 0, 0), (0, 1, 0), (1, 1, 0), (1, 1, 1)]:
+        raise ValueError(
+            "Invalid arguments. Valid combinations are: (model), (scenario), "
+            "(model, scenario), (model, scenario, version)"
+        )

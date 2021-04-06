@@ -224,6 +224,8 @@ class DatabaseBackend(Backend):
         return sha1(json.dumps(identifiers).encode()).hexdigest()
 
     def get_data(self, ts, region, variable, unit, year):
+        # NB this is a simple implementation
+        # TODO use the __ixmp_ts_info annotation to filter before loading item data
         filters = dict(
             region=as_str_list(region),
             variable=as_str_list(variable),
@@ -239,28 +241,28 @@ class DatabaseBackend(Backend):
                 # Doesn't match the filters
                 continue
 
+            # Iterate through the pd.Series
             for year, value in item["data"].items():
+                # Insert the values in the item dict to simply construction of the tuple
                 item["year"] = int(year)
                 item["value"] = float(value)
                 yield tuple(item[f] for f in FIELDS["ts_get"])
 
-    def set_data(self, ts, region, variable, data, unit, subannual, meta):
-        cur = self.conn.cursor()
+    def get_geo(self, ts):
+        for name, *info in self._iter_items(ts, "geodata"):
+            id, item = self._item_data(ts, name)
+            item["value"] = item["data"]
+            yield tuple(item[f] for f in FIELDS["ts_get_geo"])
 
-        identifiers = dict(
-            region=region,
-            variable=variable,
-            subannual=subannual,
-            unit=unit,
-            meta=meta,
-        )
+    def _set_item_with_identifiers(self, ts, kind, data, dims, identifiers):
+        cur = self.conn.cursor()
 
         # Compute a unique name for this combination of identifiers
         name = self._hash(identifiers)
         log.debug(f"hash {name} for {identifiers}")
 
         # Create the entry in the database
-        self.init_item(ts, "tsdata", name, ["year"], ["year"])
+        self.init_item(ts, kind, name, dims, dims)
 
         # Retrieve any existing data
         id, existing = self._item_data(ts, name)
@@ -280,6 +282,37 @@ class DatabaseBackend(Backend):
 
         # Store an annotation with the identifiers
         self._annotate(("item", name), "__ixmp_ts_info", repr(identifiers))
+
+    def set_data(self, ts, region, variable, data, unit, subannual, meta):
+        self._set_item_with_identifiers(
+            ts=ts,
+            kind="tsdata",
+            data=data,
+            dims=["year"],
+            identifiers=dict(
+                region=region,
+                variable=variable,
+                subannual=subannual,
+                unit=unit,
+                meta=meta,
+            ),
+        )
+
+    def set_geo(self, ts, region, variable, subannual, year, value, unit, meta):
+        self._set_item_with_identifiers(
+            ts=ts,
+            kind="geodata",
+            data=value,
+            dims=[],
+            identifiers=dict(
+                region=region,
+                variable=variable,
+                subannual=subannual,
+                unit=unit,
+                meta=meta,
+                year=year,
+            ),
+        )
 
     # Methods for ixmp.Scenario
 
@@ -487,14 +520,12 @@ class DatabaseBackend(Backend):
     delete_meta = nie
     discard_changes = nie
     get_doc = nie
-    get_geo = nie
     get_meta = nie
     get_scenarios = nie
     item_delete_elements = nie
     last_update = nie
     remove_meta = nie
     set_doc = nie
-    set_geo = nie
     set_meta = nie
 
     # Class-specific methods

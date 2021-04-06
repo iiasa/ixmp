@@ -2,7 +2,7 @@ import pandas as pd
 import pandas.testing as pdt
 import pytest
 
-from ixmp import Platform, TimeSeries, config as ixmp_config
+from ixmp import Platform, Scenario, TimeSeries, config as ixmp_config
 from ixmp.testing import make_dantzig
 from ixmp.tests.core.test_timeseries import DATA, expected, wide
 
@@ -29,6 +29,17 @@ def mp(request, tmp_env, tmp_path_factory):
 
     # Remove from config
     ixmp_config.remove_platform(platform_name)
+
+
+@pytest.fixture(scope="function", params=[TimeSeries, Scenario])
+def ts(request, mp):
+    """Copied from :func:`core.test_timeseries.ts`."""
+    # Use a hash of the pytest node ID to avoid exceeding the maximum length for a
+    # scenario name
+    node = hash(request.node.nodeid.replace("/", " "))
+    # Class of object to yield
+    cls = request.param
+    yield cls(mp, model=f"test-{node}", scenario="test", version="new")
 
 
 class TestDatabaseBackend:
@@ -101,10 +112,7 @@ class TestDatabaseBackend:
         assert ts2.is_default()
 
     @pytest.mark.parametrize("fmt", ["long", "wide"])
-    def test_tsdata(self, mp, fmt):
-        args = dict(model="Foo model", scenario="Baz scenario", version="new")
-        ts = TimeSeries(mp, **args)
-
+    def test_tsdata(self, ts, fmt):
         # Copied from core.test_timeseries.test_add_timeseries
         data = DATA[0] if fmt == "long" else wide(DATA[0])
 
@@ -127,6 +135,20 @@ class TestDatabaseBackend:
         obs = ts.timeseries(**args)
 
         pdt.assert_frame_equal(exp, obs)
+
+    def test_geodata(self, ts):
+        # Copied from core.test_timeseries.test_add_geodata
+
+        # Empty TimeSeries includes no geodata
+        pdt.assert_frame_equal(DATA["geo"].loc[[False, False, False]], ts.get_geodata())
+
+        # Data can be added
+        ts.add_geodata(DATA["geo"])
+        ts.commit("")
+
+        # Added data can be retrieved
+        obs = ts.get_geodata().sort_values("year").reset_index(drop=True)
+        pdt.assert_frame_equal(DATA["geo"], obs)
 
     @pytest.mark.parametrize(
         "solve",

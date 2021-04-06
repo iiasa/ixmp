@@ -594,7 +594,6 @@ class DatabaseBackend(Backend):
     delete = nie
     delete_geo = nie
     delete_item = nie
-    delete_meta = nie
     discard_changes = nie
     get_doc = nie
     get_scenarios = nie

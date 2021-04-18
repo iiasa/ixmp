@@ -2,19 +2,9 @@ name: Lint
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
-
-env:
-  # For setuptools-scm. With fetch --tags below, this ensures that
-  # enough history is fetched to contain the latest tag, so that
-  # setuptools-scm can generate the version number. Update:
-  # - See https://github.com/iiasa/ixmp/releases, at "NN commits to
-  #   master since this release". The value should be at least equal to
-  #   NN + the number of commits on any PR branch.
-  # - Reset to a lower value, e.g. 100, after a new release.
-  depth: 100
+    branches: [ main ]
 
 jobs:
   lint:
@@ -24,11 +14,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: ${{ env.depth }}
-
-    - name: Fetch tags (for setuptools-scm)
-      run: git fetch --tags --depth=${{ env.depth }}
 
     - uses: actions/setup-python@v2
       with:
@@ -65,9 +50,3 @@ jobs:
         # Also install packages that contain type stubs
         pip install pytest genno xarray
         mypy .
-
-    - name: Test package build
-      run: |
-        pip install twine wheel
-        python3 setup.py bdist_wheel sdist
-        twine check dist/*

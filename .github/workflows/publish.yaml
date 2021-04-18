@@ -1,4 +1,4 @@
-name: Publish
+name: Build package / publish
 
 on:
   push:
@@ -6,6 +6,10 @@ on:
     tags: [ "v*" ]
   release:
     types: [ published ]
+  # Check that package can be built even on PRs
+  pull_request:
+    branches: [ main ]
+
 
 jobs:
   publish:

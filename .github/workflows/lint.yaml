@@ -2,9 +2,9 @@ name: Lint
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   # For setuptools-scm. With fetch --tags below, this ensures that

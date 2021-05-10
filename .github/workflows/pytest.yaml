@@ -40,7 +40,7 @@ jobs:
         exclude:
         # See https://github.com/iiasa/ixmp/issues/360
         - os: windows-latest
-          python-version: '3.6'
+          python-version: "3.6"
 
       fail-fast: false
 
@@ -141,6 +141,7 @@ jobs:
       shell: Rscript {0}
 
     - name: Test documentation build using Sphinx
+      if: matrix.python-version != '3.6'
       run: make --directory=doc html
 
     - name: Upload test coverage to Codecov.io

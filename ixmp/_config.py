@@ -267,6 +267,10 @@ class Config:
                                 "JDBCBackend with driver=hsqldb"
                             )
                 assert len(args) == 0
+            elif cls == "dbapi":
+                from ixmp.backend.dbapi import DatabaseBackend
+
+                info = DatabaseBackend.handle_config(args)
             else:
                 raise ValueError(cls)
 

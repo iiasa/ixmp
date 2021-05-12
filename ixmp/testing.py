@@ -268,8 +268,8 @@ def create_test_platform(tmp_path, data_path, name, **properties):
         return props_file
 
 
-def populate_test_platform(platform):
-    """Populate *platform* with data for testing.
+def populate_test_platform(platform: Platform, solve: bool = True) -> None:
+    """Populate `platform` with data for testing.
 
     Many of the tests in test_core.py depend on this set of data.
 
@@ -282,8 +282,13 @@ def populate_test_platform(platform):
 
     - 1 version of a TimeSeries with model name 'Douglas Adams' and scenario
       name 'Hitchhiker', containing 2 values.
+
+    Parameters
+    ----------
+    solve : bool, optional
+        If :obj:`True`, the scenarios are solved.
     """
-    s1 = make_dantzig(platform, solve=True, quiet=True)
+    s1 = make_dantzig(platform, solve=solve, quiet=True)
 
     s2 = s1.clone()
     s2.set_as_default()

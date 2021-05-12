@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, Mapping, List, Optional, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -56,13 +56,11 @@ class Platform:
         "add_scenario_name",
         "close_db",
         "get_doc",
-        "get_meta",
         "get_model_names",
         "get_scenario_names",
         "open_db",
         "remove_meta",
         "set_doc",
-        "set_meta",
     ]
 
     def __init__(self, name=None, backend=None, **backend_args):
@@ -339,6 +337,59 @@ class Platform:
         """
         if not self._existing_node(region):
             self._backend.set_node(region, synonym=mapped_to)
+
+    def get_meta(
+        self,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
+        strict: bool = False,
+    ) -> Dict:
+        """Retrieve metadata.
+
+        .. todo:: Complete docstring before merging.
+        """
+        validate_meta_args(model, scenario, version)
+        return self._backend.get_meta(model, scenario, version, strict)
+
+    def set_meta(
+        self,
+        data: Mapping,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
+    ):
+        """Store metadata.
+
+        .. todo:: Complete docstring before merging.
+        """
+        kind = validate_meta_args(model, scenario, version)
+
+        if len(data) == 0:
+            return
+
+        # Arguments for checking other
+        other_args = [
+            (model, None, None),
+            (None, scenario, None),
+            (model, scenario, None),
+        ]
+        other_data = list(
+            self._backend.get_meta(*args, strict=True) if i != kind else dict()
+            for i, args in enumerate(other_args)
+        )
+
+        # Check for existing meta key
+        for key, value in data.items():
+            exists = list(key in other for other in other_data)
+            if any(exists):
+                args = other_args[exists.index(True)]
+                raise RuntimeError(
+                    f"The meta category {repr(key)} is already used at another level: "
+                    "model {!r}, scenario {!r}, version {!r}".format(*args)
+                )
+
+        self._backend.set_meta(data, model, scenario, version)
 
     def timeslices(self):
         """Return all subannual timeslices defined in this Platform instance.
@@ -1571,7 +1622,21 @@ class Scenario(TimeSeries):
 
         If ``has_solution() == True``, model solution data exists in the db.
         """
-        return self._backend("has_solution")
+        try:
+            return self._backend("has_solution")
+        except NotImplementedError:
+            # Fallback implementation if the backend does not define the optional
+            # method
+
+            for ix_type in "equ", "var":
+                for name in self._backend("list_items", ix_type):
+                    if len(
+                        self._backend("item_get_elements", ix_type, name, filters=None)
+                    ):
+                        # At least one 'equ' or 'var' item has data === a "solution"
+                        return True
+
+            return False
 
     def remove_solution(self, first_model_year=None):
         """Remove the solution from the scenario
@@ -1699,7 +1764,7 @@ class Scenario(TimeSeries):
             meta category name
         """
         all_meta = self.platform._backend.get_meta(
-            self.model, self.scenario, self.version
+            self.model, self.scenario, self.version, strict=False
         )
         return all_meta[name] if name else all_meta
 
@@ -1719,15 +1784,9 @@ class Scenario(TimeSeries):
             if isinstance(name_or_dict, str):
                 name_or_dict = {name_or_dict: value}
             else:
-                msg = (
-                    "Unsupported parameter type of name_or_dict: %s. "
-                    "Supported parameter types for name_or_dict are "
-                    "String and Dictionary"
-                ) % type(name_or_dict)
-                raise ValueError(msg)
-        self.platform._backend.set_meta(
-            name_or_dict, self.model, self.scenario, self.version
-        )
+                raise TypeError(f"{type(name_or_dict)}; expected str or dict")
+
+        self.platform.set_meta(name_or_dict, self.model, self.scenario, self.version)
 
     def delete_meta(self, *args, **kwargs):
         """Remove scenario meta.
@@ -1870,3 +1929,18 @@ def to_iamc_layout(df):
         df["subannual"] = "Year"
 
     return df
+
+
+def validate_meta_args(
+    model: Optional[str], scenario: Optional[str], version: Optional[str]
+):
+    """Helper for :meth:`.Platform.set_meta` and :meth:`.Platform.get_meta`."""
+    try:
+        return [(1, 0, 0), (0, 1, 0), (1, 1, 0), (1, 1, 1)].index(
+            (model is not None, scenario is not None, version is not None)
+        )
+    except IndexError:
+        raise ValueError(
+            "Invalid arguments. Valid combinations are: (model), (scenario), "
+            "(model, scenario), (model, scenario, version)"
+        ) from None

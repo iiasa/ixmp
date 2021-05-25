@@ -462,11 +462,13 @@ def show_versions(file=sys.stdout):
         # ixmp stack
         "ixmp",
         "message_ix",
+        "message_ix_models",
         "message_data",
         None,
         # ixmp dependencies
         "click",
         "dask",
+        "genno",
         "graphviz",
         "jpype",
         "openpyxl",

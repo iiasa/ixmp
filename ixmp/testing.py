@@ -117,6 +117,23 @@ def protect_pint_app_registry():
     pint.set_application_registry(saved)
 
 
+@pytest.fixture
+def protect_rename_dims():
+    """Protect :data:`RENAME_DIMS`.
+
+    Use this fixture on tests which invoke code that imports :mod:`message_ix`, e.g.
+    :func:`show_versions`. Importing :mod:`message_ix` has the side effect of adding
+    values to :data:`RENAME_DIMS`. Using this fixture ensures that the environment for
+    other tests is not altered.
+    """
+    from ixmp.reporting import RENAME_DIMS
+
+    saved = deepcopy(RENAME_DIMS)  # Probably just copy() is sufficient
+    yield
+    RENAME_DIMS.clear()
+    RENAME_DIMS.update(saved)
+
+
 @pytest.fixture(scope="session")
 def tmp_env(tmp_path_factory):
     """Return the os.environ dict with the IXMP_DATA variable set.

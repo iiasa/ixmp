@@ -315,7 +315,7 @@ def test_report(ixmp_cli):
     assert result.exit_code == UsageError.exit_code
 
 
-@pytest.mark.usefixtures("protect_pint_app_registry")
+@pytest.mark.usefixtures("protect_pint_app_registry", "protect_rename_dims")
 def test_show_versions(ixmp_cli):
     result = ixmp_cli.invoke(["show-versions"])
     assert result.exit_code == 0, result.output

@@ -147,17 +147,26 @@ class Config:
         # Also set on the current config object
         self.values[name] = default or type_()
 
-    def set(self, name, value):
-        """Set configuration *key* to *value*."""
+    def unregister(self, name):
+        """Unregister and clear the configuration key `name`."""
+        KEYS.pop(name, None)
+        self.values.pop(name, None)
+
+    def set(self, name, value, _strict=True):
+        """Set configuration key `name` to `value`."""
         if value is None:
             return
 
-        type_, _ = KEYS[name]
-        if not isinstance(value, type_):
-            # Value is not of the expected type
+        # Retrieve the type for `name`; or None if unregistered
+        type_ = KEYS.get(name, (None,))[0]
+
+        if type_ or _strict:
             try:
                 # Attempt to cast to the correct type
                 value = type_(value)
+            except TypeError:
+                # _strict and unregistered key; tried to call None(value)
+                raise KeyError(name)
             except Exception:
                 raise TypeError(
                     f"expected {type_} for {repr(name)}; got {type(value)} "

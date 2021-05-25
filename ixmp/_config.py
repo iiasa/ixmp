@@ -23,16 +23,18 @@ class _JSONEncoder(json.JSONEncoder):
 def _iter_config_paths():
     """Yield recognized configuration paths, in order of priority."""
     try:
-        yield "environment (IXMP_DATA)", Path(os.environ["IXMP_DATA"])
+        yield "environment (IXMP_DATA)", Path(os.environ["IXMP_DATA"]).resolve()
     except KeyError:
         pass
 
     try:
-        yield "environment (XDG_DATA_HOME)", Path(os.environ["XDG_DATA_HOME"], "ixmp")
+        yield "environment (XDG_DATA_HOME)", Path(
+            os.environ["XDG_DATA_HOME"], "ixmp"
+        ).resolve()
     except KeyError:
         pass
 
-    yield "default", Path.home() / ".local" / "share" / "ixmp"
+    yield "default", Path.home().joinpath(".local", "share", "ixmp")
 
 
 # Recognized configuration keys; name -> (type, default value)

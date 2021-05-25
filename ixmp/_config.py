@@ -11,8 +11,7 @@ log = logging.getLogger(__name__)
 class _JSONEncoder(json.JSONEncoder):
     """Helper for writing config to file.
 
-    The default JSONEncoder does not automatically convert pathlib.Path
-    objects.
+    The default JSONEncoder does not automatically convert pathlib.Path objects.
     """
 
     def default(self, o):
@@ -53,9 +52,9 @@ KEYS = {
 
 
 def _locate(filename=None):
-    """Locate an existing *filename* in the ixmp config directories.
+    """Locate an existing `filename` in the ixmp config directories.
 
-    If *filename* is None (the default), only directories are located.
+    If `filename` is :obj:`None` (the default), only directories are located.
     """
     tried = []
     for label, directory in _iter_config_paths():
@@ -78,11 +77,11 @@ def _locate(filename=None):
 class Config:
     """Configuration for ixmp.
 
-    Config stores two kinds of data: simple keys with a single value, and
-    structured Platform information.
+    Config stores two kinds of data: simple keys with a single value, and structured
+    Platform information.
 
-    ixmp has no built-in simple keys; however, it can store keys for other
-    packages that build on ixmp, such as :mod:`message_ix`.
+    ixmp has no built-in simple keys; however, it can store keys for other packages
+    that build on ixmp, such as :mod:`message_ix`.
 
     Parameters
     ----------
@@ -123,9 +122,9 @@ class Config:
 
     # Public methods
 
-    def get(self, key):
-        """Return the value of a configuration *key*."""
-        return self.values[key]
+    def get(self, name):
+        """Return the value of a configuration key `name`."""
+        return self.values[name]
 
     def register(self, name, type, default=None):
         """Register a new configuration key.
@@ -188,17 +187,17 @@ class Config:
         for name, (value_type, default) in KEYS.items():
             self.values[name] = default or value_type()
 
-        # Set the default local database path; changed versus KEYS if IXMP_DATA
-        # has been altered since the module was imported
         self.values["platform"]["local"]["path"] = (
             next(_iter_config_paths())[1] / "localdb" / "default"
         )
+        # Set the default local database path; changed versus KEYS if IXMP_DATA has been
+        # altered since the module was imported
 
     def save(self):
         """Write configuration keys to file.
 
-        ``config.json`` is created in the first of the ixmp configuration
-        directories that exists. Only non-null values are written.
+        ``config.json`` is created in the first of the ixmp configuration directories
+        that exists. Only non-null values are written.
         """
         # Use the first identifiable path
         _, config_dir = next(_iter_config_paths())
@@ -278,19 +277,19 @@ class Config:
         Parameters
         ----------
         name : str
-            Existing platform. If *name* is 'default', then the information for
-            the default platform is returned.
+            Existing platform. If `name` is 'default', then the information for the
+            default platform is returned.
 
         Returns
         -------
         dict
-            The 'class' key specifies one of the :obj:`~.BACKENDS`.
-            Other keys vary by backend class.
+            The 'class' key specifies one of the :obj:`~.BACKENDS`. Other keys vary by
+            backend class.
 
         Raises
         ------
         KeyError
-            If *name* is not configured as a platform.
+            If `name` is not configured as a platform.
         """
         if name == "default":
             # The 'default' key stores the name of another config'd platform
@@ -305,9 +304,9 @@ class Config:
             )
 
     def remove_platform(self, name):
-        """Remove the configuration for platform *name*."""
+        """Remove the configuration for platform `name`."""
         self.values["platform"].pop(name)
 
 
-#: Default |ixmp| configuration object.
+#: Default :mod:`ixmp` configuration object.
 config = Config()

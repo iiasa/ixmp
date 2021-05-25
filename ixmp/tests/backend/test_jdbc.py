@@ -37,21 +37,24 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-def test_close(test_mp, capfd):
+def test_close(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
+    # Use the session-scoped fixture to avoid affecting other tests in this file
+    mp = test_mp_f
+
     # Close once
-    test_mp.close_db()
+    mp.close_db()
 
     # Close again, once already closed
-    test_mp.close_db()
+    mp.close_db()
 
     # With the default log level, WARNING, nothing is printed
     captured = capfd.readouterr()
     assert captured.out == ""
 
     # With log level INFO, a message is printed
-    test_mp.set_log_level(logging.INFO)
-    test_mp.close_db()
+    mp.set_log_level(logging.INFO)
+    mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
     assert msg in captured.out

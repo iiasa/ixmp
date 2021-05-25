@@ -22,6 +22,23 @@ META_ENTRIES = [
 DANTZIG = models["dantzig"]
 
 
+@pytest.fixture(scope="function")
+def mp(test_mp_f):
+    """A test Platform.
+
+    The platform contains one time series with the "dantizg" model & scenario name from
+    :data:`testing.models`.
+
+    Unlike the other submodules of :mod:`ixmp.tests.core`, the tests in this file
+    generally require a clean platform each time, so this is a function-scoped fixture.
+    """
+    # Don't call populate_test_platform(), since this is all that's needed
+    ts = ixmp.TimeSeries(test_mp_f, **models["dantzig"], version="new")
+    ts.commit("")
+
+    yield test_mp_f
+
+
 @pytest.mark.parametrize("meta", META_ENTRIES)
 def test_set_meta_missing_argument(mp, meta):
     with pytest.raises(ValueError):

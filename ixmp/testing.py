@@ -176,9 +176,8 @@ def tmp_env(tmp_path_factory):
     yield os.environ
 
 
-@pytest.fixture(scope="class")
-def test_mp(request, tmp_env, test_data_path):
-    """An empty ixmp.Platform connected to a temporary, in-memory database."""
+def _platform_fixture(request, tmp_env, test_data_path):
+    """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace("/", " ")
@@ -199,6 +198,26 @@ def test_mp(request, tmp_env, test_data_path):
 
     # Remove from config
     ixmp_config.remove_platform(platform_name)
+
+
+@pytest.fixture(scope="module")
+def test_mp(request, tmp_env, test_data_path):
+    """An empty :class:`Platform` connected to a temporary, in-memory database.
+
+    This fixture has **module** scope: the same Platform is reused for all tests in a
+    module.
+    """
+    yield from _platform_fixture(request, tmp_env, test_data_path)
+
+
+@pytest.fixture(scope="function")
+def test_mp_f(request, tmp_env, test_data_path):
+    """An empty :class:`Platform` connected to a temporary, in-memory database.
+
+    This fixture has **function** scope: the same Platform is reused for one test
+    function.
+    """
+    yield from _platform_fixture(request, tmp_env, test_data_path)
 
 
 def bool_param_id(name):

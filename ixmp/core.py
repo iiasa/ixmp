@@ -885,6 +885,9 @@ class Scenario(TimeSeries):
                 "message_ix.Scenario()"
             )
 
+        if _clone:
+            return
+
         # Retrieve the Model class correlating to the *scheme*
         model_class = get_model(self.scheme).__class__
 

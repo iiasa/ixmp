@@ -50,6 +50,7 @@ JAVA_CLASSES = [
     "at.ac.iiasa.ixmp.dto.TimesliceDTO",
     "at.ac.iiasa.ixmp.Platform",
     "java.lang.Double",
+    "java.lang.Exception",
     "java.lang.Integer",
     "java.lang.NoClassDefFoundError",
     "java.lang.IllegalArgumentException",
@@ -123,10 +124,20 @@ def _read_properties(file):
 
 def _raise_jexception(exc, msg="unhandled Java exception: "):
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
+    # Try to re-raise as a ValueError for bad model or scenario name
+    arg = exc.args[0] if isinstance(exc.args[0], str) else ""
+    match = re.search(r"getting '([^']*)' in table '([^']*)'", arg)
+    if match:
+        param = match.group(2).lower()
+        if param in {"model", "scenario"}:
+            raise ValueError(f"{param}={repr(match.group(1))}") from None
+
+    # Other exceptions
     if _EXCEPTION_VERBOSE:
         msg += "\n\n" + exc.stacktrace()
     else:
         msg += exc.message()
+
     raise RuntimeError(msg) from None
 
 
@@ -1049,7 +1060,12 @@ class JDBCBackend(CachingBackend):
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
-        meta = self.jobj.getMeta(model, scenario, version, strict)
+
+        try:
+            meta = self.jobj.getMeta(model, scenario, version, strict)
+        except java.IxException as e:
+            _raise_jexception(e)
+
         return {entry.getKey(): _unwrap(entry.getValue()) for entry in meta.entrySet()}
 
     def set_meta(
@@ -1062,7 +1078,11 @@ class JDBCBackend(CachingBackend):
         jmeta = java.HashMap()
         for k, v in meta.items():
             jmeta.put(str(k), _wrap(v))
-        self.jobj.setMeta(model, scenario, version, jmeta)
+
+        try:
+            self.jobj.setMeta(model, scenario, version, jmeta)
+        except java.IxException as e:
+            _raise_jexception(e)
 
     def remove_meta(
         self, categories, model: str = None, scenario: str = None, version: int = None

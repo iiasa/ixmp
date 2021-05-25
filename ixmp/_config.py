@@ -37,7 +37,7 @@ def _iter_config_paths():
     yield "default", Path.home().joinpath(".local", "share", "ixmp")
 
 
-# Recognized configuration keys; name -> (type, default value)
+#: Registered configuration keys; name -> (type, default value).
 KEYS = {
     "platform": (
         dict,
@@ -105,16 +105,21 @@ class Config:
     def read(self):
         """Try to read configuration keys from file.
 
-        If successful, the attribute :attr:`path` is set to the path of the
-        file.
+        If successful, the attribute :attr:`path` is set to the path of the file.
         """
         try:
+            # Locate and read the configuration file
             config_path = _locate("config.json")
-            contents = config_path.read_text()
-            self.values.update(json.loads(contents))
-            self.path = config_path.resolve()
         except FileNotFoundError:
-            pass
+            contents = "{}"
+        else:
+            self.path = config_path.resolve()
+            contents = config_path.read_text()
+
+        try:
+            # Parse JSON and set values; _strict=False tolerates unregistered values
+            for key, value in json.loads(contents).items():
+                self.set(key, value, _strict=False)
         except json.JSONDecodeError:
             print(config_path, contents)
             raise

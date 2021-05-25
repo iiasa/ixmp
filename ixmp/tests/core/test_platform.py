@@ -12,6 +12,8 @@ from pytest import raises
 import ixmp
 from ixmp.testing import assert_logs
 
+from . import DATA
+
 
 def test_init():
     with pytest.raises(

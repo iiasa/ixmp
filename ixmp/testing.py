@@ -39,6 +39,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain, product
 from math import ceil
+from typing import Any, List
 
 try:
     import resource
@@ -64,12 +65,26 @@ from .reporting import Quantity
 
 log = logging.getLogger(__name__)
 
+#: Common (model name, scenario name) pairs for testing.
 models = {
-    "dantzig": {
-        "model": "canning problem",
-        "scenario": "standard",
-    },
+    "dantzig": dict(model="canning problem", scenario="standard"),
+    "h2g2": dict(model="Douglas Adams", scenario="Hitchhiker"),
 }
+
+_MS: List[Any] = [models["dantzig"]["model"], models["dantzig"]["scenario"]]
+HIST_DF = pd.DataFrame(
+    [_MS + ["DantzigLand", "GDP", "USD", 850.0, 900.0, 950.0]],
+    columns=IAMC_IDX + [2000, 2005, 2010],
+)
+INP_DF = pd.DataFrame(
+    [_MS + ["DantzigLand", "Demand", "cases", 850.0, 900.0]],
+    columns=IAMC_IDX + [2000, 2005],
+)
+TS_DF = (
+    pd.concat([HIST_DF, INP_DF], sort=False)
+    .sort_values(by="variable")
+    .reset_index(drop=True)
+)
 
 
 # pytest hooks and fixtures
@@ -228,21 +243,6 @@ def add_test_data(scen: Scenario):
     return t, t_foo, t_bar, x
 
 
-MODEL = "canning problem"
-SCENARIO = "standard"
-HIST_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, "DantzigLand", "GDP", "USD", 850.0, 900.0, 950.0]],
-    columns=IAMC_IDX + [2000, 2005, 2010],
-)
-INP_DF = pd.DataFrame(
-    [[MODEL, SCENARIO, "DantzigLand", "Demand", "cases", 850.0, 900.0]],
-    columns=IAMC_IDX + [2000, 2005],
-)
-TS_DF = pd.concat([HIST_DF, INP_DF], sort=False)
-TS_DF.sort_values(by="variable", inplace=True)
-TS_DF.index = range(len(TS_DF.index))
-
-
 def create_test_platform(tmp_path, data_path, name, **properties):
     """Create a Platform for testing using specimen files '*name*.*'.
 
@@ -312,7 +312,7 @@ def populate_test_platform(platform):
 
     s2.clone()
 
-    s4 = TimeSeries(platform, "Douglas Adams", "Hitchhiker", version="new")
+    s4 = TimeSeries(platform, **models["h2g2"], version="new")
     s4.add_timeseries(
         pd.DataFrame.from_dict(
             dict(
@@ -361,7 +361,7 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
     annot = "Dantzig's transportation problem for illustration and testing"
     scen = Scenario(
         mp,
-        **models["dantzig"],
+        **models["dantzig"],  # type: ignore [arg-type]
         version="new",
         annotation=annot,
         scheme="dantzig",

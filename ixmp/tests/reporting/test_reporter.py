@@ -133,6 +133,7 @@ def test_platform_units(test_mp, caplog, ureg):
 
 def test_cli(ixmp_cli, test_mp, test_data_path):
     # Put something in the database
+    test_mp.open_db()
     make_dantzig(test_mp)
     test_mp.close_db()
 

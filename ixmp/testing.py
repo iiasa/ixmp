@@ -291,9 +291,9 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 
 
 def populate_test_platform(platform):
-    """Populate *platform* with data for testing.
+    """Populate `platform` with data for testing.
 
-    Many of the tests in test_core.py depend on this set of data.
+    Many of the tests in :mod:`ixmp.tests.core` depend on this set of data.
 
     The data consist of:
 
@@ -714,8 +714,8 @@ def random_ts_data(length):
 def add_random_model_data(scenario, length):
     """Add a set and parameter with given *length* to *scenario*.
 
-    The set is named 'random_set'. The parameter is named 'random_par', and
-    has two dimensions indexed by 'random_set'.
+    The set is named 'random_set'. The parameter is named 'random_par', and has two
+    dimensions indexed by 'random_set'.
     """
     set_data, par_data = random_model_data(length)
     scenario.init_set("random_set")

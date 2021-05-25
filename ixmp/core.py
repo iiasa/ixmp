@@ -16,8 +16,7 @@ from .utils import as_str_list, check_year, parse_url, year_list
 
 log = logging.getLogger(__name__)
 
-# %% default settings for column headers
-
+#: Partial dimensions for “IAMC format”.
 IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
 
@@ -27,13 +26,12 @@ class Platform:
     A Platform connects two key components:
 
     1. A **back end** for storing data such as model inputs and outputs.
-    2. One or more **model(s)**; codes in Python or other languages or
-       frameworks that run, via :meth:`Scenario.solve`, on the data stored in
-       the Platform.
+    2. One or more **model(s)**; codes in Python or other languages or frameworks that
+       run, via :meth:`Scenario.solve`, on the data stored in the Platform.
 
     The Platform parameters control these components. :class:`TimeSeries` and
-    :class:`Scenario` objects tied to a single Platform; to move data between
-    platforms, see :meth:`Scenario.clone`.
+    :class:`Scenario` objects tied to a single Platform; to move data between platforms,
+    see :meth:`Scenario.clone`.
 
     Parameters
     ----------
@@ -882,8 +880,8 @@ class Scenario(TimeSeries):
         if self.scheme == "MESSAGE" and self.__class__ is Scenario:
             # Loaded scenario has an improper scheme
             raise RuntimeError(
-                f"{model}/{scenario} is a MESSAGE-scheme "
-                "scenario; use message_ix.Scenario()."
+                f"{model}/{scenario} is a MESSAGE-scheme scenario; use "
+                "message_ix.Scenario()"
             )
 
         # Retrieve the Model class correlating to the *scheme*

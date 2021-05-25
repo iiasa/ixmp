@@ -300,6 +300,56 @@ class JDBCBackend(CachingBackend):
         #     log.debug('Skip garbage collection')
 
     # Platform methods
+    @classmethod
+    def handle_config(cls, args, kwargs):
+        """Handle platform/backend config arguments.
+
+        `args` will overwrite any `kwargs`, and may be one of:
+
+        - ("oracle", url, user, password) for an Oracle database.
+        - ("hsqldb", path) for a file-backed HyperSQL database.
+        - ("hsqldb",) with "url" supplied via `kwargs`, e.g. "jdbc:hsqldb:mem://foo" for
+          an in-memory database.
+        """
+        info = copy(kwargs)
+
+        # First argument: driver
+        try:
+            info["driver"] = args.pop(0)
+        except IndexError:
+            raise ValueError(
+                f"≥1 positional argument required for class=jdbc: driver; got: {args}, "
+                + str(kwargs)
+            )
+
+        if info["driver"] == "oracle":
+            if len(args) != 3:
+                raise ValueError(
+                    "3 arguments required for driver=oracle: url, user, password; got: "
+                    + str(args)
+                )
+            info["url"], info["user"], info["password"] = args
+
+        elif info["driver"] == "hsqldb":
+            try:
+                info["path"] = Path(args.pop(0)).resolve()
+            except IndexError:
+                if "url" not in info:
+                    raise ValueError(
+                        "must supply either positional path or url= keyword argument "
+                        "for driver=hsqldb"
+                    )
+
+            if len(args):
+                raise ValueError(
+                    f"Unrecognized extra argument(s) for driver=hsqldb: {args}"
+                )
+        else:
+            raise ValueError(
+                f"driver={info['driver']}; expected one of {set(DRIVER_CLASS)}"
+            )
+
+        return info
 
     def set_log_level(self, level):
         # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled by the

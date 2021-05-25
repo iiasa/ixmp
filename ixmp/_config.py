@@ -229,13 +229,17 @@ class Config:
         name : str
             New or existing platform name.
         args
-            Positional arguments. If *name* is 'default', *args* must be a
-            single string: the name of an existing configured Platform.
-            Otherwise, the first of *args* specifies one of the
-            :obj:`~.BACKENDS`, and the remaining *args* are specific to that
-            backend.
+            Positional arguments. If `name` is 'default', `args` must be a single
+            string: the name of an existing configured Platform. Otherwise, the first
+            of `args` specifies one of the :obj:`~.BACKENDS`, and the remaining `args`
+            differ according to the backend.
         kwargs
             Keyword arguments. These differ according to backend.
+
+        See also
+        --------
+        Backend.handle_config
+        JDBCBackend.handle_config
         """
         args = list(args)
         if name == "default":
@@ -245,30 +249,21 @@ class Config:
             if info not in self.values["platform"]:
                 raise ValueError(f"Cannot set unknown {repr(info)} as default platform")
         else:
-            cls = args.pop(0)
-            info = {"class": cls}
-            info.update(kwargs)
+            from ixmp.backend import BACKENDS
 
-            if cls == "jdbc":
-                info["driver"] = args.pop(0)
-                assert info["driver"] in ("oracle", "hsqldb"), info["driver"]
-                if info["driver"] == "oracle":
-                    info["url"] = args.pop(0)
-                    info["user"] = args.pop(0)
-                    info["password"] = args.pop(0)
-                elif info["driver"] == "hsqldb":
-                    try:
-                        info["path"] = Path(args.pop(0)).resolve()
-                    except IndexError:
-                        if "url" not in info:
-                            raise ValueError(
-                                "must supply either positional"
-                                "path or url= keyword for "
-                                "JDBCBackend with driver=hsqldb"
-                            )
-                assert len(args) == 0
-            else:
-                raise ValueError(cls)
+            try:
+                # Get the backend class
+                cls = args.pop(0)
+                backend_class = BACKENDS[cls]
+            except IndexError:
+                raise ValueError("Must give at least 1 arg: backend class")
+            except KeyError:
+                raise ValueError(f"No backend named {repr(cls)}")
+
+            # Use the backend class' method to handle the arguments
+            info = backend_class.handle_config(args, kwargs)
+
+            info.setdefault("class", cls)
 
         if name in self.values["platform"]:
             log.warning(

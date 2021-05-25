@@ -77,10 +77,15 @@ models = {
 
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
+    from .backend import jdbc
+
     ixmp_config.clear()
-    # Further clear an automatic reference to the user's home directory.
-    # See fixture tmp_env below
+    # Further clear an automatic reference to the user's home directory. See fixture
+    # tmp_env below.
     ixmp_config.values["platform"]["local"].pop("path")
+
+    # Disable slow, aggressive garbage collection
+    jdbc._GC_AGGRESSIVE = False
 
 
 def pytest_report_header(config, startdir):

@@ -140,21 +140,41 @@ def solve(context, remove_solution):
     print("Solver finished")
 
 
-@main.command()
-@click.argument("action", type=click.Choice(["set", "get"]))
+@main.group("config")
+def config_group():
+    """Get and set configuration keys."""
+
+
+@config_group.command()
+@click.argument("key", metavar="KEY")
+def get(key):
+    """Get configuration KEY."""
+    print(ixmp.config.get(key))
+
+
+@config_group.command()
+def show():
+    """Show all configuration."""
+    print(
+        f"Configuration path: {ixmp.config.path}",
+        ixmp.config.path.read_text(),
+        sep="\n\n",
+    )
+
+
+@config_group.command()
 @click.argument("key", metavar="KEY")
 @click.argument("value", nargs=-1)
-def config(action, key, value):
-    """Set/get configuration keys."""
-    if action == "get":
-        if len(value):
-            raise click.BadArgumentUsage("VALUE given for 'get' action")
-        print(ixmp.config.get(key))
-    elif action == "set":
+def set(key, value):
+    """Set configuration KEY to VALUE."""
+    try:
         ixmp.config.set(key, value[0])
-
+    except KeyError as e:
+        raise click.ClickException(f"No registered configuration key {e}")
+    else:
         # Save the configuration to file
         ixmp.config.save()
+        print(f"Updated {ixmp.config.path}")
 
 
 @main.command()

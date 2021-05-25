@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -846,12 +846,13 @@ class Scenario(TimeSeries):
 
     def __init__(
         self,
-        mp,
-        model,
-        scenario,
-        version=None,
-        scheme=None,
-        annotation=None,
+        mp: Platform,
+        model: str,
+        scenario: str,
+        version: Optional[Union[int, str]] = None,
+        scheme: Optional[str] = None,
+        annotation: Optional[str] = None,
+        _clone: bool = False,
         **model_init_args,
     ):
         # Check arguments

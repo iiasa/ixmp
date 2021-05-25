@@ -452,7 +452,10 @@ class JDBCBackend(CachingBackend):
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
-        scenarios = self.jobj.getScenarioList(default, model, scenario)
+        try:
+            scenarios = self.jobj.getScenarioList(default, model, scenario)
+        except java.IxException as e:
+            _raise_jexception(e)
 
         for s in scenarios:
             data = []
@@ -672,14 +675,7 @@ class JDBCBackend(CachingBackend):
             # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
         except java.IxException as e:
-            # Try to re-raise as a ValueError for bad model or scenario name
-            match = re.search(r"table '([^']*)' from the database", e.args[0])
-            if match:
-                param = match.group(1).lower()
-                if param in ("model", "scenario"):
-                    raise ValueError(f"{param}={repr(getattr(ts, param))}")
-
-            # Failed
+            # Re-raise as a ValueError for bad model or scenario name, or other
             _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
@@ -699,9 +695,10 @@ class JDBCBackend(CachingBackend):
     def commit(self, ts, comment):
         try:
             self.jindex[ts].commit(comment)
-        except java.IxException as e:
-            if "this Scenario is not checked out" in e.args[0]:
-                raise RuntimeError(e.args[0])
+        except java.Exception as e:
+            arg = e.args[0]
+            if isinstance(arg, str) and "this Scenario is not checked out" in arg:
+                raise RuntimeError(arg)
             else:  # pragma: no cover
                 _raise_jexception(e)
         if ts.version == 0:

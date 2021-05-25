@@ -60,20 +60,17 @@ def _locate(filename=None):
     """
     tried = []
     for label, directory in _iter_config_paths():
-        if filename:
-            # Locate a specific file
-            if (directory / filename).exists():
-                return directory / filename
-        else:
-            # Locate an existing directory
-            if directory.exists():
-                return directory
+        # Locate either a specific file or an existing directory
+        path = directory.joinpath(filename) if filename else directory
+
+        if path.exists():
+            return path.resolve()
+
         tried.append(str(directory))
 
-    if filename:
-        raise FileNotFoundError(f"Could not find {filename} in {repr(tried)}")
-    else:
-        raise FileNotFoundError(f"Could not find any of {repr(tried)}")
+    raise FileNotFoundError(
+        "Could not find " + (f"{filename} in " if filename else "any of ") + repr(tried)
+    )
 
 
 class Config:

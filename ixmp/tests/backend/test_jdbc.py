@@ -63,11 +63,11 @@ def test_close(test_mp_f, capfd):
 def test_exceptions(test_mp):
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
-    s.init_par("foo", [])
+    s.init_par("test_exception", [])
     s.commit("")
 
     with pytest.raises(RuntimeError):
-        s.change_scalar("foo", 42, unit="kg")
+        s.change_scalar("test_exception", 42, unit="kg")
 
 
 def test_pass_properties():

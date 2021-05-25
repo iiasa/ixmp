@@ -46,7 +46,7 @@ KEYS = {
             "local": {
                 "class": "jdbc",
                 "driver": "hsqldb",
-                "path": next(_iter_config_paths())[1] / "localdb" / "default",
+                "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
             },
         },
     ),
@@ -125,28 +125,27 @@ class Config:
         """Return the value of a configuration key `name`."""
         return self.values[name]
 
-    def register(self, name, type, default=None):
+    def register(self, name, type_, default=None):
         """Register a new configuration key.
 
         Parameters
         ----------
         name : str
             Name of the new key; must not already exist.
-        type : object
-            Type of the key's value, such as :obj:`str` or
-            :class:`pathlib.Path`.
+        type_ : object
+            Type of the key's value, such as :obj:`str` or :class:`pathlib.Path`.
         default : any, optional
-            Default value for the key. If not supplied, the *type* is called
-            to supply the default, value, e.g. ``str()``.
+            Default value for the key. If not supplied, the `type` is called to supply
+            the default value, e.g. ``str()``.
         """
         if name in KEYS:
             raise KeyError(f"configuration key {repr(name)} already defined")
 
         # Register the key for future clear()
-        KEYS[name] = (type, default)
+        KEYS[name] = (type_, default)
 
         # Also set on the current config object
-        self.values[name] = default or type()
+        self.values[name] = default or type_()
 
     def set(self, name, value):
         """Set configuration *key* to *value*."""
@@ -183,14 +182,13 @@ class Config:
           }
         """
         self.values = dict()
-        for name, (value_type, default) in KEYS.items():
-            self.values[name] = default or value_type()
+        for name, (type_, default) in KEYS.items():
+            self.values[name] = default or type_()
 
-        self.values["platform"]["local"]["path"] = (
-            next(_iter_config_paths())[1] / "localdb" / "default"
-        )
         # Set the default local database path; changed versus KEYS if IXMP_DATA has been
         # altered since the module was imported
+        local = next(_iter_config_paths())[1].joinpath("localdb", "default")
+        self.values["platform"]["local"]["path"] = local
 
     def save(self):
         """Write configuration keys to file.
@@ -208,8 +206,9 @@ class Config:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         values = deepcopy(self.values)
-        for key, value_type in KEYS.items():
-            if value_type is str and values[key] == "":
+        for key, type_ in KEYS.items():
+            # Don't store empty strings
+            if type_ is str and values[key] == "":
                 values.pop(key)
 
         # Write the file

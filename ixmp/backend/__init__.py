@@ -2,6 +2,11 @@ from enum import IntFlag
 from typing import Dict, Type
 
 #: Lists of field names for tuples returned by Backend API methods.
+#:
+#: The key "write_file" refers to the columns appearing in the CSV output from
+#: :meth:`export_timeseries_data` when using :class:`.JDBCBackend`.
+#:
+#: .. todo:: Make this consistent with other dimension orders and with :data:`IAMC_IDX`.
 FIELDS = {
     "get_nodes": ("region", "mapped_to", "parent", "hierarchy"),
     "get_timeslices": ("name", "category", "duration"),
@@ -22,6 +27,18 @@ FIELDS = {
     ),
     "ts_get": ("region", "variable", "unit", "subannual", "year", "value"),
     "ts_get_geo": ("region", "variable", "subannual", "year", "value", "unit", "meta"),
+    "write_file": (
+        "MODEL",
+        "SCENARIO",
+        "VERSION",
+        "VARIABLE",
+        "UNIT",
+        "REGION",
+        "META",
+        "SUBANNUAL",
+        "YEAR",
+        "VALUE",
+    ),
 }
 
 

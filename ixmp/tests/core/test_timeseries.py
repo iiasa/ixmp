@@ -66,14 +66,6 @@ def assert_timeseries(scen, exp=DATA["timeseries"], cols=None, subannual=None):
         npt.assert_array_equal(exp[["subannual"]], obs[["subannual"]])
 
 
-def prepare_scenario(mp, args_all):
-    scen = TimeSeries(mp, *args_all, version="new", annotation="nk")
-    scen.add_timeseries(DATA[2010])
-    scen.commit("updating timeseries in IAMC format")
-    scen = TimeSeries(mp, *args_all)
-    return scen
-
-
 @contextmanager
 def transact(ts, condition=True, commit_message=""):
     """Context manager to wrap in a 'transaction'.

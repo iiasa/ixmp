@@ -332,13 +332,13 @@ def test_gc_lowmem(request):  # pragma: no cover
 
 
 @pytest.fixture(scope="session")
-def rc_data_size():
+def rc_data_size():  # pragma: no cover
     """Number of data rows for :meth:`test_reload_cycle` and its fixtures."""
     return 5e4
 
 
 @pytest.fixture(scope="session")
-def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):
+def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
     kwarg = dict()

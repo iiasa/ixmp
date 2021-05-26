@@ -49,6 +49,13 @@ jobs:
     - name: Fetch tags (for setuptools-scm)
       run: git fetch --tags --depth=${{ env.depth }}
 
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - uses: r-lib/actions/setup-r@master
+      id: setup-r
+
     - name: Cache GAMS installer, Python packages, and R packages
       uses: actions/cache@v2
       with:
@@ -58,8 +65,9 @@ jobs:
           ~/Library/Caches/pip
           ~/appdata/local/pip/cache
           ${{ env.R_LIBS_USER }}
-        key: ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}
+        key: ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}-R${{ steps.setup-r.outputs.installed-r-version }}
         restore-keys: |
+          ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}-
           ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-
           ${{ matrix.os }}-
 
@@ -68,12 +76,6 @@ jobs:
         version: 25.1.1
 
     - uses: ts-graphviz/setup-graphviz@v1
-
-    - uses: r-lib/actions/setup-r@master
-
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - name: Set RETICULATE_PYTHON
       # Use the environment variable set by the setup-python action, above.

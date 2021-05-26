@@ -290,7 +290,7 @@ def remove(name):
 @platform_group.command()
 @click.argument("name", metavar="PLATFORM")
 @click.argument("args", nargs=-1)
-def add(name, values):
+def add(name, args):
     """Add PLATFORM, configured with ARGS.
 
     If PLATFORM is 'default', ARGS must be the name of another platform.
@@ -304,7 +304,7 @@ def add(name, values):
     - hsqldb PATH: where PATH is the path to a file that will contain the database. To
       Use an existing database, give the file name without an extension.
     """
-    ixmp.config.add_platform(name, *values)
+    ixmp.config.add_platform(name, *args)
 
     # Save the configuration to file
     ixmp.config.save()

@@ -119,7 +119,7 @@ def test_platform(ixmp_cli, tmp_path):
 
     # The default platform is 'local'
     r = call("list")
-    assert "default local\n" in r.output
+    assert "default: local\n" in r.output
 
     # JBDC Oracle platform can be added
     r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
@@ -127,7 +127,7 @@ def test_platform(ixmp_cli, tmp_path):
     # Default platform can be changed
     r = call("add", "default", "p1")
     r = call("list")
-    assert "default p1\n" in r.output
+    assert "default: p1\n" in r.output
     # Reset to avoid disturbing other tests
     call("add", "default", "local")
 
@@ -154,7 +154,7 @@ def test_platform(ixmp_cli, tmp_path):
 
     # Extra args to 'remove' are invalid
     r = call("remove", "p2", "BADARG", exit_0=False)
-    assert r.exit_code == 1
+    assert UsageError.exit_code == r.exit_code
 
 
 def test_import_ts(ixmp_cli, test_mp, test_data_path):

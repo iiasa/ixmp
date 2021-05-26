@@ -1,6 +1,5 @@
 import gc
 import logging
-from pathlib import Path
 from sys import getrefcount
 from typing import Tuple
 
@@ -73,7 +72,6 @@ VE = pytest.mark.xfail(raises=ValueError)
             dict(),
             dict(driver="oracle", url="url", user="user", password="pass"),
         ),
-        (("hsqldb", "/foo/bar"), dict(), dict(driver="hsqldb", path=Path("/foo/bar"))),
         (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
         # Invalid
         pytest.param(tuple(), dict(), None, marks=VE),
@@ -85,7 +83,22 @@ VE = pytest.mark.xfail(raises=ValueError)
     ),
 )
 def test_handle_config(args, kwargs, expected):
+    """Test :meth:`JDBCBackend.handle_config`."""
     assert expected == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+
+
+def test_handle_config_path(tmp_path):
+    """Test :meth:`JDBCBackend.handle_config` for HyperSQL paths.
+
+    This is separate from :func:`test_handle_config` because the :class:`~pathlib.Path`
+    object stored/returned varies across platforms.
+    """
+    args = ("hsqldb", str(tmp_path))
+    kwargs = dict()
+
+    assert dict(
+        driver="hsqldb", path=tmp_path
+    ) == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
 
 
 def test_exceptions(test_mp):

@@ -1,6 +1,12 @@
 import ixmp
 from ixmp.testing import models
+from ixmp.testing.data import random_ts_data
 from ixmp.testing.resource import memory_usage
+
+
+def test_random_ts_data(N=100):
+    df = random_ts_data(N)
+    assert N == len(df)
 
 
 def test_resource_limit(resource_limit, test_mp):

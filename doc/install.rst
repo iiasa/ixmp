@@ -7,6 +7,8 @@ The sections below cover other use cases.
 Ensure you have first read the :doc:`prerequisites <prereqs>` for understanding and using |MESSAGEix|.
 These include specific points of knowledge that are necessary to understand these instructions and choose among different installation options.
 
+To use :mod:`ixmp` from R, see :ref:`message_ix:install-r` in the |MESSAGEix| documentation.
+
 Use cases for installing ixmp directly include:
 
 - Installing *ixmp* to be used alone (i.e., with models or frameworks other than |MESSAGEix|).
@@ -20,13 +22,6 @@ Use cases for installing ixmp directly include:
 
   - `Install system dependencies`_, then
   - `From source`_.
-
-- Installing the :doc:`rixmp <api-r>` R package, to use the :mod:`ixmp`, alone, from R.
-  Again, to use |MESSAGEix| from R, it is sufficient to install ``rmessageix``; and not necessary to also/separately install ``rximp``.
-
-  - Start with `Install system dependencies`_.
-  - Then install :mod:`ixmp` from source.
-  - Finally, see `Install rixmp`_.
 
 **Contents:**
 
@@ -144,42 +139,6 @@ From source
     $ pytest
 
 
-Install ``rixmp``
-=================
-
-``rixmp`` is the R interface to :mod:`ixmp`; see :doc:`its documentaiton <api-r>`.
-You only need to install ``rixmp`` if you intend to use :mod:`ixmp` from R, rather than from Python.
-
-Install :mod:`ixmp` **from source**, per the section above.
-Then:
-
-8. `Install R <https://www.r-project.org>`_.
-   Ensure that your ``PATH`` environment variable is configured correctly so that the ``Rscript`` executable is available.
-
-   .. warning::
-      Ensure the the R version installed is either 32- *or* 64-bit (and >= 3.5.0), consistently with GAMS and Java.
-      Having both 32- and 64-bit versions of R, or mixed 32- and 64-bit versions of different packages, can cause errors.
-
-9. Open a command prompt in the :file:`ixmp/` directory.
-   Type the following commands to build, then install, ``rixmp`` and its dependencies, including reticulate_::
-
-    $ R CMD build rixmp
-
-10. Check that there is only one :file:`*.tar.gz` or :file:`.zip` file in the folder, then run::
-
-      # On Windows
-      $ R CMD INSTALL rixmp_*.zip
-
-      # Other operating systems
-      $ R CMD INSTALL rixmp_*.tar.gz
-
-11. (Optional) Install `IRKernel`_, which allows running R code in Jupyter notebooks (see the link for instructions).
-
-12. (Optional) Check that the R interface works by using the built-in test suite to run the R tutorial notebooks::
-
-    $ pytest -m rixmp
-
-
 Troubleshooting
 ===============
 
@@ -216,12 +175,6 @@ Java Development Kit (JDK)
 
      .. warning:: Do not overwrite the existing ``PATH`` environment variable, but add to the list of existing paths.
 
-Rtools
-   https://cran.r-project.org/bin/windows/Rtools/
-
-   For installing or modifying some R packages on Windows.
-
-
 .. _`installing MESSAGEix`: https://docs.messageix.org/en/latest/getting_started.html
 .. _`Anaconda`: https://www.continuum.io/downloads
 .. _`GAMS`: http://www.gams.com
@@ -234,6 +187,4 @@ Rtools
 .. _conda glossary: https://docs.conda.io/projects/conda/en/latest/glossary.html
 .. _Anaconda Navigator documentation: https://docs.anaconda.com/anaconda/navigator/
 .. _`Github Desktop`: https://desktop.github.com
-.. _reticulate: https://rstudio.github.io/reticulate/
-.. _IRkernel: https://irkernel.github.io/installation/
 .. _JDK website instructions: https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/

@@ -26,3 +26,5 @@ This creates a global variable, ``ixmp``, that can be used much like the Python 
    scen <- ixmp$Scenario(mp, 'model name', 'scenario name', version = 'new')
 
 Finally, see the R versions of the :doc:`tutorials`.
+
+.. _reticulate: https://rstudio.github.io/reticulate/

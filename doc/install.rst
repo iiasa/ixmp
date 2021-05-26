@@ -118,7 +118,7 @@ From source
 
 4. (Optional) If you intend to contribute changes to *ixmp*, first register a Github account, and fork the `ixmp repository <https://github.com/iiasa/ixmp>`_.
    This will create a new repository ``<user>/ixmp``.
-   (Please also see :message_ix:doc:`contributing`.)
+   (Please also see :doc:`message_ix:contributing`.)
 
 5. Clone either the main repository, or your fork; using the `Github Desktop`_ client, or the command line::
 

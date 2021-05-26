@@ -13,12 +13,13 @@ def test_resource_limit(resource_limit, test_mp):
     """Exercise :func:`memory_usage` and :func:`resource_limit`."""
     # TODO expand to cover other missed lines in those functions
 
-    info0 = memory_usage("setup")
+    memory_usage("setup")
 
     s = ixmp.TimeSeries(test_mp, **models["h2g2"], version="new")
 
-    info1 = memory_usage("1 TimeSeries")
+    memory_usage("1 TimeSeries")
 
     del s
 
-    assert info0.python <= info1.python
+    # commented: this is nondeterministic, not always true
+    # assert info0.python <= info1.python

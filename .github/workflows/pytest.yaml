@@ -31,11 +31,6 @@ jobs:
         # build environment, currently out of scope for the ixmp project.
         # - "3.10.0-alpha.1"  # Development version
 
-        exclude:
-        # See https://github.com/iiasa/ixmp/issues/360
-        - os: windows-latest
-          python-version: "3.6"
-
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -54,6 +49,13 @@ jobs:
     - name: Fetch tags (for setuptools-scm)
       run: git fetch --tags --depth=${{ env.depth }}
 
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - uses: r-lib/actions/setup-r@master
+      id: setup-r
+
     - name: Cache GAMS installer, Python packages, and R packages
       uses: actions/cache@v2
       with:
@@ -63,9 +65,9 @@ jobs:
           ~/Library/Caches/pip
           ~/appdata/local/pip/cache
           ${{ env.R_LIBS_USER }}
-        key: ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-py${{ matrix.python-version }}
+        key: ${{ matrix.os }}-py${{ matrix.python-version }}-R${{ steps.setup-r.outputs.installed-r-version }}
         restore-keys: |
-          ${{ matrix.os }}-gams${{ env.GAMS_VERSION }}-
+          ${{ matrix.os }}-py${{ matrix.python-version }}-
           ${{ matrix.os }}-
 
     - uses: iiasa/actions/setup-gams@main
@@ -73,12 +75,6 @@ jobs:
         version: 25.1.1
 
     - uses: ts-graphviz/setup-graphviz@v1
-
-    - uses: r-lib/actions/setup-r@master
-
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - name: Set RETICULATE_PYTHON
       # Use the environment variable set by the setup-python action, above.

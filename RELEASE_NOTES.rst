@@ -3,14 +3,22 @@
 Next release
 ============
 
+Migration notes
+---------------
+
+``rixmp`` is deprecated, though not yet removed, as newer versions of the R `reticulate <https://rstudio.github.io/reticulate/>`_ package allow direct import and use of the Python modules with full functionality.
+See the updated page for :doc:`api-r`.
+
+
 All changes
 -----------
 
-- :pull:`416`:
+- (:pull:`416`):
 
   - Add ``ixmp config show`` CLI command.
   - Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions``.
-  - Clean up test suite, improve performance, increase coverage ().
+  - Clean up test suite, improve performance, increase coverage.
+  - Adjust documentation for deprecation of ``rixmp`.
 
 - Deprecate :func:`.utils.logger` (:pull:`399`).
 - Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).

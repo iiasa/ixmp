@@ -60,6 +60,33 @@ def test_close(test_mp_f, capfd):
     assert msg in captured.out
 
 
+VE = pytest.mark.xfail(raises=ValueError)
+
+
+@pytest.mark.parametrize(
+    "args, kwargs, expected",
+    (
+        # Advertised forms
+        (
+            ("oracle", "url", "user", "pass"),
+            dict(),
+            dict(driver="oracle", url="url", user="user", password="pass"),
+        ),
+        (("hsqldb", "/foo/bar"), dict(), dict(driver="hsqldb", path=Path("/foo/bar"))),
+        (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
+        # Invalid
+        pytest.param(tuple(), dict(), None, marks=VE),
+        pytest.param(("not a driver",), dict(), None, marks=VE),
+        pytest.param(("oracle", "url", "u", "p", "extra?!"), dict(), None, marks=VE),
+        pytest.param(("hsqldb", "path", "extra?!"), dict(), None, marks=VE),
+        pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
+        pytest.param(("hsqldb",), dict(), None, marks=VE),
+    ),
+)
+def test_handle_config(args, kwargs, expected):
+    assert expected == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+
+
 def test_exceptions(test_mp):
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")

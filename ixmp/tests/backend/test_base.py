@@ -7,66 +7,71 @@ from ixmp.backend.base import Backend, CachingBackend
 from ixmp.testing import make_dantzig
 
 
-def test_class():
-    # An incomplete Backend subclass can't be instantiated
-    class BE1(Backend):
-        pass
+class BE1(Backend):
+    """Incomplete subclass."""
 
+
+def noop(self, *args, **kwargs):
+    pass
+
+
+class BE2(Backend):
+    """Complete subclass."""
+
+    add_model_name = noop
+    add_scenario_name = noop
+    cat_get_elements = noop
+    cat_list = noop
+    cat_set_elements = noop
+    check_out = noop
+    clear_solution = noop
+    clone = noop
+    commit = noop
+    delete = noop
+    delete_geo = noop
+    delete_item = noop
+    delete_meta = noop
+    discard_changes = noop
+    get = noop
+    get_data = noop
+    get_doc = noop
+    get_geo = noop
+    get_meta = noop
+    get_model_names = noop
+    get_nodes = noop
+    get_scenarios = noop
+    get_scenario_names = noop
+    get_timeslices = noop
+    get_units = noop
+    has_solution = noop
+    init = noop
+    init_item = noop
+    is_default = noop
+    item_delete_elements = noop
+    item_get_elements = noop
+    item_index = noop
+    item_set_elements = noop
+    last_update = noop
+    list_items = noop
+    remove_meta = noop
+    run_id = noop
+    set_as_default = noop
+    set_data = noop
+    set_doc = noop
+    set_geo = noop
+    set_meta = noop
+    set_node = noop
+    set_timeslice = noop
+    set_unit = noop
+
+
+def test_class():
+
+    # An incomplete Backend subclass can't be instantiated
     with pytest.raises(
-        TypeError, match="Can't instantiate abstract class BE1 " "with abstract methods"
+        TypeError, match="Can't instantiate abstract class BE1 with abstract methods"
     ):
         BE1()
-
-    # A complete subclass
-    def noop(self, *args, **kwargs):
-        pass
-
-    class BE2(Backend):
-        add_model_name = noop
-        add_scenario_name = noop
-        cat_get_elements = noop
-        cat_list = noop
-        cat_set_elements = noop
-        check_out = noop
-        clear_solution = noop
-        clone = noop
-        commit = noop
-        delete = noop
-        delete_geo = noop
-        delete_item = noop
-        delete_meta = noop
-        discard_changes = noop
-        get = noop
-        get_data = noop
-        get_doc = noop
-        get_geo = noop
-        get_meta = noop
-        get_model_names = noop
-        get_nodes = noop
-        get_scenarios = noop
-        get_scenario_names = noop
-        get_timeslices = noop
-        get_units = noop
-        has_solution = noop
-        init = noop
-        init_item = noop
-        is_default = noop
-        item_delete_elements = noop
-        item_get_elements = noop
-        item_index = noop
-        item_set_elements = noop
-        last_update = noop
-        list_items = noop
-        remove_meta = noop
-        run_id = noop
-        set_as_default = noop
-        set_data = noop
-        set_doc = noop
-        set_geo = noop
-        set_meta = noop
-        set_node = noop
-        set_timeslice = noop
-        set_unit = noop
 
     # Complete subclass can be instantiated
     be = BE2()
@@ -77,6 +82,20 @@ def test_class():
 
     with pytest.raises(NotImplementedError):
         be.write_file(Path("foo"), ItemType.VAR)
+
+
+@pytest.mark.parametrize(
+    "args, kwargs",
+    (
+        (tuple(), dict()),
+        # Invalid
+        pytest.param(("foo",), dict(), marks=pytest.mark.xfail(raises=ValueError)),
+        pytest.param(tuple(), dict(bar=""), marks=pytest.mark.xfail(raises=ValueError)),
+    ),
+)
+def test_handle_config(args, kwargs):
+    """Test :meth:`JDBCBackend.handle_config`."""
+    assert dict() == Backend.handle_config(args, kwargs)
 
 
 def test_cache_non_hashable():

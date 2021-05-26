@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Dict, Generator
+from typing import Any, Dict, Generator, MutableMapping, Sequence
 
 from ixmp.core import Scenario, TimeSeries
 
@@ -24,6 +24,27 @@ class Backend(ABC):
         return getattr(self, method)(obj, *args, **kwargs)
 
     # Platform methods
+
+    @classmethod
+    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> Dict[str, Any]:
+        """OPTIONAL: Handle platform/backend config arguments.
+
+        Returns a :class:`dict` to be stored in the configuration file. This
+        :class:`dict` **must** be valid as keyword arguments to the :meth:`__init__` of
+        a backend subclass.
+
+        The default implementation expects both `args` and `kwargs` to be empty.
+
+        See also
+        --------
+        Config.add_platform
+        """
+        msg = "Unhandled {} args to Backend.handle_config(): {!r}"
+        if len(args):
+            raise ValueError(msg.format("positional", args))
+        if len(kwargs):
+            raise ValueError(msg.format("keyword", kwargs))
+        return dict()
 
     def set_log_level(self, level):
         """OPTIONAL: Set logging level for the backend and other code.

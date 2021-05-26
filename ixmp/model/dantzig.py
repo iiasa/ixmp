@@ -81,9 +81,9 @@ class DantzigModel(GAMSModel):
     def initialize(cls, scenario, with_data=False):
         """Initialize the problem.
 
-        If *with_data* is :obj:`True` (default: :obj:`False`), the set and
-        parameter values from the original problem are also populated.
-        Otherwise, the sets and parameters are left empty.
+        If *with_data* is :obj:`True` (default: :obj:`False`), the set and parameter
+        values from the original problem are also populated. Otherwise, the sets and
+        parameters are left empty.
         """
         # Initialize the ixmp items
         cls.initialize_items(scenario, ITEMS)

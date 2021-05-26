@@ -20,10 +20,10 @@ def test_encoder():
 def test_locate(cfg):
     try:
         # The result of this test depends on the user's environment. If
-        # $HOME/.local/share/ixmp exists, the call will succeed; otherwise,
-        # it will fail.
+        # $HOME/.local/share/ixmp exists, the call will succeed; otherwise, it will
+        # fail.
         _locate()
-    except FileNotFoundError:
+    except FileNotFoundError:  # pragma: no cover
         pass
 
     with pytest.raises(FileNotFoundError):

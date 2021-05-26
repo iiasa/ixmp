@@ -120,8 +120,8 @@ def show_versions_cmd():
 def solve(context, remove_solution):
     """Solve a Scenario and store results on the Platform.
 
-    The scenario indicated by --url or --platform/--model/--scenario/--version
-    is loaded, solved, and the solution results are saved on the Platform.
+    The scenario indicated by --url or --platform/--model/--scenario/--version is
+    loaded, solved, and the solution results are saved on the Platform.
 
     If the scenario already has a solution, --remove-solution must be given.
     """
@@ -140,21 +140,44 @@ def solve(context, remove_solution):
     print("Solver finished")
 
 
-@main.command()
-@click.argument("action", type=click.Choice(["set", "get"]))
+# "config" group
+
+
+@main.group("config")
+def config_group():
+    """Get and set configuration keys."""
+
+
+@config_group.command()
+@click.argument("key", metavar="KEY")
+def get(key):
+    """Get configuration KEY."""
+    print(ixmp.config.get(key))
+
+
+@config_group.command()
+def show():
+    """Show all configuration."""
+    print(
+        f"Configuration path: {ixmp.config.path}",
+        ixmp.config.path.read_text(),
+        sep="\n\n",
+    )
+
+
+@config_group.command()
 @click.argument("key", metavar="KEY")
 @click.argument("value", nargs=-1)
-def config(action, key, value):
-    """Set/get configuration keys."""
-    if action == "get":
-        if len(value):
-            raise click.BadArgumentUsage("VALUE given for 'get' action")
-        print(ixmp.config.get(key))
-    elif action == "set":
+def set(key, value):
+    """Set configuration KEY to VALUE."""
+    try:
         ixmp.config.set(key, value[0])
-
+    except KeyError as e:
+        raise click.ClickException(f"No registered configuration key {e}")
+    else:
         # Save the configuration to file
         ixmp.config.save()
+        print(f"Updated {ixmp.config.path}")
 
 
 @main.command()
@@ -165,8 +188,8 @@ def config(action, key, value):
 def export(context, path, filter_args, max_row):
     """Export scenario data to PATH.
 
-    To export only part of the parameter data, e.g. for inspection, provide
-    FILTERS in the format:
+    To export only part of the parameter data, e.g. for inspection, provide FILTERS in
+    the format:
 
         … -- dim_1=val0,val1 dim_2=val2
     """
@@ -192,8 +215,8 @@ def export(context, path, filter_args, max_row):
 def import_group(context):
     """Import time series or scenario data.
 
-    DATA is the path to a file containing input data in CSV (time series only)
-    or Excel format.
+    DATA is the path to a file containing input data in CSV (time series only) or Excel
+    format.
     """
     if not context or "scen" not in context:
         raise click.UsageError(
@@ -248,24 +271,50 @@ def import_scenario(
     )
 
 
-@main.command()
-@click.argument("action", type=click.Choice(["add", "remove", "list"]))
-@click.argument("name", required=False)
-@click.argument("values", nargs=-1)
-def platform(action, name, values):
-    """Set/get platform configuration."""
-    if action == "remove":
-        assert len(values) == 0
-        ixmp.config.remove_platform(name)
-        print(f"Removed platform config for {repr(name)}")
-    elif action == "add":
-        ixmp.config.add_platform(name, *values)
+# "platform" group
 
-        # Save the configuration to file
-        ixmp.config.save()
-    elif action == "list":
-        for key, info in ixmp.config.values["platform"].items():
-            print(key, info)
+
+@main.group("platform")
+def platform_group():
+    """Configure platforms and storage backends."""
+
+
+@platform_group.command()
+@click.argument("name", metavar="PLATFORM")
+def remove(name):
+    """Remove existing PLATFORM."""
+    ixmp.config.remove_platform(name)
+    print(f"Removed platform config for {repr(name)}")
+
+
+@platform_group.command()
+@click.argument("name", metavar="PLATFORM")
+@click.argument("args", nargs=-1)
+def add(name, args):
+    """Add PLATFORM, configured with ARGS.
+
+    If PLATFORM is 'default', ARGS must be the name of another platform.
+
+    Otherwise, the first of ARGS is the backend. Currently only 'jdbc' is supported.
+    For the 'jdbc' backend, the remaining ARGS must be one of:
+
+    \b
+    - oracle URL USERNAME PASSWORD: where the URL is something like
+      example.com:PORT:SCHEMA. This configures a connection to an Oracle database.
+    - hsqldb PATH: where PATH is the path to a file that will contain the database. To
+      Use an existing database, give the file name without an extension.
+    """
+    ixmp.config.add_platform(name, *args)
+
+    # Save the configuration to file
+    ixmp.config.save()
+
+
+@platform_group.command("list")
+def list_platforms():
+    """List configured platforms."""
+    for key, info in ixmp.config.values["platform"].items():
+        print(f"{key}: {info}")
 
 
 @main.command("list")
@@ -280,7 +329,7 @@ def platform(action, name, values):
 )
 @click.option("--as-url", is_flag=True, help="Display outputs as ixmp URLs.")
 @click.pass_obj
-def list_command(context, **kwargs):
+def list_scenarios(context, **kwargs):
     """List scenarios on the --platform."""
     from ixmp.utils import format_scenario_list
 

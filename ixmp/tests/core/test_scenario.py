@@ -38,6 +38,8 @@ def test_dict():
 
 
 class TestScenario:
+    """Tests of :class:`ixmp.Scenario`."""
+
     # Initialize Scenario
     def test_init(self, test_mp, scen_empty):
         # Empty scenario has version == 0

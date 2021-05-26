@@ -28,7 +28,7 @@ __all__ = [
 
 try:
     __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+except DistributionNotFound:  # pragma: no cover
     # Package is not installed
     __version__ = "999"
 

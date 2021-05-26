@@ -185,10 +185,14 @@ def test_parse_url(url, p, s):
     assert scenario_info == s
 
 
-def test_format_scenario_list(test_mp):
-    populate_test_platform(test_mp)
+def test_format_scenario_list(test_mp_f):
+    # Use the function-scoped fixture for precise version numbers
+    mp = test_mp_f
+    populate_test_platform(mp)
 
-    exp = [
+    # Expected results
+
+    assert [
         "",
         "Douglas Adams/",
         "  Hitchhiker#1",
@@ -200,22 +204,21 @@ def test_format_scenario_list(test_mp):
         "2 scenario name(s)",
         "2 (model, scenario) combination(s)",
         "4 total scenarios",
-    ]
-
-    # Expected results
-    assert exp == utils.format_scenario_list(test_mp)
+    ] == utils.format_scenario_list(mp)
 
     # With as_url=True
-    exp = list(
-        map(
-            lambda s: s.format(test_mp.name),
-            [
-                "ixmp://{}/Douglas Adams/Hitchhiker#1",
-                "ixmp://{}/canning problem/standard#2",
-            ],
+    assert (
+        list(
+            map(
+                lambda s: s.format(mp.name),
+                [
+                    "ixmp://{}/Douglas Adams/Hitchhiker#1",
+                    "ixmp://{}/canning problem/standard#2",
+                ],
+            )
         )
+        == utils.format_scenario_list(mp, as_url=True)
     )
-    assert exp == utils.format_scenario_list(test_mp, as_url=True)
 
 
 def test_maybe_commit(caplog, test_mp):

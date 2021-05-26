@@ -1,4 +1,4 @@
-"""Test functionality of ixmp.Platform."""
+"""Tests of :class:`ixmp.Platform`."""
 import logging
 import re
 from sys import getrefcount
@@ -10,7 +10,8 @@ from pandas.testing import assert_frame_equal
 from pytest import raises
 
 import ixmp
-from ixmp.testing import assert_logs
+from ixmp.backend import FIELDS
+from ixmp.testing import DATA, assert_logs, models
 
 
 def test_init():
@@ -56,83 +57,29 @@ def test_scenario_list(mp):
     assert scenario[0] == "Hitchhiker"
 
 
-def test_export_timeseries_data(mp, tmp_path):
+def test_export_timeseries_data(test_mp, tmp_path):
     path = tmp_path / "export.csv"
-    mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
-
-    columns = [
-        "model",
-        "scenario",
-        "version",
-        "variable",
-        "unit",
-        "region",
-        "meta",
-        "subannual",
-        "year",
-        "value",
-    ]
-    csv_dtype = dict(
-        model=str,
-        scenario=str,
-        version=int,
-        variable=str,
-        unit=str,
-        region=str,
-        year=int,
-        subannual=str,
-        meta=int,
-        value=float,
+    test_mp.export_timeseries_data(
+        path, model="Douglas Adams", unit="???", region="World"
     )
-    obs = pd.read_csv(path, index_col=False, header=0, names=columns, dtype=csv_dtype)
-    exp = pd.DataFrame(
-        [
-            [
-                "Douglas Adams",
-                "Hitchhiker",
-                1,
-                "Testing",
-                "???",
-                "World",
-                0,
-                "Year",
-                "2010",
-                23.7,
-            ],
-            [
-                "Douglas Adams",
-                "Hitchhiker",
-                1,
-                "Testing",
-                "???",
-                "World",
-                0,
-                "Year",
-                "2020",
-                23.8,
-            ],
-        ],
-        columns=[
-            "model",
-            "scenario",
-            "version",
-            "variable",
-            "unit",
-            "region",
-            "meta",
-            "subannual",
-            "year",
-            "value",
-        ],
-    ).astype(csv_dtype)
-    assert_frame_equal(obs, exp)
+
+    obs = pd.read_csv(path, index_col=False, header=0)
+
+    exp = (
+        DATA[0]
+        .assign(**models["h2g2"], version=1, subannual="Year", meta=0)
+        .rename(columns=lambda c: c.upper())
+        .reindex(columns=FIELDS["write_file"])
+    )
+
+    assert_frame_equal(exp, obs)
 
 
-def test_export_ts_wrong_params(mp, tmp_path):
+def test_export_ts_wrong_params(test_mp, tmp_path):
     """Platform.export_timeseries_data to raise error with wrong parameters."""
     path = tmp_path / "export.csv"
     with raises(ValueError, match="Invalid arguments"):
-        mp.export_timeseries_data(
+        test_mp.export_timeseries_data(
             path,
             model="Douglas Adams",
             unit="???",
@@ -146,99 +93,44 @@ def test_export_ts_of_all_runs(mp, tmp_path):
     path = tmp_path / "export.csv"
 
     # Add a new version of a run
-    scen = ixmp.TimeSeries(
-        mp, "Douglas Adams", "Hitchhiker", version="new", annotation="fo"
-    )
-    timeseries = pd.DataFrame.from_dict(
-        dict(
-            region="World",
-            variable="Testing",
-            unit="???",
-            year=[2010, 2020],
-            value=[24.7, 24.8],
-        )
-    )
-    scen.add_timeseries(timeseries)
-    scen.commit("create a new version")
-    scen.set_as_default()
-
-    columns = [
-        "model",
-        "scenario",
-        "version",
-        "variable",
-        "unit",
-        "region",
-        "meta",
-        "subannual",
-        "year",
-        "value",
-    ]
-    csv_dtype = dict(
-        model=str,
-        scenario=str,
-        version=int,
-        variable=str,
-        unit=str,
-        region=str,
-        year=int,
-        subannual=str,
-        meta=int,
-        value=float,
-    )
+    ts = ixmp.TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
+    ts.add_timeseries(DATA[0])
+    ts.commit("create a new version")
+    ts.set_as_default()
 
     # Export all default model+scenario runs
     mp.export_timeseries_data(
         path, unit="???", region="World", default=True, export_all_runs=True
     )
-    obs = pd.read_csv(path, index_col=False, header=0, names=columns, dtype=csv_dtype)
-    assert len(obs.model) == 2
-    assert pd.Series.all(obs.value == timeseries.value)
+
+    obs = pd.read_csv(path, index_col=False, header=0)
+    exp = (
+        DATA[0]
+        .assign(**models["h2g2"], version=2, subannual="Year", meta=0)
+        .rename(columns=lambda c: c.upper())
+        .reindex(columns=FIELDS["write_file"])
+    )
+
+    assert_frame_equal(exp, obs)
 
     # Export all model+scenario run versions (including non-default)
     mp.export_timeseries_data(
         path, unit="???", region="World", default=False, export_all_runs=True
     )
-    obs = pd.read_csv(path, index_col=False, header=0, names=columns, dtype=csv_dtype)
-    assert len(obs.model) == 4
+    obs = pd.read_csv(path, index_col=False, header=0)
+    assert 4 == len(obs)
 
 
 def test_export_timeseries_data_empty(mp, tmp_path):
     """Dont export data if given models/scenarios do not have any runs."""
     path = tmp_path / "export.csv"
     model = "model-no-run"
-    scenario = "scenario-no-run"
     mp.add_model_name(model)
-    mp.add_scenario_name(scenario)
+    mp.add_scenario_name("scenario-no-run")
 
     mp.export_timeseries_data(path, model=model, unit="???", region="World")
 
-    columns = [
-        "model",
-        "scenario",
-        "version",
-        "variable",
-        "unit",
-        "region",
-        "meta",
-        "subannual",
-        "year",
-        "value",
-    ]
-    csv_dtype = dict(
-        model=str,
-        scenario=str,
-        version=int,
-        variable=str,
-        unit=str,
-        region=str,
-        year=int,
-        subannual=str,
-        meta=int,
-        value=float,
-    )
-    obs = pd.read_csv(path, index_col=False, header=0, names=columns, dtype=csv_dtype)
-    assert len(obs.model) == 0
+    assert 0 == len(pd.read_csv(path, index_col=False, header=0))
 
 
 def test_unit_list(test_mp):
@@ -363,11 +255,11 @@ def test_weakref():
     # *s* is garbage-collected at this point
 
 
-def test_add_model_name(mp):
-    mp.add_model_name("new_model_name")
-    assert "new_model_name" in mp.get_model_names()
+def test_add_model_name(test_mp):
+    test_mp.add_model_name("new_model_name")
+    assert "new_model_name" in test_mp.get_model_names()
 
 
-def test_add_scenario_name(mp):
-    mp.add_scenario_name("new_scenario_name")
-    assert "new_scenario_name" in mp.get_scenario_names()
+def test_add_scenario_name(test_mp):
+    test_mp.add_scenario_name("new_scenario_name")
+    assert "new_scenario_name" in test_mp.get_scenario_names()

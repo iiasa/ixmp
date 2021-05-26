@@ -55,6 +55,7 @@ rixmp/source/inst/docum/*.html
 *.pid
 coverage.xml
 htmlcov
+prof/
 
 # JetBrains IDEs
 *.iml

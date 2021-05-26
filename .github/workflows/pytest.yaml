@@ -99,40 +99,24 @@ jobs:
     - name: Install Python package and dependencies
       run: pip install .[tests]
 
-    - name: Install R package and dependencies
+    - name: Install R dependencies and tutorial requirements
       run: |
         install.packages("remotes")
-        remotes::install_cran(c("rcmdcheck", "IRkernel"))
-        remotes::install_deps("rixmp", upgrade = "never", dependencies = TRUE)
+        remotes::install_cran(
+          c("IRkernel", "reticulate"),
+          dependencies = TRUE,
+          # force = TRUE,
+        )
+
+        IRkernel::installspec()
 
         # commented: for debugging
         # print(reticulate::py_config())
         # reticulate::py_run_string("import os; print(os.environ)")
-
-        # For R tutorial notebooks, run via the pytest suite: set up R kernel;
-        # actually install the R package
-        IRkernel::installspec()
-        remotes::install_local(
-          "rixmp",
-          force = TRUE,
-          INSTALL_opts = c("--no-multiarch"),
-          )
       shell: Rscript {0}
 
     - name: Run test suite using pytest
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
-
-    - name: Run R CMD check
-      # Temporarily disabled: see https://github.com/iiasa/ixmp/issues/403
-      if: false
-      run: |
-        rcmdcheck::rcmdcheck(
-            "rixmp",
-            args = c("--no-manual", "--as-cran", "--no-multiarch"),
-            error_on = "warning",
-            check_dir = "check"
-        )
-      shell: Rscript {0}
 
     - name: Test documentation build using Sphinx
       if: matrix.python-version != '3.6'

@@ -75,6 +75,9 @@ def test_config(ixmp_cli):
     ixmp.config.register("test key", str)
     ixmp.config.values["test key"] = "foo"
 
+    # show() works
+    assert ixmp_cli.invoke(["config", "show"]).output.startswith("Configuration path: ")
+
     # get() works
     assert ixmp_cli.invoke(["config", "get", "test key"]).output == "foo\n"
 
@@ -119,7 +122,7 @@ def test_platform(ixmp_cli, tmp_path):
 
     # The default platform is 'local'
     r = call("list")
-    assert "default local\n" in r.output
+    assert "default: local\n" in r.output
 
     # JBDC Oracle platform can be added
     r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
@@ -127,7 +130,7 @@ def test_platform(ixmp_cli, tmp_path):
     # Default platform can be changed
     r = call("add", "default", "p1")
     r = call("list")
-    assert "default p1\n" in r.output
+    assert "default: p1\n" in r.output
     # Reset to avoid disturbing other tests
     call("add", "default", "local")
 
@@ -154,7 +157,7 @@ def test_platform(ixmp_cli, tmp_path):
 
     # Extra args to 'remove' are invalid
     r = call("remove", "p2", "BADARG", exit_0=False)
-    assert r.exit_code == 1
+    assert UsageError.exit_code == r.exit_code
 
 
 def test_import_ts(ixmp_cli, test_mp, test_data_path):
@@ -315,7 +318,7 @@ def test_report(ixmp_cli):
     assert result.exit_code == UsageError.exit_code
 
 
-@pytest.mark.usefixtures("protect_pint_app_registry")
+@pytest.mark.usefixtures("protect_pint_app_registry", "protect_rename_dims")
 def test_show_versions(ixmp_cli):
     result = ixmp_cli.invoke(["show-versions"])
     assert result.exit_code == 0, result.output

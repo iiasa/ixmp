@@ -10,8 +10,8 @@ from pytest import raises
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import java
-from ixmp.testing import add_random_model_data  # random_ts_data,
-from ixmp.testing import bool_param_id, make_dantzig, memory_usage
+from ixmp.testing import add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing.resource import memory_usage
 
 log = logging.getLogger(__name__)
 
@@ -37,34 +37,78 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-def test_close(test_mp, capfd):
+def test_close(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
+    # Use the session-scoped fixture to avoid affecting other tests in this file
+    mp = test_mp_f
+
     # Close once
-    test_mp.close_db()
+    mp.close_db()
 
     # Close again, once already closed
-    test_mp.close_db()
+    mp.close_db()
 
     # With the default log level, WARNING, nothing is printed
     captured = capfd.readouterr()
     assert captured.out == ""
 
     # With log level INFO, a message is printed
-    test_mp.set_log_level(logging.INFO)
-    test_mp.close_db()
+    mp.set_log_level(logging.INFO)
+    mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
     assert msg in captured.out
 
 
+VE = pytest.mark.xfail(raises=ValueError)
+
+
+@pytest.mark.parametrize(
+    "args, kwargs, expected",
+    (
+        # Advertised forms
+        (
+            ("oracle", "url", "user", "pass"),
+            dict(),
+            dict(driver="oracle", url="url", user="user", password="pass"),
+        ),
+        (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
+        # Invalid
+        pytest.param(tuple(), dict(), None, marks=VE),
+        pytest.param(("not a driver",), dict(), None, marks=VE),
+        pytest.param(("oracle", "url", "u", "p", "extra?!"), dict(), None, marks=VE),
+        pytest.param(("hsqldb", "path", "extra?!"), dict(), None, marks=VE),
+        pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
+        pytest.param(("hsqldb",), dict(), None, marks=VE),
+    ),
+)
+def test_handle_config(args, kwargs, expected):
+    """Test :meth:`JDBCBackend.handle_config`."""
+    assert expected == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+
+
+def test_handle_config_path(tmp_path):
+    """Test :meth:`JDBCBackend.handle_config` for HyperSQL paths.
+
+    This is separate from :func:`test_handle_config` because the :class:`~pathlib.Path`
+    object stored/returned varies across platforms.
+    """
+    args = ("hsqldb", str(tmp_path))
+    kwargs = dict()
+
+    assert dict(
+        driver="hsqldb", path=tmp_path
+    ) == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+
+
 def test_exceptions(test_mp):
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
-    s.init_par("foo", [])
+    s.init_par("test_exception", [])
     s.commit("")
 
     with pytest.raises(RuntimeError):
-        s.change_scalar("foo", 42, unit="kg")
+        s.change_scalar("test_exception", 42, unit="kg")
 
 
 def test_pass_properties():
@@ -301,13 +345,13 @@ def test_gc_lowmem(request):  # pragma: no cover
 
 
 @pytest.fixture(scope="session")
-def rc_data_size():
+def rc_data_size():  # pragma: no cover
     """Number of data rows for :meth:`test_reload_cycle` and its fixtures."""
     return 5e4
 
 
 @pytest.fixture(scope="session")
-def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):
+def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
     kwarg = dict()

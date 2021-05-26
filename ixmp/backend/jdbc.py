@@ -50,6 +50,7 @@ JAVA_CLASSES = [
     "at.ac.iiasa.ixmp.dto.TimesliceDTO",
     "at.ac.iiasa.ixmp.Platform",
     "java.lang.Double",
+    "java.lang.Exception",
     "java.lang.Integer",
     "java.lang.NoClassDefFoundError",
     "java.lang.IllegalArgumentException",
@@ -123,10 +124,20 @@ def _read_properties(file):
 
 def _raise_jexception(exc, msg="unhandled Java exception: "):
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
+    # Try to re-raise as a ValueError for bad model or scenario name
+    arg = exc.args[0] if isinstance(exc.args[0], str) else ""
+    match = re.search(r"getting '([^']*)' in table '([^']*)'", arg)
+    if match:
+        param = match.group(2).lower()
+        if param in {"model", "scenario"}:
+            raise ValueError(f"{param}={repr(match.group(1))}") from None
+
+    # Other exceptions
     if _EXCEPTION_VERBOSE:
         msg += "\n\n" + exc.stacktrace()
     else:
         msg += exc.message()
+
     raise RuntimeError(msg) from None
 
 
@@ -300,6 +311,57 @@ class JDBCBackend(CachingBackend):
         #     log.debug('Skip garbage collection')
 
     # Platform methods
+    @classmethod
+    def handle_config(cls, args, kwargs):
+        """Handle platform/backend config arguments.
+
+        `args` will overwrite any `kwargs`, and may be one of:
+
+        - ("oracle", url, user, password) for an Oracle database.
+        - ("hsqldb", path) for a file-backed HyperSQL database.
+        - ("hsqldb",) with "url" supplied via `kwargs`, e.g. "jdbc:hsqldb:mem://foo" for
+          an in-memory database.
+        """
+        args = list(args)
+        info = copy(kwargs)
+
+        # First argument: driver
+        try:
+            info["driver"] = args.pop(0)
+        except IndexError:
+            raise ValueError(
+                f"≥1 positional argument required for class=jdbc: driver; got: {args}, "
+                + str(kwargs)
+            )
+
+        if info["driver"] == "oracle":
+            if len(args) != 3:
+                raise ValueError(
+                    "3 arguments required for driver=oracle: url, user, password; got: "
+                    + str(args)
+                )
+            info["url"], info["user"], info["password"] = args
+
+        elif info["driver"] == "hsqldb":
+            try:
+                info["path"] = Path(args.pop(0)).resolve()
+            except IndexError:
+                if "url" not in info:
+                    raise ValueError(
+                        "must supply either positional path or url= keyword argument "
+                        "for driver=hsqldb"
+                    )
+
+            if len(args):
+                raise ValueError(
+                    f"Unrecognized extra argument(s) for driver=hsqldb: {args}"
+                )
+        else:
+            raise ValueError(
+                f"driver={info['driver']}; expected one of {set(DRIVER_CLASS)}"
+            )
+
+        return info
 
     def set_log_level(self, level):
         # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled by the
@@ -391,7 +453,10 @@ class JDBCBackend(CachingBackend):
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
-        scenarios = self.jobj.getScenarioList(default, model, scenario)
+        try:
+            scenarios = self.jobj.getScenarioList(default, model, scenario)
+        except java.IxException as e:
+            _raise_jexception(e)
 
         for s in scenarios:
             data = []
@@ -611,14 +676,7 @@ class JDBCBackend(CachingBackend):
             # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
         except java.IxException as e:
-            # Try to re-raise as a ValueError for bad model or scenario name
-            match = re.search(r"table '([^']*)' from the database", e.args[0])
-            if match:
-                param = match.group(1).lower()
-                if param in ("model", "scenario"):
-                    raise ValueError(f"{param}={repr(getattr(ts, param))}")
-
-            # Failed
+            # Re-raise as a ValueError for bad model or scenario name, or other
             _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
@@ -638,9 +696,10 @@ class JDBCBackend(CachingBackend):
     def commit(self, ts, comment):
         try:
             self.jindex[ts].commit(comment)
-        except java.IxException as e:
-            if "this Scenario is not checked out" in e.args[0]:
-                raise RuntimeError(e.args[0])
+        except java.Exception as e:
+            arg = e.args[0]
+            if isinstance(arg, str) and "this Scenario is not checked out" in arg:
+                raise RuntimeError(arg)
             else:  # pragma: no cover
                 _raise_jexception(e)
         if ts.version == 0:
@@ -796,6 +855,7 @@ class JDBCBackend(CachingBackend):
             scenario,
             version=jclone.getVersion(),
             scheme=jclone.getScheme(),
+            _clone=True,
         )
 
     def has_solution(self, s):
@@ -999,7 +1059,12 @@ class JDBCBackend(CachingBackend):
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
-        meta = self.jobj.getMeta(model, scenario, version, strict)
+
+        try:
+            meta = self.jobj.getMeta(model, scenario, version, strict)
+        except java.IxException as e:
+            _raise_jexception(e)
+
         return {entry.getKey(): _unwrap(entry.getValue()) for entry in meta.entrySet()}
 
     def set_meta(
@@ -1012,7 +1077,11 @@ class JDBCBackend(CachingBackend):
         jmeta = java.HashMap()
         for k, v in meta.items():
             jmeta.put(str(k), _wrap(v))
-        self.jobj.setMeta(model, scenario, version, jmeta)
+
+        try:
+            self.jobj.setMeta(model, scenario, version, jmeta)
+        except java.IxException as e:
+            _raise_jexception(e)
 
     def remove_meta(
         self, categories, model: str = None, scenario: str = None, version: int = None

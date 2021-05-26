@@ -91,10 +91,14 @@ def test_platform_units(test_mp, caplog, ureg):
 
     # Unrecognized units are added automatically, with log messages emitted
     caplog.clear()
-    rep.get(x_key)
-    # NB cannot use assert_logs here. reporting.utils.parse_units uses the
-    #    pint application registry, so depending which tests are run and in
-    #    which order, this unit may already be defined.
+
+    # Protect from --verbose command-line option, which sets the level to DEBUG
+    with caplog.at_level(logging.INFO):
+        rep.get(x_key)
+
+    # NB cannot use assert_logs here. reporting.utils.parse_units uses the pint
+    #    application registry, so depending which tests are run and in which order, this
+    #    unit may already be defined.
     if len(caplog.messages):
         assert "Add unit definition: kWa = [kWa]" in caplog.messages
 
@@ -133,6 +137,7 @@ def test_platform_units(test_mp, caplog, ureg):
 
 def test_cli(ixmp_cli, test_mp, test_data_path):
     # Put something in the database
+    test_mp.open_db()
     make_dantzig(test_mp)
     test_mp.close_db()
 

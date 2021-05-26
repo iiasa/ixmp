@@ -1,39 +1,30 @@
 .. _rixmp:
 
-R (``rixmp`` package)
-*********************
+Usage in R via ``reticulate``
+*****************************
 
-An R interface to the `ixmp` is provided by the ``rixmp`` package.
-``rixmp`` uses the `reticulate <https://rstudio.github.io/reticulate/>`_ R-to-Python adapter to provide access to all features of the :mod:`ixmp` *Python* package
+:mod:`ixmp` is fully usable in R via `reticulate`_, a package that allows nearly seamless access to the Python API.
+No additional R packages are needed.
+
+.. note:: The former ``rixmp`` package was removed in :mod:`ixmp` :ref:`v3.3.0`.
+
+See :ref:`message_ix:install-r` for installing R and `reticulate`_ to use with :mod:`ixmp`.
+Those instructions are suitable whether :mod:`message_ix` is also installed, or only :mod:`ixmp`.
+
+Once installed, use reticulate to import the Python package:
 
 .. code-block:: R
 
-   # Load the rixmp package
-   library(rixmp)
-   ixmp <- import('ixmp')
+   library(reticulate)
+   ixmp <- import("ixmp")
 
-   # An 'ixmp' object is added to the global namespace.
-   # It can be used in the same way as the Python ixmp package.
-   mp <- ixmp$Platform(dbtype = 'HSQLDB')
+This creates a global variable, ``ixmp``, that can be used much like the Python module:
+
+.. code-block:: R
+
+   mp <- ixmp$Platform(name = 'default')
    scen <- ixmp$Scenario(mp, 'model name', 'scenario name', version = 'new')
 
-   # etc.
+Finally, see the R versions of the :doc:`tutorials`.
 
-One additional method, :meth:`adapt_to_ret` is provided.
-Access its documentation with
-
-.. code-block:: R
-
-   ?rixmp::adapt_to_ret
-
-This function is useful when adding :class:`data.frames` objects to a Scenario:
-
-.. code-block:: R
-
-   scen$init_set("i")
-   i.set = c("seattle", "san-diego")
-   scen$add_set("i", i.set)
-   # load dataframes
-   scen$init_par("a", c("i"))
-   a.df = data.frame(i = i.set, value = c(350, 600) , unit = 'cases')
-   scen$add_par("a", adapt_to_ret(a.df))
+.. _reticulate: https://rstudio.github.io/reticulate/

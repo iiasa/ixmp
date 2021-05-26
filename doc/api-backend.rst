@@ -121,6 +121,7 @@ Backend API
       get_scenarios
       get_scenario_names
       get_units
+      handle_config
       open_db
       read_file
       remove_meta

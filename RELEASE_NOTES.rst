@@ -4,12 +4,19 @@ Next release
 All changes
 -----------
 
+- :pull:`416`:
+
+  - Add ``ixmp config show`` CLI command.
+  - Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions``.
+  - Clean up test suite, improve performance, increase coverage ().
+
 - Deprecate :func:`.utils.logger` (:pull:`399`).
 - Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
 - :pull:`398`:
 
   - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows.
   - Format user-friendly exceptions when GAMSModel errors (:issue:`383`).
+
 - :pull:`397`: Adjust :mod:`ixmp.reporting` to use :mod:`genno`.
 - :pull:`396`: Fix two minor bugs in reporting.
 

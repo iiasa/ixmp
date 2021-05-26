@@ -15,4 +15,4 @@ def test_resource_limit(resource_limit, test_mp):
 
     del s
 
-    assert info0.python < info1.python
+    assert info0.python <= info1.python

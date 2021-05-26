@@ -11,9 +11,7 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend import FIELDS
-from ixmp.testing import assert_logs, models
-
-from . import DATA
+from ixmp.testing import DATA, assert_logs, models
 
 
 def test_init():

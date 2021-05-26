@@ -1,5 +1,6 @@
 import gc
 import logging
+from pathlib import Path
 from sys import getrefcount
 from typing import Tuple
 
@@ -10,8 +11,8 @@ from pytest import raises
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import java
-from ixmp.testing import add_random_model_data  # random_ts_data,
-from ixmp.testing import bool_param_id, make_dantzig, memory_usage
+from ixmp.testing import add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing.resource import memory_usage
 
 log = logging.getLogger(__name__)
 

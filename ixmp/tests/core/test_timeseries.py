@@ -8,9 +8,7 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import Scenario, TimeSeries
 from ixmp.core import IAMC_IDX
-from ixmp.testing import models
-
-from . import DATA
+from ixmp.testing import DATA, models
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]

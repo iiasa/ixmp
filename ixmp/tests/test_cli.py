@@ -75,6 +75,9 @@ def test_config(ixmp_cli):
     ixmp.config.register("test key", str)
     ixmp.config.values["test key"] = "foo"
 
+    # show() works
+    assert ixmp_cli.invoke(["config", "show"]).output.startswith("Configuration path: ")
+
     # get() works
     assert ixmp_cli.invoke(["config", "get", "test key"]).output == "foo\n"
 

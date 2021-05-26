@@ -322,6 +322,7 @@ class JDBCBackend(CachingBackend):
         - ("hsqldb",) with "url" supplied via `kwargs`, e.g. "jdbc:hsqldb:mem://foo" for
           an in-memory database.
         """
+        args = list(args)
         info = copy(kwargs)
 
         # First argument: driver

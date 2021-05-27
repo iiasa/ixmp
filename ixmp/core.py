@@ -852,7 +852,6 @@ class Scenario(TimeSeries):
         version: Optional[Union[int, str]] = None,
         scheme: Optional[str] = None,
         annotation: Optional[str] = None,
-        _clone: bool = False,
         **model_init_args,
     ):
         # Check arguments
@@ -884,9 +883,6 @@ class Scenario(TimeSeries):
                 f"{model}/{scenario} is a MESSAGE-scheme scenario; use "
                 "message_ix.Scenario()"
             )
-
-        if _clone:
-            return
 
         # Retrieve the Model class correlating to the *scheme*
         model_class = get_model(self.scheme).__class__

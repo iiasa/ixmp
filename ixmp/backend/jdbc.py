@@ -855,7 +855,6 @@ class JDBCBackend(CachingBackend):
             scenario,
             version=jclone.getVersion(),
             scheme=jclone.getScheme(),
-            _clone=True,
         )
 
     def has_solution(self, s):

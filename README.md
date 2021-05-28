@@ -22,7 +22,7 @@ examples for a generic model instance based on Dantzig's transport problem.
 
 ## Documentation
 
-Complete documentation of the ixmp API is available for current and past versions at: https://docs.messageix.org/ixmp.
+Complete documentation of the ixmp API is available for current and past versions at: https://docs.messageix.org/ixmp/.
 This includes:
 
 - **Installation.**

@@ -1,7 +1,13 @@
+.. Next release
+.. ============
+
+.. All changes
+.. -----------
+
 .. _v3.3.0:
 
-Next release
-============
+v3.3.0 (2021-05-28)
+===================
 
 Migration notes
 ---------------
@@ -13,22 +19,16 @@ See the updated page for :doc:`api-r`.
 All changes
 -----------
 
-- (:pull:`416`):
-
-  - Add ``ixmp config show`` CLI command.
-  - Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions``.
-  - Clean up test suite, improve performance, increase coverage.
-  - Adjust documentation for deprecation of ``rixmp`.
-
+- Add ``ixmp config show`` CLI command (:pull:`416`).
+- Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions`` (:pull:`416`).
+- Clean up test suite, improve performance, increase coverage (:pull:`416`).
+- Adjust documentation for deprecation of ``rixmp`` (:pull:`416`).
 - Deprecate :func:`.utils.logger` (:pull:`399`).
 - Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
-- :pull:`398`:
-
-  - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows.
-  - Format user-friendly exceptions when GAMSModel errors (:issue:`383`).
-
-- :pull:`397`: Adjust :mod:`ixmp.reporting` to use :mod:`genno`.
-- :pull:`396`: Fix two minor bugs in reporting.
+- Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows (:pull:`398`).
+- Format user-friendly exceptions when GAMSModel errors (:issue:`383`, :pull:`398`).
+- Adjust :mod:`ixmp.reporting` to use :mod:`genno` (:pull:`397`:).
+- Fix two minor bugs in reporting (:pull:`396`:).
 
 v3.2.0 (2021-01-24)
 ===================

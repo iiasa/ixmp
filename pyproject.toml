@@ -94,6 +94,7 @@ module = [
   "memory_profiler",
   "pandas.*",
   "pyam",
+  "pyomo",
   "pretenders.*",
 ]
 ignore_missing_imports = true

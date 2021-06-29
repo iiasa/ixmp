@@ -1,15 +1,16 @@
 from collections import ChainMap
 from functools import lru_cache
 from pathlib import Path
+from typing import Dict
 
 import pandas as pd
 
 from ixmp.utils import maybe_check_out, maybe_commit, update_par
+
 from .gams import GAMSModel
 from .pyomo import PyomoModel
 
-
-ITEMS = {
+ITEMS: Dict[str, dict] = {
     # Plants
     "i": dict(ix_type="set"),
     # Markets

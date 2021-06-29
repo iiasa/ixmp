@@ -37,16 +37,14 @@ except DistributionNotFound:  # pragma: no cover
 BACKENDS["jdbc"] = JDBCBackend
 
 # Register Models provided by ixmp
-MODELS.update(
-    {
-        "default": GAMSModel,
-        "gams": GAMSModel,
-        "dantzig": DantzigGAMSModel,
-        "dantzig-gams": DantzigGAMSModel,
-        "dantzig-pyomo": DantzigPyomoModel,
-    }
-)
-
+for name, cls in (
+    ("default", GAMSModel),
+    ("gams", GAMSModel),
+    ("dantzig", DantzigGAMSModel),
+    ("dantzig-gams", DantzigGAMSModel),
+    ("dantzig-pyomo", DantzigPyomoModel),
+):
+    MODELS[name] = cls
 
 # Configure the 'ixmp' logger: write messages to stdout, defaulting to level WARNING
 # and above

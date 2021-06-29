@@ -1,13 +1,15 @@
 from inspect import signature
+from typing import Dict, Optional
 
 try:
-    from pyomo import environ as pyo, opt
+    from pyomo import environ as pyo
+    from pyomo import opt
+
     has_pyomo = True
 except ImportError:
     has_pyomo = False
 
 from ixmp.model.base import Model
-
 
 COMPONENT = dict(
     par=pyo.Param,
@@ -23,16 +25,17 @@ def get_sets(model, names):
 
 class PyomoModel(Model):
     """General class for ixmp models using :mod:`pyomo`."""
-    name = 'pyomo'
 
-    items = {}
-    constraints = {}
-    objective = None
-    _partials = {}
+    name = "pyomo"
 
-    def __init__(self, name=None, solver='glpk'):
+    items: Dict[str, dict] = {}
+    constraints: Dict = {}
+    objective: Optional[str] = None
+    _partials: Dict = {}
+
+    def __init__(self, name=None, solver="glpk"):
         if not has_pyomo:
-            raise ImportError('pyomo must be installed')
+            raise ImportError("pyomo must be installed")
 
         self.opt = opt.SolverFactory(solver)
 
@@ -43,17 +46,17 @@ class PyomoModel(Model):
                 # Handle the objective separately
                 continue
 
-            Component = COMPONENT[info['ix_type']]
+            Component = COMPONENT[info["ix_type"]]
 
             kwargs = {}
 
-            if info['ix_type'] == 'equ':
+            if info["ix_type"] == "equ":
                 func = self.equation[name]
                 params = signature(func).parameters
                 idx_sets = list(params.keys())[1:]
                 kwargs = dict(rule=func)
             else:
-                idx_sets = info.get('idx_sets', None) or []
+                idx_sets = info.get("idx_sets", None) or []
 
                 # NB would like to do this, but pyomo doesn't recognize partial
                 #    objects as callable
@@ -76,32 +79,34 @@ class PyomoModel(Model):
 
     def to_pyomo(self, name):
         info = self.items[name]
-        ix_type = info['ix_type']
+        ix_type = info["ix_type"]
 
-        if ix_type == 'par':
+        if ix_type == "par":
             item = self.scenario.par(name)
 
-            idx_sets = info.get('idx_sets', []) or []
+            idx_sets = info.get("idx_sets", []) or []
             if len(idx_sets):
-                series = item.set_index(idx_sets)['value']
+                series = item.set_index(idx_sets)["value"]
                 series.index = series.index.to_flat_index()
                 return series.to_dict()
             else:
-                return {None: item['value']}
-        elif ix_type == 'set':
+                return {None: item["value"]}
+        elif ix_type == "set":
             return {None: self.scenario.set(name).tolist()}
 
     def all_to_pyomo(self):
-        return {None: dict(
-            filter(
-                lambda name_data: name_data[1],
-                [(name, self.to_pyomo(name)) for name in self.items]
+        return {
+            None: dict(
+                filter(
+                    lambda name_data: name_data[1],
+                    [(name, self.to_pyomo(name)) for name in self.items],
+                )
             )
-        )}
+        }
 
     def all_from_pyomo(self, model):
         for name, info in self.items.items():
-            if info['ix_type'] not in ('equ', 'var'):
+            if info["ix_type"] not in ("equ", "var"):
                 continue
             self.from_pyomo(model, name)
 
@@ -131,4 +136,4 @@ class PyomoModel(Model):
 
         self.all_from_pyomo(m)
 
-        delattr(self, 'scenario')
+        delattr(self, "scenario")

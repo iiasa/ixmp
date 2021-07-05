@@ -1,5 +1,6 @@
-.. Next release
-.. ============
+Next release
+============
+- :pull:`421`: Adjust :func:`.format_scenario_list` for changes in :mod:`pandas` 1.3.0.
 
 .. All changes
 .. -----------

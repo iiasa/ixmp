@@ -390,10 +390,11 @@ def format_scenario_list(
         platform.scenario_list(model=model, scen=scenario, default=default_only)
         .groupby(["model", "scenario"])
         .apply(describe)
-        .reset_index()
     )
 
-    if not len(info):
+    if len(info):
+        info = info.reset_index()
+    else:
         # No results; re-create a minimal empty data frame
         info = pd.DataFrame([], columns=["model", "scenario", "default", "N"])
 

@@ -19,8 +19,12 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
     env : dict-like, optional
         Execution environment for :mod:`nbclient`. Default: :obj:`os.environ`.
     kernel : str, optional
-        Jupyter kernel to use. Default: 'python2' or 'python3', matching the current
+        Jupyter kernel to use. Default: "python2" or "python3", matching the current
         Python version.
+
+        .. warning:: Any existing configuration for this kernel—such as an IPython
+           start-up file—will be executed when the kernel starts. Code that enables
+           GUI features can interfere with :func:`run_notebook`.
     allow_errors : bool, optional
         Whether to pass the ``--allow-errors`` option to :mod:`nbclient`. If
         :obj:`True`, the execution always succeeds, and cell output contains exception

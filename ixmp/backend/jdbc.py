@@ -5,7 +5,6 @@ import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
 from copy import copy
-from itertools import chain
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import Generator, Mapping
@@ -14,11 +13,10 @@ from weakref import WeakKeyDictionary
 import jpype
 import pandas as pd
 
+from ixmp.backend import FIELDS, ItemType
+from ixmp.backend.base import CachingBackend
 from ixmp.core.scenario import Scenario
 from ixmp.utils import as_str_list, filtered
-
-from . import FIELDS, ItemType
-from .base import CachingBackend
 
 log = logging.getLogger(__name__)
 
@@ -1165,13 +1163,10 @@ def start_jvm(jvmargs=None):
     # Arguments
     args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
 
-    # Base for Java classpath entries
-    cp = Path(__file__).parents[1]
-
     # Keyword arguments
     kwargs = dict(
-        # Given 'lib/*' JPype will only glob '*.jar', so glob here explicitly
-        classpath=map(str, chain([cp / "ixmp.jar"], cp.glob("lib/*"))),
+        # Glob pattern for ixmp.jar and related Java binaries
+        classpath=str(Path(__file__).parent.joinpath("jdbc", "*")),
         # For JPype 0.7 (raises a warning) and 0.8 (default is False).
         # 'True' causes Java string objects to be converted automatically to
         # Python str(), as expected by ixmp Python code.

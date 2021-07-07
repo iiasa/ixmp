@@ -82,10 +82,10 @@ def check_year(y, s):
 def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
-    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`.
-    Only parameters are compared. :func:`~pandas.merge` is called with the
-    arguments ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True";
-    the merge is performed on all columns except 'value' or 'unit'.
+    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`. Only
+    parameters are compared. :func:`~pandas.merge` is called with the arguments
+    ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
+    performed on all columns except 'value' or 'unit'.
 
     Yields
     ------
@@ -163,11 +163,11 @@ def maybe_check_out(timeseries, state=None):
     Returns
     -------
     :obj:`True`
-        if `state` was :obj:`None` and a check out was performed, i.e.
-        `timeseries` was previously in a checked-in state.
+        if `state` was :obj:`None` and a check out was performed, i.e. `timeseries` was
+        previously in a checked-in state.
     :obj:`False`
-        if `state` was :obj:`None` and no check out was performed, i.e.
-        `timeseries` was already in a checked-out state.
+        if `state` was :obj:`None` and no check out was performed, i.e. `timeseries`
+        was already in a checked-out state.
     `state`
         if `state` was not :obj:`None` and no check out was attempted.
 
@@ -188,8 +188,8 @@ def maybe_check_out(timeseries, state=None):
     try:
         timeseries.check_out()
     except RuntimeError:
-        # If `timeseries` is new (has not been committed), the checkout
-        # attempt raises an exception
+        # If `timeseries` is new (has not been committed), the checkout attempt raises
+        # an exception
         return False
     else:
         return True
@@ -228,8 +228,8 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
     Parameters
     ----------
     obj
-        Any value returned by :meth:`Scenario.par`. For a scalar
-        (0-dimensional) parameter, this will be :class:`dict`.
+        Any value returned by :meth:`Scenario.par`. For a scalar (0-dimensional)
+        parameter, this will be :class:`dict`.
 
     Returns
     -------

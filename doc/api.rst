@@ -238,8 +238,17 @@ Utilities
 .. currentmodule:: ixmp.utils
 
 .. automodule:: ixmp.utils
-   :members: format_scenario_list, logger, maybe_check_out, maybe_commit, parse_url, show_versions, update_par
+   :members:
+   :exclude-members: as_str_list, check_year, isscalar, year_list, filtered
 
+   .. autosummary::
+      diff
+      format_scenario_list
+      maybe_check_out
+      maybe_commit
+      parse_url
+      show_versions
+      update_par
 
 Testing utilities
 -----------------

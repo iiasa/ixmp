@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from copy import copy
 from typing import Any, Dict, Generator, MutableMapping, Sequence
 
-from ixmp.core import Scenario, TimeSeries
+from ixmp.core.scenario import Scenario, TimeSeries
 
 from . import ItemType
 from .io import s_read_excel, s_write_excel, ts_read_file

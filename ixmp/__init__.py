@@ -2,16 +2,17 @@ import logging
 
 from pkg_resources import DistributionNotFound, get_distribution
 
-from ._config import config
-from .backend import BACKENDS, ItemType
-from .backend.jdbc import JDBCBackend
-from .core import IAMC_IDX, Platform, Scenario, TimeSeries
-from .model import MODELS
-from .model.base import ModelError
-from .model.dantzig import DantzigModel
-from .model.gams import GAMSModel
-from .reporting import Reporter
-from .utils import show_versions
+from ixmp._config import config
+from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
+from ixmp.backend.jdbc import JDBCBackend
+from ixmp.core.platform import Platform
+from ixmp.core.scenario import Scenario, TimeSeries
+from ixmp.model import MODELS
+from ixmp.model.base import ModelError
+from ixmp.model.dantzig import DantzigModel
+from ixmp.model.gams import GAMSModel
+from ixmp.reporting import Reporter
+from ixmp.utils import show_versions
 
 __all__ = [
     "IAMC_IDX",

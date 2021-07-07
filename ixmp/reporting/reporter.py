@@ -4,7 +4,7 @@ from typing import List, Union
 import dask
 from genno.core.computer import Computer, Key
 
-from ixmp.core import Scenario
+from ixmp.core.scenario import Scenario
 from ixmp.reporting import computations
 from ixmp.reporting.util import RENAME_DIMS, keys_for_quantity
 

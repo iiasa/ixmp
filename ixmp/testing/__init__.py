@@ -44,9 +44,8 @@ import pint
 import pytest
 from click.testing import CliRunner
 
-from ixmp import cli
+from ixmp import Platform, cli
 from ixmp import config as ixmp_config
-from ixmp.core import Platform
 
 from .data import (
     DATA,

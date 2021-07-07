@@ -8,7 +8,8 @@ import pandas as pd
 import pint
 import xarray as xr
 
-from ixmp.core import IAMC_IDX, Platform, Scenario, TimeSeries
+from ixmp import Platform, Scenario, TimeSeries
+from ixmp.backend import IAMC_IDX
 from ixmp.reporting import Quantity
 
 #: Common (model name, scenario name) pairs for testing.

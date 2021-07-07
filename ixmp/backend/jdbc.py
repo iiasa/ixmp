@@ -14,7 +14,7 @@ from weakref import WeakKeyDictionary
 import jpype
 import pandas as pd
 
-from ixmp.core import Scenario
+from ixmp.core.scenario import Scenario
 from ixmp.utils import as_str_list, filtered
 
 from . import FIELDS, ItemType
@@ -1091,8 +1091,6 @@ class JDBCBackend(CachingBackend):
         return self.jobj.removeMeta(model, scenario, version, to_jlist(categories))
 
     def clear_solution(self, s, from_year=None):
-        from ixmp.core import Scenario
-
         if from_year:
             if type(s) is not Scenario:
                 raise TypeError(

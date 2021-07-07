@@ -97,6 +97,7 @@ TimeSeries
       run_id
       set_as_default
       timeseries
+      transact
 
 
 Scenario

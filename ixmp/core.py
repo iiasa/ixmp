@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 from functools import partial
 from itertools import repeat, zip_longest
 from pathlib import Path
@@ -9,10 +10,17 @@ from weakref import ProxyType, proxy
 import numpy as np
 import pandas as pd
 
-from ._config import config
-from .backend import BACKENDS, FIELDS, ItemType
-from .model import get_model
-from .utils import as_str_list, check_year, parse_url, year_list
+from ixmp._config import config
+from ixmp.backend import BACKENDS, FIELDS, ItemType
+from ixmp.model import get_model
+from ixmp.utils import (
+    as_str_list,
+    check_year,
+    maybe_check_out,
+    maybe_commit,
+    parse_url,
+    year_list,
+)
 
 log = logging.getLogger(__name__)
 
@@ -540,6 +548,32 @@ class TimeSeries:
     def discard_changes(self):
         """Discard all changes and reload from the database."""
         self._backend("discard_changes")
+
+    @contextmanager
+    def transact(self, message: str = "", condition: bool = True):
+        """Context manager to wrap code in a 'transaction'.
+
+        If `condition` is :obj:`True`, the TimeSeries` (or :class:`.Scenario`) is
+        checked out *before* the block begins. When the block ends, the object is
+        committed with `commit_message`. If `condition` is :obj:`False`, nothing occurs
+        before or after the block.
+
+        Example
+        -------
+        >>> # `ts` is currently checked in/locked
+        >>> with ts.transact(message="replace 'foo' with 'bar' in set x"):
+        >>>    # `ts` is checked out and may be modified
+        >>>    ts.remove_set("x", "foo")
+        >>>    ts.add_set("x", "bar")
+        >>> # Changes to `ts` have been committed
+        """
+        # TODO implement __enter__ and __exit__ to allow simpler "with ts: …"
+        if condition:
+            maybe_check_out(self)
+        try:
+            yield
+        finally:
+            maybe_commit(self, condition, message)
 
     def set_as_default(self):
         """Set the current :attr:`version` as the default."""

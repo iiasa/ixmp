@@ -311,6 +311,50 @@ def parse_url(url):
     return platform_info, scenario_info
 
 
+def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
+    """Transform *df* to a standard IAMC layout.
+
+    The returned object has:
+
+    - Any (Multi)Index levels reset as columns.
+    - Lower-case column names 'region', 'variable', 'subannual', and 'unit'.
+    - If not present in *df*, the value 'Year' in the 'subannual' column.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        May have a 'node' column, which will be renamed to 'region'.
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    Raises
+    ------
+    ValueError
+        If 'region', 'variable', or 'unit' is not among the column names.
+    """
+    # Reset the index if meaningful entries are included there
+    if not list(df.index.names) == [None]:
+        df.reset_index(inplace=True)
+
+    # Rename columns in lower case, and transform 'node' to 'region'
+    cols = {c: str(c).lower() for c in df.columns}
+    cols.update(node="region")
+    df = df.rename(columns=cols)
+
+    required_cols = ["region", "variable", "unit"]
+    missing = list(set(required_cols) - set(df.columns))
+    if len(missing):
+        raise ValueError(f"missing required columns {repr(missing)}")
+
+    # Add a column 'subannual' with the default value
+    if "subannual" not in df.columns:
+        df["subannual"] = "Year"
+
+    return df
+
+
 def year_list(x):
     """Return the elements of x that can be cast to year (int)."""
     lst = []

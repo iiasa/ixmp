@@ -42,15 +42,23 @@ class TimeSeries:
     """
 
     #: Name of the model associated with the TimeSeries.
-    model = None
+    model: str
 
     #: Name of the scenario associated with the TimeSeries.
-    scenario = None
+    scenario: str
 
     #: Version of the TimeSeries. Immutable for a specific instance.
     version = None
 
-    def __init__(self, mp, model, scenario, version=None, annotation=None, **kwargs):
+    def __init__(
+        self,
+        mp: Platform,
+        model: str,
+        scenario: str,
+        version: Optional[Union[int, str]] = None,
+        annotation: str = None,
+        **kwargs,
+    ):
         # Check arguments
         if not isinstance(mp, Platform):
             raise TypeError("mp is not a valid `ixmp.Platform` instance")
@@ -110,7 +118,7 @@ class TimeSeries:
         # Only Scenario class can have a solution
         return False
 
-    def check_out(self, timeseries_only=False) -> None:
+    def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the TimeSeries.
 
         Data in the TimeSeries can only be modified when it is in a checked-out state.
@@ -121,7 +129,7 @@ class TimeSeries:
         """
         self._backend("check_out", timeseries_only)
 
-    def commit(self, comment) -> None:
+    def commit(self, comment: str) -> None:
         """Commit all changed data to the database.
 
         If the TimeSeries was newly created (with ``version='new'``), :attr:`version`
@@ -177,11 +185,11 @@ class TimeSeries:
         """Return :obj:`True` if the :attr:`version` is the default version."""
         return self._backend("is_default")
 
-    def last_update(self):
+    def last_update(self) -> str:
         """Get the timestamp of the last update/edit of this TimeSeries."""
         return self._backend("last_update")
 
-    def run_id(self):
+    def run_id(self) -> int:
         """Get the run id of this TimeSeries."""
         return self._backend("run_id")
 

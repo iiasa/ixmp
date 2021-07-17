@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from copy import copy
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, Mapping
+from typing import Generator, List, Mapping
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -1196,7 +1196,7 @@ def start_jvm(jvmargs=None):
 # Conversion methods
 
 
-def to_pylist(jlist):
+def to_pylist(jlist) -> List:
     """Convert Java list types to :class:`list`."""
     try:
         return list(jlist[:])

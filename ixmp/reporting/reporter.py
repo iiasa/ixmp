@@ -1,7 +1,8 @@
 from itertools import chain, repeat
-from typing import List, Union
+from typing import List, Union, cast
 
 import dask
+import pandas as pd
 from genno.core.computer import Computer, Key
 
 from ixmp.core.scenario import Scenario
@@ -78,7 +79,7 @@ class Reporter(Computer):
             try:
                 # Convert Series to list; protect list so that dask schedulers do not
                 # try to interpret its contents as further tasks
-                elements = dask.core.quote(elements.tolist())
+                elements = dask.core.quote(cast(pd.Series, elements).tolist())
             except AttributeError:  # pragma: no cover
                 # pd.DataFrame for a multidimensional set; store as-is
                 # TODO write tests for this

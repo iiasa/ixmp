@@ -1,9 +1,10 @@
 import logging
 from functools import partial
 from itertools import repeat, zip_longest
+from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from warnings import warn
 
 import pandas as pd
@@ -426,7 +427,9 @@ class Scenario(TimeSeries):
             )
         return self._backend("item_get_elements", "par", name, filters)
 
-    def items(self, type=ItemType.PAR, filters: Dict[str, Sequence[str]] = None):
+    def items(
+        self, type: ItemType = ItemType.PAR, filters: Dict[str, Sequence[str]] = None
+    ) -> Iterable[Tuple[str, Any]]:
         """Iterate over model data items.
 
         Parameters
@@ -573,7 +576,7 @@ class Scenario(TimeSeries):
         # Store
         self._backend("item_set_elements", "par", name, elements)
 
-    def init_scalar(self, name, val, unit, comment=None):
+    def init_scalar(self, name: str, val: Real, unit: str, comment=None) -> None:
         """Initialize a new scalar.
 
         Parameters
@@ -590,7 +593,7 @@ class Scenario(TimeSeries):
         self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
-    def scalar(self, name: str):
+    def scalar(self, name: str) -> Dict[str, Union[Real, str]]:
         """Return the value and unit of a scalar.
 
         Parameters
@@ -604,7 +607,9 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_get_elements", "par", name, None)
 
-    def change_scalar(self, name, val, unit, comment=None):
+    def change_scalar(
+        self, name: str, val: Real, unit: str, comment: str = None
+    ) -> None:
         """Set the value and unit of a scalar.
 
         Parameters
@@ -622,7 +627,7 @@ class Scenario(TimeSeries):
             "item_set_elements", "par", name, [(None, float(val), unit, comment)]
         )
 
-    def remove_par(self, name, key=None):
+    def remove_par(self, name: str, key=None) -> None:
         """Remove parameter values or an entire parameter.
 
         Parameters
@@ -663,7 +668,7 @@ class Scenario(TimeSeries):
         idx_names = as_str_list(idx_names)
         return self._backend("init_item", "var", name, idx_sets, idx_names)
 
-    def var(self, name, filters=None, **kwargs):
+    def var(self, name: str, filters=None, **kwargs):
         """Return a dataframe of (filtered) elements for a specific variable.
 
         Parameters
@@ -675,11 +680,11 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_get_elements", "var", name, filters)
 
-    def equ_list(self):
+    def equ_list(self) -> List[str]:
         """List all defined equations."""
         return self._backend("list_items", "equ")
 
-    def init_equ(self, name, idx_sets=None, idx_names=None):
+    def init_equ(self, name: str, idx_sets=None, idx_names=None) -> None:
         """Initialize a new equation.
 
         Parameters
@@ -699,7 +704,7 @@ class Scenario(TimeSeries):
         """Check whether the scenario has an equation with that name."""
         return name in self.equ_list()
 
-    def equ(self, name, filters=None, **kwargs):
+    def equ(self, name: str, filters=None, **kwargs) -> pd.DataFrame:
         """Return a dataframe of (filtered) elements for a specific equation.
 
         Parameters
@@ -770,7 +775,7 @@ class Scenario(TimeSeries):
         """Return :obj:`True` if the Scenario contains model solution data."""
         return self._backend("has_solution")
 
-    def remove_solution(self, first_model_year: int = None):
+    def remove_solution(self, first_model_year: int = None) -> None:
         """Remove the solution from the scenario.
 
         This function removes the solution (variables and equations) and timeseries

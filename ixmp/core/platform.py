@@ -1,4 +1,6 @@
 import logging
+from os import PathLike
+from typing import TYPE_CHECKING, Dict, List, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -6,6 +8,10 @@ import pandas as pd
 from ixmp._config import config
 from ixmp.backend import BACKENDS, FIELDS, ItemType
 from ixmp.utils import as_str_list
+
+if TYPE_CHECKING:
+    from ixmp.backend.base import Backend
+
 
 log = logging.getLogger(__name__)
 
@@ -28,15 +34,14 @@ class Platform:
     name : str
         Name of a specific :ref:`configured <configuration>` backend.
     backend : 'jdbc'
-        Storage backend type. 'jdbc' corresponds to the built-in
-        :class:`.JDBCBackend`; see :obj:`.BACKENDS`.
+        Storage backend type. 'jdbc' corresponds to the built-in :class:`.JDBCBackend`;
+        see :obj:`.BACKENDS`.
     backend_args
-        Keyword arguments to specific to the `backend`. See
-        :class:`.JDBCBackend`.
+        Keyword arguments to specific to the `backend`. See :class:`.JDBCBackend`.
     """
 
     # Storage back end for the platform
-    _backend = None
+    _backend: "Backend"
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
@@ -53,7 +58,7 @@ class Platform:
         "set_meta",
     ]
 
-    def __init__(self, name=None, backend=None, **backend_args):
+    def __init__(self, name: str = None, backend: str = None, **backend_args):
         if name is None:
             if backend is None and not len(backend_args):
                 # No arguments given: use the default platform config
@@ -75,11 +80,11 @@ class Platform:
 
         # Retrieve the Backend class
         try:
-            backend_class = kwargs.pop("class")
-            backend_class = BACKENDS[backend_class]
+            backend_class_name = kwargs.pop("class")
+            backend_class = BACKENDS[backend_class_name]
         except KeyError:
             raise ValueError(
-                f"backend class {repr(backend_class)} not among "
+                f"backend class {repr(backend_class_name)} not among "
                 + str(sorted(BACKENDS.keys()))
             )
 
@@ -93,7 +98,7 @@ class Platform:
         else:
             raise AttributeError(name)
 
-    def set_log_level(self, level):
+    def set_log_level(self, level: Union[str, int]) -> None:
         """Set log level for the Platform and its storage :class:`.Backend`.
 
         Parameters
@@ -101,7 +106,13 @@ class Platform:
         level : str
             Name of a :py:ref:`Python logging level <levels>`.
         """
-        if not (level in dir(logging) or isinstance(level, int)):
+        if isinstance(level, str):
+            try:
+                level = getattr(logging, level)
+            except AttributeError:
+                pass
+
+        if not isinstance(level, int):
             raise ValueError(
                 f"{repr(level)} is not a valid Python logger level, see "
                 "https://docs.python.org/3/library/logging.html#logging-level"
@@ -118,7 +129,7 @@ class Platform:
         # stdout.
         self._backend.set_log_level(level)
 
-    def get_log_level(self):
+    def get_log_level(self) -> str:
         """Return log level of the storage :class:`.Backend`, if any.
 
         Returns
@@ -128,16 +139,17 @@ class Platform:
         """
         return self._backend.get_log_level()
 
-    def scenario_list(self, default=True, model=None, scen=None):
+    def scenario_list(
+        self, default: bool = True, model: str = None, scen: str = None
+    ) -> pd.DataFrame:
         """Return information about TimeSeries and Scenarios on the Platform.
 
         Parameters
         ----------
         default : bool, optional
             Return *only* the default version of each TimeSeries/Scenario (see
-            :meth:`TimeSeries.set_as_default`). Any (`model`, `scenario`)
-            without a default version is omitted. If :obj:`False`, return all
-            versions.
+            :meth:`TimeSeries.set_as_default`). Any (`model`, `scenario`) without a
+            default version is omitted. If :obj:`False`, return all versions.
         model : str, optional
             A model name. If given, only return information for *model*.
         scen : str, optional
@@ -148,18 +160,16 @@ class Platform:
         :class:`pandas.DataFrame`
             Scenario information, with the columns:
 
-            - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario
-              identifiers; see :class:`Scenario`.
-            - ``is_default``—:obj:`True` if the ``version`` is the default
-              version for the (``model``, ``scenario``).
-            - ``is_locked``—:obj:`True` if the Scenario has been locked for
-              use.
-            - ``cre_user`` and ``cre_date``—database user that created the
-              Scenario, and creation time.
-            - ``upd_user`` and ``upd_date``—user and time for last modification
-              of the Scenario.
-            - ``lock_user`` and ``lock_date``—user that locked the Scenario and
-              lock time.
+            - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario identifiers;
+              see :class:`.Timeseries and :class:`.Scenario`.
+            - ``is_default``—:obj:`True` if the ``version`` is the default version for
+              the (``model``, ``scenario``).
+            - ``is_locked``—:obj:`True` if the Scenario has been locked for use.
+            - ``cre_user``, ``cre_date``—database user that created the Scenario, and
+              creation time.
+            - ``upd_user``, ``upd_date``—user and time for last modification of the
+              Scenario.
+            - ``lock_user``, ``lock_date``—user that locked the Scenario and lock time.
             - ``annotation``: description of the Scenario or changelog.
         """
         return pd.DataFrame(
@@ -169,19 +179,18 @@ class Platform:
 
     def export_timeseries_data(
         self,
-        path,
-        default=True,
-        model=None,
-        scenario=None,
+        path: PathLike,
+        default: bool = True,
+        model: str = None,
+        scenario: str = None,
         variable=None,
         unit=None,
         region=None,
-        export_all_runs=False,
-    ):
-        """Export timeseries data to CSV file across multiple scenarios.
+        export_all_runs: bool = False,
+    ) -> None:
+        """Export time series data to CSV file across multiple :class:`.TimeSeries`.
 
-        Refer :meth:`.add_timeseries` of :class:`Timeseries` to get more
-        information about adding timeseries data to scenario.
+        Refer :meth:`.TimeSeries.add_timeseries` about adding time series data.
 
         Parameters
         ----------
@@ -214,17 +223,11 @@ class Platform:
             Only return data for region(s) in this list.
         export_all_runs: boolean, optional
             Export all existing model+scenario run combinations.
-
-
-        Returns
-        -------
-        None
         """
         if export_all_runs and (model or scenario):
             raise ValueError(
-                "Invalid arguments: "
-                "export_all_runs cannot be used when providing "
-                "a model or scenario."
+                "Invalid arguments: export_all_runs cannot be used when providing a "
+                "model or scenario."
             )
         filters = {
             "model": as_str_list(model) or [],
@@ -238,7 +241,7 @@ class Platform:
 
         self._backend.write_file(path, ItemType.TS, filters=filters)
 
-    def add_unit(self, unit, comment="None"):
+    def add_unit(self, unit: str, comment: str = "None") -> None:
         """Define a unit.
 
         Parameters
@@ -246,8 +249,8 @@ class Platform:
         unit : str
             Name of the unit.
         comment : str, optional
-            Annotation describing the unit or why it was added. The current
-            database user and timestamp are appended automatically.
+            Annotation describing the unit or why it was added. The current database
+            user and timestamp are appended automatically.
         """
         if unit in self.units():
             log.info(f"unit `{unit}` is already defined in the platform instance")
@@ -255,18 +258,17 @@ class Platform:
 
         self._backend.set_unit(unit, comment)
 
-    def units(self):
+    def units(self) -> List[str]:
         """Return all units defined on the Platform.
 
         Returns
         -------
-        numpy.ndarray of str
+        list of str
         """
         return self._backend.get_units()
 
-    def regions(self):
-        """Return all regions defined for the IAMC-style timeseries format
-        including known synonyms.
+    def regions(self) -> pd.DataFrame:
+        """Return all regions defined time series data, including synonyms.
 
         Returns
         -------
@@ -275,7 +277,7 @@ class Platform:
         return pd.DataFrame(self._backend.get_nodes(), columns=FIELDS["get_nodes"])
 
     def _existing_node(self, name):
-        """Check whether the node *name* has been defined.
+        """Check whether the node `name` has been defined.
 
         If :obj:`True`, log a warning and return True. Otherwise, return False.
         """
@@ -292,13 +294,13 @@ class Platform:
 
         return False
 
-    def add_region(self, region, hierarchy, parent="World"):
+    def add_region(self, region: str, hierarchy: str, parent: str = "World") -> None:
         """Define a region including a hierarchy level and a 'parent' region.
 
         .. tip::
-           On a :class:`Platform` backed by a shared database, a region may
-           already exist with a different spelling. Use :meth:`regions` first
-           to check, and consider calling :meth:`add_region_synonym` instead.
+           On a :class:`Platform` backed by a shared database, a region may already
+           exist with a different spelling. Use :meth:`regions` first to check, and
+           consider calling :meth:`add_region_synonym` instead.
 
         Parameters
         ----------
@@ -312,11 +314,11 @@ class Platform:
         if not self._existing_node(region):
             self._backend.set_node(region, parent, hierarchy)
 
-    def add_region_synonym(self, region, mapped_to):
+    def add_region_synonym(self, region: str, mapped_to: str) -> None:
         """Define a synonym for a `region`.
 
-        When adding timeseries data using the synonym in the region column, it
-        will be converted to `mapped_to`.
+        When adding timeseries data using the synonym in the region column, it will be
+        converted to `mapped_to`.
 
         Parameters
         ----------
@@ -328,7 +330,7 @@ class Platform:
         if not self._existing_node(region):
             self._backend.set_node(region, synonym=mapped_to)
 
-    def timeslices(self):
+    def timeslices(self) -> pd.DataFrame:
         """Return all subannual timeslices defined in this Platform instance.
 
         Timeslices are a way to represent subannual temporal resolution in timeseries
@@ -358,7 +360,7 @@ class Platform:
             self._backend.get_timeslices(), columns=FIELDS["get_timeslices"]
         )
 
-    def add_timeslice(self, name, category, duration):
+    def add_timeslice(self, name: str, category: str, duration: float) -> None:
         """Define a subannual timeslice including a category and duration.
 
         See :meth:`timeslices` for a detailed description of timeslices.
@@ -382,7 +384,9 @@ class Platform:
         else:
             self._backend.set_timeslice(name, category, duration)
 
-    def check_access(self, user, models, access="view"):
+    def check_access(
+        self, user: str, models: Union[str, Sequence[str]], access: str = "view"
+    ) -> Union[bool, Dict[str, bool]]:
         """Check access to specific models.
 
         Parameters

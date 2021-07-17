@@ -28,6 +28,19 @@ from ixmp.core.timeseries import TimeSeries
 class Backend(ABC):
     """Abstract base class for backends."""
 
+    # Typing:
+    # - All methods MUST be fully typed.
+    # - Use more permissive types, e.g. Sequence[str], for inputs.
+    # - Use precise types, e.g. List[str], for return values.
+    # - Backend subclasses do not need to repeat the type annotations; these are implied
+    #   by this parent class.
+    #
+    # Docstrings:
+    # - The "Returns" section is OPTIONAL. Do not include it if the method returns None.
+    #   Otherwise, include it when necessary to disambiguate if/when different types or
+    #   values are returned.
+    # - Use "OPTIONAL:" for methods that are not @abstractmethod.
+
     def __init__(self):
         """OPTIONAL: Initialize the backend."""
 

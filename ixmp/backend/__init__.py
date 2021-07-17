@@ -45,8 +45,8 @@ FIELDS = {
 IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
 
-#: Mapping from names to available backends. To register additional backends,
-#: add elements to this variable.
+#: Mapping from names to available backends. To register additional backends, add
+#: entries to this dictionary.
 BACKENDS: Dict[str, Type] = {}
 
 

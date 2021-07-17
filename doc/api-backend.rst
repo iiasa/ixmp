@@ -3,29 +3,26 @@
 Storage back ends (:mod:`ixmp.backend`)
 =======================================
 
-By default, the |ixmp| is installed with :class:`ixmp.backend.jdbc.JDBCBackend`, which can store data in many types of relational database management systems (RDBMS) that have Java DataBase Connector (JDBC) interfaces—hence its name.
+:mod:`ixmp` includes :class:`ixmp.backend.jdbc.JDBCBackend`, which can store data in many types of relational database management systems (RDBMS) that have Java DataBase Connector (JDBC) interfaces—hence its name.
 
-However, |ixmp| is extensible to support other methods of storing data: in non-JDBC RDBMS, non-relational databases, local files, memory, or other ways.
+:mod:`ixmp` is extensible to support other methods of storing data: in non-JDBC RDBMS, non-relational databases, local files, memory, or other ways.
 Developers wishing to add such capabilities may subclass :class:`ixmp.backend.base.Backend` and implement its methods.
 
+.. contents::
+   :local:
+   :backlinks: none
 
 Provided backends
 -----------------
 
-.. automodule:: ixmp.backend
-   :members: BACKENDS
-
-   .. autoclass:: ItemType
-      :members:
-      :undoc-members:
-      :member-order: bysource
+.. autodata:: ixmp.backend.BACKENDS
 
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
    :members: read_file, write_file
 
-   JDBCBackend **supports**:
+   JDBCBackend supports:
 
    - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
    - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
@@ -70,9 +67,10 @@ Backend API
 
 .. autosummary::
 
-   ixmp.backend.FIELDS
    ixmp.backend.base.Backend
    ixmp.backend.base.CachingBackend
+   ixmp.backend.ItemType
+   ixmp.backend.FIELDS
 
 - :class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
   This means its methods can take many types of arguments, check, and transform them—in a way that provides modeler-users with easy, intuitive workflows.
@@ -84,9 +82,6 @@ Backend API
 
 - Additional Backends may inherit from :class:`Backend` or
   :class:`CachingBackend`.
-
-
-.. autodata:: ixmp.backend.FIELDS
 
 .. autoclass:: ixmp.backend.base.Backend
    :members:
@@ -190,7 +185,6 @@ Backend API
       cat_list
       cat_set_elements
 
-
 .. autoclass:: ixmp.backend.base.CachingBackend
    :members:
    :private-members:
@@ -198,3 +192,10 @@ Backend API
    CachingBackend stores cache values for multiple :class:`.TimeSeries`/:class:`Scenario` objects, and for multiple values of a *filters* argument.
 
    Subclasses **must** call :meth:`cache`, :meth:`cache_get`, and :meth:`cache_invalidate` as appropriate to manage the cache; CachingBackend does not enforce any such logic.
+
+.. autoclass:: ixmp.backend.ItemType
+   :members:
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ixmp.backend.FIELDS

@@ -30,6 +30,13 @@ class Scenario(TimeSeries):
         Use an explicit scheme to initialize the new scenario. The
         :meth:`~.base.Model.initialize` method of the corresponding :class:`.Model`
         class in :data:`.MODELS` is used to initialize items in the Scenario.
+    cache:
+        .. deprecated:: 3.0
+           The `cache` keyword argument to :class:`Scenario` has no effect and raises a
+           warning. Use `cache` as one of the `backend_args` to :class:`Platform` to
+           disable/enable caching for storage backends that support it. Use
+           :meth:`load_scenario_data` to load all data in the Scenario into an in-memory
+           cache.
     """
 
     #: Scheme of the Scenario.
@@ -898,7 +905,7 @@ class Scenario(TimeSeries):
                 break
 
     def get_meta(self, name: str = None):
-        """Get scenario meta.
+        """Get scenario :ref:`data-meta`.
 
         Parameters
         ----------
@@ -911,7 +918,7 @@ class Scenario(TimeSeries):
         return all_meta[name] if name else all_meta
 
     def set_meta(self, name_or_dict: Union[str, Dict[str, Any]], value=None) -> None:
-        """Set scenario meta.
+        """Set scenario :ref:`data-meta`.
 
         Parameters
         ----------
@@ -1016,8 +1023,7 @@ class Scenario(TimeSeries):
         add_units : bool, optional
             Add missing units, if any, to the Platform instance.
         init_items : bool, optional
-            Initialize sets and parameters that do not already exist in the
-            Scenario.
+            Initialize sets and parameters that do not already exist in the Scenario.
         commit_steps : bool, optional
             Commit changes after every data addition.
 

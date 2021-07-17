@@ -331,12 +331,9 @@ class Platform:
             self._backend.set_node(region, synonym=mapped_to)
 
     def timeslices(self) -> pd.DataFrame:
-        """Return all subannual timeslices defined in this Platform instance.
+        """Return all subannual time slices defined in this Platform instance.
 
-        Timeslices are a way to represent subannual temporal resolution in timeseries
-        data. A timeslice consists of a **name** (e.g., 'january', 'summer'), a
-        **category** (e.g., 'months', 'seasons'), and a **duration** given relative to a
-        full year.
+        See the :ref:`Data model <data-timeslice>` documentation for further details.
 
         The category and duration do not have any functional relevance within the ixmp
         framework, but they may be useful for pre- or post-processing.  For example,
@@ -344,17 +341,14 @@ class Platform:
         months) from the :class:`pandas.DataFrame` returned by this function or to
         aggregate subannual data to full-year results.
 
-        A timeslice is related to the index set 'time' in a :class:`message_ix.Scenario`
-        to indicate a subannual temporal dimension. Alas, timeslices and set elements of
-        time have to be initialized/defined independently.
-
-        See :meth:`add_timeslice` to initialize additional timeslices in the Platform
-        instance.
-
         Returns
         -------
         :class:`pandas.DataFrame`
-            DataFrame of timeslices, categories and duration
+            Data frame with columns 'timeslice', 'category', and 'duration'.
+
+        See also
+        --------
+        add_timeslice
         """
         return pd.DataFrame(
             self._backend.get_timeslices(), columns=FIELDS["get_timeslices"]

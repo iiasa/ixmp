@@ -610,11 +610,10 @@ def test_filter_str(scen_empty):
 def test_solve_callback(test_mp):
     """Test the callback argument to Scenario.solve().
 
-    In real usage, callback() would compute some kind of convergence criterion.
-    This test uses a sequence of different values for d(seattle, new-york) in
-    Dantzig's transport problem. Once the correct value is set on the
-    ixmp.Scenario, the solution equals an expected value, and the model has
-    'converged'.
+    In real usage, callback() would compute some kind of convergence criterion. This
+    test uses a sequence of different values for d(seattle, new-york) in Dantzig's
+    transport problem. Once the correct value is set on the ixmp.Scenario, the solution
+    equals an expected value, and the model has 'converged'.
     """
     # Set up the Dantzig problem
     scen = make_dantzig(test_mp)
@@ -638,8 +637,8 @@ def test_solve_callback(test_mp):
         scenario.add_par("d", pd.DataFrame(data, index=[0]))
         scenario.commit("iterative solution")
 
-    # Changing the entry in the array 'd' results in an optimal 'x' that is
-    # different from the one stored as *expected*.
+    # Changing the entry in the array 'd' results in an optimal 'x' that is different
+    # from the one stored as `expected`.
     set_d(scen, d[0])
 
     def change_distance(scenario):
@@ -650,16 +649,16 @@ def test_solve_callback(test_mp):
 
         # Convergence not reached
 
-        # Change the distance between Seattle and New York, using the
-        # 'iteration' variable stored on the Scenario object
+        # Change the distance between Seattle and New York, using the 'iteration'
+        # variable stored on the Scenario object.
         set_d(scenario, d[scenario.iteration])
 
         # commented: see below
         # # Trigger another solution of the model
         # return False
 
-    # Warning is raised because 'return False' is commented above, meaning
-    # user may have forgotten any return statement in the callback
+    # Warning is raised because 'return False' is commented above, meaning user may
+    # have forgotten any return statement in the callback
     message = (
         r"solve\(callback=...\) argument returned None; will loop "
         "indefinitely unless True is returned."

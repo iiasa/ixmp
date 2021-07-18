@@ -6,7 +6,7 @@ This page describes the ixmp *data model*, [1]_ with each kind of object in its 
 The description here is **application independent**: it describes how :mod:`ixmp` handles data without reference to specific uses of :mod:`ixmp` to model specific real-world systems (such as :mod:`message_ix`).
 
 .. note::
-   Due to the development history of :mod:`ixmp`, some words are used with 2 or more different meanings in the data model, including ‘model’, ‘scenario’, ‘time series’, ‘meta’, and ‘region/node’.
+   Due to the development history of :mod:`ixmp`, some words are used with 2 or more different meanings in the data model, including ‘model’, ‘scenario’, ‘time series’, ‘meta’, ‘category’, and ‘region/node’.
    This page lists and disambiguates the multiple meanings.
 
 .. contents::
@@ -131,7 +131,7 @@ Sub-annual time slice
    However, these are not linked automatically within :mod:`ixmp` or :mod:`message_ix` and must be defined independently.
    See :doc:`message_ix:time`.
 
-(Meta)
+(Metadata)
    These are the name or ID of metadata entries; see :ref:`data-meta`, below.
 
    This list is not directly modifiable.

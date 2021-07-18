@@ -1,4 +1,6 @@
-"""Test meta functionality of ixmp.Platform and ixmp.Scenario."""
+"""Test :ref:`data-meta` functionality of :class:`.Platform` and :class:`.Scenario`."""
+# TODO move tests to .tests.backend or .tests.core, according to the class whose
+#      behaviour they actually test.
 
 import copy
 

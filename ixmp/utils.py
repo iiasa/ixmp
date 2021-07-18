@@ -44,12 +44,12 @@ def as_str_list(arg, idx_names=None):
     """Convert various *arg* to list of str.
 
     Several types of arguments are handled:
-    - None: returned as None.
-    - str: returned as a length-1 list of str.
-    - iterable of values: returned as a list with each value converted to str
-    - dict, with list of idx_names: the idx_names are used to look up values
-      in the dict, the resulting list has the corresponding values in the same
-      order.
+
+    - :obj:`None`: returned as None.
+    - class:`str`: returned as a length-1 list of str.
+    - iterable of values: :class:`str` is called on each value.
+    - :class:`dict`, with `idx_names`: the `idx_names` are used to look up values in the
+      dict. The return value has the corresponding values in the same order.
 
     """
     if arg is None:

@@ -302,11 +302,13 @@ def parse_url(url):
             version = int(components.fragment)
         except ValueError:
             if components.fragment != "new":
-                raise
+                raise ValueError(
+                    f"URL version must be int or 'new'; got '{components.fragment}'"
+                )
             else:
                 version = "new"
-        finally:
-            scenario_info["version"] = version
+
+        scenario_info["version"] = version
 
     return platform_info, scenario_info
 
@@ -559,7 +561,7 @@ def show_versions(file=sys.stdout):
     # Also display GAMS version, if any
     try:
         version = gams_version()
-    except (CalledProcessError, FileNotFoundError):
+    except (CalledProcessError, FileNotFoundError):  # pragma: no cover
         version = "'gams' executable not in PATH"
     finally:
         info.extend([("GAMS", version), (None, None)])

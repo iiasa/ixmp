@@ -1,3 +1,5 @@
+import re
+
 import numpy.testing as npt
 import pandas as pd
 import pytest
@@ -66,6 +68,11 @@ class TestScenario:
 
         # …but loading with a subclass of ixmp.Scenario is fine
         Scenario(test_mp, model="foo", scenario="bar")
+
+        with pytest.warns(
+            DeprecationWarning, match=re.escape("Scenario(…, cache=…) is deprecated")
+        ):
+            Scenario(test_mp, model="foo", scenario="bar", cache=False)
 
     def test_default_version(self, mp):
         scen = ixmp.Scenario(mp, **models["dantzig"])
@@ -176,11 +183,21 @@ class TestScenario:
     @pytest.mark.parametrize(
         "args, kwargs",
         (
-            # Scalar values/units are broadcast across multiple keys
-            (("b", ["new-york", "chicago"]), dict(value=100, unit="cases")),
+            # Scalar values/units/comment are broadcast across multiple keys
+            (
+                ("b", ["new-york", "chicago"]),
+                dict(value=100, unit="cases", comment="c"),
+            ),
             # Empty DataFrame can be added without error
             (("b", pd.DataFrame(columns=["i", "j", "value", "unit"])), dict()),
             # Exceptions
+            pytest.param(
+                ("b", ["new-york", "chicago"]),
+                dict(value=[100, 200, 300]),
+                marks=pytest.mark.xfail(
+                    raises=ValueError, reason="Length mismatch between keys and values"
+                ),
+            ),
             pytest.param(
                 ("b", pd.DataFrame(columns=["i", "j", "value", "unit"])),
                 dict(value=1.0),
@@ -221,6 +238,9 @@ class TestScenario:
         # Units are as expected
         assert df.loc[0, "unit"] == "km"
 
+        with pytest.warns(DeprecationWarning, match="ignored kwargs"):
+            scen.par("d", i=["seattle"])
+
     def test_items(self, scen):
         # Without filters
         iterator = scen.items()
@@ -249,6 +269,10 @@ class TestScenario:
             assert exp[i][1] == len(data)
 
         assert i == 1
+
+        with pytest.raises(NotImplementedError):
+            # NB next() is required here to attempt to generate the first item
+            next(scen.items(ixmp.ItemType.SET))
 
     def test_var(self, scen):
         df = scen.var("x", filters={"i": ["seattle"]})
@@ -281,11 +305,16 @@ class TestScenario:
         hits_after = scen.platform._backend._cache_hit[cache_key]
         assert hits_after == hits_before + 1
 
-    def test_load_scenario_data_clear_cache(self, mp):
+    def test_load_scenario_data_clear_cache(self, monkeypatch, mp):
         # this fails on commit: 4376f54
         scen = ixmp.Scenario(mp, **models["dantzig"])
         scen.load_scenario_data()
         scen.platform._backend.cache_invalidate(scen, "par", "d")
+
+        # With cache disabled, the method fails
+        monkeypatch.setattr(scen.platform._backend, "cache_enabled", False)
+        with pytest.raises(ValueError, match="Cache must be enabled"):
+            scen.load_scenario_data()
 
     # I/O
     def test_excel_io(self, scen, scen_empty, tmp_path, caplog):

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from ixmp import TimeSeries
 from ixmp.backend import ItemType
 from ixmp.backend.base import Backend, CachingBackend
 from ixmp.testing import make_dantzig
@@ -66,7 +67,6 @@ class BE2(Backend):
 
 
 def test_class():
-
     # An incomplete Backend subclass can't be instantiated
     with pytest.raises(
         TypeError, match="Can't instantiate abstract class BE1 with abstract methods"
@@ -74,14 +74,27 @@ def test_class():
         BE1()
 
     # Complete subclass can be instantiated
-    be = BE2()
+    BE2()
 
-    # Methods with a default implementation can be called
-    with pytest.raises(NotImplementedError):
-        be.read_file(Path("foo"), ItemType.VAR)
 
-    with pytest.raises(NotImplementedError):
-        be.write_file(Path("foo"), ItemType.VAR)
+class TestBackend:
+    @pytest.fixture
+    def be(self):
+        return BE2()
+
+    # Methods with a default implementation
+    def test_get_auth(self, be):
+        assert dict(foo=True, bar=True, baz=True) == be.get_auth(
+            "user", "foo bar baz".split(), "access"
+        )
+
+    def test_read_file(self, be):
+        with pytest.raises(NotImplementedError):
+            be.read_file(Path("foo"), ItemType.VAR)
+
+    def test_write_file(self, be):
+        with pytest.raises(NotImplementedError):
+            be.write_file(Path("foo"), ItemType.VAR)
 
 
 @pytest.mark.parametrize(
@@ -98,32 +111,39 @@ def test_handle_config(args, kwargs):
     assert dict() == Backend.handle_config(args, kwargs)
 
 
-def test_cache_non_hashable():
-    filters = {"s": ["foo", 42, object()]}
+class TestCachingBackend:
+    def test_cache_non_hashable(self):
+        filters = {"s": ["foo", 42, object()]}
 
-    # _cache_key() cannot handle non-hashable object()
-    # NB exception message contains single quotes on 'object' on Windows/py3.6
-    with pytest.raises(
-        TypeError, match="Object of type .?object.? is not JSON" " serializable"
-    ):
-        CachingBackend._cache_key(object(), "par", "p", filters)
+        # _cache_key() cannot handle non-hashable object()
+        # NB exception message contains single quotes on 'object' on Windows/py3.6
+        with pytest.raises(
+            TypeError, match="Object of type .?object.? is not JSON" " serializable"
+        ):
+            CachingBackend._cache_key(object(), "par", "p", filters)
 
+    def test_cache_invalidate(self, test_mp):
+        backend = test_mp._backend
 
-def test_cache_del_ts(test_mp):
-    """Test CachingBackend.del_ts()."""
-    # Since CachingBackend is an abstract class, test it via JDBCBackend
-    backend = test_mp._backend
-    cache_size_pre = len(backend._cache)
+        ts = TimeSeries(test_mp, model="foo", scenario="bar", version="new")
 
-    # Load data, thereby adding to the cache
-    s = make_dantzig(test_mp)
-    s.par("d")
+        backend.cache_invalidate(ts, "par", "baz", dict(x=["x1", "x2"], y=["y1", "y2"]))
 
-    # Cache size has increased
-    assert len(backend._cache) == cache_size_pre + 1
+    def test_del_ts(self, test_mp):
+        """Test CachingBackend.del_ts()."""
+        # Since CachingBackend is an abstract class, test it via JDBCBackend
+        backend = test_mp._backend
+        cache_size_pre = len(backend._cache)
 
-    # Delete the object; associated cache is freed
-    del s
+        # Load data, thereby adding to the cache
+        s = make_dantzig(test_mp)
+        s.par("d")
 
-    # Objects were invalidated/removed from cache
-    assert len(backend._cache) == cache_size_pre
+        # Cache size has increased
+        assert len(backend._cache) == cache_size_pre + 1
+
+        # Delete the object; associated cache is freed
+        del s
+
+        # Objects were invalidated/removed from cache
+        assert len(backend._cache) == cache_size_pre

@@ -1262,4 +1262,4 @@ class CachingBackend(Backend):
             to_remove = [key]
 
         for key in list(to_remove):
-            self._cache.pop(key)
+            self._cache.pop(key, None)

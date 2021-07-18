@@ -71,8 +71,8 @@ class TimeSeries:
             )
             annotation = ""
 
-        # scheme= keyword argument only passed from Scenario.__init__;
-        # otherwise must be None
+        # scheme= keyword argument only passed from Scenario.__init__; otherwise must be
+        # None
         scheme = kwargs.get("scheme", None)
         if scheme:
             if self.__class__ is TimeSeries:
@@ -85,8 +85,8 @@ class TimeSeries:
         self.scenario = scenario
 
         # Store a weak reference to the Platform object. This reference is not enough
-        # to keep the Platform alive, i.e. 'del mp' will work even while this
-        # TimeSeries object lives.
+        # to keep the Platform alive, i.e. 'del mp' will work even while this TimeSeries
+        # object lives.
         self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)
 
         if version == "new":

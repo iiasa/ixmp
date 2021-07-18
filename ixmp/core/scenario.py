@@ -59,8 +59,7 @@ class Scenario(TimeSeries):
 
         if "cache" in model_init_args:
             warn(
-                "Scenario(..., cache=...) is deprecated; use Platform(..., "
-                "cache=...) instead",
+                "Scenario(…, cache=…) is deprecated; use Platform(…, cache=…) instead",
                 DeprecationWarning,
             )
             model_init_args.pop("cache")
@@ -309,7 +308,7 @@ class Scenario(TimeSeries):
 
             # Check for ambiguous arguments
             if comment and isinstance(key, (dict, pd.DataFrame)) and "comment" in key:
-                raise ValueError("ambiguous; both key['comment'] and comment " "given")
+                raise ValueError("ambiguous; both key['comment'] and comment= given")
 
             if isinstance(key, pd.DataFrame):
                 # DataFrame of key values and perhaps comments
@@ -429,8 +428,9 @@ class Scenario(TimeSeries):
             in the respective index set(s) are silently ignored.
         """
         if len(kwargs):
-            raise DeprecationWarning(
-                "ignored kwargs to Scenario.par(); will raise TypeError in 4.0"
+            warn(
+                "ignored kwargs to Scenario.par(); will raise TypeError in 4.0",
+                DeprecationWarning,
             )
         return self._backend("item_get_elements", "par", name, filters)
 
@@ -468,8 +468,7 @@ class Scenario(TimeSeries):
                 # No overlap between the filters and this item's dimensions
                 continue
 
-            # Retrieve the data, reducing the filters to only the dimensions of
-            # the item
+            # Retrieve the data, reducing the filters to only the dimensions of the item
             yield name, self.par(
                 name, filters={k: v for k, v in filters.items() if k in idx_names}
             )

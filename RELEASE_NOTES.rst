@@ -1,9 +1,20 @@
 Next release
 ============
+
+Migration notes
+---------------
+
+:func:`ixmp.utils.isscalar` is deprecated.
+Code should use :func:`numpy.isscalar`.
+
+All changes
+-----------
+
+- :pull:`422`: Add :meth:`.TimeSeries.transact`, for wrapping data manipulations in :meth:`~.TimeSeries.check_out` and :meth:`~.TimeSeries.commit` operations.
+- :pull:`422`: Add :doc:`data-model`, a documentation page giving a complete description of the :mod:`ixmp` data model.
+- :pull:`422`: Add the :command:`pytest --user-config` command-line option, to use user's local configuration when testing.
 - :pull:`421`: Adjust :func:`.format_scenario_list` for changes in :mod:`pandas` 1.3.0.
 
-.. All changes
-.. -----------
 
 .. _v3.3.0:
 

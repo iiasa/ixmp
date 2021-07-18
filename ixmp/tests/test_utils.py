@@ -135,6 +135,16 @@ def test_diff_items(test_mp):
         pass  # No check of the contents
 
 
+def test_filtered():
+    df = pd.DataFrame()
+    assert df is utils.filtered(df, filters=None)
+
+
+def test_isscalar():
+    with pytest.warns(DeprecationWarning):
+        assert False is utils.isscalar([3, 4])
+
+
 def test_logger_deprecated():
     with pytest.warns(DeprecationWarning):
         utils.logger()
@@ -164,7 +174,10 @@ URLS = [
     param("ixmp://example/m", None, None, marks=mark.xfail(raises=ValueError)),
     # Version not an integer
     param(
-        "ixmp://example/m#notaversion", None, None, marks=mark.xfail(raises=ValueError)
+        "ixmp://example/m/s#notaversion",
+        None,
+        None,
+        marks=mark.xfail(raises=ValueError),
     ),
     # Query string not supported
     param(

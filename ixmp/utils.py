@@ -1,12 +1,12 @@
 import logging
 import re
 import sys
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterable, Iterator, List, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from ixmp.backend import ItemType
@@ -44,12 +44,12 @@ def as_str_list(arg, idx_names=None):
     """Convert various *arg* to list of str.
 
     Several types of arguments are handled:
-    - None: returned as None.
-    - str: returned as a length-1 list of str.
-    - iterable of values: returned as a list with each value converted to str
-    - dict, with list of idx_names: the idx_names are used to look up values
-      in the dict, the resulting list has the corresponding values in the same
-      order.
+
+    - :obj:`None`: returned as None.
+    - class:`str`: returned as a length-1 list of str.
+    - iterable of values: :class:`str` is called on each value.
+    - :class:`dict`, with `idx_names`: the `idx_names` are used to look up values in the
+      dict. The return value has the corresponding values in the same order.
 
     """
     if arg is None:
@@ -67,8 +67,12 @@ def as_str_list(arg, idx_names=None):
 
 
 def isscalar(x):
-    """Returns True if x is a scalar"""
-    return not isinstance(x, Iterable) or isinstance(x, str)
+    """Returns True if `x` is a scalar."""
+    warn(
+        "ixmp.utils.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
+        DeprecationWarning,
+    )
+    return np.isscalar(x)
 
 
 def check_year(y, s):
@@ -82,10 +86,10 @@ def check_year(y, s):
 def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
-    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`.
-    Only parameters are compared. :func:`~pandas.merge` is called with the
-    arguments ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True";
-    the merge is performed on all columns except 'value' or 'unit'.
+    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`. Only
+    parameters are compared. :func:`~pandas.merge` is called with the arguments
+    ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
+    performed on all columns except 'value' or 'unit'.
 
     Yields
     ------
@@ -163,11 +167,11 @@ def maybe_check_out(timeseries, state=None):
     Returns
     -------
     :obj:`True`
-        if `state` was :obj:`None` and a check out was performed, i.e.
-        `timeseries` was previously in a checked-in state.
+        if `state` was :obj:`None` and a check out was performed, i.e. `timeseries` was
+        previously in a checked-in state.
     :obj:`False`
-        if `state` was :obj:`None` and no check out was performed, i.e.
-        `timeseries` was already in a checked-out state.
+        if `state` was :obj:`None` and no check out was performed, i.e. `timeseries`
+        was already in a checked-out state.
     `state`
         if `state` was not :obj:`None` and no check out was attempted.
 
@@ -188,8 +192,8 @@ def maybe_check_out(timeseries, state=None):
     try:
         timeseries.check_out()
     except RuntimeError:
-        # If `timeseries` is new (has not been committed), the checkout
-        # attempt raises an exception
+        # If `timeseries` is new (has not been committed), the checkout attempt raises
+        # an exception
         return False
     else:
         return True
@@ -228,8 +232,8 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
     Parameters
     ----------
     obj
-        Any value returned by :meth:`Scenario.par`. For a scalar
-        (0-dimensional) parameter, this will be :class:`dict`.
+        Any value returned by :meth:`Scenario.par`. For a scalar (0-dimensional)
+        parameter, this will be :class:`dict`.
 
     Returns
     -------
@@ -302,13 +306,59 @@ def parse_url(url):
             version = int(components.fragment)
         except ValueError:
             if components.fragment != "new":
-                raise
+                raise ValueError(
+                    f"URL version must be int or 'new'; got '{components.fragment}'"
+                )
             else:
                 version = "new"
-        finally:
-            scenario_info["version"] = version
+
+        scenario_info["version"] = version
 
     return platform_info, scenario_info
+
+
+def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
+    """Transform *df* to a standard IAMC layout.
+
+    The returned object has:
+
+    - Any (Multi)Index levels reset as columns.
+    - Lower-case column names 'region', 'variable', 'subannual', and 'unit'.
+    - If not present in *df*, the value 'Year' in the 'subannual' column.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        May have a 'node' column, which will be renamed to 'region'.
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    Raises
+    ------
+    ValueError
+        If 'region', 'variable', or 'unit' is not among the column names.
+    """
+    # Reset the index if meaningful entries are included there
+    if not list(df.index.names) == [None]:
+        df.reset_index(inplace=True)
+
+    # Rename columns in lower case, and transform 'node' to 'region'
+    cols = {c: str(c).lower() for c in df.columns}
+    cols.update(node="region")
+    df = df.rename(columns=cols)
+
+    required_cols = ["region", "variable", "unit"]
+    missing = list(set(required_cols) - set(df.columns))
+    if len(missing):
+        raise ValueError(f"missing required columns {repr(missing)}")
+
+    # Add a column 'subannual' with the default value
+    if "subannual" not in df.columns:
+        df["subannual"] = "Year"
+
+    return df
 
 
 def year_list(x):
@@ -515,7 +565,7 @@ def show_versions(file=sys.stdout):
     # Also display GAMS version, if any
     try:
         version = gams_version()
-    except (CalledProcessError, FileNotFoundError):
+    except (CalledProcessError, FileNotFoundError):  # pragma: no cover
         version = "'gams' executable not in PATH"
     finally:
         info.extend([("GAMS", version), (None, None)])

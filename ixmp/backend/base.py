@@ -1,25 +1,54 @@
 import json
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Dict, Generator, MutableMapping, Sequence
+from os import PathLike
+from pathlib import Path
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
-from ixmp.core import Scenario, TimeSeries
+import pandas as pd
 
-from . import ItemType
-from .io import s_read_excel, s_write_excel, ts_read_file
+from ixmp.backend import ItemType
+from ixmp.backend.io import s_read_excel, s_write_excel, ts_read_file
+from ixmp.core.platform import Platform
+from ixmp.core.scenario import Scenario
+from ixmp.core.timeseries import TimeSeries
 
 
 class Backend(ABC):
     """Abstract base class for backends."""
 
+    # Typing:
+    # - All methods MUST be fully typed.
+    # - Use more permissive types, e.g. Sequence[str], for inputs.
+    # - Use precise types, e.g. List[str], for return values.
+    # - Backend subclasses do not need to repeat the type annotations; these are implied
+    #   by this parent class.
+    #
+    # Docstrings:
+    # - The "Returns" section is OPTIONAL. Do not include it if the method returns None.
+    #   Otherwise, include it when necessary to disambiguate if/when different types or
+    #   values are returned.
+    # - Use "OPTIONAL:" for methods that are not @abstractmethod.
+
     def __init__(self):
         """OPTIONAL: Initialize the backend."""
 
     def __call__(self, obj, method, *args, **kwargs):
-        """Call the backend method *method* for *obj*.
+        """Call the backend method `method` for `obj`.
 
-        The class attribute obj._backend_prefix is used to determine a prefix
-        for the method name, e.g. 'ts_{method}'.
+        The class attribute obj._backend_prefix is used to determine a prefix for the
+        method name, e.g. 'ts_{method}'.
         """
         return getattr(self, method)(obj, *args, **kwargs)
 
@@ -46,7 +75,7 @@ class Backend(ABC):
             raise ValueError(msg.format("keyword", kwargs))
         return dict()
 
-    def set_log_level(self, level):
+    def set_log_level(self, level: int) -> None:
         """OPTIONAL: Set logging level for the backend and other code.
 
         The default implementation has no effect.
@@ -60,7 +89,7 @@ class Backend(ABC):
         get_log_level
         """
 
-    def get_log_level(self):
+    def get_log_level(self) -> str:
         """OPTIONAL: Get logging level for the backend and other code.
 
         The default implementation has no effect.
@@ -76,21 +105,20 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_doc(self, domain, docs):
+    def set_doc(self, domain: str, docs) -> None:
         """Save documentation to database
 
         Parameters
         ----------
         domain : str
-            Documentation domain, e.g. model, scenario etc
+            Documentation domain, e.g. model, scenario, etc.
         docs : dict or array of tuples
-            Dictionary or tuple array containing mapping between name of domain
-            object (e.g. model name) and string representing fragment
-            of documentation
+            Dictionary or tuple array containing mapping between name of domain object
+            (e.g. model name) and string representing fragment of documentation.
         """
 
     @abstractmethod
-    def get_doc(self, domain, name=None):
+    def get_doc(self, domain: str, name: str = None) -> Union[str, Dict]:
         """Read documentation from database
 
         Parameters
@@ -103,32 +131,31 @@ class Backend(ABC):
         Returns
         -------
         str or dict
-            String representing fragment of documentation if name is passed as
-            parameter or dictionary containing mapping between name of domain
-            object (e.g. model name) and string representing fragment when
-            name parameter is omitted.
+            String representing fragment of documentation if name is passed as parameter
+            or dictionary containing mapping between name of domain object (e.g. model
+            name) and string representing fragment when name parameter is omitted.
         """
 
-    def open_db(self):
+    def open_db(self) -> None:
         """OPTIONAL: (Re-)open database connection(s).
 
-        A backend **may** connect to a database server. This method opens the
-        database connection if it is closed.
+        A backend **may** connect to a database server. This method opens the database
+        connection if it is closed.
         """
 
-    def close_db(self):
+    def close_db(self) -> None:
         """OPTIONAL: Close database connection(s).
 
         Close any database connection(s), if open.
         """
 
-    def get_auth(self, user, models, kind):
-        """OPTIONAL: Return user authorization for *models*.
+    def get_auth(self, user: str, models: Sequence[str], kind: str) -> Dict[str, bool]:
+        """OPTIONAL: Return user authorization for `models`.
 
-        If the Backend implements access control, this method **must** indicate
-        whether *user* has permission *kind* for each of *models*.
+        If the Backend implements access control, this method **must** indicate whether
+        `user` has permission `kind` for each of `models`.
 
-        *kind* **may** be 'read'/'view', 'write'/'modify', or other values;
+        `kind` **may** be 'read'/'view', 'write'/'modify', or other values;
         :meth:`get_auth` **should** raise exceptions on invalid values.
 
         Parameters
@@ -143,20 +170,22 @@ class Backend(ABC):
         Returns
         -------
         dict
-            Mapping of *model name (str)* → :class:`bool`; :obj:`True` if the
-            user is authorized for the model.
+            Mapping of `model name (str)` → :class:`bool`; :obj:`True` if the user is
+            authorized for the model.
         """
         return {model: True for model in models}
 
     @abstractmethod
-    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
+    def set_node(
+        self, name: str, parent: str = None, hierarchy: str = None, synonym: str = None
+    ) -> None:
         """Add a node name to the Platform.
 
         This method **must** have one of two effects, depending on the
         arguments:
 
-        - With `parent` and `hierarchy`: `name` is added as a child of `parent`
-          in the named `hierarchy`.
+        - With `parent` and `hierarchy`: `name` is added as a child of `parent` in the
+          named `hierarchy`.
         - With `synonym`: `synonym` is added as an alias for `name`.
 
         Parameters
@@ -176,7 +205,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_nodes(self):
+    def get_nodes(self) -> Iterable[Tuple[str, Optional[str], str, str]]:
         """Iterate over all nodes stored on the Platform.
 
         Yields
@@ -199,7 +228,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_timeslices(self):
+    def get_timeslices(self) -> Iterable[Tuple[str, str, float]]:
         """Iterate over subannual timeslices defined on the Platform instance.
 
         Yields
@@ -221,7 +250,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_timeslice(self, name, category, duration):
+    def set_timeslice(self, name: str, category: str, duration: float) -> None:
         """Add a subannual time slice to the Platform.
 
         Parameters
@@ -239,7 +268,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def add_model_name(self, name: str):
+    def add_model_name(self, name: str) -> None:
         """Add (register) new model name.
 
         Parameters
@@ -249,7 +278,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def add_scenario_name(self, name: str):
+    def add_scenario_name(self, name: str) -> None:
         """Add (register) new scenario name.
 
         Parameters
@@ -259,7 +288,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_model_names(self) -> Generator[str, None, None]:
+    def get_model_names(self) -> Iterable[str]:
         """List existing model names.
 
         Returns
@@ -269,7 +298,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_scenario_names(self) -> Generator[str, None, None]:
+    def get_scenario_names(self) -> Iterable[str]:
         """List existing scenario names.
 
         Returns
@@ -279,7 +308,11 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_scenarios(self, default, model, scenario):
+    def get_scenarios(
+        self, default: bool, model: Optional[str], scenario: Optional[str]
+    ) -> Iterable[
+        Tuple[str, str, str, bool, bool, str, str, str, str, str, str, str, int]
+    ]:
         """Iterate over TimeSeries stored on the Platform.
 
         Scenarios, as subclasses of TimeSeries, are also included.
@@ -318,7 +351,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_unit(self, name, comment):
+    def set_unit(self, name: str, comment: str) -> None:
         """Add a unit of measurement to the Platform.
 
         Parameters
@@ -334,7 +367,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_units(self):
+    def get_units(self) -> List[str]:
         """Return all registered symbols for units of measurement.
 
         Returns
@@ -346,18 +379,18 @@ class Backend(ABC):
         set_unit
         """
 
-    def read_file(self, path, item_type: ItemType, **kwargs):
+    def read_file(self, path: PathLike, item_type: ItemType, **kwargs) -> None:
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
-        A backend **may** implement read_file for one or more combinations of
-        the `path` and `item_type` methods. For all other combinations, it
-        **must** raise :class:`NotImplementedError`.
+        A backend **may** implement read_file for one or more combinations of the `path`
+        and `item_type` methods. For all other combinations, it **must** raise
+        :class:`NotImplementedError`.
 
         The default implementation supports:
 
-        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: read a
-          single Scenario given by kwargs['filters']['scenario'] from file
-          using :meth:`pandas.DataFrame.read_excel`.
+        - `path` ending in '.xlsx', `item_type` is ItemType.MODEL: read a single
+          Scenario given by ``kwargs['filters']['scenario']`` from file, using
+          :func:`.s_read_excel`.
 
         Parameters
         ----------
@@ -380,14 +413,14 @@ class Backend(ABC):
         ValueError
             If `ts` is not None and 'scenario' is a key in `filters`.
         NotImplementedError
-            If input of the specified items from the file format is not
-            supported.
+            If input of the specified items from the file format is not supported.
 
         See also
         --------
         write_file
         """
         s, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
+        path = Path(path)
         if path.suffix in (".csv", ".xlsx") and item_type is ItemType.TS and s:
             ts_read_file(s, path, **kwargs)
         elif path.suffix == ".xlsx" and item_type is ItemType.MODEL and s:
@@ -395,19 +428,18 @@ class Backend(ABC):
         else:
             raise NotImplementedError
 
-    def write_file(self, path, item_type: ItemType, **kwargs):
+    def write_file(self, path: PathLike, item_type: ItemType, **kwargs) -> None:
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
-        A backend **may** implement write_file for one or more combinations of
-        the `path` and `item_type` methods. For all other combinations, it
-        **must** raise :class:`NotImplementedError`.
+        A backend **may** implement write_file for one or more combinations of the
+        `path` and `item_type` methods. For all other combinations, it **must** raise
+        :class:`NotImplementedError`.
 
         The default implementation supports:
 
-        - `path` ending in '.xlsx', `item_type` is either :attr:`.MODEL` or
-          :attr:`.SET` | :attr:`.PAR`: write a single Scenario given by
-          kwargs['filters']['scenario'] to file using
-          :meth:`pandas.DataFrame.to_excel`.
+        - `path` ending in '.xlsx', `item_type` is either :attr:`.MODEL` or :attr:`.SET`
+          | :attr:`.PAR`: write a single Scenario given by
+          ``kwargs['filters']['scenario']`` to file using :func:`.s_write_excel`.
 
         Parameters
         ----------
@@ -421,18 +453,18 @@ class Backend(ABC):
         ValueError
             If `ts` is not None and 'scenario' is a key in `filters`.
         NotImplementedError
-            If output of the specified items to the file format is not
-            supported.
+            If output of the specified items to the file format is not supported.
 
         See also
         --------
         read_file
         """
-        # Use the "scenario" filter to retrieve the Scenario `s` to be written;
-        # reappend any other filters
+        # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
+        # any other filters
         s, kwargs["filters"] = self._handle_rw_filters(kwargs.pop("filters", {}))
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
+        path = Path(path)
         if path.suffix == ".xlsx" and item_type in xlsx_types and s:
             s_write_excel(self, s, path, item_type, **kwargs)
         else:
@@ -442,53 +474,43 @@ class Backend(ABC):
     # Methods for ixmp.TimeSeries
 
     @abstractmethod
-    def init(self, ts: TimeSeries, annotation):
-        """Create a new TimeSeries (or Scenario) *ts*.
+    def init(self, ts: TimeSeries, annotation: str) -> None:
+        """Create a new TimeSeries (or Scenario) `ts`.
 
-        init **may** modify the :attr:`~TimeSeries.version` attribute of
-        *ts*.
+        init **may** modify the :attr:`~TimeSeries.version` attribute of `ts`.
 
-        If *ts* is a :class:`Scenario`; the Backend **must** store the
+        If `ts` is a :class:`Scenario`; the Backend **must** store the
         :attr:`.Scenario.scheme` attribute.
 
         Parameters
         ----------
         annotation : str
-            If *ts* is newly-created, the Backend **must** store this
-            annotation with the TimeSeries.
-
-        Returns
-        -------
-        None
+            If `ts` is newly-created, the Backend **must** store this annotation with
+            the TimeSeries.
         """
 
     @abstractmethod
-    def get(self, ts: TimeSeries):
-        """Retrieve the existing TimeSeries (or Scenario) *ts*.
+    def get(self, ts: TimeSeries) -> None:
+        """Retrieve the existing TimeSeries (or Scenario) `ts`.
 
-        The TimeSeries is identified based on the unique combination of the
-        attributes of *ts*:
+        The TimeSeries is identified based on the unique combination of the attributes
+        of `ts`:
 
         - :attr:`~.TimeSeries.model`,
         - :attr:`~.TimeSeries.scenario`, and
         - :attr:`~.TimeSeries.version`.
 
-        If :attr:`.version` is :obj:`None`, the Backend **must** return the
-        version marked as default, and **must** set the attribute value.
+        If :attr:`.version` is :obj:`None`, the Backend **must** return the version
+        marked as default, and **must** set the attribute value.
 
-        If *ts* is a Scenario, :meth:`get` **must** set the
-        :attr:`~.Scenario.scheme` attribute with the value previously passed to
-        :meth:`init`.
-
-        Returns
-        -------
-        None
+        If `ts` is a Scenario, :meth:`get` **must** set the :attr:`~.Scenario.scheme`
+        attribute with the value previously passed to :meth:`init`.
 
         Raises
         ------
         ValueError
-            If :attr:`~.TimeSeries.model` or :attr:`~.TimeSeries.scenario` does
-            not exist on the Platform.
+            If :attr:`~.TimeSeries.model` or :attr:`~.TimeSeries.scenario` does not
+            exist on the Platform.
 
         See also
         --------
@@ -496,59 +518,41 @@ class Backend(ABC):
         set_as_default
         """
 
-    def del_ts(self, ts: TimeSeries):
-        """OPTIONAL: Free memory associated with the TimeSeries *ts*.
+    def del_ts(self, ts: TimeSeries) -> None:
+        """OPTIONAL: Free memory associated with the TimeSeries `ts`.
 
         The default implementation has no effect.
         """
 
     @abstractmethod
-    def check_out(self, ts: TimeSeries, timeseries_only):
-        """Check out *ts* for modification.
+    def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
+        """Check out `ts` for modification.
 
         Parameters
         ----------
         timeseries_only : bool
             ???
-
-        Returns
-        -------
-        None
         """
 
     @abstractmethod
-    def commit(self, ts: TimeSeries, comment):
-        """Commit changes to *ts*.
+    def commit(self, ts: TimeSeries, comment: str) -> None:
+        """Commit changes to `ts`.
 
-        ts_init **may** modify the :attr:`~.TimeSeries.version` attribute of
-        *ts*.
+        ts_init **may** modify the :attr:`~.TimeSeries.version` attribute of `ts`.
 
         Parameters
         ----------
         comment : str
             Description of the changes being committed.
-
-        Returns
-        -------
-        None
         """
 
     @abstractmethod
-    def discard_changes(self, ts: TimeSeries):
-        """Discard changes to *ts* since the last :meth:`ts_check_out`.
-
-        Returns
-        -------
-        None
-        """
+    def discard_changes(self, ts: TimeSeries) -> None:
+        """Discard changes to `ts` since the last :meth:`ts_check_out`."""
 
     @abstractmethod
-    def set_as_default(self, ts: TimeSeries):
+    def set_as_default(self, ts: TimeSeries) -> None:
         """Set the current :attr:`.TimeSeries.version` as the default.
-
-        Returns
-        -------
-        None
 
         See also
         --------
@@ -557,12 +561,8 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def is_default(self, ts: TimeSeries):
-        """Return :obj:`True` if *ts* is the default version.
-
-        Returns
-        -------
-        bool
+    def is_default(self, ts: TimeSeries) -> bool:
+        """Return :obj:`True` if `ts` is the default version for its (model, scenario).
 
         See also
         --------
@@ -571,28 +571,18 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def last_update(self, ts: TimeSeries):
-        """Return the date of the last modification of the *ts*.
-
-        Returns
-        -------
-        str or None
-        """
+    def last_update(self, ts: TimeSeries) -> Optional[str]:
+        """Return the date of the last modification of the `ts`, if any."""
 
     @abstractmethod
-    def run_id(self, ts: TimeSeries):
-        """Return the run ID for the *ts*.
+    def run_id(self, ts: TimeSeries) -> int:
+        """Return the run ID of the `ts`."""
 
-        Returns
-        -------
-        int
-        """
-
-    def preload(self, ts: TimeSeries):
-        """OPTIONAL: Load *ts* data into memory."""
+    def preload(self, ts: TimeSeries) -> None:
+        """OPTIONAL: Load `ts` data into memory."""
 
     @staticmethod
-    def _handle_rw_filters(filters: dict):
+    def _handle_rw_filters(filters: dict) -> Tuple[Optional[TimeSeries], Dict]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
@@ -610,8 +600,15 @@ class Backend(ABC):
         return ts, filters
 
     @abstractmethod
-    def get_data(self, ts: TimeSeries, region, variable, unit, year):
-        """Retrieve time-series data.
+    def get_data(
+        self,
+        ts: TimeSeries,
+        region: Sequence[str],
+        variable: Sequence[str],
+        unit: Sequence[str],
+        year: Sequence[str],
+    ) -> Iterable[Tuple[str, str, str, int, float]]:
+        """Retrieve time series data.
 
         Parameters
         ----------
@@ -641,7 +638,9 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_geo(self, ts: TimeSeries):
+    def get_geo(
+        self, ts: TimeSeries
+    ) -> Iterable[Tuple[str, str, int, str, str, str, bool]]:
         """Retrieve time-series 'geodata'.
 
         Yields
@@ -663,8 +662,17 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def set_data(self, ts: TimeSeries, region, variable, data, unit, subannual, meta):
-        """Store *data*.
+    def set_data(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        data: Dict[int, float],
+        unit: str,
+        subannual: str,
+        meta: bool,
+    ) -> None:
+        """Store `data`.
 
         Parameters
         ----------
@@ -679,14 +687,22 @@ class Backend(ABC):
         data : dict (int -> float)
             Mapping from year to value.
         meta : bool
-            :obj:`True` to mark *data* as metadata.
+            :obj:`True` to mark `data` as metadata.
         """
 
     @abstractmethod
     def set_geo(
-        self, ts: TimeSeries, region, variable, subannual, year, value, unit, meta
-    ):
-        """Store time-series 'geodata'.
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        year: int,
+        value: str,
+        unit: str,
+        meta: bool,
+    ) -> None:
+        """Store time series geodata.
 
         Parameters
         ----------
@@ -703,12 +719,20 @@ class Backend(ABC):
         unit : str
             Unit symbol.
         meta : bool
-            :obj:`True` to mark *data* as metadata.
+            :obj:`True` to mark `data` as metadata.
         """
 
     @abstractmethod
-    def delete(self, ts: TimeSeries, region, variable, subannual, years, unit):
-        """Remove data values.
+    def delete(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        years: Iterable[int],
+        unit: str,
+    ) -> None:
+        """Remove time series data.
 
         Parameters
         ----------
@@ -722,14 +746,18 @@ class Backend(ABC):
             Unit symbol.
         subannual : str
             Name of time slice.
-
-        Returns
-        -------
-        None
         """
 
     @abstractmethod
-    def delete_geo(self, ts: TimeSeries, region, variable, subannual, years, unit):
+    def delete_geo(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        years: Iterable[int],
+        unit: str,
+    ) -> None:
         """Remove 'geodata' values.
 
         Parameters
@@ -744,10 +772,6 @@ class Backend(ABC):
             Years.
         unit : str
             Unit symbol.
-
-        Returns
-        -------
-        None
         """
 
     # Methods for ixmp.Scenario
@@ -756,19 +780,19 @@ class Backend(ABC):
     def clone(
         self,
         s: Scenario,
-        platform_dest,
-        model,
-        scenario,
-        annotation,
-        keep_solution,
-        first_model_year=None,
-    ):
-        """Clone *s*.
+        platform_dest: Platform,
+        model: str,
+        scenario: str,
+        annotation: str,
+        keep_solution: bool,
+        first_model_year: int = None,
+    ) -> Scenario:
+        """Clone `s`.
 
         Parameters
         ----------
         platform_dest : :class:`.Platform`
-            Target backend. May be the same as *s.platform*.
+            Target backend. May be the same as ``s.platform``.
         model : str
             New model name.
         scenario : str
@@ -779,37 +803,40 @@ class Backend(ABC):
             If :obj:`True`, model solution data is also cloned. If
             :obj:`False`, it is discarded.
         first_model_year : int or None
-            If :class:`int`, must be greater than the first model year of *s*.
+            If :class:`int`, must be greater than the first model year of `s`.
 
         Returns
         -------
-        Same class as *s*
+        Same class as `s`
             The cloned Scenario.
         """
 
     @abstractmethod
-    def has_solution(self, s: Scenario):
-        """Return `True` if Scenario *s* has been solved.
+    def has_solution(self, s: Scenario) -> bool:
+        """Return `True` if Scenario `s` has been solved.
 
         If :obj:`True`, model solution data is available from the Backend.
         """
 
     @abstractmethod
-    def list_items(self, s: Scenario, type):
-        """Return a list of items of *type*.
+    def list_items(self, s: Scenario, type: str) -> List[str]:
+        """Return a list of names of items of `type`.
 
         Parameters
         ----------
         type : 'set' or 'par' or 'equ'
-
-        Return
-        ------
-        list of str
         """
 
     @abstractmethod
-    def init_item(self, s: Scenario, type, name, idx_sets, idx_names):
-        """Initialize an item *name* of *type*.
+    def init_item(
+        self,
+        s: Scenario,
+        type: str,
+        name: str,
+        idx_sets: Sequence[str],
+        idx_names: Optional[Sequence[str]],
+    ) -> None:
+        """Initialize an item `name` of `type`.
 
         Parameters
         ----------
@@ -820,39 +847,31 @@ class Backend(ABC):
             If empty, a 0-dimensional/scalar item is initialized. Otherwise, a
             1+-dimensional item is initialized.
         idx_names : sequence of str or None
-            Optional names for the dimensions. If not supplied, the names of
-            the *idx_sets* (if any) are used. If supplied, *idx_names* and
-            *idx_sets* must be the same length.
-
-        Return
-        ------
-        None
+            Optional names for the dimensions. If not supplied, the names of the
+            `idx_sets` (if any) are used. If supplied, `idx_names` and `idx_sets` must
+            be the same length.
 
         Raises
         ------
         ValueError
-            if any of the *idx_sets* is not an existing set in the Scenario;
-            if *idx_names* and *idx_sets* are not the same length.
+            if any of the `idx_sets` is not an existing set in the Scenario; if
+            `idx_names` and `idx_sets` are not the same length.
         """
 
     @abstractmethod
-    def delete_item(self, s: Scenario, type, name):
-        """Remove an item *name* of *type*.
+    def delete_item(self, s: Scenario, type: str, name: str) -> None:
+        """Remove an item `name` of `type`.
 
         Parameters
         ----------
         type : 'set' or 'par' or 'equ'
         name : str
             Name of the item to delete.
-
-        Return
-        ------
-        None
         """
 
     @abstractmethod
-    def item_index(self, s: Scenario, name, sets_or_names):
-        """Return the index sets or names of item *name*.
+    def item_index(self, s: Scenario, name: str, sets_or_names: str) -> List[str]:
+        """Return the index sets or names of item `name`.
 
         Parameters
         ----------
@@ -864,8 +883,10 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def item_get_elements(self, s: Scenario, type, name, filters=None):
-        """Return elements of item *name*.
+    def item_get_elements(
+        self, s: Scenario, type: str, name: str, filters: Dict[str, List[Any]] = None
+    ) -> Union[Dict[str, Any], pd.Series, pd.DataFrame]:
+        """Return elements of item `name`.
 
         Parameters
         ----------
@@ -873,39 +894,43 @@ class Backend(ABC):
         name : str
             Name of the item.
         filters : dict (str -> list), optional
-            If provided, a mapping from dimension names to allowed values
-            along that dimension.
+            If provided, a mapping from dimension names to allowed values along that
+            dimension.
 
-            item_get_elements **must** silently accept values that are *not*
-            members of the set indexing a dimension. Elements which are not
-            :class:`str` **must** be handled as equivalent to their string
-            representation; i.e. item_get_elements must return the same data
-            for `filters={'foo': [42]}` and `filters={'foo': ['42']}`.
+            item_get_elements **must** silently accept values that are *not* members of
+            the set indexing a dimension. Elements which are not :class:`str` **must**
+            be handled as equivalent to their string representation; i.e.
+            item_get_elements must return the same data for ``filters={'foo': [42]}``
+            and ``filters={'foo': ['42']}``.
 
         Returns
         -------
         pandas.Series
-            When *type* is 'set' and *name* an index set (not indexed by other
-            sets).
+            When `type` is 'set' and `name` an index set (not indexed by other sets).
         dict
-            When *type* is 'equ', 'par', or 'var' and *name* is scalar (zero-
-            dimensional). The value has the keys 'value' and 'unit' (for 'par')
-            or 'lvl' and 'mrg' (for 'equ' or 'var').
+            When `type` is 'equ', 'par', or 'var' and `name` is scalar (zero-
+            dimensional). The value has the keys 'value' and 'unit' (for 'par') or 'lvl'
+            and 'mrg' (for 'equ' or 'var').
         pandas.DataFrame
-            For mapping sets, or all 1+-dimensional values. The dataframe has
-            one column per index name with dimension values; plus the columns
-            'value' and 'unit' (for 'par') or 'lvl' and 'mrg' (for 'equ' or
-            'var').
+            For mapping sets, or all 1+-dimensional values. The dataframe has one
+            column per index name with dimension values; plus the columns 'value' and
+            'unit' (for 'par') or 'lvl' and 'mrg' (for 'equ' or 'var').
 
         Raises
         ------
         KeyError
-            If *name* does not exist in *s*.
+            If `name` does not exist in `s`.
         """
 
     @abstractmethod
-    def item_set_elements(self, s: Scenario, type, name, elements):
-        """Add keys or values to item *name*.
+    def item_set_elements(
+        self,
+        s: Scenario,
+        type: str,
+        name: str,
+        elements: Iterable[Tuple[Any, Optional[float], Optional[str], Optional[str]]],
+    ) -> None:
+        """Add keys or values to item `name`.
 
         Parameters
         ----------
@@ -924,14 +949,14 @@ class Backend(ABC):
             comment str or None                Description of the change
             ======= ========================== ===
 
-            If *name* is indexed by other set(s), then the number of elements
-            of each *key*, and their contents, must match the index set(s).
-            When *type* is 'set', *value* and *unit* **must** be :obj:`None`.
+            If `name` is indexed by other set(s), then the number of elements
+            of each `key`, and their contents, must match the index set(s).
+            When `type` is 'set', `value` and `unit` **must** be :obj:`None`.
 
         Raises
         ------
         ValueError
-            If *elements* contain invalid values, e.g. key values not in the
+            If `elements` contain invalid values, e.g. key values not in the
             index set(s).
         Exception
             If the Backend encounters any error adding the elements.
@@ -943,19 +968,18 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def item_delete_elements(self, s: Scenario, type, name, keys):
-        """Remove elements of item *name*.
+    def item_delete_elements(self, s: Scenario, type: str, name: str, keys) -> None:
+        """Remove elements of item `name`.
 
         Parameters
         ----------
         type : 'par' or 'set'
         name : str
         keys : iterable of iterable of str
-            If *name* is indexed by other set(s), then the number of elements
-            of each key in *keys*, and their contents, must match the index
-            set(s).
-            If *name* is a basic set, then each key must be a list containing a
-            single str, which must exist in the set.
+            If `name` is indexed by other set(s), then the number of elements of each
+            key in `keys`, and their contents, must match the index set(s).
+            If `name` is a basic set, then each key must be a list containing a single
+            str, which must exist in the set.
 
         See also
         --------
@@ -964,86 +988,109 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_meta(self, model: str, scenario: str, version: int, strict: bool) -> dict:
-        """Retrieve meta indicators.
+    def get_meta(
+        self,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+        strict: bool,
+    ) -> Dict[str, Any]:
+        """Retrieve all metadata attached to a specific target.
+
+        Depending on which of `model`, `scenario`, `version` are :obj:`None`, metadata
+        attached to one of the four kinds of metadata targets (see :ref:`data-meta`) is
+        returned.
+
+        If `strict` is :obj:`False`, then :func:`get_meta` **must** also return metadata
+        attached to less specific or “higher level” targets:
+
+        - For (model, scenario, version), these are (model, scenario); (model,); and
+          (scenario).
+        - For (model, scenario), these are (model,) and (scenario,).
+        - For (model,) or (scenario,), there are no less specific targets.
 
         Parameters
         ----------
-        model : str, optional
-            filter meta by a model
-        scenario : str, optional
-            filter meta by a scenario
-        version : int or str, optional
-            retrieve meta of a specific model/scenario run version
-        strict : bool, optional
-            only retrieve indicators from the requested model-scenario-version
-            level
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
+        strict : bool
+            Only retrieve metadata from the specified target.
 
         Returns
         -------
         dict (str -> any)
-            Mapping from meta category keys to values.
+            Mapping from metadata names/identifiers to values.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
         """
 
     @abstractmethod
-    def set_meta(self, meta: dict, model: str, scenario: str, version: int):
-        """Set meta categories.
+    def set_meta(
+        self,
+        meta: dict,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> None:
+        """Set metadata on a target.
 
         Parameters
         ----------
         meta : dict
-            containing meta key/value category pairs
-        model : str, optional
-            model name that meta should be attached to
-        scenario : str, optional
-            scenario name that meta should be attached to
-        version : int, optional
-            run version that meta should be attached to
-
-        Returns
-        -------
-        None
+            Mapping from metadata names/identifiers to values.
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
+
+        See also
+        --------
+        get_meta
         """
 
     @abstractmethod
-    def remove_meta(self, categories: list, model: str, scenario: str, version: int):
-        """Remove meta categories.
+    def remove_meta(
+        self,
+        names: list,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> None:
+        """Remove metadata attached to a target.
 
         Parameters
         ----------
-        categories : list of str
-            meta-category keys to remove
-        model : str, optional
-            only remove meta of a specific model
-        scenario : str, optional
-            only remove meta of a specific scenario
-        version : int, optional
-            only remove meta of a specific model/scenario run version
-
-        Returns
-        -------
-        None
+        names : list of str
+            Metadata names/identifiers to remove.
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
+
+        See also
+        --------
+        get_meta
         """
 
     @abstractmethod
@@ -1056,8 +1103,8 @@ class Backend(ABC):
     # Methods for message_ix.Scenario
 
     @abstractmethod
-    def cat_list(self, ms: Scenario, name):
-        """Return list of categories in mapping *name*.
+    def cat_list(self, ms: Scenario, name: str) -> List[str]:
+        """Return list of categories in mapping `name`.
 
         Parameters
         ----------
@@ -1067,11 +1114,11 @@ class Backend(ABC):
         Returns
         -------
         list of str
-            All categories in *name*.
+            All categories in `name`.
         """
 
     @abstractmethod
-    def cat_get_elements(self, ms: Scenario, name, cat):
+    def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> List[str]:
         """Get elements of a category mapping.
 
         Parameters
@@ -1079,16 +1126,23 @@ class Backend(ABC):
         name : str
             Name of the category mapping set.
         cat : str
-            Name of the category within *name*.
+            Name of the category within `name`.
 
         Returns
         -------
         list of str
-            All set elements mapped to *cat* in *name*.
+            All set elements mapped to `cat` in `name`.
         """
 
     @abstractmethod
-    def cat_set_elements(self, ms: Scenario, name, cat, keys, is_unique):
+    def cat_set_elements(
+        self,
+        ms: Scenario,
+        name: str,
+        cat: str,
+        keys: Union[str, Sequence[str]],
+        is_unique: bool,
+    ) -> None:
         """Add elements to category mapping.
 
         Parameters
@@ -1096,19 +1150,15 @@ class Backend(ABC):
         name : str
             Name of the category mapping set.
         cat : str
-            Name of the category within *name*.
+            Name of the category within `name`.
         keys : iterable of str or list of str
-            Keys to add to *cat*.
+            Keys to add to `cat`.
         is_unique : bool
             If :obj:`True`:
 
-            - *keys* **must** contain only one key.
-            - The Backend **must** remove any existing member of *cat*, so that
-              it has only one element.
-
-        Returns
-        -------
-        None
+            - `keys` **must** contain only one key.
+            - The Backend **must** remove any existing member of `cat`, so that it has
+              only one element.
         """
 
 
@@ -1118,13 +1168,13 @@ class CachingBackend(Backend):
     #: :obj:`True` if caching is enabled.
     cache_enabled = True
 
-    #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on
-    #: the subclass' usage of the cache.
-    _cache: Dict[str, object] = {}
+    #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on the
+    #: subclass' usage of the cache.
+    _cache: Dict[Tuple, object] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
     #: using :meth:`cache_get`.
-    _cache_hit: Dict[str, int] = {}
+    _cache_hit: Dict[Tuple, int] = {}
 
     # Backend API methods
 
@@ -1138,50 +1188,48 @@ class CachingBackend(Backend):
         self._cache_hit = {}
 
     def del_ts(self, ts: TimeSeries):
-        """Invalidate cache entries associated with *ts*."""
+        """Invalidate cache entries associated with `ts`."""
         self.cache_invalidate(ts)
 
     # New methods for CachingBackend
 
     @classmethod
-    def _cache_key(self, ts, ix_type, name, filters=None):
+    def _cache_key(
+        self,
+        ts: TimeSeries,
+        ix_type: Optional[str],
+        name: Optional[str],
+        filters: Optional[Dict[str, Hashable]] = None,
+    ) -> Tuple[Hashable, ...]:
         """Return a hashable cache key.
 
-        ixmp *filters* (a :class:`dict` of :class:`list`) are converted to a
-        unique id that is hashable.
-
-        Parameters
-        ----------
-        ts : .TimeSeries
-        ix_type : str
-        name : str
-        filters : dict (str -> list of hashable)
+        ixmp `filters` (a :class:`dict` of :class:`list`) are converted to a unique id
+        that is hashable.
 
         Returns
         -------
         tuple
-            A hashable key with 4 elements for *ts*, *ix_type*, *name*, and
-            *filters*.
+            A hashable key with 4 elements for `ts`, `ix_type`, `name`, and `filters`.
         """
-        ts = id(ts)
+        ts_id = id(ts)
         if filters is None or len(filters) == 0:
-            return (ts, ix_type, name)
+            return (ts_id, ix_type, name)
         else:
             # Convert filters into a hashable object
-            filters = hash(json.dumps(sorted(filters.items())))
-            return (ts, ix_type, name, filters)
+            return (ts_id, ix_type, name, hash(json.dumps(sorted(filters.items()))))
 
-    def cache_get(self, ts, ix_type, name, filters):
+    def cache_get(
+        self, ts: TimeSeries, ix_type: str, name: str, filters: Dict
+    ) -> Optional[Any]:
         """Retrieve value from cache.
 
-        The value in :attr:`_cache` is copied to avoid cached values being
-        modified by user code. :attr:`_cache_hit` is incremented.
+        The value in :attr:`_cache` is copied to avoid cached values being modified by
+        user code. :attr:`_cache_hit` is incremented.
 
         Raises
         ------
         KeyError
-            If the key for *ts*, *ix_type*, *name* and *filters* is not in the
-            cache.
+            If the key for `ts`, `ix_type`, `name` and `filters` is not in the cache.
         """
         key = self._cache_key(ts, ix_type, name, filters)
 
@@ -1191,8 +1239,10 @@ class CachingBackend(Backend):
         else:
             raise KeyError(ts, ix_type, name, filters)
 
-    def cache(self, ts, ix_type, name, filters, value):
-        """Store *value* in cache.
+    def cache(
+        self, ts: TimeSeries, ix_type: str, name: str, filters: Dict, value: Any
+    ) -> bool:
+        """Store `value` in cache.
 
         Returns
         -------
@@ -1211,24 +1261,32 @@ class CachingBackend(Backend):
 
         return refreshed
 
-    def cache_invalidate(self, ts, ix_type=None, name=None, filters=None):
+    def cache_invalidate(
+        self,
+        ts: TimeSeries,
+        ix_type: str = None,
+        name: str = None,
+        filters: Dict = None,
+    ) -> None:
         """Invalidate cached values.
 
-        With all arguments given, single key/value is removed from the cache.
-        Otherwise, multiple keys/values are removed:
+        With all arguments given, single key/value is removed from the cache. Otherwise,
+        multiple keys/values are removed:
 
-        - *ts* only: all cached values associated with the :class:`.TimeSeries`
-          or :class:`.Scenario` object.
-        - *ts*, *ix_type*, and *name*: all cached values associated with the
-          ixmp item, whether filtered or unfiltered.
+        - `ts` only: all cached values associated with the :class:`.TimeSeries` or
+          :class:`.Scenario` object.
+        - `ts`, `ix_type`, and `name`: all cached values associated with the item,
+          whether filtered or unfiltered.
         """
         key = self._cache_key(ts, ix_type, name, filters)
 
         if filters is None:
             i = slice(1) if (ix_type is name is None) else slice(3)
-            to_remove = filter(lambda k: k[i] == key[i], self._cache.keys())
+            to_remove: Iterable[Tuple] = filter(
+                lambda k: k[i] == key[i], self._cache.keys()
+            )
         else:
             to_remove = [key]
 
         for key in list(to_remove):
-            self._cache.pop(key)
+            self._cache.pop(key, None)

@@ -5,20 +5,18 @@ import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
 from copy import copy
-from itertools import chain
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, Mapping
+from typing import Generator, List, Mapping
 from weakref import WeakKeyDictionary
 
 import jpype
 import pandas as pd
 
-from ixmp.core import Scenario
+from ixmp.backend import FIELDS, ItemType
+from ixmp.backend.base import CachingBackend
+from ixmp.core.scenario import Scenario
 from ixmp.utils import as_str_list, filtered
-
-from . import FIELDS, ItemType
-from .base import CachingBackend
 
 log = logging.getLogger(__name__)
 
@@ -40,8 +38,8 @@ LOG_LEVELS = {
     "NOTSET": "ALL",
 }
 
-# Java classes, loaded by start_jvm(). These become available as e.g.
-# java.IxException or java.HashMap.
+# Java classes, loaded by start_jvm(). These become available as e.g. java.IxException
+# or java.HashMap.
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
@@ -98,8 +96,7 @@ def _create_properties(driver=None, path=None, url=None, user=None, password=Non
             else:
                 raise ValueError(url)
         else:
-            # Convert Windows paths to use forward slashes per HyperSQL JDBC
-            # URL spec
+            # Convert Windows paths to use forward slashes per HyperSQL JDBC URL spec
             url_path = str(PurePosixPath(Path(path).resolve())).replace("\\", "")
             full_url = f"jdbc:hsqldb:file:{url_path}"
         user = user or "ixmp"
@@ -182,42 +179,41 @@ class JDBCBackend(CachingBackend):
     path : path-like, optional
         Path to the HyperSQL database.
     url : str, optional
-        Partial or complete JDBC URL for the Oracle or HyperSQL database,
-        e.g. ``database-server.example.com:PORT:SCHEMA``. See
-        :ref:`configuration`.
+        Partial or complete JDBC URL for the Oracle or HyperSQL database, e.g.
+        ``database-server.example.com:PORT:SCHEMA``. See :ref:`configuration`.
     user : str, optional
         Database user name.
     password : str, optional
         Database user password.
     cache : bool, optional
-        If :obj:`True` (the default), cache Python objects after conversion
-        from Java objects.
+        If :obj:`True` (the default), cache Python objects after conversion from Java
+        objects.
     jvmargs : str, optional
         Java Virtual Machine arguments. See :meth:`.start_jvm`.
     dbprops : path-like, optional
-        With ``driver='oracle'``, the path to a database properties file
-        containing `driver`, `url`, `user`, and `password` information.
+        With ``driver='oracle'``, the path to a database properties file containing
+        `driver`, `url`, `user`, and `password` information.
     """
 
-    # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source
-    #    Github repository.
+    # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source GitHub
+    #    repository.
     #
     #    Among other abstractions, this backend:
     #
-    #    - Handles any conversion between Java and Python types that is not
-    #      done automatically by JPype.
-    #    - Catches Java exceptions such as ixmp.exceptions.IxException, and
-    #      re-raises them as appropriate Python exceptions.
+    #    - Handles any conversion between Java and Python types that is not done
+    #      automatically by JPype.
+    #    - Catches Java exceptions such as ixmp.exceptions.IxException, and re-raises
+    #      them as appropriate Python exceptions.
     #
     #    Limitations:
     #
     #    - s_clone() is only supported when target_backend is JDBCBackend.
 
-    #: Reference to the at.ac.iiasa.ixmp.Platform Java object
+    #: Reference to the at.ac.iiasa.ixmp.Platform Java object.
     jobj: jpype.JObject = None
 
-    #: Mapping from ixmp.TimeSeries object to the underlying
-    #: at.ac.iiasa.ixmp.Scenario object (or subclasses of either)
+    #: Mapping from ixmp.TimeSeries object to the underlying at.ac.iiasa.ixmp.Scenario
+    #: object (or subclasses of either).
     jindex: Mapping[object, jpype.JObject] = WeakKeyDictionary()
 
     def __init__(self, jvmargs=None, **kwargs):
@@ -283,10 +279,9 @@ class JDBCBackend(CachingBackend):
                 msg = "when initializing database:"
                 if "applied migration" in e.args[0]:
                     msg += (
-                        "\n\nThe schema of the database does not match the "
-                        "schema of this version of ixmp. To resolve, either "
-                        "install the version of ixmp used to create the "
-                        "database, or delete it and retry."
+                        "\n\nThe schema of the database does not match the schema of "
+                        "this version of ixmp. To resolve, either install the version "
+                        "of ixmp used to create the database, or delete it and retry."
                     )
             else:
                 _raise_jexception(e)
@@ -401,9 +396,8 @@ class JDBCBackend(CachingBackend):
     def close_db(self):
         """Close the database connection.
 
-        A HSQL database can only be used by one :class:`Backend` instance at a
-        time. Any existing connection must be closed before a new one can be
-        opened.
+        A HyperSQL database can only be used by one :class:`Backend` instance at a time.
+        Any existing connection must be closed before a new one can be opened.
         """
         try:
             self.jobj.closeDB()
@@ -476,14 +470,13 @@ class JDBCBackend(CachingBackend):
         JDBCBackend supports reading from:
 
         - ``path='*.gdx', item_type=ItemType.MODEL``. The keyword arguments
-          `check_solution`, `comment`, `equ_list`, and `var_list` are
-          **required**.
+          `check_solution`, `comment`, `equ_list`, and `var_list` are **required**.
 
         Other parameters
         ----------------
         check_solution : bool
-            If True, raise an exception if the GAMS solver did not reach
-            optimality. (Only for MESSAGE-scheme Scenarios.)
+            If True, raise an exception if the GAMS solver did not reach optimality.
+            (Only for MESSAGE-scheme Scenarios.)
         comment : str
             Comment added to Scenario when importing the solution.
         equ_list : list of str
@@ -573,8 +566,7 @@ class JDBCBackend(CachingBackend):
             elif not isinstance(ts, Scenario):
                 raise ValueError("write to GDX requires a Scenario object")
 
-            # include_var_equ=False -> do not include variables/equations in
-            # GDX
+            # include_var_equ=False -> do not include variables/equations in GDX
             self.jindex[ts].toGDX(str(path.parent), path.name, False)
         elif path.suffix == ".csv" and item_type is ItemType.TS:
             models = set(filters.pop("model"))
@@ -586,8 +578,7 @@ class JDBCBackend(CachingBackend):
             export_all_runs = filters.pop("export_all_runs")
 
             scen_list = self.jobj.getScenarioList(default, None, None)
-            # TODO: replace with passing list of models/scenarios
-            #       to the method above
+            # TODO replace with passing list of models/scenarios to the method above
             run_ids = [
                 s["run_id"]
                 for s in scen_list
@@ -646,11 +637,10 @@ class JDBCBackend(CachingBackend):
         elif model and scenario and version is not None:
             valid = True
         if not valid:
-            msg = (
-                "Invalid arguments. Valid combinations are: (model), "
-                "(scenario), (model, scenario), (model, scenario, version)"
+            raise ValueError(
+                "Invalid arguments. Valid combinations are: (model), (scenario), "
+                "(model, scenario), (model, scenario, version)"
             )
-            raise ValueError(msg)
 
     def init(self, ts, annotation):
         klass = ts.__class__.__name__
@@ -776,8 +766,8 @@ class JDBCBackend(CachingBackend):
                 if f != "value"
             }
 
-            # At this point, the 'year' key is a not a single value, but a
-            # year -> value mapping with multiple entries
+            # At this point, the 'year' key is a not a single value, but a year ->
+            # value mapping with multiple entries
             yv_entries = data1.pop("year").entrySet()
 
             # Construct a chain map: look up in data1, then data2
@@ -873,8 +863,8 @@ class JDBCBackend(CachingBackend):
         if idx_names:
             if len(idx_names) != len(idx_sets):
                 raise ValueError(
-                    f"index names {repr(idx_names)} must have same length as "
-                    f"index sets {repr(idx_sets)}"
+                    f"index names {repr(idx_names)} must have same length as index sets"
+                    f" {repr(idx_sets)}"
                 )
             idx_names = to_jlist(idx_names)
         else:
@@ -883,8 +873,8 @@ class JDBCBackend(CachingBackend):
         # Initialize the Item
         func = getattr(self.jindex[s], f"initialize{type.title()}")
 
-        # The constructor returns a reference to the Java Item, but these
-        # aren't exposed by Backend, so don't return here
+        # The constructor returns a reference to the Java Item, but these aren't exposed
+        # by Backend, so don't return here
         try:
             func(name, idx_sets, idx_names)
         except jpype.JException as e:
@@ -952,8 +942,8 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for index columns
             dtypes = {}
             for idx_name, idx_set in zip(columns, idx_sets):
-                # NB using categoricals could be more memory-efficient, but
-                #    requires adjustment of tests/documentation. See
+                # NB using categoricals could be more memory-efficient, but requires
+                #    adjustment of tests/documentation. See
                 #    https://github.com/iiasa/ixmp/issues/228
                 # dtypes[idx_name] = CategoricalDtype(
                 #     self.item_get_elements(s, 'set', idx_set))
@@ -1042,9 +1032,9 @@ class JDBCBackend(CachingBackend):
         for key in keys:
             jitem.removeElement(to_jlist(key))
 
-        # Since `name` may be an index set, clear the cache entirely. This
-        # ensures that e.g. parameter elements for parameters indexed by `name`
-        # are also refreshed on the next call to item_get_elements.
+        # Since `name` may be an index set, clear the cache entirely. This ensures that
+        # e.g. parameter elements for parameters indexed by `name` are also refreshed
+        # on the next call to item_get_elements.
         args = (s,) if type == "set" else (s, type, name)
         self.cache_invalidate(*args)
 
@@ -1083,21 +1073,19 @@ class JDBCBackend(CachingBackend):
             _raise_jexception(e)
 
     def remove_meta(
-        self, categories, model: str = None, scenario: str = None, version: int = None
+        self, names, model: str = None, scenario: str = None, version: int = None
     ):
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
-        return self.jobj.removeMeta(model, scenario, version, to_jlist(categories))
+        return self.jobj.removeMeta(model, scenario, version, to_jlist(names))
 
     def clear_solution(self, s, from_year=None):
-        from ixmp.core import Scenario
-
         if from_year:
             if type(s) is not Scenario:
                 raise TypeError(
-                    "s_clear_solution(from_year=...) only valid "
-                    "for ixmp.Scenario; not subclasses"
+                    "s_clear_solution(from_year=...) only valid for ixmp.Scenario; not "
+                    "subclasses"
                 )
             self.jindex[s].removeSolution(from_year)
         else:
@@ -1119,15 +1107,14 @@ class JDBCBackend(CachingBackend):
     # Helpers; not part of the Backend interface
 
     def _get_item(self, s, ix_type, name, load=True):
-        """Return the Java object for item *name* of *ix_type*.
+        """Return the Java object for item `name` of `ix_type`.
 
         Parameters
         ----------
         load : bool, optional
-            If *ix_type* is 'par', 'var', or 'equ', the elements of the item
-            are loaded from the database before :meth:`_item` returns. If
-            :const:`False`, the elements can be loaded later using
-            ``item.loadItemElementsfromDB()``.
+            If `ix_type` is 'par', 'var', or 'equ', the elements of the item are loaded
+            from the database before :meth:`_item` returns. If :const:`False`, the
+            elements can be loaded later using ``item.loadItemElementsfromDB()``.
         """
         # getItem is not overloaded to accept a second bool argument
         args = [name] + ([load] if ix_type != "item" else [])
@@ -1149,12 +1136,10 @@ def start_jvm(jvmargs=None):
     Parameters
     ----------
     jvmargs : str or list of str, optional
-        Additional arguments for launching the JVM, passed to
-        :func:`jpype.startJVM`.
+        Additional arguments for launching the JVM, passed to :func:`jpype.startJVM`.
 
         For instance, to set the maximum heap space to 4 GiB, give
-        ``jvmargs=['-Xmx4G']``. See the `JVM documentation`_ for a list of
-        options.
+        ``jvmargs=['-Xmx4G']``. See the `JVM documentation`_ for a list of options.
 
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
@@ -1167,16 +1152,13 @@ def start_jvm(jvmargs=None):
     # Arguments
     args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
 
-    # Base for Java classpath entries
-    cp = Path(__file__).parents[1]
-
     # Keyword arguments
     kwargs = dict(
-        # Given 'lib/*' JPype will only glob '*.jar', so glob here explicitly
-        classpath=map(str, chain([cp / "ixmp.jar"], cp.glob("lib/*"))),
-        # For JPype 0.7 (raises a warning) and 0.8 (default is False).
-        # 'True' causes Java string objects to be converted automatically to
-        # Python str(), as expected by ixmp Python code.
+        # Glob pattern for ixmp.jar and related Java binaries
+        classpath=str(Path(__file__).parent.joinpath("jdbc", "*")),
+        # For JPype 0.7 (raises a warning) and 0.8 (default is False). 'True' causes
+        # Java string objects to be converted automatically to Python str(), as expected
+        # by ixmp Python code.
         convertStrings=True,
     )
 
@@ -1194,7 +1176,7 @@ def start_jvm(jvmargs=None):
             "Runtime Environment. See the install documentation."
         ) from e
 
-    # define auxiliary references to Java classes
+    # Define auxiliary references to Java classes
     global java
     for class_name in JAVA_CLASSES:
         setattr(java, class_name.split(".")[-1], jpype.JClass(class_name))
@@ -1203,7 +1185,7 @@ def start_jvm(jvmargs=None):
 # Conversion methods
 
 
-def to_pylist(jlist):
+def to_pylist(jlist) -> List:
     """Convert Java list types to :class:`list`."""
     try:
         return list(jlist[:])
@@ -1219,8 +1201,8 @@ def to_jlist(arg, convert=None):
     ----------
     arg : Collection or Iterable or str
     convert : callable, optional
-        If supplied, every element of *arg* is passed through `convert` before
-        being added.
+        If supplied, every element of `arg` is passed through `convert` before being
+        added.
 
     Returns
     -------
@@ -1228,9 +1210,9 @@ def to_jlist(arg, convert=None):
     """
     jlist = java.LinkedList()
 
-    # Previously JPype1 (prior to 1.0) could take single argument
-    # in addAll method of Java collection. As string implements Sequence
-    # contract in Python we need to convert it explicitly to list here.
+    # Previously JPype1 (prior to 1.0) could take single argument in addAll method of
+    # Java collection. As string implements Sequence contract in Python we need to
+    # convert it explicitly to list here.
     if isinstance(arg, str):
         arg = [arg]
 

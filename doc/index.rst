@@ -52,6 +52,7 @@ Scientific programming API
    file-io
    api-model
    reporting
+   data-model
 
 The `ixmp` has application programming interfaces (API) for efficient scientific workflows and data processing.
 
@@ -61,6 +62,7 @@ The `ixmp` has application programming interfaces (API) for efficient scientific
 - :doc:`file-io`
 - :doc:`api-model`
 - :doc:`reporting`
+- :doc:`data-model`
 
 
 Help & reference

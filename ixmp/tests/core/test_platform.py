@@ -14,11 +14,21 @@ from ixmp.backend import FIELDS
 from ixmp.testing import DATA, assert_logs, models
 
 
-def test_init():
-    with pytest.raises(
-        ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
-    ):
-        ixmp.Platform(backend="foo")
+class TestPlatform:
+    def test_init(self):
+        with pytest.raises(
+            ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
+        ):
+            ixmp.Platform(backend="foo")
+
+        # name="default" is used, referring to "local"
+        mp = ixmp.Platform()
+        assert "local" == mp.name
+
+    def test_getattr(self, test_mp):
+        """Test __getattr__."""
+        with pytest.raises(AttributeError):
+            test_mp.not_a_direct_backend_method
 
 
 @pytest.fixture

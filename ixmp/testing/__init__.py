@@ -44,9 +44,8 @@ import pint
 import pytest
 from click.testing import CliRunner
 
-from ixmp import cli
+from ixmp import Platform, cli
 from ixmp import config as ixmp_config
-from ixmp.core import Platform
 
 from .data import (
     DATA,
@@ -85,14 +84,24 @@ __all__ = [
 # Pytest hooks
 
 
+def pytest_addoption(parser):
+    """Add the ``--user-config`` command-line option to pytest."""
+    parser.addoption(
+        "--user-config",
+        action="store_true",
+        help="Use the user's existing config/'local' platform.",
+    )
+
+
 def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
     from ixmp.backend import jdbc
 
-    ixmp_config.clear()
-    # Further clear an automatic reference to the user's home directory. See fixture
-    # tmp_env below.
-    ixmp_config.values["platform"]["local"].pop("path")
+    if not session.config.option.user_config:
+        ixmp_config.clear()
+        # Further clear an automatic reference to the user's home directory. See fixture
+        # tmp_env below.
+        ixmp_config.values["platform"]["local"].pop("path")
 
     # Disable slow, aggressive garbage collection
     jdbc._GC_AGGRESSIVE = False
@@ -146,20 +155,20 @@ def test_mp(request, tmp_env, test_data_path):
 
 
 @pytest.fixture(scope="session")
-def tmp_env(tmp_path_factory):
+def tmp_env(pytestconfig, tmp_path_factory):
     """Return the os.environ dict with the IXMP_DATA variable set.
 
-    IXMP_DATA will point to a temporary directory that is unique to the
-    test session. ixmp configuration (i.e. the 'config.json' file) can be
-    written and read in this directory without modifying the current user's
-    configuration.
+    IXMP_DATA will point to a temporary directory that is unique to the test session.
+    ixmp configuration (i.e. the 'config.json' file) can be written and read in this
+    directory without modifying the current user's configuration.
     """
     base_temp = tmp_path_factory.getbasetemp()
     os.environ["IXMP_DATA"] = str(base_temp)
 
-    # Set the path for the default/local platform in the test directory
-    localdb = base_temp / "localdb" / "default"
-    ixmp_config.values["platform"]["local"]["path"] = localdb
+    if not pytestconfig.option.user_config:
+        # Set the path for the default/local platform in the test directory
+        localdb = base_temp.joinpath("localdb", "default")
+        ixmp_config.values["platform"]["local"]["path"] = localdb
 
     # Save for other processes
     ixmp_config.save()

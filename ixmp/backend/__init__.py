@@ -1,5 +1,5 @@
 from enum import IntFlag
-from typing import Dict, Type
+from typing import Dict, List, Type, Union
 
 #: Lists of field names for tuples returned by Backend API methods.
 #:
@@ -41,9 +41,12 @@ FIELDS = {
     ),
 }
 
+#: Partial dimensions for “IAMC format”.
+IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
-#: Mapping from names to available backends. To register additional backends,
-#: add elements to this variable.
+
+#: Mapping from names to available backends. To register additional backends, add
+#: entries to this dictionary.
 BACKENDS: Dict[str, Type] = {}
 
 

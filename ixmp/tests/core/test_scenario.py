@@ -1,3 +1,5 @@
+import re
+
 import numpy.testing as npt
 import pandas as pd
 import pytest
@@ -66,6 +68,11 @@ class TestScenario:
 
         # …but loading with a subclass of ixmp.Scenario is fine
         Scenario(test_mp, model="foo", scenario="bar")
+
+        with pytest.warns(
+            DeprecationWarning, match=re.escape("Scenario(…, cache=…) is deprecated")
+        ):
+            Scenario(test_mp, model="foo", scenario="bar", cache=False)
 
     def test_default_version(self, mp):
         scen = ixmp.Scenario(mp, **models["dantzig"])
@@ -176,11 +183,21 @@ class TestScenario:
     @pytest.mark.parametrize(
         "args, kwargs",
         (
-            # Scalar values/units are broadcast across multiple keys
-            (("b", ["new-york", "chicago"]), dict(value=100, unit="cases")),
+            # Scalar values/units/comment are broadcast across multiple keys
+            (
+                ("b", ["new-york", "chicago"]),
+                dict(value=100, unit="cases", comment="c"),
+            ),
             # Empty DataFrame can be added without error
             (("b", pd.DataFrame(columns=["i", "j", "value", "unit"])), dict()),
             # Exceptions
+            pytest.param(
+                ("b", ["new-york", "chicago"]),
+                dict(value=[100, 200, 300]),
+                marks=pytest.mark.xfail(
+                    raises=ValueError, reason="Length mismatch between keys and values"
+                ),
+            ),
             pytest.param(
                 ("b", pd.DataFrame(columns=["i", "j", "value", "unit"])),
                 dict(value=1.0),
@@ -221,6 +238,9 @@ class TestScenario:
         # Units are as expected
         assert df.loc[0, "unit"] == "km"
 
+        with pytest.warns(DeprecationWarning, match="ignored kwargs"):
+            scen.par("d", i=["seattle"])
+
     def test_items(self, scen):
         # Without filters
         iterator = scen.items()
@@ -249,6 +269,10 @@ class TestScenario:
             assert exp[i][1] == len(data)
 
         assert i == 1
+
+        with pytest.raises(NotImplementedError):
+            # NB next() is required here to attempt to generate the first item
+            next(scen.items(ixmp.ItemType.SET))
 
     def test_var(self, scen):
         df = scen.var("x", filters={"i": ["seattle"]})
@@ -281,11 +305,16 @@ class TestScenario:
         hits_after = scen.platform._backend._cache_hit[cache_key]
         assert hits_after == hits_before + 1
 
-    def test_load_scenario_data_clear_cache(self, mp):
+    def test_load_scenario_data_clear_cache(self, monkeypatch, mp):
         # this fails on commit: 4376f54
         scen = ixmp.Scenario(mp, **models["dantzig"])
         scen.load_scenario_data()
         scen.platform._backend.cache_invalidate(scen, "par", "d")
+
+        # With cache disabled, the method fails
+        monkeypatch.setattr(scen.platform._backend, "cache_enabled", False)
+        with pytest.raises(ValueError, match="Cache must be enabled"):
+            scen.load_scenario_data()
 
     # I/O
     def test_excel_io(self, scen, scen_empty, tmp_path, caplog):
@@ -477,6 +506,11 @@ def test_set(scen_empty):
         scen.add_set("i", ["i9"], ["i9 comment", "extra"])
     with pytest.raises(ValueError, match="Key 'extra' without matching comment"):
         scen.add_set("i", ["i9", "extra"], ["i9 comment"])
+    # Incorrect type
+    with pytest.raises(
+        TypeError, match="must be str or list of str; got <class 'dict'>"
+    ):
+        scen.add_set("i", dict(foo="bar"))
 
     # Add elements to a 1D set
     scen.init_set("foo", "i", "dim_i")
@@ -576,11 +610,10 @@ def test_filter_str(scen_empty):
 def test_solve_callback(test_mp):
     """Test the callback argument to Scenario.solve().
 
-    In real usage, callback() would compute some kind of convergence criterion.
-    This test uses a sequence of different values for d(seattle, new-york) in
-    Dantzig's transport problem. Once the correct value is set on the
-    ixmp.Scenario, the solution equals an expected value, and the model has
-    'converged'.
+    In real usage, callback() would compute some kind of convergence criterion. This
+    test uses a sequence of different values for d(seattle, new-york) in Dantzig's
+    transport problem. Once the correct value is set on the ixmp.Scenario, the solution
+    equals an expected value, and the model has 'converged'.
     """
     # Set up the Dantzig problem
     scen = make_dantzig(test_mp)
@@ -604,8 +637,8 @@ def test_solve_callback(test_mp):
         scenario.add_par("d", pd.DataFrame(data, index=[0]))
         scenario.commit("iterative solution")
 
-    # Changing the entry in the array 'd' results in an optimal 'x' that is
-    # different from the one stored as *expected*.
+    # Changing the entry in the array 'd' results in an optimal 'x' that is different
+    # from the one stored as `expected`.
     set_d(scen, d[0])
 
     def change_distance(scenario):
@@ -616,16 +649,16 @@ def test_solve_callback(test_mp):
 
         # Convergence not reached
 
-        # Change the distance between Seattle and New York, using the
-        # 'iteration' variable stored on the Scenario object
+        # Change the distance between Seattle and New York, using the 'iteration'
+        # variable stored on the Scenario object.
         set_d(scenario, d[scenario.iteration])
 
         # commented: see below
         # # Trigger another solution of the model
         # return False
 
-    # Warning is raised because 'return False' is commented above, meaning
-    # user may have forgotten any return statement in the callback
+    # Warning is raised because 'return False' is commented above, meaning user may
+    # have forgotten any return statement in the callback
     message = (
         r"solve\(callback=...\) argument returned None; will loop "
         "indefinitely unless True is returned."
@@ -636,3 +669,8 @@ def test_solve_callback(test_mp):
 
     # Solution reached after 4 iterations, i.e. for d[4 - 1] == 2.5
     assert scen.iteration == 4
+
+    # Fails with invalid arguments
+    scen.remove_solution()
+    with pytest.raises(ValueError, match="callback='foo' is not callable"):
+        scen.solve(**solve_args, callback="foo")

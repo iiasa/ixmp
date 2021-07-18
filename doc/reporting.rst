@@ -1,13 +1,14 @@
-Reporting API
-*************
+Reporting / postprocessing
+**************************
 
 .. currentmodule:: ixmp.reporting
 
-:mod:`ixmp.reporting` is built on the :mod:`genno` package.
+:mod:`ixmp.reporting` provides features for computing derived values from the contents of a :class:`ixmp.Scenario`, *after* it has been solved using a model and the solution data has been stored.
+It is built on the :mod:`genno` package, which has its own, separate documentation.
 This page provides only API documentation.
 
 - For an introduction and basic concepts, see :doc:`genno:usage` in the :mod:`genno` documentation.
-- For automatic reporting of :class:`message_ix.Scenario`, see :doc:`message_ix:reporting`.
+- For automatic reporting of :class:`message_ix.Scenario`, see :doc:`message_ix:reporting` in the |MESSAGEix| documentation.
 
 .. contents::
    :local:

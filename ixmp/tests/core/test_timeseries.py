@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -7,7 +6,7 @@ from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
 from ixmp import Scenario, TimeSeries
-from ixmp.core import IAMC_IDX
+from ixmp.backend import IAMC_IDX
 from ixmp.testing import DATA, models
 
 # string columns for timeseries checks
@@ -66,23 +65,6 @@ def assert_timeseries(scen, exp=DATA["timeseries"], cols=None, subannual=None):
         npt.assert_array_equal(exp[["subannual"]], obs[["subannual"]])
 
 
-@contextmanager
-def transact(ts, condition=True, commit_message=""):
-    """Context manager to wrap in a 'transaction'.
-
-    If `condition` is :obj:`True`, the :class:`.TimeSeries`/:class:`.Scenario` `ts` is
-    checked out *before* the block begins, and afterwards a commit is made with the
-    `commit_message`. If `condition` is :obj:`False`, nothing occurs.
-    """
-    if condition:
-        ts.check_out()
-    try:
-        yield ts
-    finally:
-        if condition:
-            ts.commit(commit_message)
-
-
 # Fixtures
 
 
@@ -116,7 +98,17 @@ class TestTimeSeries:
         with pytest.raises(ValueError):
             cls(test_mp, "model name", "scenario name", version=3.4)
 
-    # TimeSeries properties
+    def test_init2(self, test_mp):
+        # Scheme argument
+        with pytest.raises(TypeError, match="'scheme' argument"):
+            TimeSeries(test_mp, "m", "s", scheme="scheme")
+
+    # TimeSeries methods
+
+    def test_has_solution(self, ts):
+        """:meth:`.TimeSeries.has_solution` is always :obj:`False`."""
+        assert False is ts.has_solution()
+
     def test_default(self, mp, ts):
         # NB this is required before the is_default method can be used
         # FIXME should return False regardless
@@ -161,13 +153,24 @@ class TestTimeSeries:
     def test_add_timeseries(self, ts, format):
         data = DATA[0] if format == "long" else wide(DATA[0])
 
-        # Data added
+        # Add data
         ts.add_timeseries(data)
         ts.commit("")
 
         # Error: column 'unit' is missing
         with pytest.raises(ValueError):
             ts.add_timeseries(DATA[0].drop("unit", axis=1))
+
+    def test_discard_changes(self, ts):
+        ts.commit("")
+        assert 0 == len(ts.timeseries())
+
+        with ts.transact():
+            # Add data, but discard before commit
+            ts.add_timeseries(DATA[0])
+            ts.discard_changes()
+
+        assert 0 == len(ts.timeseries())
 
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_get(self, ts, format):
@@ -203,7 +206,7 @@ class TestTimeSeries:
         ts.commit("initial data")
 
         # Overwrite existing data
-        with transact(ts, commit_message="overwrite existing data"):
+        with ts.transact(message="overwrite existing data"):
             ts.add_timeseries(data)
 
         df = expected(DATA[2030], ts)
@@ -212,7 +215,7 @@ class TestTimeSeries:
             df = wide(df)
 
         # Overwrite and add new values at once
-        with transact(ts, commit_message="overwrite and add data"):
+        with ts.transact(message="overwrite and add data"):
             ts.add_timeseries(df)
 
         # Close and re-open database
@@ -270,7 +273,7 @@ class TestTimeSeries:
         assert_frame_equal(df, ts.timeseries())
 
         # Remove a single data point
-        with transact(ts, commit):
+        with ts.transact(condition=commit):
             ts.remove_timeseries(df[df.year == 2010])
 
         # Expected data remains
@@ -278,7 +281,7 @@ class TestTimeSeries:
         assert_frame_equal(exp, ts.timeseries())
 
         # Remove two data points
-        with transact(ts, commit):
+        with ts.transact(condition=commit):
             ts.remove_timeseries(df[df.year.isin([2030, 2050])])
 
         # Expected data remains
@@ -286,11 +289,13 @@ class TestTimeSeries:
         assert_frame_equal(exp, ts.timeseries())
 
         # Remove all remaining data
-        with transact(ts, commit):
+        with ts.transact(condition=commit):
             ts.remove_timeseries(df)
 
         # Result is empty
         assert ts.timeseries().empty
+
+    # Geodata
 
     def test_add_geodata(self, ts):
         # Empty TimeSeries includes no geodata
@@ -342,8 +347,15 @@ class TestTimeSeries:
 
         data = ts.timeseries()
 
-        with transact(ts):
+        with ts.transact():
             ts.remove_timeseries(data)
+
+    # Metadata
+
+    def test_set_meta(self, ts):
+        # Raises TypeError when first argument is not str or dict
+        with pytest.raises(TypeError):
+            ts.set_meta(["foo", "bar"])
 
     # FIXME all tests below this line need cleanup
 

@@ -7,6 +7,7 @@ from typing import Dict, Iterator, List, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from ixmp.backend import ItemType
@@ -67,8 +68,12 @@ def as_str_list(arg, idx_names=None):
 
 
 def isscalar(x):
-    """Returns True if x is a scalar"""
-    return not isinstance(x, Iterable) or isinstance(x, str)
+    """Returns True if `x` is a scalar."""
+    warn(
+        "ixmp.utils.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
+        DeprecationWarning,
+    )
+    return np.isscalar(x)
 
 
 def check_year(y, s):

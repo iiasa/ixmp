@@ -102,6 +102,7 @@ intersphinx_mapping = {
     "genno": ("https://genno.readthedocs.io/en/latest", None),
     "jpype": ("https://jpype.readthedocs.io/en/latest", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "pint": ("https://pint.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),

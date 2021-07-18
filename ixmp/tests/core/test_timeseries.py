@@ -295,6 +295,8 @@ class TestTimeSeries:
         # Result is empty
         assert ts.timeseries().empty
 
+    # Geodata
+
     def test_add_geodata(self, ts):
         # Empty TimeSeries includes no geodata
         assert_frame_equal(DATA["geo"].loc[[False, False, False]], ts.get_geodata())
@@ -347,6 +349,13 @@ class TestTimeSeries:
 
         with ts.transact():
             ts.remove_timeseries(data)
+
+    # Metadata
+
+    def test_set_meta(self, ts):
+        # Raises TypeError when first argument is not str or dict
+        with pytest.raises(TypeError):
+            ts.set_meta(["foo", "bar"])
 
     # FIXME all tests below this line need cleanup
 

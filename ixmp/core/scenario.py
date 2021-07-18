@@ -249,8 +249,9 @@ class Scenario(TimeSeries):
         if len(idx_names) == 0:
             # Basic set. Keys must be strings.
             if isinstance(key, (dict, pd.DataFrame)):
-                raise ValueError(
-                    "dict, DataFrame keys invalid for basic set {repr(name)}"
+                raise TypeError(
+                    f"keys for basic set {repr(name)} must be str or list of str; got "
+                    f"{type(key)}"
                 )
 
             # Ensure keys is a list of str

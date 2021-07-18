@@ -114,7 +114,7 @@ def show_versions_cmd():
     "--remove-solution",
     is_flag=True,
     default=False,
-    help="Forces removing solution if exists.",
+    help="Remove any existing model solution data.",
 )
 @click.pass_obj
 def solve(context, remove_solution):
@@ -129,14 +129,15 @@ def solve(context, remove_solution):
         raise click.UsageError("give --url before command solve")
 
     print("Run scenario solver")
+
     scen = context.get("scen")
-    if not scen:
-        print("Scenario not found")
-        return
+
     if remove_solution and scen.has_solution():
         scen.remove_solution()
         print("Solution removed")
+
     scen.solve()
+
     print("Solver finished")
 
 

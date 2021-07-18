@@ -1,9 +1,8 @@
 import logging
 import re
 import sys
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterable, Iterator, List, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 

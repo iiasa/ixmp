@@ -506,6 +506,11 @@ def test_set(scen_empty):
         scen.add_set("i", ["i9"], ["i9 comment", "extra"])
     with pytest.raises(ValueError, match="Key 'extra' without matching comment"):
         scen.add_set("i", ["i9", "extra"], ["i9 comment"])
+    # Incorrect type
+    with pytest.raises(
+        TypeError, match="must be str or list of str; got <class 'dict'>"
+    ):
+        scen.add_set("i", dict(foo="bar"))
 
     # Add elements to a 1D set
     scen.init_set("foo", "i", "dim_i")
@@ -665,3 +670,8 @@ def test_solve_callback(test_mp):
 
     # Solution reached after 4 iterations, i.e. for d[4 - 1] == 2.5
     assert scen.iteration == 4
+
+    # Fails with invalid arguments
+    scen.remove_solution()
+    with pytest.raises(ValueError, match="callback='foo' is not callable"):
+        scen.solve(**solve_args, callback="foo")

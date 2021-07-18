@@ -397,6 +397,8 @@ class Platform:
         bool or dict of bool
         """
         models_list = as_str_list(models)
+        if not models_list:
+            raise ValueError("must supply at least 1 model name")
         result = self._backend.get_auth(user, models_list, access)
         if isinstance(models, str):
             return result[models]

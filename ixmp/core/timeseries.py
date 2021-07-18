@@ -2,7 +2,8 @@ import logging
 from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from warnings import warn
 from weakref import ProxyType, proxy
 
 import pandas as pd
@@ -13,6 +14,7 @@ from ixmp.utils import (
     as_str_list,
     maybe_check_out,
     maybe_commit,
+    parse_url,
     to_iamc_layout,
     year_list,
 )
@@ -112,6 +114,55 @@ class TimeSeries:
         except (AttributeError, ReferenceError):
             pass  # The Platform has already been garbage-collected
 
+    @classmethod
+    def from_url(
+        cls, url: str, errors="warn"
+    ) -> Tuple[Optional["TimeSeries"], Platform]:
+        """Instantiate a TimeSeries (or Scenario) given an ``ixmp://`` URL.
+
+        The following are equivalent::
+
+            from ixmp import Platform, TimeSeries
+            mp = Platform(name='example')
+            scen = TimeSeries(mp 'model', 'scenario', version=42)
+
+        and::
+
+            from ixmp import TimeSeries
+            scen, mp = TimeSeries.from_url('ixmp://example/model/scenario#42')
+
+        Parameters
+        ----------
+        url : str
+            See :meth:`parse_url <ixmp.utils.parse_url>`.
+        errors : 'warn' or 'raise'
+            If 'warn', a failure to load the TimeSeries is logged as a warning, and the
+            platform is still returned. If 'raise', the exception is raised.
+
+        Returns
+        -------
+        ts, platform : 2-tuple of (TimeSeries, :class:`Platform`)
+            The TimeSeries and Platform referred to by the URL.
+        """
+        assert errors in ("warn", "raise"), "errors= must be 'warn' or 'raise'"
+
+        platform_info, scenario_info = parse_url(url)
+        platform = Platform(**platform_info)
+
+        try:
+            ts = cls(platform, **scenario_info)
+        except Exception as e:
+            if errors == "warn":
+                log.warning(
+                    f"{e.__class__.__name__}: {e.args[0]}\n"
+                    f"when loading {cls.__name__} from url: {repr(url)}"
+                )
+                return None, platform
+            else:
+                raise
+        else:
+            return ts, platform
+
     # Transactions and versioning
 
     def has_solution(self) -> bool:
@@ -193,7 +244,7 @@ class TimeSeries:
         """Get the run id of this TimeSeries."""
         return self._backend("run_id")
 
-    # Handling time series data
+    # Time series data
 
     def preload_timeseries(self) -> None:
         """Preload timeseries data to in-memory cache. Useful for bulk updates."""
@@ -378,6 +429,8 @@ class TimeSeries:
         for (r, v, u, t), data in df.groupby(id_cols):
             self._backend("delete", r, v, t, data["year"].tolist(), u)
 
+    # Geodata
+
     def add_geodata(self, df: pd.DataFrame) -> None:
         """Add geodata.
 
@@ -440,6 +493,74 @@ class TimeSeries:
             .reset_index(drop=True)
             .astype({"meta": "int64", "year": "int64"})
         )
+
+    # Metadata
+
+    def get_meta(self, name: str = None):
+        """Get :ref:`data-meta` for this object.
+
+        Metadata with the given `name`, attached to this (:attr:`model` name,
+        :attr:`scenario` name, :attr:`version`), is retrieved.
+
+        Parameters
+        ----------
+        name : str, optional
+            Metadata name/identifier.
+        """
+        all_meta = self.platform._backend.get_meta(
+            self.model, self.scenario, self.version
+        )
+        return all_meta[name] if name else all_meta
+
+    def set_meta(self, name_or_dict: Union[str, Dict[str, Any]], value=None) -> None:
+        """Set :ref:`data-meta` for this object.
+
+        Parameters
+        ----------
+        name_or_dict : str or dict
+            If :class:`dict`, a mapping of names/identifiers to values. Otherwise,
+            use the metadata identifier.
+        value : str or number or bool, optional
+            Metadata value.
+        """
+        if isinstance(name_or_dict, str):
+            name_or_dict = {name_or_dict: value}
+        elif not isinstance(name_or_dict, dict):
+            raise TypeError(
+                f"name_or_dict must be str or dict; got {type(name_or_dict)}"
+            )
+        self.platform._backend.set_meta(
+            name_or_dict, self.model, self.scenario, self.version
+        )
+
+    def delete_meta(self, *args, **kwargs) -> None:
+        """Remove :ref:`data-meta` for this object.
+
+        .. deprecated:: 3.1
+
+           Use :meth:`.remove_meta`.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single metadata name/identifier, or list of names.
+        """
+        warn("TimeSeries.delete_meta(); use remove_meta()", DeprecationWarning)
+        self.remove_meta(*args, **kwargs)
+
+    def remove_meta(self, name: Union[str, Sequence[str]]) -> None:
+        """Remove :ref:`data-meta` for this object.
+
+        Parameters
+        ----------
+        name : str or list of str
+            Either single metadata name/identifier, or list of names.
+        """
+        self.platform._backend.remove_meta(
+            as_str_list(name), self.model, self.scenario, self.version
+        )
+
+    # File I/O
 
     def read_file(
         self,

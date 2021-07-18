@@ -13,7 +13,7 @@ from ixmp.backend import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.model import get_model
-from ixmp.utils import as_str_list, check_year, parse_url
+from ixmp.utils import as_str_list, check_year
 
 log = logging.getLogger(__name__)
 
@@ -86,54 +86,6 @@ class Scenario(TimeSeries):
 
         # Use the model class to initialize the Scenario
         model_class.initialize(self, **model_init_args)
-
-    @classmethod
-    def from_url(cls, url: str, errors="warn") -> Tuple[Optional["Scenario"], Platform]:
-        """Instantiate a Scenario given an ixmp-scheme URL.
-
-        The following are equivalent::
-
-            from ixmp import Platform, Scenario
-            mp = Platform(name='example')
-            scen = Scenario(mp 'model', 'scenario', version=42)
-
-        and::
-
-            from ixmp import Scenario
-            scen, mp = Scenario.from_url('ixmp://example/model/scenario#42')
-
-        Parameters
-        ----------
-        url : str
-            See :meth:`parse_url <ixmp.utils.parse_url>`.
-        errors : 'warn' or 'raise'
-            If 'warn', a failure to load the Scenario is logged as a warning,
-            and the platform is still returned. If 'raise', the exception
-            is raised.
-
-        Returns
-        -------
-        scenario, platform : 2-tuple of (Scenario, :class:`Platform`)
-            The Scenario and Platform referred to by the URL.
-        """
-        assert errors in ("warn", "raise"), "errors= must be 'warn' or 'raise'"
-
-        platform_info, scenario_info = parse_url(url)
-        platform = Platform(**platform_info)
-
-        try:
-            scenario = cls(platform, **scenario_info)
-        except Exception as e:
-            if errors == "warn":
-                log.warning(
-                    f"{e.__class__.__name__}: {e.args[0]}\n"
-                    f"when loading Scenario from url: {repr(url)}"
-                )
-                return None, platform
-            else:
-                raise
-        else:
-            return scenario, platform
 
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.
@@ -902,67 +854,6 @@ class Scenario(TimeSeries):
             if cb_result:
                 # Callback indicates convergence is reached
                 break
-
-    def get_meta(self, name: str = None):
-        """Get scenario :ref:`data-meta`.
-
-        Parameters
-        ----------
-        name : str, optional
-            meta category name
-        """
-        all_meta = self.platform._backend.get_meta(
-            self.model, self.scenario, self.version
-        )
-        return all_meta[name] if name else all_meta
-
-    def set_meta(self, name_or_dict: Union[str, Dict[str, Any]], value=None) -> None:
-        """Set scenario :ref:`data-meta`.
-
-        Parameters
-        ----------
-        name_or_dict : str or dict
-            If the argument is dict, it used as a mapping of meta categories (names) to
-            values. Otherwise, use the argument as the meta category name.
-        value : str or number or bool, optional
-            Meta category value.
-        """
-        if isinstance(name_or_dict, str):
-            name_or_dict = {name_or_dict: value}
-        elif not isinstance(name_or_dict, dict):
-            raise TypeError(
-                f"name_or_dict must be str or dict; got {type(name_or_dict)}"
-            )
-        self.platform._backend.set_meta(
-            name_or_dict, self.model, self.scenario, self.version
-        )
-
-    def delete_meta(self, *args, **kwargs) -> None:
-        """Remove scenario meta.
-
-        .. deprecated:: 3.1
-
-           Use :meth:`remove_meta()`.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Either single meta key or list of keys.
-        """
-        warn("Scenario.delete_meta(); use remove_meta()", DeprecationWarning)
-        self.remove_meta(*args, **kwargs)
-
-    def remove_meta(self, name: Union[str, Sequence[str]]) -> None:
-        """Remove scenario meta.
-
-        Parameters
-        ----------
-        name : str or list of str
-            Either single meta key or list of keys.
-        """
-        self.platform._backend.remove_meta(
-            as_str_list(name), self.model, self.scenario, self.version
-        )
 
     # Input and output
     def to_excel(

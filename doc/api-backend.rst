@@ -98,6 +98,7 @@ Backend API
    Backends:
 
    - **must** only raise standard Python exceptions.
+   - **must** implement the :doc:`data model <data-model>` as described, or raise :class:`.NotImplementedError` for not implemented parts of the data model.
 
    Methods related to :class:`ixmp.Platform`:
 

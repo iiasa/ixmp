@@ -147,26 +147,27 @@ Sub-annual time slice
 Metadata
 --------
 - These are a key-value store for arbitrary metadata.
-  As an artifact of some initial applications, they are variously referred to as “categories”, “quantitative indicators”, and other names.
 - Each entry is uniquely identified by:
 
   - a **“meta name”** or **ID**: an arbitrary string.
 
 - In addition each entry has:
 
-  - a **value**: either a string or a number (floating-point, integer, or boolean).
+  - a **value**: either a string, a number (floating-point, integer, or boolean), or a list of these.
   - the **target** to which it is attached or associated.
-    (Sometimes called a “level”.)
     This may be one of:
 
-    1. A set of (model name, scenario name, version)
-    2. A set of (model name, scenario name)
+    1. A set of (model name, scenario name, version).
+    2. A set of (model name, scenario name).
     3. A model name.
     4. A scenario name.
 
+- As an artifact of some early applications, terms including “category” and “(quantitative) indicator” are variously used for the metadata identifier or metadata value.
+  The term “level” is sometimes used to refer to the different kinds of targets.
 - Because the name is the unique identifier, the same name cannot be used with different targets.
 - The model name and/or scenario name to which an entry is associated **must** be in the :ref:`codelists` on the Platform.
   It is not required that any specific TimeSeries exist that are identified by these model name(s) and/or scenario name(s).
+
 
 Documentation
 -------------
@@ -183,7 +184,7 @@ Documentation
     scenario   Scenario name
     region     Region
     metadata   Meta, i.e. the name/ID used by :ref:`metadata <data-meta>` entries
-    timseries  Variable, i.e. values for the “variable” identifier for time-series or geodata
+    timseries  Variable, i.e. values for the “variable” identifier of time-series or geodata
     =========  ===
 
 - Each entry consists of a string, e.g. containing a block of text.

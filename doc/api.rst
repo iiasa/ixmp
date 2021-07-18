@@ -94,7 +94,7 @@ Scenario
    A Scenario is a :class:`TimeSeries` that also contains model data, including model solution data.
    See the :ref:`data model documentation <data-model-data>`.
 
-   Scenario contains methods to manipulate different model data items:
+   The Scenario class provides methods to manipulate model data items:
 
    - Set: :meth:`init_set`, :meth:`add_set`, :meth:`set`, :meth:`remove_set`, :meth:`has_set`
    - Parameter:

@@ -1073,12 +1073,12 @@ class JDBCBackend(CachingBackend):
             _raise_jexception(e)
 
     def remove_meta(
-        self, categories, model: str = None, scenario: str = None, version: int = None
+        self, names, model: str = None, scenario: str = None, version: int = None
     ):
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
-        return self.jobj.removeMeta(model, scenario, version, to_jlist(categories))
+        return self.jobj.removeMeta(model, scenario, version, to_jlist(names))
 
     def clear_solution(self, s, from_year=None):
         if from_year:

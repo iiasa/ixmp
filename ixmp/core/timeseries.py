@@ -206,10 +206,10 @@ class TimeSeries:
     def transact(self, message: str = "", condition: bool = True):
         """Context manager to wrap code in a 'transaction'.
 
-        If `condition` is :obj:`True`, the TimeSeries` (or :class:`.Scenario`) is
+        If `condition` is :obj:`True`, the TimeSeries (or :class:`.Scenario`) is
         checked out *before* the block begins. When the block ends, the object is
-        committed with `commit_message`. If `condition` is :obj:`False`, nothing occurs
-        before or after the block.
+        committed with `message`. If `condition` is :obj:`False`, nothing occurs before
+        or after the block.
 
         Example
         -------

@@ -989,81 +989,108 @@ class Backend(ABC):
 
     @abstractmethod
     def get_meta(
-        self, model: str, scenario: str, version: int, strict: bool
+        self,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+        strict: bool,
     ) -> Dict[str, Any]:
-        """Retrieve meta indicators.
+        """Retrieve all metadata attached to a specific target.
+
+        Depending on which of `model`, `scenario`, `version` are :obj:`None`, metadata
+        attached to one of the four kinds of metadata targets (see :ref:`data-meta`) is
+        returned.
+
+        If `strict` is :obj:`False`, then :func:`get_meta` **must** also return metadata
+        attached to less specific or “higher level” targets:
+
+        - For (model, scenario, version), these are (model, scenario); (model,); and
+          (scenario).
+        - For (model, scenario), these are (model,) and (scenario,).
+        - For (model,) or (scenario,), there are no less specific targets.
 
         Parameters
         ----------
-        model : str, optional
-            filter meta by a model
-        scenario : str, optional
-            filter meta by a scenario
-        version : int or str, optional
-            retrieve meta of a specific model/scenario run version
-        strict : bool, optional
-            only retrieve indicators from the requested model-scenario-version
-            level
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
+        strict : bool
+            Only retrieve metadata from the specified target.
 
         Returns
         -------
         dict (str -> any)
-            Mapping from meta category keys to values.
+            Mapping from metadata names/identifiers to values.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
         """
 
     @abstractmethod
-    def set_meta(self, meta: dict, model: str, scenario: str, version: int) -> None:
-        """Set meta categories.
+    def set_meta(
+        self,
+        meta: dict,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> None:
+        """Set metadata on a target.
 
         Parameters
         ----------
         meta : dict
-            containing meta key/value category pairs
-        model : str, optional
-            model name that meta should be attached to
-        scenario : str, optional
-            scenario name that meta should be attached to
-        version : int, optional
-            run version that meta should be attached to
+            Mapping from metadata names/identifiers to values.
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
+
+        See also
+        --------
+        get_meta
         """
 
     @abstractmethod
     def remove_meta(
-        self, categories: list, model: str, scenario: str, version: int
+        self,
+        names: list,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
     ) -> None:
-        """Remove meta categories.
+        """Remove metadata attached to a target.
 
         Parameters
         ----------
-        categories : list of str
-            meta-category keys to remove
-        model : str, optional
-            only remove meta of a specific model
-        scenario : str, optional
-            only remove meta of a specific scenario
-        version : int, optional
-            only remove meta of a specific model/scenario run version
+        names : list of str
+            Metadata names/identifiers to remove.
+        model : str or None
+            Model name of metadata target.
+        scenario : str or None
+            Scenario name of metadata target.
+        version : int or None
+            :attr:`.TimeSeries.version` of metadata target.
 
         Raises
         ------
         ValueError
-            On unsupported model-scenario-version combinations.
-            Supported combinations are: (model), (scenario), (model, scenario),
-            (model, scenario, version)
+            on unsupported (`model`, `scenario`, `version`) combinations.
+
+        See also
+        --------
+        get_meta
         """
 
     @abstractmethod

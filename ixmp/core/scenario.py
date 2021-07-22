@@ -716,19 +716,24 @@ class Scenario(TimeSeries):
             Platform to clone to (default: current platform)
         """
         if shift_first_model_year is not None:
+            if not isinstance(shift_first_model_year, int):
+                raise TypeError(
+                    "shift_first_model_year must be int; got "
+                    + str(type(shift_first_model_year))
+                )
             if keep_solution:
                 log.warning("Override keep_solution=True for shift_first_model_year")
                 keep_solution = False
 
-        platform = platform or self.platform
-        model = model or self.model
-        scenario = scenario or self.scenario
-
-        args = [platform, model, scenario, annotation, keep_solution]
-        if check_year(shift_first_model_year, "first_model_year"):
-            args.append(shift_first_model_year)
-
-        return self._backend("clone", *args)
+        return self._backend(
+            "clone",
+            platform or self.platform,
+            model or self.model,
+            scenario or self.scenario,
+            annotation,
+            keep_solution,
+            shift_first_model_year,
+        )
 
     def has_solution(self) -> bool:
         """Return :obj:`True` if the Scenario contains model solution data."""

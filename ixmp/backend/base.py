@@ -786,7 +786,7 @@ class Backend(ABC):
         scenario: str,
         annotation: str,
         keep_solution: bool,
-        first_model_year: int = None,
+        first_model_year: Optional[int],
     ) -> Union[TimeSeries, Scenario]:
         """Clone `ts`.
 

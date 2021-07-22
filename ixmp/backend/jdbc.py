@@ -1122,8 +1122,10 @@ class JDBCBackend(CachingBackend):
             return getattr(self.jindex[s], f"get{ix_type.title()}")(*args)
         except java.IxException as e:
             # Regex for similar but not consistent messages from Java code
-            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this " "Scenario!"
-            if re.match(msg, e.args[0]):
+            if re.match(
+                f"No (item|{ix_type.title()}) '?{name}'? exists in this Scenario!",
+                e.args[0],
+            ):
                 # Re-raise as a Python KeyError
                 raise KeyError(name) from None
             else:  # pragma: no cover

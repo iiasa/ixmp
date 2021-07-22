@@ -40,6 +40,9 @@ class Platform:
         Keyword arguments to specific to the `backend`. See :class:`.JDBCBackend`.
     """
 
+    #: Name of the platform.
+    name: str
+
     # Storage back end for the platform
     _backend: "Backend"
 
@@ -74,6 +77,8 @@ class Platform:
         if name:
             # Using a named platform config; retrieve it
             self.name, kwargs = config.get_platform_info(name)
+        else:
+            self.name = "(anonymous)"
 
         # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)

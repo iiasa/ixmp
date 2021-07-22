@@ -4,6 +4,7 @@ from copy import copy
 from os import PathLike
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
@@ -14,6 +15,7 @@ from typing import (
     Sequence,
     Tuple,
     Union,
+    cast,
 )
 
 import pandas as pd
@@ -776,18 +778,17 @@ class Backend(ABC):
 
     # Methods for ixmp.Scenario
 
-    @abstractmethod
     def clone(
         self,
-        s: Scenario,
+        ts: TimeSeries,
         platform_dest: Platform,
         model: str,
         scenario: str,
         annotation: str,
         keep_solution: bool,
         first_model_year: int = None,
-    ) -> Scenario:
-        """Clone `s`.
+    ) -> Union[TimeSeries, Scenario]:
+        """Clone `ts`.
 
         Parameters
         ----------
@@ -800,8 +801,8 @@ class Backend(ABC):
         annotation : str
             Description for the creation of the new scenario.
         keep_solution : bool
-            If :obj:`True`, model solution data is also cloned. If
-            :obj:`False`, it is discarded.
+            If :obj:`True`, model solution data is also cloned. If :obj:`False`, it is
+            discarded.
         first_model_year : int or None
             If :class:`int`, must be greater than the first model year of `s`.
 
@@ -810,6 +811,78 @@ class Backend(ABC):
         Same class as `s`
             The cloned Scenario.
         """
+        be_dest = platform_dest._backend
+        cls = type(ts)
+
+        # Create the target object
+        target = cls(
+            mp=platform_dest,
+            model=model,
+            scenario=scenario,
+            version="new",
+            annotation=annotation,
+            scheme=getattr(ts, "scheme", None),
+        )
+
+        # TODO copy lists of identifiers
+        # TODO copy time series data
+        # TODO copy geodata
+
+        # Copy set, parameter data
+        # TODO copy VAR, EQU data
+        for item_type in (
+            (ItemType.SET, ItemType.PAR) if issubclass(cls, Scenario) else ()
+        ):
+            if TYPE_CHECKING:
+                ts = cast(Scenario, ts)
+                target = cast(Scenario, target)
+
+            type_ = ItemType(item_type).name.lower()
+            for name in self.list_items(ts, type_):
+                # Contents, dimensions, and index
+                data = self.item_get_elements(ts, type_, name)
+                dims = self.item_index(ts, name, "names")
+                sets = self.item_index(ts, name, "sets")
+
+                try:
+                    # Create the item in `target`
+                    be_dest.init_item(target, type_, name, sets, dims)
+                except ValueError as e:
+                    if "already exists" in e.args[0]:
+                        pass
+                    else:
+                        raise
+
+                # Munge data. This shouldn't be necessary; output types of
+                # item_get_elements should correspond to input types of
+                # item_set_elements
+                if item_type is ItemType.SET:
+                    elements: Iterable[
+                        Tuple[Any, Optional[float], Optional[str], Optional[str]]
+                    ] = map(lambda v: (v, None, None, ""), cast(pd.Series, data).values)
+                elif item_type is ItemType.PAR and len(dims):
+                    elements = map(
+                        lambda obs: (
+                            tuple(getattr(obs, d) for d in dims),
+                            obs.value,
+                            obs.unit,
+                            "",
+                        ),
+                        cast(pd.DataFrame, data).itertuples(),
+                    )
+                elif item_type is ItemType.PAR:
+                    elements = [(tuple(), data["value"], data["unit"], "")]
+
+                # Add the data to `target`
+                be_dest.item_set_elements(target, type_, name, elements)
+
+        # Store
+        target.commit(
+            f"Clone from ixmp://{ts.platform.name}/{ts.model}/{ts.scenario}"
+            f"#{ts.version}"
+        )
+
+        return target
 
     @abstractmethod
     def has_solution(self, s: Scenario) -> bool:

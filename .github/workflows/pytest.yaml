@@ -97,7 +97,7 @@ jobs:
 
     - name: Install R dependencies and tutorial requirements
       run: |
-        install.packages("remotes")
+        install.packages(c("remotes", "Rcpp"))
         remotes::install_cran(
           c("IRkernel", "reticulate"),
           dependencies = TRUE,

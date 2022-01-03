@@ -6,7 +6,7 @@ import tempfile
 from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_call
-from typing import Mapping
+from typing import MutableMapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError

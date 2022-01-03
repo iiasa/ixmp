@@ -160,7 +160,7 @@ class GAMSModel(Model):
     name = "default"
 
     #: Default values and format strings for options.
-    defaults: Mapping[str, object] = {
+    defaults: MutableMapping[str, Any] = {
         "model_file": "{model_name}.gms",
         "case": "{scenario.model}_{scenario.scenario}",
         "in_file": str(Path("{cwd}", "{model_name}_in.gdx")),

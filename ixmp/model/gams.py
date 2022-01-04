@@ -6,7 +6,7 @@ import tempfile
 from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_call
-from typing import Mapping
+from typing import Any, MutableMapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError
@@ -160,7 +160,7 @@ class GAMSModel(Model):
     name = "default"
 
     #: Default values and format strings for options.
-    defaults: Mapping[str, object] = {
+    defaults: MutableMapping[str, Any] = {
         "model_file": "{model_name}.gms",
         "case": "{scenario.model}_{scenario.scenario}",
         "in_file": str(Path("{cwd}", "{model_name}_in.gdx")),

@@ -31,11 +31,10 @@ These include:
      get_cell_output
 
 """
-import contextlib
 import logging
 import os
 import shutil
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
@@ -283,12 +282,10 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
     first = len(caplog.records)
 
     if at_level is not None:
-        # Use the pytest caplog fixture's built-in context manager to
-        # temporarily set the level of the 'ixmp' logger
+        # Use the pytest caplog fixture's built-in context manager to temporarily set
+        # the level of the 'ixmp' logger
         ctx = caplog.at_level(at_level, logger="ixmp")
     else:
-        # Python 3.6 compatibility: use suppress for nullcontext
-        nullcontext = getattr(contextlib, "nullcontext", contextlib.suppress)
         # ctx does nothing
         ctx = nullcontext()
 

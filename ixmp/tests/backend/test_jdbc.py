@@ -76,8 +76,10 @@ VE = pytest.mark.xfail(raises=ValueError)
         # Invalid
         pytest.param(tuple(), dict(), None, marks=VE),
         pytest.param(("not a driver",), dict(), None, marks=VE),
-        pytest.param(("oracle", "url", "u", "p", "extra?!"), dict(), None, marks=VE),
-        pytest.param(("hsqldb", "path", "extra?!"), dict(), None, marks=VE),
+        pytest.param(
+            ("oracle", "url", "u", "p", "-Xmx12G", "extra?!"), dict(), None, marks=VE
+        ),
+        pytest.param(("hsqldb", "path", "-Xmx12G", "extra?!"), dict(), None, marks=VE),
         pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
         pytest.param(("hsqldb",), dict(), None, marks=VE),
     ),

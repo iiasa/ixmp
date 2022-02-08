@@ -116,3 +116,16 @@ class TestConfig:
 
         with pytest.raises(ValueError):
             cfg.get_platform_info("nonexistent")
+
+    def test_platform_jvmargs(self, cfg):
+        """JVM arguments are understood by add_platform."""
+        cfg.add_platform("foo", "jdbc", "hsqldb", "/path/to/db", "-Xmx12G")
+        assert (
+            "foo",
+            {
+                "class": "jdbc",
+                "driver": "hsqldb",
+                "path": Path("/path/to/db"),
+                "jvmargs": "-Xmx12G",
+            },
+        ) == cfg.get_platform_info("foo")

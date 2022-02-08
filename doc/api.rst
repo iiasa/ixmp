@@ -175,6 +175,9 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
   $ ixmp platform add p2 jdbc oracle \
          database.server.example.com:PORT:SCHEMA username password
 
+  # Add a platform named 'p3' with specific JVM arguments
+  $ ixmp platform add p3 jdbc hsqldb /path/to/database/files -Xmx12G
+
   # Make 'p2' the default Platform
   $ ixmp platform add default p2
 

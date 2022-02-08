@@ -96,8 +96,8 @@ def memory_usage(message="", reset=False):
         _RT = runtime
         result.extend(
             [
-                _RT.totalMemory() / 1024 ** 2,
-                _RT.freeMemory() / 1024 ** 2,
+                _RT.totalMemory() / 1024**2,
+                _RT.freeMemory() / 1024**2,
             ]
         )
     else:
@@ -150,7 +150,7 @@ def resource_limit(request):
     value = int(value)
 
     if res in (resource.RLIMIT_AS, resource.RLIMIT_DATA, resource.RLIMIT_RSS):
-        value = value * 1024 ** 2  # MiB → bytes
+        value = value * 1024**2  # MiB → bytes
 
     if value > 0:
         # Store existing limit

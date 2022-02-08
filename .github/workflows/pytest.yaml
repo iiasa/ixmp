@@ -122,7 +122,6 @@ jobs:
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
 
     - name: Test documentation build using Sphinx
-      if: matrix.python-version != '3.6'
       run: make --directory=doc html
 
     - name: Upload test coverage to Codecov.io

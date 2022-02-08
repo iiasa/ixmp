@@ -74,7 +74,7 @@ class TestConfig:
     def test_register_late(self, monkeypatch, tmp_path):
         """Calling Config.register() after load from file retains existing values."""
         # Temporarily set IXMP_DATA to an empty directory, temporary for this function
-        monkeypatch.setenv("IXMP_DATA", tmp_path)
+        monkeypatch.setenv("IXMP_DATA", str(tmp_path))
         # Write a dummy config file
         tmp_path.joinpath("config.json").write_text("""{"foo": 123}""")
 

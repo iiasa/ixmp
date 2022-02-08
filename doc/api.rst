@@ -164,7 +164,7 @@ When imported, :mod:`ixmp` reads configuration from the first file named
 .. tip::
    For most users, #2 or #3 is a sensible default; platform information for many local and remote databases can be stored in ``config.json`` and retrieved by name.
 
-   Advanced users wishing to use a project-specific ``config.json`` can set ``IXMP_DATA`` to the directory containing this file.
+   Advanced users wishing to use a project-specific ``config.json`` can set ``IXMP_DATA`` to the path for any directory containing a file with this name.
 
 To manipulate the configuration file, use the ``platform`` command in the ixmp command-line interface::
 
@@ -178,7 +178,7 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
   # Make 'p2' the default Platform
   $ ixmp platform add default p2
 
-…or, use the methods of :obj:`ixmp.config`.
+…or, use the methods of :data:`.ixmp.config`.
 
 .. currentmodule:: ixmp
 

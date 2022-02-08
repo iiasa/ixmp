@@ -1,9 +1,10 @@
 import json
 import logging
 import os
-from copy import copy, deepcopy
+from copy import copy
+from dataclasses import asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict, Optional, Tuple, Type, Union
 
 log = logging.getLogger(__name__)
 
@@ -37,24 +38,8 @@ def _iter_config_paths():
     yield "default", Path.home().joinpath(".local", "share", "ixmp")
 
 
-#: Registered configuration keys; name -> (type, default value).
-KEYS = {
-    "platform": (
-        dict,
-        {
-            "default": "local",
-            "local": {
-                "class": "jdbc",
-                "driver": "hsqldb",
-                "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
-            },
-        },
-    ),
-}
-
-
 def _locate(filename=None):
-    """Locate an existing `filename` in the ixmp config directories.
+    """Locate an existing director or `filename` in the ixmp configuration directory.
 
     If `filename` is :obj:`None` (the default), only directories are located.
     """
@@ -73,14 +58,151 @@ def _locate(filename=None):
     )
 
 
+def _platform_default():
+    """Default values for the `platform` setting on BaseValues."""
+    return {
+        "default": "local",
+        "local": {
+            "class": "jdbc",
+            "driver": "hsqldb",
+            "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
+        },
+    }
+
+
+@dataclass
+class BaseValues:
+    """Base class for storing configuration values."""
+
+    platform: Dict[str, Union[str, Dict[str, Any]]] = field(
+        default_factory=_platform_default
+    )
+
+    def __getitem__(self, name):
+        return getattr(self, name.replace(" ", "_"))
+
+    def __setitem__(self, name, value):
+        setattr(self, name.replace(" ", "_"), value)
+
+    def add_field(self, name, type_, default=None):
+        # Check `name`
+        name = name.replace(" ", "_")
+        if name in self.__dataclass_fields__:
+            raise ValueError(f"configuration key {repr(name)} already defined")
+
+        # Create a new data class with an additional field
+        new_cls = make_dataclass(
+            "Values", [(name, type_, field(default=default))], bases=(self.__class__,)
+        )
+
+        # Re-use current values and any defaults for the new fields
+        data = asdict(self)
+        try:
+            data[name] = getattr(self, name)
+        except AttributeError:
+            pass
+
+        return new_cls, new_cls(**data)
+
+    def delete_field(self, name):
+        # Check `name`
+        name = self.munge(name)
+        if name in BaseValues.__dataclass_fields__:
+            raise ValueError(f"cannot remove ixmp core configuration key {repr(name)}")
+
+        # Create a new dataclass, removing `name`
+        fields = []
+        for f in self.__dataclass_fields__.values():
+            if f.name == name or f in BaseValues.__dataclass_fields__:
+                continue
+            fields.append((f.name, f.type, f))
+        new_cls = make_dataclass("Values", fields, bases=(BaseValues,))
+
+        # Reuse current values, discarding the deleted field
+        data = asdict(self)
+        data.pop(name)
+        return new_cls, new_cls(**data)
+
+    def keys(self) -> Tuple[str, ...]:
+        return tuple(map(lambda f: f.name.replace("_", " "), fields(self)))
+
+    def set(self, name: str, value: Any, strict: bool = True):
+        # Retrieve the type for `name`; or None if unregistered
+        f = self.get_field(name) or None
+        type_ = getattr(f, "type", None)
+
+        try:
+            # Attempt to cast to the correct type, if any
+            if type_ and strict:
+                value = type_(value)
+        except TypeError:
+            # `strict` but `name` is not registered; tried to call None(value)
+            raise KeyError(name)
+        except Exception:
+            raise TypeError(
+                f"expected {type_} for {repr(name)}; got {repr(value)} ({type(value)})"
+            )
+
+        setattr(self, getattr(f, "name", name.replace(" ", "_")), value)
+
+    # Utilities
+
+    def get_field(self, name):
+        """For `name` = "field name", retrieve a field "field_name", if any."""
+        for f in fields(self):
+            if f.name in (name, name.replace(" ", "_")):
+                return f
+
+    def munge(self, name):
+        """Return a field name matching `name`."""
+        return self.get_field(name).name or name
+
+
 class Config:
     """Configuration for ixmp.
 
-    Config stores two kinds of data: simple keys with a single value, and structured
-    Platform information.
+    For most purposes, there is only one instance of this class, available at
+    :data:`.ixmp.config` and automatically :meth:`read` from the ixmp configuration
+    file at the moment the package is imported. (:meth:`save` writes the current values
+    to file.)
 
-    ixmp has no built-in simple keys; however, it can store keys for other packages
-    that build on ixmp, such as :mod:`message_ix`.
+    Config is a key-value store. Key names are strings; each key has values of a fixed
+    type. Individual keys can be accessed with :meth:`get` and :meth:`set`, or by
+    accessing the :attr:`values` attribute.
+
+    Spaces in names are automatically replaced with underscores, e.g. "my key" is
+    stored as "my_key", but may be set and retrieved as "my key".
+
+    Downstream packages (e.g. :mod:`message_ix`, :mod:`message_ix_models`) may
+    :meth:`register` additional keys to be stored in and read from the ixmp
+    configuration file.
+
+    The default configuration (restored by :meth:`clear`) is:
+
+    .. code-block:: json
+
+       {
+         "platform": {
+           "default": "local",
+           "local": {
+             "class": "jdbc",
+             "driver": "hsqldb",
+             "path": "~/.local/share/ixmp/localdb/default"
+           },
+       }
+
+    .. autosummary::
+       clear
+       get
+       keys
+       read
+       save
+       set
+       register
+       unregister
+       add_platform
+       get_platform_info
+       remove_platform
 
     Parameters
     ----------
@@ -88,15 +210,20 @@ class Config:
         Read ``config.json`` on startup.
     """
 
-    #: Full-resolved path of the ``config.json`` file.
-    path = None
+    #: Fully-resolved path of the ``config.json`` file.
+    path: Optional[Path] = None
 
-    # Configuration values
-    values: Dict[str, object] = dict()
+    #: Configuration values. These can be accessed using Python item access syntax, e.g.
+    #: ``ixmp.config.values["platform"]["platform name"]…``.
+    values: BaseValues
 
-    def __init__(self, read=True):
+    _ValuesClass: Type
+
+    def __init__(self, read: bool = True):
+        self._ValuesClass = BaseValues
+
         # Default values
-        self.clear()
+        self.values = self._ValuesClass()
 
         # Read configuration from file; store the path at which it was located
         if read:
@@ -126,83 +253,54 @@ class Config:
 
     # Public methods
 
-    def get(self, name):
+    def get(self, name: str) -> Any:
         """Return the value of a configuration key `name`."""
         return self.values[name]
 
-    def register(self, name, type_, default=None):
+    def keys(self) -> Tuple[str, ...]:
+        """Return the names of all registered configuration keys."""
+        return self.values.keys()
+
+    def register(self, name: str, type_: type, default: Any = None):
         """Register a new configuration key.
 
         Parameters
         ----------
         name : str
-            Name of the new key; must not already exist.
+            Name of the new key.
         type_ : object
-            Type of the key's value, such as :obj:`str` or :class:`pathlib.Path`.
+            Type of valid values for the key, e.g. :obj:`str` or :class:`pathlib.Path`.
         default : any, optional
             Default value for the key. If not supplied, the `type` is called to supply
             the default value, e.g. ``str()``.
+
+        Raises
+        ------
+        ValueError
+            if the key `name` is already registered.
         """
-        if name in KEYS:
-            raise KeyError(f"configuration key {repr(name)} already defined")
+        self._ValuesClass, self.values = self.values.add_field(name, type_, default)
 
-        # Register the key for future clear()
-        KEYS[name] = (type_, default)
-
-        # Also set on the current config object
-        self.values[name] = default or type_()
-
-    def unregister(self, name):
+    def unregister(self, name: str) -> None:
         """Unregister and clear the configuration key `name`."""
-        KEYS.pop(name, None)
-        self.values.pop(name, None)
+        self._ValuesClass, self.values = self.values.delete_field(name)
 
-    def set(self, name, value, _strict=True):
-        """Set configuration key `name` to `value`."""
+    def set(self, name: str, value: Any, _strict: bool = True):
+        """Set configuration key `name` to `value`.
+
+        Parameters
+        ----------
+        value :
+            Value to store. If :obj:`None`, :func:`set` has no effect.
+        """
         if value is None:
             return
 
-        # Retrieve the type for `name`; or None if unregistered
-        type_ = KEYS.get(name, (None,))[0]
-
-        if type_ or _strict:
-            try:
-                # Attempt to cast to the correct type
-                value = type_(value)
-            except TypeError:
-                # _strict and unregistered key; tried to call None(value)
-                raise KeyError(name)
-            except Exception:
-                raise TypeError(
-                    f"expected {type_} for {repr(name)}; got {type(value)} "
-                    f"{repr(value)}"
-                )
-
-        self.values[name] = value
+        self.values.set(name, value, _strict)
 
     def clear(self):
-        """Clear all configuration keys by setting empty or default values.
-
-        :meth:`clear` also sets the default local platform::
-
-          {
-            "platform": {
-              "default": "local",
-              "local": {
-                "class": "jdbc",
-                "driver": "hsqldb",
-                "path": "~/.local/share/ixmp/localdb/default"
-              },
-          }
-        """
-        self.values = dict()
-        for name, (type_, default) in KEYS.items():
-            self.values[name] = default or type_()
-
-        # Set the default local database path; changed versus KEYS if IXMP_DATA has been
-        # altered since the module was imported
-        local = next(_iter_config_paths())[1].joinpath("localdb", "default")
-        self.values["platform"]["local"]["path"] = local
+        """Clear all configuration keys by setting empty or default values."""
+        self.values = self._ValuesClass()
 
     def save(self):
         """Write configuration keys to file.
@@ -219,20 +317,16 @@ class Config:
         # Make the directory to contain the configuration file
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        values = deepcopy(self.values)
-        for key, type_ in KEYS.items():
-            # Don't store empty strings
-            if type_ is str and values[key] == "":
-                values.pop(key)
+        values = asdict(self.values)
 
         # Write the file
-        log.info("Updating configuration file: {}".format(path))
+        log.info(f"Updating configuration file: {path}")
         path.write_text(_JSONEncoder(indent=2).encode(values))
 
         # Update the path attribute to match the written file
         self.path = path
 
-    def add_platform(self, name, *args, **kwargs):
+    def add_platform(self, name: str, *args, **kwargs):
         """Add or overwrite information about a platform.
 
         Parameters
@@ -249,10 +343,9 @@ class Config:
 
         See also
         --------
-        Backend.handle_config
-        JDBCBackend.handle_config
+        .Backend.handle_config
+        .JDBCBackend.handle_config
         """
-        args = list(args)
         if name == "default":
             assert len(args) == 1
             info = args[0]
@@ -262,9 +355,11 @@ class Config:
         else:
             from ixmp.backend import BACKENDS
 
+            _args = list(args)
+
             try:
                 # Get the backend class
-                cls = args.pop(0)
+                cls = _args.pop(0)
                 backend_class = BACKENDS[cls]
             except IndexError:
                 raise ValueError("Must give at least 1 arg: backend class")
@@ -272,8 +367,7 @@ class Config:
                 raise ValueError(f"No backend named {repr(cls)}")
 
             # Use the backend class' method to handle the arguments
-            info = backend_class.handle_config(args, kwargs)
-
+            info = backend_class.handle_config(_args, kwargs)
             info.setdefault("class", cls)
 
         if name in self.values["platform"]:
@@ -283,24 +377,27 @@ class Config:
 
         self.values["platform"][name] = info
 
-    def get_platform_info(self, name):
-        """Return information on configured Platform *name*.
+    def get_platform_info(self, name: str) -> Tuple[str, Dict[str, Any]]:
+        """Return information on configured Platform `name`.
 
         Parameters
         ----------
         name : str
-            Existing platform. If `name` is 'default', then the information for the
-            default platform is returned.
+            Existing platform. If `name` is "default", the information for the default
+            platform is returned.
 
         Returns
         -------
+        str
+            The name of the platform. If `name` was "default", this will be the actual
+            name of platform that is designated default.
         dict
-            The 'class' key specifies one of the :obj:`~.BACKENDS`. Other keys vary by
+            The "class" key specifies one of the :obj:`~.BACKENDS`. Other keys vary by
             backend class.
 
         Raises
         ------
-        KeyError
+        ValueError
             If `name` is not configured as a platform.
         """
         if name == "default":
@@ -313,9 +410,9 @@ class Config:
                 f"platform name {repr(name)} not among "
                 + repr(sorted(self.values["platform"].keys()))
                 + f"\nfrom {self.path}"
-            )
+            ) from None
 
-    def remove_platform(self, name):
+    def remove_platform(self, name: str):
         """Remove the configuration for platform `name`."""
         self.values["platform"].pop(name)
 

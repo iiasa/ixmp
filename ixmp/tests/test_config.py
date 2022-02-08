@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from ixmp._config import KEYS, Config, _JSONEncoder, _locate
+from ixmp._config import Config, _JSONEncoder, _locate
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def cfg():
     """Return a :class:`ixmp._config.Config` object without reading a file."""
     yield Config(read=False)
@@ -30,64 +30,89 @@ def test_locate(cfg):
         _locate("nonexistent")
 
 
-def test_set_get(cfg):
-    # ixmp has no string keys by default, so we insert a fake one
-    KEYS["test key"] = (str, None)
-    cfg.values["test key"] = "foo"
+class TestConfig:
+    def test_set_get(self, cfg):
+        # ixmp has no string keys by default, so we insert a fake one
+        cfg.register("test key", str, None)
+        cfg.values["test key"] = "foo"
 
-    # get() works
-    assert cfg.get("test key") == "foo"
+        # get() works
+        assert cfg.get("test key") == "foo"
 
-    # set() changes the value
-    cfg.set("test key", "bar")
-    assert cfg.get("test key") == "bar"
+        # set() changes the value
+        cfg.set("test key", "bar")
+        assert cfg.get("test key") == "bar"
 
-    # set() with None makes no change
-    cfg.set("test key", None)
-    assert cfg.get("test key") == "bar"
+        # set() with None makes no change
+        cfg.set("test key", None)
+        assert cfg.get("test key") == "bar"
 
-    # set() with invalid type raises exception
-    KEYS["test key"] = (int, None)
-    with pytest.raises(TypeError):
-        cfg.set("test key", "foo")
+    def test_set_invalid_type(self, cfg):
+        """set() with invalid type raises exception."""
+        cfg.register("test key", int, None)
+        with pytest.raises(TypeError):
+            cfg.set("test key", "foo")
 
+    def test_register(self, cfg):
+        # New key can be registered
+        cfg.register("new key", int, 42)
 
-def test_register(cfg):
-    # New key can be registered
-    cfg.register("new key", int, 42)
+        # Default value is set on the instance
+        assert cfg.get("new key") == 42
 
-    # Default value is set on the instance
-    assert cfg.get("new key") == 42
+        # Can't re-register an existing key
+        with pytest.raises(ValueError):
+            cfg.register("new key", int, 43)
 
-    # Can't re-register an existing key
-    with pytest.raises(KeyError):
-        cfg.register("new key", int, 43)
+        # Register a key with type Path
+        cfg.register("new key 2", Path)
 
-    # Register a key with type Path
-    cfg.register("new key 2", Path)
+        # The key can be with a string value, automatically converted to Path
+        cfg.set("new key 2", "/foo/bar/baz")
+        assert isinstance(cfg.get("new key 2"), Path)
 
-    # The key can be with a string value, automatically converted to Path
-    cfg.set("new key 2", "/foo/bar/baz")
-    assert isinstance(cfg.get("new key 2"), Path)
+    def test_register_late(self, monkeypatch, tmp_path):
+        """Calling Config.register() after load from file retains existing values."""
+        # Temporarily set IXMP_DATA to an empty directory, temporary for this function
+        monkeypatch.setenv("IXMP_DATA", tmp_path)
+        # Write a dummy config file
+        tmp_path.joinpath("config.json").write_text("""{"foo": 123}""")
 
+        # Read configuration from this file
+        cfg = Config()
+        assert cfg.get("foo") == 123
 
-def test_config_platform(cfg):
-    # Default platform is 'local'
-    assert cfg.values["platform"]["default"] == "local"
+        # Now register with a different default value
+        cfg.register("foo", int, 456)
 
-    # Set another platform as the default
-    cfg.add_platform("dummy", "jdbc", "oracle", "url", "user", "password")
-    cfg.add_platform("default", "dummy")
+        # Value read from file *not* overwritten by the default
+        assert cfg.get("foo") == 123
 
-    # Now the default platform is 'dummy'
-    assert cfg.values["platform"]["default"] == "dummy"
+        # Clearing applies the default value
+        cfg.clear()
+        assert cfg.get("foo") == 456
 
-    # Same info is retrieved for 'default' and the actual name
-    assert cfg.get_platform_info("default") == cfg.get_platform_info("dummy")
+        # Value is preserved in re-saved file
+        cfg.save()
+        assert """  "foo": 456""" in tmp_path.joinpath("config.json").read_text()
 
-    # Invalid calls
-    with pytest.raises(ValueError):
-        cfg.add_platform("invalid", "notabackend", "other", "args")
+    def test_platform(self, cfg):
+        # Default platform is 'local'
+        assert cfg.values["platform"]["default"] == "local"
 
-    with pytest.raises(ValueError):
-        cfg.get_platform_info("nonexistent")
+        # Set another platform as the default
+        cfg.add_platform("dummy", "jdbc", "oracle", "url", "user", "password")
+        cfg.add_platform("default", "dummy")
+
+        # Now the default platform is 'dummy'
+        assert cfg.values["platform"]["default"] == "dummy"
+
+        # Same info is retrieved for 'default' and the actual name
+        assert cfg.get_platform_info("default") == cfg.get_platform_info("dummy")
+
+        # Invalid calls
+        with pytest.raises(ValueError):
+            cfg.add_platform("invalid", "notabackend", "other", "args")
+
+        with pytest.raises(ValueError):
+            cfg.get_platform_info("nonexistent")

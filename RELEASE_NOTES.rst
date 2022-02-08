@@ -1,8 +1,18 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- Minimum requirements are increased for dependencies (:pull:`435`):
+
+  - Python 3.7 or greater. Python 3.6 reached end-of-life on 2021-12-31.
+  - Pandas 1.2 (2020-12-26) or greater, the oldest version with a minimum Python version of 3.7.
+
+- Improvements to configuration (:pull:`435`):
+
+  - The `jvmargs` argument to :class:`.JDBCBackend` can be set via the command line (:program:`ixmp platform add …`) or :meth:`.Config.add_platform`; see :ref:`configuration` (:issue:`408`).
+  - Bug fix: user config file values from downstream packages (e.g. :mod:`message_ix`) are respected (:issue:`415`).
 
 .. _v3.4.0:
 

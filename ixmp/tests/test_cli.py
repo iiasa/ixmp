@@ -73,7 +73,7 @@ def test_main(ixmp_cli, test_mp, tmp_path):
 def test_config(ixmp_cli):
     # ixmp has no string keys by default, so we insert a fake one
     ixmp.config.register("test key", str)
-    ixmp.config.values["test key"] = "foo"
+    ixmp.config.set("test key", "foo")
 
     # show() works
     assert ixmp_cli.invoke(["config", "show"]).output.startswith("Configuration path: ")
@@ -89,6 +89,9 @@ def test_config(ixmp_cli):
     # get() with a value is an invalid call
     result = ixmp_cli.invoke(["config", "get", "test key", "BADVALUE"])
     assert result.exit_code != 0
+
+    # Tidy up for other tests
+    ixmp.config.unregister("test key")
 
 
 def test_list(ixmp_cli, test_mp):

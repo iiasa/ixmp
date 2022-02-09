@@ -312,8 +312,8 @@ class JDBCBackend(CachingBackend):
 
         `args` will overwrite any `kwargs`, and may be one of:
 
-        - ("oracle", url, user, password) for an Oracle database.
-        - ("hsqldb", path) for a file-backed HyperSQL database.
+        - ("oracle", url, user, password, [jvmargs]) for an Oracle database.
+        - ("hsqldb", path, [jvmargs]) for a file-backed HyperSQL database.
         - ("hsqldb",) with "url" supplied via `kwargs`, e.g. "jdbc:hsqldb:mem://foo" for
           an in-memory database.
         """
@@ -330,12 +330,12 @@ class JDBCBackend(CachingBackend):
             )
 
         if info["driver"] == "oracle":
-            if len(args) != 3:
+            if len(args) < 3:
                 raise ValueError(
-                    "3 arguments required for driver=oracle: url, user, password; got: "
-                    + str(args)
+                    "3 or 4 arguments expected for driver=oracle: url, user, password, "
+                    f"[jvmargs]; got: {str(args)}"
                 )
-            info["url"], info["user"], info["password"] = args
+            info["url"], info["user"], info["password"], *jvmargs = args
 
         elif info["driver"] == "hsqldb":
             try:
@@ -346,15 +346,20 @@ class JDBCBackend(CachingBackend):
                         "must supply either positional path or url= keyword argument "
                         "for driver=hsqldb"
                     )
+            jvmargs = args
 
-            if len(args):
-                raise ValueError(
-                    f"Unrecognized extra argument(s) for driver=hsqldb: {args}"
-                )
         else:
             raise ValueError(
                 f"driver={info['driver']}; expected one of {set(DRIVER_CLASS)}"
             )
+
+        if len(jvmargs) > 1:
+            raise ValueError(
+                f"Unrecognized extra argument(s) for driver={info['driver']}: "
+                f"{jvmargs[1:]}"
+            )
+        elif len(jvmargs):
+            info["jvmargs"] = jvmargs[0]
 
         return info
 

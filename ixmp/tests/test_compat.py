@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from ixmp import _config, config
+from ixmp import config
 
 
 @pytest.fixture()
@@ -48,4 +48,4 @@ def test_message_model_dir(ixmp_cli, tmp_env, tmp_path):
 
     # Clean for remainder of tests
     config.unregister(key)
-    assert key not in _config.KEYS
+    assert key not in config.keys()

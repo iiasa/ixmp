@@ -21,15 +21,22 @@ jobs:
         - ubuntu-latest
         - windows-latest
         python-version:
-        - "3.6"  # Earliest version supported by ixmp
+        - "3.7"  # Earliest version supported by ixmp
         - "3.8"
-        - "3.9"  # Latest release / latest supported by ixmp
+        - "3.9"
+        - "3.10"  # Latest release / latest supported by ixmp
 
-        # For development versions of Python, compiled binary wheels are not
-        # available for some dependencies, e.g. llvmlite, numba, numpy, and/or
-        # pandas. Compiling these on the job runner requires a more elaborate
-        # build environment, currently out of scope for the ixmp project.
-        # - "3.10.0-alpha.1"  # Development version
+        # For fresh releases and development versions of Python, compiled
+        # binary wheels are not available for some dependencies, e.g. llvmlite,
+        # numba, numpy, and/or pandas. Compiling these on the job runner
+        # requires a more elaborate build environment, currently out of scope
+        # for the ixmp project.
+        # - "3.11.0-alpha.1"  # Development version
+
+        exclude:
+        # JPype1 binary wheels are not available for this combination
+        - os: windows-latest
+          python-version: "3.10"
 
       fail-fast: false
 
@@ -38,7 +45,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs that have not completed
-      uses: styfle/cancel-workflow-action@0.7.0
+      uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
 
@@ -53,7 +60,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - uses: r-lib/actions/setup-r@master
+    - uses: r-lib/actions/setup-r@v2
       id: setup-r
 
     - name: Cache GAMS installer, Python packages, and R packages
@@ -81,14 +88,6 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
-    - name: Use OpenJDK 14 (macOS only)
-      # Using the default OpenJDK 1.8 on the macos-latest runner produces
-      # "Abort trap: 6" when JPype1 starts the JVM
-      if: ${{ startsWith(matrix.os, 'macos') }}
-      uses: actions/setup-java@v1
-      with:
-        java-version: '14'
-
     - name: Upgrade pip, wheel, setuptools-scm
       run: python -m pip install --upgrade pip wheel setuptools-scm
 
@@ -115,8 +114,7 @@ jobs:
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
 
     - name: Test documentation build using Sphinx
-      if: matrix.python-version != '3.6'
       run: make --directory=doc html
 
     - name: Upload test coverage to Codecov.io
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2

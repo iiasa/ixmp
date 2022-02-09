@@ -220,18 +220,15 @@ def test_format_scenario_list(test_mp_f):
     ] == utils.format_scenario_list(mp)
 
     # With as_url=True
-    assert (
-        list(
-            map(
-                lambda s: s.format(mp.name),
-                [
-                    "ixmp://{}/Douglas Adams/Hitchhiker#1",
-                    "ixmp://{}/canning problem/standard#2",
-                ],
-            )
+    assert list(
+        map(
+            lambda s: s.format(mp.name),
+            [
+                "ixmp://{}/Douglas Adams/Hitchhiker#1",
+                "ixmp://{}/canning problem/standard#2",
+            ],
         )
-        == utils.format_scenario_list(mp, as_url=True)
-    )
+    ) == utils.format_scenario_list(mp, as_url=True)
 
 
 def test_maybe_commit(caplog, test_mp):

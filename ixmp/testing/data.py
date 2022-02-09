@@ -261,11 +261,11 @@ def random_model_data(length):
     add_random_model_data
     """
     # Dimension size
-    dim_len = ceil(length ** 0.5)
+    dim_len = ceil(length**0.5)
     set_data = list(str(i) for i in range(dim_len))
 
     # Revised length, possibly slightly higher than original
-    length = dim_len ** 2
+    length = dim_len**2
 
     par_data = pd.concat(
         [

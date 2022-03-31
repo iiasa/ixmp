@@ -1,5 +1,4 @@
 import logging
-from functools import partial
 from itertools import repeat, zip_longest
 from numbers import Real
 from os import PathLike

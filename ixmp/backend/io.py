@@ -209,7 +209,7 @@ def s_read_excel(be, s, path, add_units=False, init_items=False, commit_steps=Fa
         except IndexError:
             break  # Finished
 
-        log.info(name)
+        # log.debug(name)
 
         first_pass = data is None
         if first_pass:

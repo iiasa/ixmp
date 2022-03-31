@@ -1,5 +1,5 @@
 Contributing to development
-===========================
+***************************
 
 The |MESSAGEix| software stack, including :mod:`ixmp` and :mod:`message_ix`, is developed by a single group of contributors in an integrated process.
 The MESSAGEix documentation contains :doc:`complete guidelines <message_ix:contributing>` for contributing to the code base, at: https://docs.messageix.org/en/latest/contributing.html.

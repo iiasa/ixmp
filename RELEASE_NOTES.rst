@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- Improve performance in :meth:`.add_par` (:pull:`441`).
 - Minimum requirements are increased for dependencies (:pull:`435`):
 
   - Python 3.7 or greater. Python 3.6 reached end-of-life on 2021-12-31.

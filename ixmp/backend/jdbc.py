@@ -822,18 +822,29 @@ class JDBCBackend(CachingBackend):
         first_model_year=None,
     ):
         # Raise exceptions for limitations of JDBCBackend
-        if not isinstance(platform_dest._backend, self.__class__):
-            raise NotImplementedError(  # pragma: no cover
-                f"Clone between {self.__class__} and"
-                f"{platform_dest._backend.__class__}"
-            )
-        elif platform_dest._backend is not self:
+        if platform_dest._backend is not self:
             package = s.__class__.__module__.split(".")[0]
             msg = f"Cross-platform clone of {package}.Scenario with"
             if keep_solution is False:
                 raise NotImplementedError(f"{msg} `keep_solution=False`")
             elif "message_ix" in msg and first_model_year is not None:
                 raise NotImplementedError(f"{msg} first_model_year != None")
+
+        # # This condition replicates existing behaviour
+        # if not isinstance(platform_dest._backend, self.__class__):
+        # This condition is what is desired; see the PR
+        if True:
+            return super().clone(
+                s,
+                platform_dest,
+                model,
+                scenario,
+                annotation,
+                keep_solution,
+                first_model_year,
+            )
+
+        # Remaining code can be deleted once the PR is complete
 
         # Prepare arguments
         args = [platform_dest._backend.jobj, model, scenario, annotation, keep_solution]
@@ -1127,8 +1138,10 @@ class JDBCBackend(CachingBackend):
             return getattr(self.jindex[s], f"get{ix_type.title()}")(*args)
         except java.IxException as e:
             # Regex for similar but not consistent messages from Java code
-            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this " "Scenario!"
-            if re.match(msg, e.args[0]):
+            if re.match(
+                f"No (item|{ix_type.title()}) '?{name}'? exists in this Scenario!",
+                e.args[0],
+            ):
                 # Re-raise as a Python KeyError
                 raise KeyError(name) from None
             else:  # pragma: no cover

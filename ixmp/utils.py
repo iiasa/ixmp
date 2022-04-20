@@ -456,7 +456,7 @@ def format_scenario_list(
     lines = []
 
     if as_url:
-        info["url"] = "ixmp://{}".format(platform.name)
+        info["url"] = f"ixmp://{platform.name}"
         urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")
         lines = urls.tolist()
     else:

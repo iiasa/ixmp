@@ -244,6 +244,11 @@ class TimeSeries:
         """Get the run id of this TimeSeries."""
         return self._backend("run_id")
 
+    @property
+    def url(self) -> str:
+        """URL fragment for the TimeSeries."""
+        return f"{self.model}/{self.scenario}#{self.version}"
+
     # Time series data
 
     def preload_timeseries(self) -> None:

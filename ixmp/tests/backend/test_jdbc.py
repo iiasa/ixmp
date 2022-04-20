@@ -4,13 +4,14 @@ from sys import getrefcount
 from typing import Tuple
 
 import jpype
+import numpy as np
 import pytest
 from pytest import raises
 
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import java
-from ixmp.testing import add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 
 log = logging.getLogger(__name__)
@@ -121,6 +122,16 @@ class TestJDBCBackend:
         kwargs = dict()
 
         assert dict(driver="hsqldb", path=tmp_path) == klass.handle_config(args, kwargs)
+
+    def test_add_timeseries_inf(self, mp):
+        """:meth:`JDBCBackend.set_data` errors on :data:`numpy.inf` values."""
+        ts = ixmp.TimeSeries(mp, "model name", "scenario name", version="new")
+
+        data = DATA[0].assign(value=[np.inf, -np.inf])
+
+        with pytest.raises(FileNotFoundError):  # Not the actual exception
+            ts.add_timeseries(data)
+            ts.commit("")
 
     def test_read_file(self, tmp_path, be):
         """Cannot read CSV files."""

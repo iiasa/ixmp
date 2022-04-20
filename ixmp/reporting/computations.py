@@ -6,7 +6,8 @@ import pint
 from genno.core.quantity import Quantity
 from genno.util import parse_units
 
-from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
+from ixmp.reporting.util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
+from ixmp.utils import to_iamc_layout
 
 log = logging.getLogger(__name__)
 
@@ -166,6 +167,27 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
     )
 
 
+def store_ts(scenario, *data):
+    """Store time series data on `scenario`."""
+    import pyam
+
+    log.info(f"Store time series data on '{scenario.url}'")
+    scenario.check_out()
+
+    for order, df in enumerate(data):
+        df = (
+            df.as_pandas(meta_cols=False)
+            if isinstance(df, pyam.IamDataFrame)
+            else to_iamc_layout(df)
+        )
+
+        # Add the data
+        log.info(f"  ← {len(df)} rows")
+        scenario.add_timeseries(df)
+
+    scenario.commit(f"Data added using {__name__}")
+
+
 def update_scenario(scenario, *quantities, params=[]):
     """Update *scenario* with computed data from reporting *quantities*.
 
@@ -178,7 +200,7 @@ def update_scenario(scenario, *quantities, params=[]):
         For every element of `quantities` that is a pd.DataFrame, the element of
         `params` at the same index gives the name of the parameter to update.
     """
-    log.info("Update '{0.model}/{0.scenario}#{0.version}'".format(scenario))
+    log.info(f"Update '{scenario.url}'")
     scenario.check_out()
 
     for order, (qty, par_name) in enumerate(zip_longest(quantities, params)):

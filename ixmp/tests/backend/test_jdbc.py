@@ -63,44 +63,74 @@ def test_close(test_mp_f, capfd):
 VE = pytest.mark.xfail(raises=ValueError)
 
 
-@pytest.mark.parametrize(
-    "args, kwargs, expected",
-    (
-        # Advertised forms
+class TestJDBCBackend:
+    @pytest.fixture(scope="class")
+    def klass(self):
+        """The JDBCBackend class."""
+        yield ixmp.backend.jdbc.JDBCBackend
+
+    @pytest.fixture(scope="function")
+    def mp(self):
+        """A Platform connected to a JDBCBackend."""
+        yield ixmp.Platform(
+            backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest"
+        )
+
+    @pytest.fixture()
+    def be(self, mp):
+        """The Backend object itself."""
+        yield mp._backend
+
+    @pytest.mark.parametrize(
+        "args, kwargs, expected",
         (
-            ("oracle", "url", "user", "pass"),
-            dict(),
-            dict(driver="oracle", url="url", user="user", password="pass"),
+            # Advertised forms
+            (
+                ("oracle", "url", "user", "pass"),
+                dict(),
+                dict(driver="oracle", url="url", user="user", password="pass"),
+            ),
+            (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
+            # Invalid
+            pytest.param(tuple(), dict(), None, marks=VE),
+            pytest.param(("not a driver",), dict(), None, marks=VE),
+            pytest.param(
+                ("oracle", "url", "u", "p", "-Xmx12G", "extra?!"),
+                dict(),
+                None,
+                marks=VE,
+            ),
+            pytest.param(
+                ("hsqldb", "path", "-Xmx12G", "extra?!"), dict(), None, marks=VE
+            ),
+            pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
+            pytest.param(("hsqldb",), dict(), None, marks=VE),
         ),
-        (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
-        # Invalid
-        pytest.param(tuple(), dict(), None, marks=VE),
-        pytest.param(("not a driver",), dict(), None, marks=VE),
-        pytest.param(
-            ("oracle", "url", "u", "p", "-Xmx12G", "extra?!"), dict(), None, marks=VE
-        ),
-        pytest.param(("hsqldb", "path", "-Xmx12G", "extra?!"), dict(), None, marks=VE),
-        pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
-        pytest.param(("hsqldb",), dict(), None, marks=VE),
-    ),
-)
-def test_handle_config(args, kwargs, expected):
-    """Test :meth:`JDBCBackend.handle_config`."""
-    assert expected == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+    )
+    def test_handle_config(self, klass, args, kwargs, expected):
+        """Test :meth:`JDBCBackend.handle_config`."""
+        assert expected == klass.handle_config(args, kwargs)
 
+    def test_handle_config_path(self, tmp_path, klass):
+        """Test :meth:`JDBCBackend.handle_config` for HyperSQL paths.
 
-def test_handle_config_path(tmp_path):
-    """Test :meth:`JDBCBackend.handle_config` for HyperSQL paths.
+        This is separate from :func:`test_handle_config` because the
+        :class:`~pathlib.Path` object stored/returned varies across platforms.
+        """
+        args = ("hsqldb", str(tmp_path))
+        kwargs = dict()
 
-    This is separate from :func:`test_handle_config` because the :class:`~pathlib.Path`
-    object stored/returned varies across platforms.
-    """
-    args = ("hsqldb", str(tmp_path))
-    kwargs = dict()
+        assert dict(driver="hsqldb", path=tmp_path) == klass.handle_config(args, kwargs)
 
-    assert dict(
-        driver="hsqldb", path=tmp_path
-    ) == ixmp.backend.jdbc.JDBCBackend.handle_config(args, kwargs)
+    def test_read_file(self, tmp_path, be):
+        """Cannot read CSV files."""
+        with pytest.raises(NotImplementedError):
+            be.read_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
+
+    def test_write_file(self, tmp_path, be):
+        """Cannot write CSV files."""
+        with pytest.raises(NotImplementedError):
+            be.write_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
 
 
 def test_exceptions(test_mp):
@@ -155,20 +185,6 @@ def test_cache_arg(arg):
     scen.par("a")
 
     assert len(mp._backend._cache) == (1 if arg else 0)
-
-
-def test_read_file(test_mp, tmp_path):
-    be = test_mp._backend
-
-    with pytest.raises(NotImplementedError):
-        be.read_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
-
-
-def test_write_file(test_mp, tmp_path):
-    be = test_mp._backend
-
-    with pytest.raises(NotImplementedError):
-        be.write_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
 
 
 # This variable formerly had 'warns' as the third element in some tuples, to

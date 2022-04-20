@@ -59,11 +59,11 @@ class Reporter(Computer):
             comps = keys_for_quantity(ix_type, name, scenario)
 
             # Add to the graph and index, including sums
-            rep.add(*comps[0], strict=True, index=True, sums=True)
+            rep.add(*comps[0], strict=True, sums=True)
 
             try:
                 # Add any marginals, but without sums
-                rep.add(*comps[1], strict=True, index=True)
+                rep.add(*comps[1], strict=True)
             except IndexError:
                 pass  # Not an equ/var with marginals
 

@@ -40,12 +40,14 @@ class VersionType(click.ParamType):
 @click.option("--version", type=VersionType(), help="Scenario version.")
 @click.pass_context
 def main(ctx, url, platform, dbprops, model, scenario, version):
+    ctx.obj = dict()
+
     # Load the indicated Platform
     mp = None
     if url:
         if dbprops or platform or model or scenario or version:
             raise click.UsageError(
-                "--platform --model --scenario and/or " "--version redundant with --url"
+                "--platform --model --scenario and/or --version redundant with --url"
             )
 
         scen, mp = ScenarioClass.from_url(url)
@@ -61,7 +63,7 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
     if not mp:
         return
 
-    ctx.obj = dict(mp=mp)
+    ctx.obj.update(mp=mp)
 
     # Store the model and scenario name from arguments
     if model:
@@ -116,7 +118,7 @@ def show_versions_cmd():
     default=False,
     help="Remove any existing model solution data.",
 )
-@click.pass_obj
+@click.pass_context
 def solve(context, remove_solution):
     """Solve a Scenario and store results on the Platform.
 
@@ -125,12 +127,17 @@ def solve(context, remove_solution):
 
     If the scenario already has a solution, --remove-solution must be given.
     """
-    if not context:
+    if not context.obj:
         raise click.UsageError("give --url before command solve")
 
-    print("Run scenario solver")
+    print("Load scenario")
 
-    scen = context.get("scen")
+    scen = context.obj.get("scen")
+
+    if scen is None:
+        context.fail("not found")
+
+    print("Run scenario solver")
 
     if remove_solution and scen.has_solution():
         scen.remove_solution()

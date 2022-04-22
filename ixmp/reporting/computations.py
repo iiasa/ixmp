@@ -168,7 +168,19 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
 
 
 def store_ts(scenario, *data):
-    """Store time series data on `scenario`."""
+    """Store time series `data` on `scenario`.
+
+    The data is stored using :meth:`.add_timeseries`; `scenario` is checked out and then
+    committed.
+
+    Parameters
+    ----------
+    scenario :
+        Scenario on which to store data.
+    data : pandas.DataFrame or pyam.IamDataFrame
+        1 or more objects containing data to store. If :class:`pandas.DataFrame`, the
+        data are passed through :func:`to_iamc_layout`.
+    """
     import pyam
 
     log.info(f"Store time series data on '{scenario.url}'")

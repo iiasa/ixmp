@@ -210,6 +210,7 @@ Utilities
       parse_url
       show_versions
       update_par
+      to_iamc_layout
 
 Testing utilities
 -----------------

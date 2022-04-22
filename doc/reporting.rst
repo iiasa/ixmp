@@ -134,6 +134,7 @@ Computations
       data_for_quantity
       map_as_qty
       update_scenario
+      store_ts
 
    Basic computations are defined by :mod:`genno.computation`; and its compatibility modules; see there for details:
 

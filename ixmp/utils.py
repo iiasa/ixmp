@@ -318,13 +318,13 @@ def parse_url(url):
 
 
 def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
-    """Transform *df* to a standard IAMC layout.
+    """Transform `df` to the IAMC structure/layout.
 
     The returned object has:
 
     - Any (Multi)Index levels reset as columns.
     - Lower-case column names 'region', 'variable', 'subannual', and 'unit'.
-    - If not present in *df*, the value 'Year' in the 'subannual' column.
+    - If not present in `df`, the value 'Year' in the 'subannual' column.
 
     Parameters
     ----------

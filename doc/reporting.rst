@@ -148,9 +148,15 @@ Computations
       ~genno.computations.combine
       ~genno.computations.concat
       ~genno.computations.disaggregate_shares
+      ~genno.computations.div
       ~genno.computations.group_sum
+      ~genno.computations.interpolate
       ~genno.computations.load_file
+      ~genno.computations.mul
+      ~genno.computations.pow
       ~genno.computations.product
+      ~genno.computations.relabel
+      ~genno.computations.rename_dims
       ~genno.computations.ratio
       ~genno.computations.select
       ~genno.computations.sum

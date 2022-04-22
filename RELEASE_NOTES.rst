@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- New attribute :attr:`.url` for convenience in constructing :class:`.TimeSeries`/:class:`.Scenario` URLS (:pull:`444`).
 - New :func:`.store_ts` reporting computation for storing time-series data on a :class:`.TimeSeries`/:class:`.Scenario` (:pull:`444`).
 - Improve performance in :meth:`.add_par` (:pull:`441`).
 - Minimum requirements are increased for dependencies (:pull:`435`):

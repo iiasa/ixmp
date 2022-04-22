@@ -63,7 +63,7 @@ TimeSeries
    - Instantiating a new TimeSeries with the same `model` and `scenario` as an existing TimeSeries.
    - Calling :meth:`Scenario.clone`.
 
-   TimeSeries objects have the following methods:
+   TimeSeries objects have the following methods and attributes:
 
    .. autosummary::
       add_geodata
@@ -82,6 +82,7 @@ TimeSeries
       set_as_default
       timeseries
       transact
+      url
 
 
 Scenario

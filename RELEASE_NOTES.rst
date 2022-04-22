@@ -30,10 +30,10 @@ Code should use :func:`numpy.isscalar`.
 All changes
 -----------
 
-- :pull:`422`: Add :meth:`.TimeSeries.transact`, for wrapping data manipulations in :meth:`~.TimeSeries.check_out` and :meth:`~.TimeSeries.commit` operations.
-- :pull:`422`: Add :doc:`data-model`, a documentation page giving a complete description of the :mod:`ixmp` data model.
-- :pull:`422`: Add the :command:`pytest --user-config` command-line option, to use user's local configuration when testing.
-- :pull:`421`: Adjust :func:`.format_scenario_list` for changes in :mod:`pandas` 1.3.0.
+- Add :meth:`.TimeSeries.transact`, for wrapping data manipulations in :meth:`~.TimeSeries.check_out` and :meth:`~.TimeSeries.commit` operations (:pull:`422`).
+- Add :doc:`data-model`, a documentation page giving a complete description of the :mod:`ixmp` data model (:pull:`422`).
+- Add the :command:`pytest --user-config` command-line option, to use user's local configuration when testing (:pull:`422`).
+- Adjust :func:`.format_scenario_list` for changes in :mod:`pandas` 1.3.0 (:pull:`421`).
 
 
 .. _v3.3.0:
@@ -59,8 +59,8 @@ All changes
 - Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
 - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows (:pull:`398`).
 - Format user-friendly exceptions when GAMSModel errors (:issue:`383`, :pull:`398`).
-- Adjust :mod:`ixmp.reporting` to use :mod:`genno` (:pull:`397`:).
-- Fix two minor bugs in reporting (:pull:`396`:).
+- Adjust :mod:`ixmp.reporting` to use :mod:`genno` (:pull:`397`).
+- Fix two minor bugs in reporting (:pull:`396`).
 
 v3.2.0 (2021-01-24)
 ===================
@@ -68,15 +68,15 @@ v3.2.0 (2021-01-24)
 All changes
 -----------
 
-- :pull:`394`: Increase JPype minimum version to 1.2.1.
-- :pull:`391`: Adjust test suite for pandas v1.2.0.
-- :pull:`374`: Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data.
-- :pull:`389`: Depend on :mod:`openpyxl` instead of :mod:`xlrd` and :mod:`xlsxwriter` for Excel I/O; :mod:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx`.
-- :pull:`367`: Add a parameter for exporting all model+scenario run versions to :meth:`.Platform.export_timeseries_data`, and fix a bug where exporting all runs happens uninteneded.
-- :pull:`378`: Silence noisy output from ignored exceptions on JDBCBackend/JVM shutdown.
-- :pull:`376`: Add a utility method, :func:`.gams_version`, to check the installed version of GAMS.
+- Increase JPype minimum version to 1.2.1 (:pull:`394`).
+- Adjust test suite for pandas v1.2.0 (:pull:`391`).
+- Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data (:pull:`374`).
+- Depend on :mod:`openpyxl` instead of :mod:`xlrd` and :mod:`xlsxwriter` for Excel I/O; :mod:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx` (:pull:`389`).
+- Add a parameter for exporting all model+scenario run versions to :meth:`.Platform.export_timeseries_data`, and fix a bug where exporting all runs happens uninteneded (:pull:`367`).
+- Silence noisy output from ignored exceptions on JDBCBackend/JVM shutdown (:pull:`378`).
+- Add a utility method, :func:`.gams_version`, to check the installed version of GAMS (:pull:`376`).
   The result is displayed by the ``ixmp show-versions`` CLI command/:func:`.show_versions`.
-- :pull:`376`: :meth:`.init_par` and related methods accept any sequence (not merely :class:`list`) of :class:`str` for the `idx_sets` and `idx_names` arguments.
+- :meth:`.init_par` and related methods accept any sequence (not merely :class:`list`) of :class:`str` for the `idx_sets` and `idx_names` arguments (:pull:`376`).
 
 
 v3.1.0 (2020-08-28)
@@ -87,22 +87,22 @@ All changes
 
 ixmp v3.1.0 coincides with message_ix v3.1.0.
 
-- :pull:`345`: Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets.
-- :pull:`363`: Expand documentation and revise installation instructions.
-- :pull:`362`: Raise Python exceptions from :class:`.JDBCBackend`.
-- :pull:`354`: Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export``.
-- :pull:`353`: Add functionality for storing ‘meta’ (annotations of model names, scenario names, versions, and some combinations thereof).
+- Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets (:pull:`345`).
+- Expand documentation and revise installation instructions (:pull:`363`).
+- Raise Python exceptions from :class:`.JDBCBackend` (:pull:`362`).
+- Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export`` (:pull:`354`).
+- Add functionality for storing ‘meta’ (annotations of model names, scenario names, versions, and some combinations thereof) (:pull:`353`).
 
   - Add :meth:`.Backend.add_model_name`, :meth:`~.Backend.add_scenario_name`, :meth:`~.Backend.get_model_names`, :meth:`~.Backend.get_scenario_names`, :meth:`~.Backend.get_meta`, :meth:`~.Backend.set_meta`, :meth:`~.Backend.remove_meta`.
   - Allow these to be called from :class:`.Platform` instances.
   - Remove :meth:`.Scenario.delete_meta`.
 
-- :pull:`349`: Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel`.
-- :pull:`343`: Add region/unit parameters to :meth:`.Platform.export_timeseries_data`.
-- :pull:`347`: Preserve dtypes of index columns in :func:`.data_for_quantity`.
-- :pull:`339`: ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype.
-- :pull:`317`: Make :class:`reporting.Quantity` classes interchangeable.
-- :pull:`330`: Use GitHub Actions for continuous testing and integration.
+- Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel` (:pull:`349`).
+- Add region/unit parameters to :meth:`.Platform.export_timeseries_data` (:pull:`343`).
+- Preserve dtypes of index columns in :func:`.data_for_quantity` (:pull:`347`).
+- ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype (:pull:`339`).
+- Make :class:`reporting.Quantity` classes interchangeable (:pull:`317`).
+- Use GitHub Actions for continuous testing and integration (:pull:`330`).
 
 
 v3.0.0 (2020-06-05)
@@ -149,26 +149,24 @@ Deprecations and deprecation policy
 All changes
 -----------
 
-- :pull:`327`: Bump JPype dependency to 0.7.5.
-- :pull:`298`: Improve memory management in :class:`.JDBCBackend`.
-- :pull:`316`: Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs).
-- :pull:`315`: Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects.
-- :pull:`320`: Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging.
-- :pull:`314`: Bulk saving for metadata and exposing documentation API
-- :pull:`312`: Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add`.
-- :pull:`310`: :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes.
-- :pull:`304`: Add CLI command ``ixmp solve`` to run model solver.
-- :pull:`303`: Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`).
-- :pull:`295`: Add option to include `subannual` column in dataframe returned by :meth:`.TimeSeries.timeseries`.
-- :pull:`286`,
-  :pull:`297`,
-  :pull:`309`: Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix` and enhanced for dealing with maximum row limits in Excel.
-- :pull:`270`: Include all tests in the ixmp package.
-- :pull:`212`: Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme.
-- :pull:`267`: Apply units to reported quantities.
-- :pull:`261`: Increase minimum pandas version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_.
-- :pull:`243`: Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV.
-- :pull:`264`: Implement methods to get and create new subannual timeslices.
+- Bump JPype dependency to 0.7.5 (:pull:`327`).
+- Improve memory management in :class:`.JDBCBackend` (:pull:`298`).
+- Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs) (:pull:`316`).
+- Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects (:pull:`315`).
+- Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging (:pull:`320`).
+- Bulk saving for metadata and exposing documentation AP (:pull:`314`)I
+- Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add` (:pull:`312`).
+- :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes (:pull:`310`).
+- Add CLI command ``ixmp solve`` to run model solver (:pull:`304`).
+- Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`) (:pull:`303`).
+- Add option to include `subannual` column in dataframe returned by :meth:`.TimeSeries.timeseries` (:pull:`295`).
+- Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix` and enhanced for dealing with maximum row limits in Excel (:pull:`286`, :pull:`297`, :pull:`309`).
+- Include all tests in the ixmp package (:pull:`270`).
+- Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme (:pull:`212`).
+- Apply units to reported quantities (:pull:`267`).
+- Increase minimum pandas version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_ (:pull:`261`).
+- Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV (:pull:`243`).
+- Implement methods to get and create new subannual timeslices (:pull:`264`).
 
 
 v2.0.0 (2020-01-14)

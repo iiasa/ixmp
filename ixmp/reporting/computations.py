@@ -181,6 +181,9 @@ def store_ts(scenario, *data):
         1 or more objects containing data to store. If :class:`pandas.DataFrame`, the
         data are passed through :func:`to_iamc_layout`.
     """
+    # TODO tolerate invalid types/errors on elements of `data`, logging exceptions on
+    #      level ERROR, then continue and commit anyway; add an optional parameter like
+    #      continue_on_error=True to control this behaviour
     import pyam
 
     log.info(f"Store time series data on '{scenario.url}'")

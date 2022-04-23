@@ -244,6 +244,32 @@ class TimeSeries:
         """Get the run id of this TimeSeries."""
         return self._backend("run_id")
 
+    @property
+    def url(self) -> str:
+        """URL fragment for the TimeSeries.
+
+        This has the format ``{model name}/{scenario name}#{version}``, with the same
+        values passed when creating the TimeSeries instance.
+
+        Examples
+        --------
+        To form a complete URL (e.g. to use with :meth:`.from_url`), use a configured
+        :class:`Platform` name:
+
+        >>> platform_name = "my-ixmp-platform"
+        >>> mp = Platform(platform_name)
+        >>> ts = TimeSeries(mp, "foo", "bar", 34)
+        >>> ts.url
+        "foo/bar#34"
+        >>> f"ixmp://{platform_name}/{ts.url}"
+        "ixmp://platform_name/foo/bar#34"
+
+        .. note:: Use caution: because Platform configuration is system-specific, other
+           systems must have the same configuration for `platform_name` in order for
+           the URL to refer to the same TimeSeries/Scenario.
+        """
+        return f"{self.model}/{self.scenario}#{self.version}"
+
     # Time series data
 
     def preload_timeseries(self) -> None:

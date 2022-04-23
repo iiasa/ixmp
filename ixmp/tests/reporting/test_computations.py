@@ -2,13 +2,16 @@ import logging
 from functools import partial
 
 import pandas as pd
+import pyam
 import pytest
 from genno import Computer, Quantity
 from genno.testing import assert_qty_equal
 from pandas.testing import assert_frame_equal
 
-from ixmp.model.dantzig import DATA
-from ixmp.reporting.computations import map_as_qty, update_scenario
+from ixmp import Scenario
+from ixmp.model.dantzig import DATA as dantzig_data
+from ixmp.reporting.computations import map_as_qty, store_ts, update_scenario
+from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
@@ -40,7 +43,7 @@ def test_map_as_qty():
     assert_qty_equal(exp, result)
 
 
-def test_update_scenario(request, caplog, test_mp):
+def test_update_scenario(caplog, test_mp):
     scen = make_dantzig(test_mp)
     scen.check_out()
     scen.add_set("j", "toronto")
@@ -57,7 +60,7 @@ def test_update_scenario(request, caplog, test_mp):
     c.add("target", scen)
 
     # Create a pd.DataFrame suitable for Scenario.add_par()
-    data = DATA["d"].query("j == 'chicago'").assign(j="toronto")
+    data = dantzig_data["d"].query("j == 'chicago'").assign(j="toronto")
     data["value"] += 1.0
 
     # Add to the Reporter
@@ -75,7 +78,7 @@ def test_update_scenario(request, caplog, test_mp):
     assert len(scen.par("d")) == N_before + len(data)
 
     # Modify the data
-    data = pd.concat([DATA["d"], data]).reset_index(drop=True)
+    data = pd.concat([dantzig_data["d"], data]).reset_index(drop=True)
     data["value"] *= 2.0
 
     # Convert to a Quantity object and re-add
@@ -91,3 +94,44 @@ def test_update_scenario(request, caplog, test_mp):
 
     # All the rows have been updated
     assert_frame_equal(scen.par("d"), data)
+
+
+def test_store_ts(request, caplog, test_mp):
+    # Computer and target scenario
+    c = Computer()
+
+    # Target scenario
+    model_name = __name__
+    scenario_name = "test scenario"
+    scen = Scenario(test_mp, model_name, scenario_name, version="new")
+    scen.commit("Empty scenario")
+    c.add("target", scen)
+
+    # Add test data to the Computer: a pd.DataFrame
+    input_1 = test_data[0].assign(variable="Foo")
+    c.add("input 1", input_1)
+
+    # A pyam.IamDataFrame
+    input_2 = test_data[2050].assign(variable="Bar")
+    c.add("input 2", pyam.IamDataFrame(input_2))
+
+    # Expected results: same as input, but with the `model` and `scenario` columns
+    # filled automatically.
+    expected_1 = input_1.assign(model=model_name, scenario=scenario_name)
+    expected_2 = input_2.assign(model=model_name, scenario=scenario_name)
+
+    # Task to update the scenario with the data
+    c.add("test 1", store_ts, "target", "input 1", "input 2")
+
+    # Scenario starts empty of time series data
+    assert 0 == len(scen.timeseries())
+
+    # The computation runs successfully
+    c.get("test 1")
+
+    # All rows from both inputs are present
+    assert len(input_1) + len(input_2) == len(scen.timeseries())
+
+    # Input is stored exactly
+    assert_frame_equal(expected_1, scen.timeseries(variable="Foo"))
+    assert_frame_equal(expected_2, scen.timeseries(variable="Bar"))

@@ -369,6 +369,10 @@ def test_solve(ixmp_cli, test_mp):
     assert result.exit_code == 1, result.output
     assert "Error: model='non-existing'" in result.output
 
+    result = ixmp_cli.invoke([f"--url=ixmp://{test_mp.name}/foo/bar", "solve"])
+    assert UsageError.exit_code == result.exit_code, result.output
+    assert "Error: not found" in result.output
+
     # no platform/scenario provided
     cmd = ["solve"]
     result = ixmp_cli.invoke(cmd)

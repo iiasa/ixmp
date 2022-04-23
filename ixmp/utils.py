@@ -318,13 +318,13 @@ def parse_url(url):
 
 
 def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
-    """Transform *df* to a standard IAMC layout.
+    """Transform `df` to the IAMC structure/layout.
 
     The returned object has:
 
     - Any (Multi)Index levels reset as columns.
     - Lower-case column names 'region', 'variable', 'subannual', and 'unit'.
-    - If not present in *df*, the value 'Year' in the 'subannual' column.
+    - If not present in `df`, the value 'Year' in the 'subannual' column.
 
     Parameters
     ----------
@@ -456,7 +456,7 @@ def format_scenario_list(
     lines = []
 
     if as_url:
-        info["url"] = "ixmp://{}".format(platform.name)
+        info["url"] = f"ixmp://{platform.name}"
         urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")
         lines = urls.tolist()
     else:

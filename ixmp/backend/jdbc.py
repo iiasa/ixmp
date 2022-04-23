@@ -11,6 +11,7 @@ from typing import Generator, List, Mapping
 from weakref import WeakKeyDictionary
 
 import jpype
+import numpy as np
 import pandas as pd
 
 from ixmp.backend import FIELDS, ItemType
@@ -260,6 +261,9 @@ class JDBCBackend(CachingBackend):
                 properties.getProperty("jdbc.url")
             )
         )
+
+        # Store a copy of the properties for later introspection
+        self._properties = properties
 
         try:
             self.jobj = java.Platform("Python", properties)
@@ -793,6 +797,14 @@ class JDBCBackend(CachingBackend):
         for k, v in data.items():
             # Explicit cast is necessary; otherwise java.lang.Long
             jdata.put(java.Integer(k), v)
+        # Oracle is unable to handle ±∞ (issue #442)
+        if self._properties["jdbc.driver"] == DRIVER_CLASS["oracle"] and any(
+            map(np.isinf, data.values())
+        ):
+            raise ValueError(
+                f"± infinity (at region={region}, variable={variable}) cannot be stored"
+                " in an Oracle database using JDBCBackend"
+            )
 
         self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit, meta)
 

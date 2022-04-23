@@ -277,7 +277,7 @@ class JDBCBackend(CachingBackend):
             jclass = e.__class__.__name__
             if jclass.endswith("HikariPool.PoolInitializationException"):
                 redacted = copy(kwargs)
-                redacted.update({"user": "(HIDDEN)", "password": "(HIDDEN)"})
+                redacted.update(user="(HIDDEN)", password="(HIDDEN)")
                 msg = f"unable to connect to database:\n{repr(redacted)}"
             elif jclass.endswith("FlywayException"):
                 msg = "when initializing database:"
@@ -792,11 +792,6 @@ class JDBCBackend(CachingBackend):
                 yield tuple(cm[f] for f in FIELDS["ts_get_geo"])
 
     def set_data(self, ts, region, variable, data, unit, subannual, meta):
-        # Convert *data* to a Java data structure
-        jdata = java.LinkedHashMap()
-        for k, v in data.items():
-            # Explicit cast is necessary; otherwise java.lang.Long
-            jdata.put(java.Integer(k), v)
         # Oracle is unable to handle ±∞ (issue #442)
         if self._properties["jdbc.driver"] == DRIVER_CLASS["oracle"] and any(
             map(np.isinf, data.values())
@@ -805,6 +800,10 @@ class JDBCBackend(CachingBackend):
                 f"± infinity (at region={region}, variable={variable}) cannot be stored"
                 " in an Oracle database using JDBCBackend"
             )
+
+        # Convert *data* to a Java data structure. Explicitly cast the key (period) to
+        # Integer so JPype does not produce invalid java.lang.Long.
+        jdata = java.LinkedHashMap({java.Integer(k): v for k, v in data.items()})
 
         self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit, meta)
 

@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4005665.svg)](https://doi.org/10.5281/zenodo.4005665)
 [![PyPI version](https://img.shields.io/pypi/v/ixmp.svg)](https://pypi.python.org/pypi/ixmp/)
 [![Anaconda version](https://img.shields.io/conda/vn/conda-forge/ixmp)](https://anaconda.org/conda-forge/ixmp)
-[![Documentation build](https://readthedocs.com/projects/iiasa-energy-program-ixmp/badge/?version=master)](https://docs.messageix.org/projects/ixmp/en/master/)
+[![Documentation build](https://readthedocs.com/projects/iiasa-energy-program-ixmp/badge/?version=latest)](https://docs.messageix.org/projects/ixmp/en/latest/)
 [![Build status](https://github.com/iiasa/ixmp/actions/workflows/pytest.yaml/badge.svg)](https://github.com/iiasa/ixmp/actions/workflows/pytest.yaml)
 [![Test coverage](https://codecov.io/gh/iiasa/ixmp/branch/master/graph/badge.svg)](https://codecov.io/gh/iiasa/ixmp)
 

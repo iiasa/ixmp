@@ -62,6 +62,8 @@ def test_close(test_mp_f, capfd):
     msg = "Database connection could not be closed or was already closed"
     # assert msg in captured.err
     assert msg in captured.out
+
+
 VE = pytest.mark.xfail(raises=ValueError)
 
 

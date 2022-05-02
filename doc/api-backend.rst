@@ -49,7 +49,8 @@ Provided backends
 
    JDBCBackend has the following **limitations**:
 
-   - The `comment` argument to :meth:`Platform.add_unit` is limited to 64 characters.
+   - The `comment` argument to :meth:`.Platform.add_unit` is limited to 64 characters.
+   - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`) cannot be stored using :meth:`.TimeSeries.add_timeseries` when using an Oracle database via ``driver='oracle'``.
 
    JDBCBackend's implementation allows the following kinds of file input and output:
 

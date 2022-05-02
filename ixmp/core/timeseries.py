@@ -353,7 +353,9 @@ class TimeSeries:
         # Add one time series per row
         for (r, v, u, sa), data in df.iterrows():
             # Values as float; exclude NA
-            self._backend("set_data", r, v, data.astype(float).dropna(), u, sa, meta)
+            self._backend(
+                "set_data", r, v, data.astype(float).dropna().to_dict(), u, sa, meta
+            )
 
     def timeseries(
         self,

@@ -71,6 +71,8 @@ rst_prolog = r"""
 
 # -- Options for HTML output -----------------------------------------------------------
 
+html_favicon = "_static/favicon.svg"
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = "sphinx_rtd_theme"

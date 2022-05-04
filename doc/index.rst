@@ -1,7 +1,7 @@
 The |ixmp|
 ==========
 
-.. figure:: _static/ix_features.png
+.. figure:: _static/ix_features.svg
    :width: 320px
    :align: right
 

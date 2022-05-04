@@ -5,7 +5,7 @@ The |ixmp|
    :width: 360px
    :align: right
 
-   Key features of the |ixmp| (source: :cite:`huppmann_messageix_2018`)
+   Key features of the |ixmp| :cite:`huppmann_messageix_2018`
 
 The |ixmp| (ixmp) is a data warehouse for high-powered numerical scenario analysis.
 It is designed to provide an effective framework for integrated and cross-cutting analysis (hence the abbreviation *ix*).

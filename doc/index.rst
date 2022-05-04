@@ -2,7 +2,7 @@ The |ixmp|
 ==========
 
 .. figure:: _static/ix_features.svg
-   :width: 320px
+   :width: 360px
    :align: right
 
    Key features of the |ixmp| (source: :cite:`huppmann_messageix_2018`)

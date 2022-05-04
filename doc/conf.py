@@ -20,7 +20,7 @@ import ixmp.testing
 
 # -- Project information ---------------------------------------------------------------
 
-project = "ix modeling platform"
+project = "ixmp"
 copyright = "2017–2022, IIASA Energy, Climate, and Environment (ECE) program"
 author = "ixmp Developers"
 

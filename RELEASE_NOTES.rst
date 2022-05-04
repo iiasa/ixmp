@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- Add new logo and diagram to the documentation (:pull:`446`).
 - Raise an informative :class:`ValueError` when adding infinite values with :meth:`.add_timeseries`; this is unsupported on :class:`.JDBCBackend` when connected to an Oracle database (:pull:`443`, :issue:`442`).
 - New attribute :attr:`.url` for convenience in constructing :class:`.TimeSeries`/:class:`.Scenario` URLS (:pull:`444`).
 - New :func:`.store_ts` reporting computation for storing time-series data on a :class:`.TimeSeries`/:class:`.Scenario` (:pull:`444`).

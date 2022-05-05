@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+
+
+[tool.isort]
+profile = "black"
+
+[[tool.mypy.overrides]]
+# Packages/modules for which no type hints are available.
+module = [
+  "dask.*",
+  "jpype",
+  "nbclient",
+  "nbformat",
+  "numpy",
+  "memory_profiler",
+  "pandas.*",
+  "pint",
+  "pyam",
+  "pretenders.*",
+  "requests_cache",
+  "requests_mock",
+  "setuptools",
+  "sparse",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+# Disable faulthandler plugin on Windows to prevent spurious console noise; see
+# - https://github.com/jpype-project/jpype/issues/561
+# - https://github.com/iiasa/ixmp/issues/229
+# - https://github.com/iiasa/ixmp/issues/247
+addopts = """
+  -m "not rixmp and not performance"
+  -p no:faulthandler
+  --benchmark-skip
+  --cov=ixmp --cov-report="""
+markers = [
+    "rixmp: test of the ixmp R interface.",
+    "performance: ixmp performance test.",
+]

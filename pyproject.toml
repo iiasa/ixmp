@@ -12,16 +12,10 @@ module = [
   "jpype",
   "nbclient",
   "nbformat",
-  "numpy",
   "memory_profiler",
   "pandas.*",
-  "pint",
   "pyam",
   "pretenders.*",
-  "requests_cache",
-  "requests_mock",
-  "setuptools",
-  "sparse",
 ]
 ignore_missing_imports = true
 

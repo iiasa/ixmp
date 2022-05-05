@@ -19,6 +19,11 @@ All changes
   - The `jvmargs` argument to :class:`.JDBCBackend` can be set via the command line (:program:`ixmp platform add …`) or :meth:`.Config.add_platform`; see :ref:`configuration` (:issue:`408`).
   - Bug fix: user config file values from downstream packages (e.g. :mod:`message_ix`) are respected (:issue:`415`).
 
+- Security: upgrade Log4j to 2.17.1 in Java code underlying :class:`.JDBCBackend` to address `CVE-2021-44228 <https://nvd.nist.gov/  vuln/detail/CVE-2021-44228>`_, a.k.a. “Log4Shell” (:pull:`445`).
+
+  The ixmp Python package is not network-facing *per se* (unless exposed as such by user code; we are not aware of any such applications), so remote code execution attacks are not a significant concern.
+  However, users should still avoid running unknown or untrusted code provided by third parties with versions of ixmp prior to 3.5.0, as such code could be deliberately crafted to exploit the vulnerability.
+
 .. _v3.4.0:
 
 v3.4.0 (2022-01-24)

@@ -51,16 +51,13 @@ def test_close(test_mp_f, capfd):
 
     # With the default log level, WARNING, nothing is printed
     captured = capfd.readouterr()
-    # assert captured.out == ""
-    msg = "Database connection could not be closed or was already closed"
-    assert msg in captured.out
+    assert captured.out == ""
 
     # With log level INFO, a message is printed
     mp.set_log_level(logging.INFO)
     mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
-    # assert msg in captured.err
     assert msg in captured.out
 
 

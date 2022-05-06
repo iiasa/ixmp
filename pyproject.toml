@@ -109,6 +109,6 @@ addopts = """
   --benchmark-skip
   --cov=ixmp --cov-report="""
 markers = [
-    "rixmp: test of the ixmp R interface.",
-    "performance: ixmp performance test.",
+  "rixmp: test of the ixmp R interface.",
+  "performance: ixmp performance test.",
 ]

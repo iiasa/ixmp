@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+
+# Replacement for setup.cfg
+#
+# Support for this section is experimental in setuptools 61–62.1.0. This should
+# not be enabled until that support is stable.
+#
+# [project]
+# name = "ixmp"
+# description = "ix modeling platform"
+# authors = [
+#   { email = "message_ix@iiasa.ac.at"},
+#   { name = "IIASA Energy, Climate, and Environment (ECE) program"},
+# ]
+# license = { text = "Apache" }
+# readme = { file = "README.md", content-type = "text/markdown" }
+# classifiers = [
+#     "Development Status :: 5 - Production/Stable",
+#     "Intended Audience :: Developers",
+#     "Intended Audience :: Science/Research",
+#     "License :: OSI Approved :: Apache Software License",
+#     "Natural Language :: English",
+#     "Operating System :: OS Independent",
+#     "Programming Language :: Python",
+#     "Programming Language :: Python :: 3",
+#     "Programming Language :: Python :: 3.7",
+#     "Programming Language :: Python :: 3.8",
+#     "Programming Language :: Python :: 3.9",
+#     "Programming Language :: Python :: 3.10",
+#     "Programming Language :: R",
+#     "Topic :: Scientific/Engineering",
+#     "Topic :: Scientific/Engineering :: Information Analysis",
+# ]
+# dependencies = [
+#   "click",
+#   "genno >= 1.11.0",
+#   "JPype1 >= 1.2.1",
+#   "openpyxl",
+#   "pandas >= 1.2",
+#   "pint",
+#   "PyYAML",
+#   "xarray",
+# ]
+# dynamic = ["version"]
+#
+# [project.urls]
+# documentation = "http://docs.messageix.org/ixmp"
+# repository = "http://github.com/iiasa/ixmp"
+#
+# [tool.setuptools]
+# zip-safe = true
+#
+# [project.optional-dependencies]
+# docs = [
+#   "numpydoc",
+#   "sphinx >= 3.0",
+#   "sphinx_rtd_theme",
+#   "sphinxcontrib-bibtex",
+# ]
+# report = ["genno[compat,graphviz]"]
+# tutorial = ["jupyter"]
+# tests = [
+#   # Duplicated from above; see pypa/setuptools#3221
+#   "numpydoc",
+#   "sphinx >= 3.0",
+#   "sphinx_rtd_theme",
+#   "sphinxcontrib-bibtex",
+#   "genno[compat,graphviz]",
+#   "jupyter",
+#   # Other test requirements
+#   "codecov",
+#   "memory_profiler",
+#   "nbclient >= 0.5",
+#   "pretenders >= 1.4.4",
+#   "pytest >= 5",
+#   "pytest-benchmark",
+#   "pytest-cov",
+# ]
+#
+# [project.scripts]
+# ixmp = "ixmp.cli:main"
+
+[tool.isort]
+profile = "black"
+
+[[tool.mypy.overrides]]
+# Packages/modules for which no type hints are available.
+module = [
+  "dask.*",
+  "jpype",
+  "nbclient",
+  "nbformat",
+  "memory_profiler",
+  "pandas.*",
+  "pyam",
+  "pretenders.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+# Disable faulthandler plugin on Windows to prevent spurious console noise; see
+# - https://github.com/jpype-project/jpype/issues/561
+# - https://github.com/iiasa/ixmp/issues/229
+# - https://github.com/iiasa/ixmp/issues/247
+addopts = """
+  -m "not rixmp and not performance"
+  -p no:faulthandler
+  --benchmark-skip
+  --cov=ixmp --cov-report="""
+markers = [
+  "rixmp: test of the ixmp R interface.",
+  "performance: ixmp performance test.",
+]

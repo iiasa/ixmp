@@ -6,16 +6,25 @@ import pandas as pd
 from genno.core.computer import Computer, Key
 
 from ixmp.core.scenario import Scenario
-from ixmp.reporting import computations
 from ixmp.reporting.util import RENAME_DIMS, keys_for_quantity
 
 
 class Reporter(Computer):
     """Class for describing and executing computations."""
 
-    # Append ixmp.reporting.computations to the modules in which the Computer will look
-    # up computations names.
-    modules = list(Computer.modules) + [computations]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Append ixmp.reporting.computations to the modules in which the Computer will
+        # look up computations names.
+        # genno <= 1.11
+        from ixmp.reporting import computations
+
+        if computations not in self.modules:
+            self.modules.append(computations)
+
+        # TODO use this once genno >= 1.12.0 is released
+        # self.require_compat("ixmp.reporting.computations")
 
     @classmethod
     def from_scenario(cls, scenario: Scenario, **kwargs) -> "Reporter":

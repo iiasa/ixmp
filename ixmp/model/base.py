@@ -34,6 +34,26 @@ class Model(ABC):
         chars = r'<>"/\|?*' + (":" if os.name == "nt" else "")
         return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
+    @staticmethod
+    def enforce(scenario):
+        """Enforce data consistency in `scenario`.
+
+        Optional. Implementations of :meth:`enforce`:
+
+        - **should** modify the contents of sets and parameters so that `scenario`
+          contains structure and data that is consistent with the underlying model.
+        - **must not** add or remove sets or parameters; for that, use
+          :meth:`initiatize`.
+
+        :meth:`enforce` is always called by :meth:`run` before the model is run or
+        solved; it **may** be called manually at other times.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Object on which to enforce data consistency.
+        """
+
     @classmethod
     def initialize(cls, scenario):
         """Set up *scenario* with required items.
@@ -160,6 +180,10 @@ class Model(ABC):
     @abstractmethod
     def run(self, scenario):
         """Execute the model.
+
+        Implementations of :meth:`run`:
+
+        - **must** call :meth:`enforce`.
 
         Parameters
         ----------

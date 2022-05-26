@@ -300,14 +300,14 @@ class Scenario(TimeSeries):
 
         # Combine iterators to tuples. If the lengths are mismatched, the sentinel
         # value 'False' is filled in
-        to_add = list(zip_longest(keys, comments, fillvalue=False))
+        to_add = list(zip_longest(keys, comments, fillvalue=(False,)))
 
         # Check processed arguments
         for e, c in to_add:
             # Check for sentinel values
-            if e is False:
+            if e == (False,):
                 raise ValueError(f"Comment {repr(c)} without matching key")
-            elif c is False:
+            elif c == (False,):
                 raise ValueError(f"Key {repr(e)} without matching comment")
             elif len(idx_names) and len(idx_names) != len(e):
                 raise ValueError(

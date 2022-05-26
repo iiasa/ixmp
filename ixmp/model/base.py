@@ -34,6 +34,26 @@ class Model(ABC):
         chars = r'<>"/\|?*' + (":" if os.name == "nt" else "")
         return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
+    @staticmethod
+    def enforce(scenario):
+        """Enforce data consistency in `scenario`.
+
+        Optional. Implementations of :meth:`enforce`:
+
+        - **should** modify the contents of sets and parameters so that `scenario`
+          contains structure and data that is consistent with the underlying model.
+        - **must not** add or remove sets or parameters; for that, use
+          :meth:`initiatize`.
+
+        :meth:`enforce` is always called by :meth:`run` before the model is run or
+        solved; it **may** be called manually at other times.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Object on which to enforce data consistency.
+        """
+
     @classmethod
     def initialize(cls, scenario):
         """Set up *scenario* with required items.
@@ -42,8 +62,8 @@ class Model(ABC):
 
         - **may** add sets, set elements, and/or parameter values.
         - **may** accept any number of keyword arguments to control behaviour.
-        - **must not** modify existing parameter data in *scenario*, either by
-          deleting or overwriting values.
+        - **must not** modify existing parameter data in *scenario*, either by deleting
+          or overwriting values; for that, use :meth:`enforce`.
 
         Parameters
         ----------
@@ -60,12 +80,12 @@ class Model(ABC):
     def initialize_items(cls, scenario, items):
         """Helper for :meth:`initialize`.
 
-        All of the `items` are added to `scenario`. Existing items are not
-        modified. Errors are logged if the description in `items` conflicts
-        with the index set(s) and/or index name(s) of existing items.
+        All of the `items` are added to `scenario`. Existing items are not modified.
+        Errors are logged if the description in `items` conflicts with the index set(s)
+        and/or index name(s) of existing items.
 
-        initialize_items may perform one commit. `scenario` is in the same
-        state (checked in, or checked out) after initialize_items is complete.
+        initialize_items may perform one commit. `scenario` is in the same state
+        (checked in, or checked out) after initialize_items is complete.
 
         Parameters
         ----------
@@ -73,15 +93,15 @@ class Model(ABC):
             Object to initialize.
         items : dict of (str -> dict)
             Each key is the name of an ixmp item (set, parameter, equation, or
-            variable) to initialize. Each dict **must** have the key 'ix_type';
-            one of 'set', 'par', 'equ', or 'var'; any other entries are keyword
-            arguments to the methods :meth:`.init_set` etc.
+            variable) to initialize. Each dict **must** have the key 'ix_type'; one of
+            'set', 'par', 'equ', or 'var'; any other entries are keyword arguments to
+            the methods :meth:`.init_set` etc.
 
         Raises
         ------
         ValueError
-            if `scenario` has a solution, i.e. :meth:`~.Scenario.has_solution`
-            is :obj:`True`.
+            if `scenario` has a solution, i.e. :meth:`~.Scenario.has_solution` is
+            :obj:`True`.
 
         See also
         --------
@@ -135,10 +155,9 @@ class Model(ABC):
             try:
                 checkout = maybe_check_out(scenario, checkout)
             except ValueError as exc:  # pragma: no cover
-                # The Scenario has a solution. This indicates an inconsistent
-                # situation: the Scenario lacks the item *name*, but somehow it
-                # was successfully solved without it, and the solution stored.
-                # Can't proceed further.
+                # The Scenario has a solution. This indicates an inconsistent situation:
+                # the Scenario lacks the item *name*, but somehow it was successfully
+                # solved without it, and the solution stored. Can't proceed further.
                 log.error(str(exc))
                 return
 
@@ -160,6 +179,10 @@ class Model(ABC):
     @abstractmethod
     def run(self, scenario):
         """Execute the model.
+
+        Implementations of :meth:`run`:
+
+        - **must** call :meth:`enforce`.
 
         Parameters
         ----------

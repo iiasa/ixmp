@@ -1,8 +1,10 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- Add :meth:`.enforce` to the :class:`~.base.Model` API for enforcing structure/data consistency before :meth:`.Model.solve` (:pull:`450`).
 
 .. _v3.5.0:
 

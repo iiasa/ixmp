@@ -187,7 +187,7 @@ def store_ts(scenario, *data):
     import pyam
 
     log.info(f"Store time series data on '{scenario.url}'")
-    scenario.check_out()
+    scenario.check_out(timeseries_only=True)
 
     for order, df in enumerate(data):
         df = (

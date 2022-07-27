@@ -82,25 +82,24 @@ class BaseValues:
     def __setitem__(self, name, value):
         setattr(self, name.replace(" ", "_"), value)
 
-    def add_field(self, name, type_, default=None):
+    def add_field(self, name, type_, default, **kwargs):
         # Check `name`
         name = name.replace(" ", "_")
-        if name in self.__dataclass_fields__:
+        if (
+            name in self.__dataclass_fields__
+            and "auto" not in self.__dataclass_fields__[name].metadata
+        ):
             raise ValueError(f"configuration key {repr(name)} already defined")
 
         # Create a new data class with an additional field
         new_cls = make_dataclass(
-            "Values", [(name, type_, field(default=default))], bases=(self.__class__,)
+            "Values",
+            [(name, type_, field(default=default, **kwargs))],
+            bases=(self.__class__,),
         )
 
         # Re-use current values and any defaults for the new fields
-        data = asdict(self)
-        try:
-            data[name] = getattr(self, name)
-        except AttributeError:
-            pass
-
-        return new_cls, new_cls(**data)
+        return new_cls, new_cls(**asdict(self))
 
     def delete_field(self, name):
         # Check `name`
@@ -249,9 +248,11 @@ class Config:
         # Parse JSON and set values
         for key, value in data.items():
             try:
-                self.set(key, value, _strict=True)  # Cast type for registered keys
+                self.set(key, value)  # Cast type for registered keys
             except KeyError:
-                self.set(key, value, _strict=False)  # Tolerate unregistered keys
+                # Automatically register new values
+                self.register(key, type(value), default=None, metadata=dict(auto=True))
+                self.set(key, value)
 
     # Public methods
 
@@ -263,7 +264,7 @@ class Config:
         """Return the names of all registered configuration keys."""
         return self.values.keys()
 
-    def register(self, name: str, type_: type, default: Any = None):
+    def register(self, name: str, type_: type, default: Any = None, **kwargs):
         """Register a new configuration key.
 
         Parameters
@@ -281,7 +282,9 @@ class Config:
         ValueError
             if the key `name` is already registered.
         """
-        self._ValuesClass, self.values = self.values.add_field(name, type_, default)
+        self._ValuesClass, self.values = self.values.add_field(
+            name, type_, default, **kwargs
+        )
 
     def unregister(self, name: str) -> None:
         """Unregister and clear the configuration key `name`."""

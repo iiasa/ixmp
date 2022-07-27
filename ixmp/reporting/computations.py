@@ -222,9 +222,12 @@ def update_scenario(scenario, *quantities, params=[]):
         if not isinstance(qty, pd.DataFrame):
             # Convert a Quantity to a DataFrame
             par_name = qty.name
-            new = qty.to_series().reset_index().rename(columns={par_name: "value"})
-            new["unit"] = "{:~}".format(qty.attrs["_unit"])  # type: ignore [str-format]
-            qty = new
+            qty = (
+                qty.to_series()
+                .reset_index()
+                .rename(columns={par_name: "value"})
+                .assign(unit=f"{qty.units:~}")
+            )
 
         # Add the data
         log.info(f"  {repr(par_name)} ← {len(qty)} rows")

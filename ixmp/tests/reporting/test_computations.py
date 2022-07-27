@@ -4,7 +4,7 @@ from functools import partial
 import pandas as pd
 import pyam
 import pytest
-from genno import Computer, Quantity
+from genno import ComputationError, Computer, Quantity
 from genno.testing import assert_qty_equal
 from pandas.testing import assert_frame_equal
 
@@ -135,3 +135,11 @@ def test_store_ts(request, caplog, test_mp):
     # Input is stored exactly
     assert_frame_equal(expected_1, scen.timeseries(variable="Foo"))
     assert_frame_equal(expected_2, scen.timeseries(variable="Bar"))
+
+    # Data with an unregistered region name
+    c.add("input 3", test_data[0].assign(variable="Foo", region="Moon"))
+    c.add("test 2", store_ts, "target", "input 3")
+
+    # The computation fails
+    with pytest.raises(ComputationError, match="baz"):
+        c.get("test 2")

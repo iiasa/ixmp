@@ -17,14 +17,7 @@ class Reporter(Computer):
 
         # Append ixmp.reporting.computations to the modules in which the Computer will
         # look up computations names.
-        # genno <= 1.11
-        from ixmp.reporting import computations
-
-        if computations not in self.modules:
-            self.modules.append(computations)
-
-        # TODO use this once genno >= 1.12.0 is released
-        # self.require_compat("ixmp.reporting.computations")
+        self.require_compat("ixmp.reporting.computations")
 
     @classmethod
     def from_scenario(cls, scenario: Scenario, **kwargs) -> "Reporter":

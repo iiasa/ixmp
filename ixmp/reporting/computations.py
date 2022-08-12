@@ -167,7 +167,7 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
     )
 
 
-def store_ts(scenario, *data):
+def store_ts(scenario, *data, strict: bool = False) -> None:
     """Store time series `data` on `scenario`.
 
     The data is stored using :meth:`.add_timeseries`; `scenario` is checked out and then
@@ -180,10 +180,11 @@ def store_ts(scenario, *data):
     data : pandas.DataFrame or pyam.IamDataFrame
         1 or more objects containing data to store. If :class:`pandas.DataFrame`, the
         data are passed through :func:`to_iamc_layout`.
+    strict: bool
+        If :data:`True` (default :data:`False`), raise an exception if any of `data` are
+        not successfully added. Otherwise, log on level :ref:`ERROR <python:levels>` and
+        continue.
     """
-    # TODO tolerate invalid types/errors on elements of `data`, logging exceptions on
-    #      level ERROR, then continue and commit anyway; add an optional parameter like
-    #      continue_on_error=True to control this behaviour
     import pyam
 
     log.info(f"Store time series data on '{scenario.url}'")
@@ -197,8 +198,14 @@ def store_ts(scenario, *data):
         )
 
         # Add the data
-        log.info(f"  ← {len(df)} rows")
-        scenario.add_timeseries(df)
+        try:
+            scenario.add_timeseries(df)
+        except Exception as e:
+            log.error(f"Failed with {e!r}:\n{df}")
+            if strict:
+                raise
+        else:
+            log.info(f"  ← {len(df)} rows")
 
     scenario.commit(f"Data added using {__name__}")
 

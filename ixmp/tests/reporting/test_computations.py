@@ -1,4 +1,5 @@
 import logging
+import re
 from functools import partial
 
 import pandas as pd
@@ -140,6 +141,24 @@ def test_store_ts(request, caplog, test_mp):
     c.add("input 3", test_data[0].assign(variable="Foo", region="Moon"))
     c.add("test 2", store_ts, "target", "input 3")
 
-    # The computation fails
-    with pytest.raises(ComputationError, match="baz"):
+    # Succeeds with default strict=False
+    caplog.clear()
+    c.get("test 2")
+
+    # A message is logged
+    r = caplog.record_tuples[-1]
+    assert (
+        "ixmp.reporting.computations" == r[0]
+        and logging.ERROR == r[1]
+        and r[2].startswith("Failed with ValueError('region = Moon')")
+    ), caplog.record_tuples
+
+    caplog.clear()
+
+    # with strict=True, the computation fails
+    c.add("test 2", partial(store_ts, strict=True), "target", "input 3")
+    with pytest.raises(
+        ComputationError,
+        match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
+    ):
         c.get("test 2")

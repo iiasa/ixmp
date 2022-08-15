@@ -166,7 +166,6 @@ def test_cli(ixmp_cli, test_mp, test_data_path):
     # TODO warning should be logged
 
     # Reporting produces the expected command-line output
-
     assert re.match(
         "i          j       "  # Trailing whitespace
         r"""
@@ -176,8 +175,7 @@ san-diego  chicago     1\.8
 seattle    chicago     1\.7
            new-york    2\.5
            topeka      1\.8
-(Name: value, )?dtype: float64
-""",
+(Name: value, )?dtype: float64(, units: dimensionsless)?""",
         result.output,
     )
 

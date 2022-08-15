@@ -805,7 +805,16 @@ class JDBCBackend(CachingBackend):
         # Integer so JPype does not produce invalid java.lang.Long.
         jdata = java.LinkedHashMap({java.Integer(k): v for k, v in data.items()})
 
-        self.jindex[ts].addTimeseries(region, variable, subannual, jdata, unit, meta)
+        try:
+            self.jindex[ts].addTimeseries(
+                region, variable, subannual, jdata, unit, meta
+            )
+        except java.IxException as e:
+            match = re.search("node '([^']*)' does not exist in the database", str(e))
+            if match:
+                raise ValueError(f"region = {match.group(1)}") from None
+            else:
+                raise
 
     def set_geo(self, ts, region, variable, subannual, year, value, unit, meta):
         self.jindex[ts].addGeoData(

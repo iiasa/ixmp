@@ -14,11 +14,13 @@ class ModelError(Exception):
 
 class Model(ABC):
     #: Name of the model.
-    name = "base"
+    name: str = "base"
 
     @abstractmethod
     def __init__(self, name, **kwargs):
         """Constructor.
+
+        **Required.**
 
         Parameters
         ----------
@@ -38,12 +40,13 @@ class Model(ABC):
     def enforce(scenario):
         """Enforce data consistency in `scenario`.
 
-        Optional. Implementations of :meth:`enforce`:
+        **Optional**; the default implementation does nothing. Subclass implementations
+        of :meth:`enforce`:
 
         - **should** modify the contents of sets and parameters so that `scenario`
           contains structure and data that is consistent with the underlying model.
         - **must not** add or remove sets or parameters; for that, use
-          :meth:`initiatize`.
+          :meth:`initialize`.
 
         :meth:`enforce` is always called by :meth:`run` before the model is run or
         solved; it **may** be called manually at other times.
@@ -58,7 +61,8 @@ class Model(ABC):
     def initialize(cls, scenario):
         """Set up *scenario* with required items.
 
-        Implementations of :meth:`initialize`:
+        **Optional**; the default implementation does nothing. Subclass implementations
+        of :meth:`initialize`:
 
         - **may** add sets, set elements, and/or parameter values.
         - **may** accept any number of keyword arguments to control behaviour.
@@ -180,9 +184,10 @@ class Model(ABC):
     def run(self, scenario):
         """Execute the model.
 
-        Implementations of :meth:`run`:
+        **Required.** Implementations of :meth:`run`:
 
         - **must** call :meth:`enforce`.
+
 
         Parameters
         ----------

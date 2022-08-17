@@ -1,5 +1,13 @@
-Next release
-============
+.. Next release
+.. ============
+
+.. All changes
+.. -----------
+
+.. _v3.6.0:
+
+v3.6.0 (2022-08-17)
+===================
 
 All changes
 -----------
@@ -7,7 +15,7 @@ All changes
 - Optionally tolerate failures to add individual items in :func:`.store_ts` reporting computation (:pull:`451`); use ``timeseries_only=True`` in check-out to function with :class:`.Scenario` with solution data stored.
 - Bugfix: :class:`.Config` squashed configuration values read from :file:`config.json`, if the respective keys were registered in downstream packages, e.g. :mod:`message_ix`.
   Allow the values loaded from file to persist (:pull:`451`).
-- Adjust to genno 1.12 and set this as the minimum required version (:pull:`451`).
+- Adjust to genno 1.12 and set this as the minimum required version for :mod:`ixmp.reporting` (:pull:`451`).
 - Add :meth:`.enforce` to the :class:`~.base.Model` API for enforcing structure/data consistency before :meth:`.Model.solve` (:pull:`450`).
 
 .. _v3.5.0:

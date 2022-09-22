@@ -67,7 +67,6 @@ All changes
 - Add the :command:`pytest --user-config` command-line option, to use user's local configuration when testing (:pull:`422`).
 - Adjust :func:`.format_scenario_list` for changes in :mod:`pandas` 1.3.0 (:pull:`421`).
 
-
 .. _v3.3.0:
 
 v3.3.0 (2021-05-28)
@@ -94,6 +93,8 @@ All changes
 - Adjust :mod:`ixmp.reporting` to use :mod:`genno` (:pull:`397`).
 - Fix two minor bugs in reporting (:pull:`396`).
 
+.. _v3.2.0:
+
 v3.2.0 (2021-01-24)
 ===================
 
@@ -110,6 +111,7 @@ All changes
   The result is displayed by the ``ixmp show-versions`` CLI command/:func:`.show_versions`.
 - :meth:`.init_par` and related methods accept any sequence (not merely :class:`list`) of :class:`str` for the `idx_sets` and `idx_names` arguments (:pull:`376`).
 
+.. _v3.1.0:
 
 v3.1.0 (2020-08-28)
 ===================
@@ -136,6 +138,7 @@ ixmp v3.1.0 coincides with message_ix v3.1.0.
 - Make :class:`reporting.Quantity` classes interchangeable (:pull:`317`).
 - Use GitHub Actions for continuous testing and integration (:pull:`330`).
 
+.. _v3.0.0:
 
 v3.0.0 (2020-06-05)
 ===================
@@ -200,6 +203,7 @@ All changes
 - Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV (:pull:`243`).
 - Implement methods to get and create new subannual timeslices (:pull:`264`).
 
+.. _v2.0.0:
 
 v2.0.0 (2020-01-14)
 ===================
@@ -239,25 +243,19 @@ DEFAULT_LOCAL_DB_PATH
 All changes
 -----------
 
-- :pull:`240`: Add ``ixmp list`` command-line tool.
-- :pull:`225`: Ensure filters are always converted to string.
-- :pull:`189`: Identify and load Scenarios using URLs.
-- :pull:`182`,
-  :pull:`200`,
-  :pull:`213`,
-  :pull:`217`,
-  :pull:`230`,
-  :pull:`245`,
-  :pull:`246`: Add new Backend, Model APIs and CachingBackend, JDBCBackend, GAMSModel classes.
-- :pull:`188`,
-  :pull:`195`: Enhance reporting.
-- :pull:`177`: Add ability to pass `gams_args` through :meth:`.solve`.
-- :pull:`175`,
-  :pull:`239`: Drop support for Python 2.7.
-- :pull:`174`: Set `convertStrings=True` for JPype >= 0.7; see the `JPype changelog <https://jpype.readthedocs.io/en/latest/CHANGELOG.html>`_.
-- :pull:`173`: Make AppVeyor CI more robust; support pandas 0.25.0.
-- :pull:`165`: Add support for handling geodata.
-- :pull:`232`: Fix exposing whole config file to log output.
+- Add ``ixmp list`` command-line tool (:pull:`240`).
+- Ensure filters are always converted to string (:pull:`225`).
+- Identify and load Scenarios using URLs (:pull:`189`).
+- Add new Backend, Model APIs and CachingBackend, JDBCBackend, GAMSModel classes (:pull:`182`, :pull:`200`, :pull:`213`, :pull:`217`, :pull:`230`, :pull:`245`, :pull:`246`).
+- Enhance reporting (:pull:`188`, :pull:`195`).
+- Add ability to pass `gams_args` through :meth:`.solve` (:pull:`177`).
+- Drop support for Python 2.7 (:pull:`175`, :pull:`239`).
+- Set `convertStrings=True` for JPype >= 0.7; see the `JPype changelog <https://jpype.readthedocs.io/en/latest/CHANGELOG.html>`_ (:pull:`174`).
+- Make AppVeyor CI more robust; support pandas 0.25.0 (:pull:`173`).
+- Add support for handling geodata (:pull:`165`).
+- Fix exposing whole config file to log output (:pull:`232`).
+
+.. _v0.2.0:
 
 v0.2.0 (2019-06-25)
 ===================
@@ -273,34 +271,34 @@ Release 0.2.0 coincides with MESSAGEix release 1.2.0.
 All changes
 -----------
 
-- :pull:`135`: Test ``rixmp`` (former ``retixmp``) using the R ``testthat`` package.
-- :pull:`142`: Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core.
-- :pull:`115`: Support iterating with user-supplied callbacks.
-- :pull:`130`: Recognize ``IXMP_DATA`` environment variable for configuration and local databases.
-- :pull:`129`,
-  :pull:`132`: Fully implement :meth:`~.Scenario.clone` across platforms (databases).
-- :pull:`128`,
-  :pull:`137`: New module :mod:`ixmp.testing` for reuse of testing utilities.
-- :pull:`125`: Add functions to view and add regions for IAMC-style timeseries data.
-- :pull:`123`: Return absolute path from ``find_dbprops()``.
-- :pull:`118`: Switch to RTD Sphinx theme.
-- :pull:`116`: Bugfix and extend functionality for working with IAMC-style timeseries data.
-- :pull:`111`: Add functions to check if a Scenario has an item (set, par, var, equ).
-- :pull:`110`: Generalize the internal functions to format index dimensions for mapping sets and parameters.
-- :pull:`108`: Improve documentation.
-- :pull:`105`: Replace `deprecated <http://pandas.pydata.org/pandas-docs/stable/indexing.html#ix-indexer-is-deprecated>`_ pandas ``.ix`` indexer with ``.iloc``.
-- :pull:`103`: Specify dependencies in setup.py.
+- Test ``rixmp`` (former ``retixmp``) using the R ``testthat`` package (:pull:`135`).
+- Cloning across platforms, better support of IAMC_style timeseries data, preparations for MESSAGEix release 1.2 in Java core (:pull:`142`).
+- Support iterating with user-supplied callbacks (:pull:`115`).
+- Recognize ``IXMP_DATA`` environment variable for configuration and local databases (:pull:`130`).
+- Fully implement :meth:`~.Scenario.clone` across platforms (databases) (:pull:`129`, :pull:`132`).
+- New module :mod:`ixmp.testing` for reuse of testing utilities (:pull:`128`, :pull:`137`).
+- Add functions to view and add regions for IAMC-style timeseries data (:pull:`125`).
+- Return absolute path from ``find_dbprops()`` (:pull:`123`).
+- Switch to RTD Sphinx theme (:pull:`118`).
+- Bugfix and extend functionality for working with IAMC-style timeseries data (:pull:`116`).
+- Add functions to check if a Scenario has an item (set, par, var, equ) (:pull:`111`).
+- Generalize the internal functions to format index dimensions for mapping sets and parameters (:pull:`110`).
+- Improve documentation (:pull:`108`).
+- Replace `deprecated <http://pandas.pydata.org/pandas-docs/stable/indexing.html#ix-indexer-is-deprecated>`_ pandas ``.ix`` indexer with ``.iloc`` (:pull:`105`).
+- Specify dependencies in setup.py (:pull:`103`).
+
+.. _v0.1.3:
 
 v0.1.3 (2018-11-21)
 ===================
 
-- :pull:`88`: Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1.
-- :pull:`80`: Can now set logging level which is harmonized between Java and Python.
-- :pull:`79`: Adding a deprecated-warning for `ixmp.Scenario` with `scheme=='MESSAGE'`.
-- :pull:`76`: Changing the API from ``mp.Scenario(...)`` to ``ixmp.Scenario(mp, ...)``.
-- :pull:`73`: Adding a function :meth:`~.Scenario.has_solution`, rename kwargs to `..._solution`.
-- :pull:`69`: Bring retixmp available to other users.
-- :pull:`64`: Support writing multiple sheets to Excel in utils.pd_write.
-- :pull:`61`: Now able to connect to multiple databases (Platforms).
-- :pull:`58`: Add MacOSX support in CI.
-- :pull:`52`: Add ability to load all scenario data into memory for fast subsequent computation.
+- Connecting to multiple databases, updating MESSAGE-scheme scenario specifications to version 1.1 (:pull:`88`).
+- Can now set logging level which is harmonized between Java and Python (:pull:`80`).
+- Adding a deprecated-warning for `ixmp.Scenario` with `scheme=='MESSAGE'` (:pull:`79`).
+- Changing the API from ``mp.Scenario(...)`` to ``ixmp.Scenario(mp, ...)`` (:pull:`76`).
+- Adding a function :meth:`~.Scenario.has_solution`, rename kwargs to `..._solution` (:pull:`73`).
+- Bring retixmp available to other users (:pull:`69`).
+- Support writing multiple sheets to Excel in utils.pd_write (:pull:`64`).
+- Now able to connect to multiple databases (Platforms) (:pull:`61`).
+- Add MacOSX support in CI (:pull:`58`).
+- Add ability to load all scenario data into memory for fast subsequent computation (:pull:`52`).

@@ -127,7 +127,7 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     for name, data in empty_sets:
         data.to_excel(writer, sheet_name=name, index=False)
 
-    writer.save()
+    writer.close()
 
 
 def maybe_init_item(scenario, ix_type, name, new_idx, path):

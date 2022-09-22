@@ -139,10 +139,10 @@ class TestCachingBackend:
         s.par("d")
 
         # Cache size has increased
-        assert len(backend._cache) == cache_size_pre + 1
+        assert cache_size_pre + 1 == len(backend._cache)
 
         # Delete the object; associated cache is freed
         del s
 
         # Objects were invalidated/removed from cache
-        assert len(backend._cache) == cache_size_pre
+        assert cache_size_pre == len(backend._cache)

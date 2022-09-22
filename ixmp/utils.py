@@ -438,8 +438,8 @@ def format_scenario_list(
 
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
-        .groupby(["model", "scenario"])
-        .apply(describe)
+        # group_keys silences a warning in pandas 1.5.0
+        .groupby(["model", "scenario"], group_keys=True).apply(describe)
     )
 
     if len(info):
@@ -461,9 +461,9 @@ def format_scenario_list(
         lines = urls.tolist()
     else:
         width = 0 if not len(info) else info["scenario"].str.len().max()
-        info["scenario"] = info["scenario"].str.ljust(width)
+        info["scenario"] = info["scenario"].str.ljust(width + 2)
 
-        for model, m_info in info.groupby(["model"]):
+        for model, m_info in info.groupby("model"):
             lines.extend(
                 [
                     "",
@@ -475,15 +475,16 @@ def format_scenario_list(
         lines.append("")
 
     # Summary information
-    if not as_url:
-        lines.extend(
-            [
-                str(len(info["model"].unique())) + " model name(s)",
-                str(len(info["scenario"].unique())) + " scenario name(s)",
-                str(len(info)) + " (model, scenario) combination(s)",
-                str(info["N"].sum()) + " total scenarios",
-            ]
-        )
+    lines.extend(
+        []
+        if as_url
+        else [
+            f"{len(info['model'].unique())} model name(s)",
+            f"{len(info['scenario'].unique())} scenario name(s)",
+            f"{len(info)} (model, scenario) combination(s)",
+            f"{info['N'].sum()} total scenarios",
+        ]
+    )
 
     return lines
 

@@ -208,10 +208,10 @@ def test_format_scenario_list(test_mp_f):
     assert [
         "",
         "Douglas Adams/",
-        "  Hitchhiker#1",
+        "  Hitchhiker#1  ",
         "",
         "canning problem/",
-        "  standard#2  1–3",
+        "  standard#2    1–3",
         "",
         "2 model name(s)",
         "2 scenario name(s)",

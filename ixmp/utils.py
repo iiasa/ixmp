@@ -438,8 +438,8 @@ def format_scenario_list(
 
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
-        .groupby(["model", "scenario"])
-        .apply(describe)
+        # group_keys silences a warning in pandas 1.5.0
+        .groupby(["model", "scenario"], group_keys=True).apply(describe)
     )
 
     if len(info):
@@ -463,7 +463,7 @@ def format_scenario_list(
         width = 0 if not len(info) else info["scenario"].str.len().max()
         info["scenario"] = info["scenario"].str.ljust(width)
 
-        for model, m_info in info.groupby(["model"]):
+        for model, m_info in info.groupby("model"):
             lines.extend(
                 [
                     "",

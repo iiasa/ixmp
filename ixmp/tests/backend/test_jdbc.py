@@ -312,8 +312,10 @@ def test_del_ts():
     for i in range(N):
         s = scenarios.pop(0)
 
+        message = "\n".join(map(str, gc.get_referrers(s)))
+
         # The variable 's' is the only reference to this Scenario object
-        assert getrefcount(s) - 1 == 1
+        assert 1 == getrefcount(s) - 1, (message, gc.garbage)
 
         # ID of the Scenario object
         s_id = id(s)

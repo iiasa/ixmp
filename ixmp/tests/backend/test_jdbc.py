@@ -54,11 +54,15 @@ def test_close(test_mp_f, capfd):
     assert captured.out == ""
 
     # With log level INFO, a message is printed
+    level = mp.get_log_level()
     mp.set_log_level(logging.INFO)
     mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
-    assert msg in captured.out
+    try:
+        assert msg in captured.out
+    finally:
+        mp.set_log_level(level)
 
 
 VE = pytest.mark.xfail(raises=ValueError)
@@ -175,10 +179,26 @@ def test_invalid_properties_file(test_data_path):
 def test_connect_message(capfd, caplog):
     msg = "connected to database 'jdbc:hsqldb:mem://ixmptest' (user: ixmp)..."
 
-    ixmp.Platform(backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest")
+    ixmp.Platform(
+        backend="jdbc",
+        driver="hsqldb",
+        url="jdbc:hsqldb:mem://ixmptest",
+        log_level="INFO",
+    )
 
     # Java code via JPype does not log to the standard Python logger
     assert not any(msg in m for m in caplog.messages)
+
+    # NB cannot inspect capfd here. Depending on the order in which the tests were run,
+    #    a previous run may have left the Java log level higher than INFO, in which
+    #    case the Java Platform object would not write to stderr before set_log_level()
+    #    in the above call. Try again now that the level is INFO:
+
+    ixmp.Platform(
+        backend="jdbc",
+        driver="hsqldb",
+        url="jdbc:hsqldb:mem://ixmptest",
+    )
 
     # Instead, log messages are printed to stdout
     captured = capfd.readouterr()

@@ -152,15 +152,16 @@ def _unwrap(v):
     """Unwrap meta numeric value or list of values (BigDecimal -> Double)."""
     if isinstance(v, java.BigDecimal):
         return v.doubleValue()
-    if isinstance(v, java.ArrayList):
+    elif isinstance(v, java.ArrayList):
         return [_unwrap(elt) for elt in v]
-    return v
+    else:
+        return v
 
 
 def _wrap(value):
     if isinstance(value, (str, bool)):
         return value
-    if isinstance(value, (int, float)):
+    elif isinstance(value, (int, float)):
         return java.BigDecimal(value)
     elif isinstance(value, (Sequence, Iterable)):
         jlist = java.ArrayList()

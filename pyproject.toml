@@ -93,6 +93,7 @@ module = [
   "nbformat",
   "memory_profiler",
   "pandas.*",
+  "pint._vendor",
   "pyam",
   "pretenders.*",
 ]

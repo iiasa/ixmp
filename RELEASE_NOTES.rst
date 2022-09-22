@@ -1,8 +1,10 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- Adjust to pandas 1.5.0 (:pull:`458`).
 
 .. _v3.6.0:
 

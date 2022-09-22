@@ -977,41 +977,51 @@ class JDBCBackend(CachingBackend):
             # Prepare dtypes for additional columns
             if type == "par":
                 columns.extend(["value", "unit"])
-                dtypes["value"] = float
+                dtypes.update(value=float, unit=str)
                 # Same as above
                 # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
-                dtypes["unit"] = str
             elif type in ("equ", "var"):
                 columns.extend(["lvl", "mrg"])
-                dtypes.update({"lvl": float, "mrg": float})
-            # Prepare empty DataFrame
-            result = pd.DataFrame(index=pd.RangeIndex(len(jList)), columns=columns)
+                dtypes.update(lvl=float, mrg=float)
 
-            # Copy vectors from Java into DataFrame columns
-            # NB [:] causes JPype to use a faster code path
-            for i in range(len(idx_sets)):
-                result.iloc[:, i] = item.getCol(i, jList)[:]
+            # Copy vectors from Java into pd.Series to form DataFrame columns
+            columns = []
+
+            def _get(method, name, *args):
+                columns.append(
+                    pd.Series(
+                        # NB [:] causes JPype to use a faster code path
+                        getattr(item, f"get{method}")(*args, jList)[:],
+                        dtype=dtypes[name],
+                        name=name,
+                    )
+                )
+
+            # Index columns
+            for i, idx_name in enumerate(idx_names):
+                _get("Col", idx_name, i)
+
+            # Data columns
             if type == "par":
-                result.loc[:, "value"] = item.getValues(jList)[:]
-                result.loc[:, "unit"] = item.getUnits(jList)[:]
+                _get("Values", "value")
+                _get("Units", "unit")
             elif type in ("equ", "var"):
-                result.loc[:, "lvl"] = item.getLevels(jList)[:]
-                result.loc[:, "mrg"] = item.getMarginals(jList)[:]
+                _get("Levels", "lvl")
+                _get("Marginals", "mrg")
 
-            # .loc assignment above modifies dtypes; set afterwards
-            result = result.astype(dtypes)
+            result = pd.concat(columns, axis=1, copy=False)
         elif type == "set":
             # Index sets
             # dtype=object is to silence a warning in pandas 1.0
-            result = pd.Series(item.getCol(0, jList), dtype=object)
+            result = pd.Series(item.getCol(0, jList)[:], dtype=object)
         elif type == "par":
-            # Scalar parameters
+            # Scalar parameter
             result = dict(
                 value=float(item.getScalarValue().floatValue()),
                 unit=str(item.getScalarUnit()),
             )
         elif type in ("equ", "var"):
-            # Scalar equations and variables
+            # Scalar equation or variable
             result = dict(
                 lvl=float(item.getScalarLevel().floatValue()),
                 mrg=float(item.getScalarMarginal().floatValue()),
@@ -1147,7 +1157,7 @@ class JDBCBackend(CachingBackend):
             return getattr(self.jindex[s], f"get{ix_type.title()}")(*args)
         except java.IxException as e:
             # Regex for similar but not consistent messages from Java code
-            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this " "Scenario!"
+            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this Scenario!"
             if re.match(msg, e.args[0]):
                 # Re-raise as a Python KeyError
                 raise KeyError(name) from None

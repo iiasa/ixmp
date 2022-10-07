@@ -4,7 +4,7 @@ Installation
 Most users will have :mod:`ixmp` installed automatically when `installing MESSAGEix`_.
 The sections below cover other use cases.
 
-Ensure you have first read the :doc:`prerequisites <prereqs>` for understanding and using |MESSAGEix|.
+Ensure you have first read the :doc:`prerequisites <message_ix:prereqs>` for understanding and using |MESSAGEix|.
 These include specific points of knowledge that are necessary to understand these instructions and choose among different installation options.
 
 To use :mod:`ixmp` from R, see :ref:`message_ix:install-r` in the |MESSAGEix| documentation.

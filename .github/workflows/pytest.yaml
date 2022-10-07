@@ -113,7 +113,7 @@ jobs:
         # For pull_request triggers, GitHub creates a temporary merge commit
         # with a hash that does not match the head of the branch. Tell it which
         # branch to use.
-        SPHINXOPTS: -D linkcode_github_remote_head=${{ github.ref_name }}
+        SPHINXOPTS: -D linkcode_github_remote_head=${{ github.head_ref }}
       run: make --directory=doc html
 
     - name: Upload test coverage to Codecov.io

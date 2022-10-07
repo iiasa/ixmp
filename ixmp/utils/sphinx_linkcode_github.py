@@ -13,6 +13,56 @@ if TYPE_CHECKING:
     import sphinx.application
 
 
+def _git_remote_head(app: "sphinx.application.Sphinx", log) -> str:
+    """Use git to identify the name of the remote branch containing the code."""
+    import git
+
+    repo = git.Repo(app.srcdir, search_parent_directories=True)
+
+    # Current commit; valid even in detached HEAD state
+    commit = repo.head.commit
+
+    try:
+        remote = repo.remote("origin")
+
+        # Identify a branch whose head is the same as the current commit
+        refs = list(filter(lambda r: r.commit == commit, remote.refs))  # type: ignore
+        if not refs:
+            log.info(f"No remote branch for commit {commit}")
+            raise ValueError
+    except ValueError:
+        # Same, but locally
+        refs = list(filter(lambda b: b.commit == commit, repo.branches))  # type: ignore
+        if not refs:
+            raise ValueError(f"Unable to identify a branch for commit {commit}")
+
+    # Use the first result, arbitrarily. If the commit hash matches, so will the code.
+    return refs[0].name
+
+
+def remote_head(app: "sphinx.application.Sphinx", log) -> str:
+    """Return a name for the remote branch containing the code."""
+    result = None
+    try:
+        # Use GitPython to retrieve the repo information
+        result = _git_remote_head(app, log)
+    except (ImportError, RuntimeError) as e:
+        log.info(e)
+
+    # Use value from configuration
+    from_cfg = app.config["linkcode_github_remote_head"]
+    if from_cfg and remote_head:
+        log.info(
+            f"Configuration setting linkcode_github_remote_head={from_cfg}"
+            f"overrides value from local git: {result}"
+        )
+        result = from_cfg
+
+    assert result is not None
+
+    return result
+
+
 class GitHubLinker:
     def __init__(self):
         self.line_numbers = dict()
@@ -20,37 +70,9 @@ class GitHubLinker:
 
     def config_inited(self, app: "sphinx.application.Sphinx", config):
         self.file_root = Path(app.srcdir).parent
-
-        try:
-            # Use GitPython to retrieve the repo information
-            import git
-
-            repo = git.Repo(self.file_root)
-        except (ImportError, Exception):
-            # E.g. GitPython not installed; local directory is not a git repo.
-            remote_head = None
-        else:
-            branch = repo.active_branch.tracking_branch()
-            if branch:
-                remote_head = branch.remote_head
-            else:
-                remote_head = repo.active_branch.name
-                self.log.info(f"No tracking branch, using local git {remote_head!r}")
-
-        # Check value from configuration
-        cfg = config["linkcode_github_remote_head"]
-        if cfg and remote_head:
-            self.log.info(
-                f"Configuration setting linkcode_github_remote_head={cfg}"
-                f"overrides value from local git: {remote_head}"
-            )
-            remote_head = cfg
-
-        assert remote_head is not None
-
         self.base_url = (
             f"https://github.com/{config['linkcode_github_repo_slug']}/blob/"
-            + remote_head
+            + remote_head(app, self.log)
         )
 
     def autodoc_process_docstring(

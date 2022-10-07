@@ -271,6 +271,8 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
     at_level : int, optional
         Messages must appear on 'ixmp' or a sub-logger with at least this level.
     """
+    __tracebackhide__ = True
+
     # Wrap a string in a list
     expected = (
         [message_or_messages]

@@ -27,10 +27,10 @@ author = "ixmp Developers"
 
 # -- General configuration -------------------------------------------------------------
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
+# Add any Sphinx extension module names here, as strings. They can be extensions coming
+# with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
+    "ixmp.utils.sphinx_linkcode_github",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
@@ -110,6 +110,10 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/stable/", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
+
+# -- Options for sphinx.ext.linkcode / ixmp.utils.sphinx_linkcode_github ---------------
+
+linkcode_github_repo_slug = "iiasa/ixmp"
 
 # -- Options for sphinx.ext.todo -------------------------------------------------------
 

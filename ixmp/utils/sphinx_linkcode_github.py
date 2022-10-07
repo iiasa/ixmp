@@ -12,8 +12,10 @@ from sphinx.util import logging
 if TYPE_CHECKING:
     import sphinx.application
 
+log = logging.getLogger(__name__)
 
-def _git_remote_head(app: "sphinx.application.Sphinx", log) -> str:
+
+def _git_remote_head(app: "sphinx.application.Sphinx") -> str:
     """Use git to identify the name of the remote branch containing the code."""
     import git
 
@@ -40,12 +42,12 @@ def _git_remote_head(app: "sphinx.application.Sphinx", log) -> str:
     return refs[0].name
 
 
-def remote_head(app: "sphinx.application.Sphinx", log) -> str:
+def remote_head(app: "sphinx.application.Sphinx") -> str:
     """Return a name for the remote branch containing the code."""
     result = None
     try:
         # Use GitPython to retrieve the repo information
-        result = _git_remote_head(app, log)
+        result = _git_remote_head(app)
     except (ImportError, RuntimeError) as e:
         log.info(e)
 
@@ -66,13 +68,12 @@ def remote_head(app: "sphinx.application.Sphinx", log) -> str:
 class GitHubLinker:
     def __init__(self):
         self.line_numbers = dict()
-        self.log = logging.getLogger(__name__)
 
     def config_inited(self, app: "sphinx.application.Sphinx", config):
         self.file_root = Path(app.srcdir).parent
         self.base_url = (
             f"https://github.com/{config['linkcode_github_repo_slug']}/blob/"
-            + remote_head(app, self.log)
+            + remote_head(app)
         )
 
     def autodoc_process_docstring(
@@ -119,7 +120,7 @@ class GitHubLinker:
         ):
             line_info = self.line_numbers.get(candidate)
             if line_info:
-                self.log.debug(f"Cannot find a code link for {combined!r}")
+                log.debug(f"Cannot find a code link for {combined!r}")
                 break
 
         if not line_info:
@@ -129,6 +130,7 @@ class GitHubLinker:
         return f"{self.base_url}/{line_info[0]}#L{start_line}-L{end_line}"
 
 
+# Single instance
 LINKER = GitHubLinker()
 
 

@@ -81,6 +81,11 @@ requires = ["setuptools", "setuptools-scm"]
 # [project.scripts]
 # ixmp = "ixmp.cli:main"
 
+[tool.coverage.report]
+omit = [
+  "ixmp/utils/sphinx_linkcode_github.py",
+]
+
 [tool.isort]
 profile = "black"
 

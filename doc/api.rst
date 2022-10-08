@@ -186,7 +186,7 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
 
 .. currentmodule:: ixmp
 
-.. data:: ixmp.config
+.. data:: config
 
    An instance of :class:`~.Config`.
 

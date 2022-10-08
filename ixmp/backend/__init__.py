@@ -1,3 +1,4 @@
+"""Backend API."""
 from enum import IntFlag
 from typing import Dict, List, Type, Union
 

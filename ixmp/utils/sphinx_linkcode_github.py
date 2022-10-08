@@ -4,8 +4,11 @@ Expanded from https://github.com/sphinx-doc/sphinx/issues/1556.
 """
 
 import inspect
+import sys
+from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from types import FunctionType
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from sphinx.util import logging
 
@@ -36,6 +39,10 @@ def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
         if not refs:
             log.info(f"No remote branch for commit {commit}")
             raise ValueError
+
+        # Use the first result, arbitrarily. If the commit hash matches, so will the
+        # code.
+        return refs[0].remote_head
     except ValueError:  # Either no remote "origin", or raised explicitly
         # Same, but locally
         refs = list(filter(lambda b: b.commit == commit, repo.branches))  # type: ignore
@@ -43,8 +50,7 @@ def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
             log.info(f"Unable to identify a branch for commit {commit}")
             return None
 
-    # Use the first result, arbitrarily. If the commit hash matches, so will the code.
-    return refs[0].name
+        return refs[0].name
 
 
 def find_remote_head(app: "sphinx.application.Sphinx") -> str:
@@ -67,14 +73,22 @@ def find_remote_head(app: "sphinx.application.Sphinx") -> str:
         raise RuntimeError("Cannot determine a remote head")
 
 
+@lru_cache()
+def package_base_path(obj) -> Path:
+    """Return the base path of the package containing `obj`."""
+    # Module name: obj.__name__ if obj is a module
+    module_name = getattr(obj, "__module__", obj.__name__)
+    # Path to the top-level package containing the module
+    path = sys.modules[module_name.split(".")[0]].__file__
+    assert path is not None
+    return Path(path).parents[1]
+
+
 class GitHubLinker:
     def __init__(self):
         self.line_numbers = dict()
-        self._ln_printed = False
 
     def config_inited(self, app: "sphinx.application.Sphinx", config):
-        self.file_root = Path(app.srcdir).parent
-        log.info(f"linkcode file root: {self.file_root}")
         self.base_url = (
             f"https://github.com/{config['linkcode_github_repo_slug']}/blob/"
             + find_remote_head(app)
@@ -88,58 +102,54 @@ class GitHubLinker:
 
         Misuse the autodoc hook because we have access to the actual object here.
         """
-        # We can't properly handle ordinary attributes.
-        # In linkcode_resolve we'll resolve to the `__init__` or module instead
-        if what == "attribute":
-            return
-        elif hasattr(obj, "fget"):
-            # Special casing for properties
+        # Identify the object for which to locate code
+        if isinstance(obj, property):
+            # Reference the getter method
             obj = obj.fget
+        elif isinstance(obj, FunctionType):
+            # Reference a wrapped function, rather than the wrapper, which may be in the
+            # standard library somewhere
+            obj = getattr(obj, "__wrapped__", obj)
 
         try:
+            # Identify the source file and source lines
             sf = inspect.getsourcefile(obj)
-            if sf:
-                file = Path(sf).relative_to(self.file_root)
-                source_lines, start_line = inspect.getsourcelines(obj)
-                end_line = start_line + len(source_lines)
-                self.line_numbers[name] = (file, start_line, end_line)
-        except Exception as e:
-            log.info(e)
-            pass
+            assert sf is not None
+            file = Path(sf).relative_to(package_base_path(obj))
+            lines, start_line = inspect.getsourcelines(obj)
+        except TypeError:
+            # inspect.getsourcefile() can't handle ordinary class attributes or
+            # module-level data. In linkcode_resolve we'll resolve to the `__init__` or
+            # module instead.
+            # TODO extend using e.g. ast to identify the source lines
+            if what not in {"attribute", "data"}:
+                raise
+        except Exception as e:  # Other exceptions
+            log.info(f"{name} {e}")
+        else:
+            # Store information for use by linkcode_resolve
+            self.line_numbers[name] = (file, start_line, start_line + len(lines))
+            # # Display information, for debugging
+            # print(name, "→", self.line_numbers[name])
 
-        # In case `__init__` is not documented, we call this manually to have it
-        # available for attributes -- see the note above
-        if what == "class":
-            self.autodoc_process_docstring(
-                app, "method", f"{name}.__init__", obj.__init__, options, lines
-            )
-
-    def linkcode_resolve(self, domain, info):
+    def linkcode_resolve(self, domain: str, info: dict) -> Optional[str]:
         """See www.sphinx-doc.org/en/master/usage/extensions/linkcode.html."""
+        # Candidates for lookup in self.line_numbers
         combined = "{module}.{fullname}".format(**info)
+        parent = combined.rsplit(".", 1)[0]
+        candidates = (combined, parent, f"{parent}.__init__", info["module"])
 
-        for candidate in (
-            combined,
-            f"{combined.rsplit('.', 1)[0]}.__init__",  # __init__
-            f"{combined.rsplit('.', 1)[0]}",  # Class
-            info["module"],  # Module
-        ):
-            line_info = self.line_numbers.get(candidate)
-            if line_info:
-                break
-
-        if not line_info:
-            log.info(f"Cannot find a code link for {combined!r}")
-
-            # Display debug information
-            if not self._ln_printed:
-                log.info("Among:\n\n" + "\n".join(self.line_numbers.keys()))
-                self._ln_printed = True
-
-            return
-
-        file, start_line, end_line = line_info
-        return f"{self.base_url}/{line_info[0]}#L{start_line}-L{end_line}"
+        try:
+            # Use the info for the first of `candidates` available
+            line_info: Tuple[str, int, int] = next(
+                filter(None, map(self.line_numbers.get, candidates))
+            )
+        except StopIteration:
+            log.info(f"Cannot locate code for {combined!r} or parent class/module")
+            return None
+        else:
+            file, start_line, end_line = line_info
+            return f"{self.base_url}/{file}#L{start_line}-L{end_line}"
 
 
 # Single instance
@@ -147,12 +157,15 @@ LINKER = GitHubLinker()
 
 
 def setup(app: "sphinx.application.Sphinx"):
+    # Required first-party extensions
     app.setup_extension("sphinx.ext.autodoc")
     app.setup_extension("sphinx.ext.linkcode")
 
+    # Configuration settings
     app.add_config_value("linkcode_github_repo_slug", None, "")
     app.add_config_value("linkcode_github_remote_head", None, "")
 
+    # Connect signals and config
     app.connect("config-inited", LINKER.config_inited)
     app.connect("autodoc-process-docstring", LINKER.autodoc_process_docstring)
     app.config["linkcode_resolve"] = LINKER.linkcode_resolve

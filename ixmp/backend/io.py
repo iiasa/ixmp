@@ -172,6 +172,8 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
             raise ValueError from None
 
 
+# FIXME reduce complexity. Currently 26; next highest is JDBCBackend.item_get_elements
+#       at 19
 def s_read_excel(be, s, path, add_units=False, init_items=False, commit_steps=False):
     """Read data from a Microsoft Excel file at *path* into *s*.
 

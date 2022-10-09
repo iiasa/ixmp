@@ -5,6 +5,7 @@ All changes
 -----------
 
 - Adjust to pandas 1.5.0 (:pull:`458`).
+- New module :mod:`.util.sphinx_linkcode_github` to link documentation to source code on GitHub (:pull:`459`).
 
 .. _v3.6.0:
 

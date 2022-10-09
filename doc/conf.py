@@ -107,6 +107,7 @@ intersphinx_mapping = {
     "pint": ("https://pint.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "sparse": ("https://sparse.pydata.org/en/stable/", None),
+    "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 

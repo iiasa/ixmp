@@ -213,8 +213,32 @@ Utilities
       update_par
       to_iamc_layout
 
-Testing utilities
------------------
+
+Utilities for documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: ixmp.utils.sphinx_linkcode_github
+   :members:
+
+   To use this extension, add it to the ``extensions`` setting in the Sphinx configuration file (usually :file:`conf.py`), and set the required ``linkcode_github_repo_slug``:
+
+   .. code-block:: python
+
+      extensions = [
+          ...,
+          "ixmp.utils.sphinx_linkcode_github",
+          ...,
+      ]
+
+      linkcode_github_repo_slug = "iiasa/ixmp"  # Required
+      linkcode_github_remote_head = "feature/example"  # Optional
+
+   The extension uses `GitPython <https://gitpython.readthedocs.io>`_ (if installed) or ``linkcode_github_remote_head`` (optional override) to match a local commit to a remote head (~branch name), and construct links like::
+
+      https://github.com/{repo_slug}/blob/{remote_head}/path/to/source.py#L123-L456
+
+Utilities for testing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: ixmp.testing
 

@@ -1,11 +1,9 @@
-"""GitHub integration for sphinx.ext.linkcode.
-
-Expanded from https://github.com/sphinx-doc/sphinx/issues/1556.
-"""
+"""GitHub adapter for :mod:`sphinx.ext.linkcode`."""
+# Expanded from a snippet at https://github.com/sphinx-doc/sphinx/issues/1556
 
 import inspect
 import sys
-from functools import lru_cache
+from functools import _lru_cache_wrapper, lru_cache
 from pathlib import Path
 from types import FunctionType
 from typing import TYPE_CHECKING, Optional, Tuple
@@ -85,10 +83,13 @@ def package_base_path(obj) -> Path:
 
 
 class GitHubLinker:
+    """Handler for storing files/line numbers for code objects and formatting links."""
+
     def __init__(self):
         self.line_numbers = dict()
 
     def config_inited(self, app: "sphinx.application.Sphinx", config):
+        """Handler for the Sphinx ``config-inited`` event."""
         self.base_url = (
             f"https://github.com/{config['linkcode_github_repo_slug']}/blob/"
             + find_remote_head(app)
@@ -98,15 +99,15 @@ class GitHubLinker:
     def autodoc_process_docstring(
         self, app: "sphinx.application.Sphinx", what, name: str, obj, options, lines
     ):
-        """Retrieve file names and line numbers.
+        """Handler for the Sphinx ``autodoc-process-docstring`` event.
 
-        Misuse the autodoc hook because we have access to the actual object here.
+        Records the file and source line numbers containing `obj`.
         """
         # Identify the object for which to locate code
         if isinstance(obj, property):
             # Reference the getter method
             obj = obj.fget
-        elif isinstance(obj, FunctionType):
+        elif isinstance(obj, (FunctionType, _lru_cache_wrapper)):
             # Reference a wrapped function, rather than the wrapper, which may be in the
             # standard library somewhere
             obj = getattr(obj, "__wrapped__", obj)
@@ -123,6 +124,8 @@ class GitHubLinker:
             # module instead.
             # TODO extend using e.g. ast to identify the source lines
             if what not in {"attribute", "data"}:
+                print(type(obj))
+                print(type(obj).__mro__)
                 raise
         except Exception as e:  # Other exceptions
             log.info(f"{name} {e}")
@@ -133,7 +136,11 @@ class GitHubLinker:
             # print(name, "→", self.line_numbers[name])
 
     def linkcode_resolve(self, domain: str, info: dict) -> Optional[str]:
-        """See www.sphinx-doc.org/en/master/usage/extensions/linkcode.html."""
+        """Function for the :mod:`sphinx.ext.linkcode` setting of the same name.
+
+        Returns URLs for code objects on GitHub, using information stored by
+        :func:`autodoc_process_docstring`.
+        """
         # Candidates for lookup in self.line_numbers
         combined = "{module}.{fullname}".format(**info)
         parent = combined.rsplit(".", 1)[0]
@@ -157,6 +164,7 @@ LINKER = GitHubLinker()
 
 
 def setup(app: "sphinx.application.Sphinx"):
+    """Sphinx extension registration hook."""
     # Required first-party extensions
     app.setup_extension("sphinx.ext.autodoc")
     app.setup_extension("sphinx.ext.linkcode")

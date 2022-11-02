@@ -87,7 +87,10 @@ jobs:
       run: python -m pip install --upgrade pip wheel setuptools-scm
 
     - name: Install Python package and dependencies
-      run: pip install .[tests]
+      run: |
+        pip install .[tests]
+        # TEMPORARY work around iiasa/ixmp#463
+        pip install "JPype1 != 1.4.1"
 
     - name: Install R dependencies and tutorial requirements
       run: |

@@ -40,18 +40,18 @@ jobs:
 
     steps:
     - name: Cancel previous runs that have not completed
-      uses: styfle/cancel-workflow-action@0.9.1
+      uses: styfle/cancel-workflow-action@0.11.0
       with:
         access_token: ${{ github.token }}
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: ${{ env.depth }}
 
     - name: Fetch tags (for setuptools-scm)
       run: git fetch --tags --depth=${{ env.depth }}
 
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -120,4 +120,4 @@ jobs:
       run: make --directory=doc html
 
     - name: Upload test coverage to Codecov.io
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3

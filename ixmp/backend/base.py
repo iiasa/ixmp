@@ -1,4 +1,5 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from copy import copy
 from os import PathLike
@@ -92,7 +93,9 @@ class Backend(ABC):
     def get_log_level(self) -> str:
         """OPTIONAL: Get logging level for the backend and other code.
 
-        The default implementation has no effect.
+        The default implementation returns the effective level of the
+        "ixmp.backend.base" logger; usually the same as "ixmp" or "ixmp.backend" (if
+        set).
 
         Returns
         -------
@@ -103,6 +106,7 @@ class Backend(ABC):
         --------
         set_log_level
         """
+        return logging.getLevelName(logging.getLogger(__name__).getEffectiveLevel())
 
     @abstractmethod
     def set_doc(self, domain: str, docs) -> None:

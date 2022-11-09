@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    uses: iiasa/actions/.github/workflows/lint.yaml@migrate-message-ix-workflows
+    uses: iiasa/actions/.github/workflows/lint.yaml@main
     with:
       max-complexity: 26
       # If the "Latest version testable on GitHub Actions" in pytest.yaml

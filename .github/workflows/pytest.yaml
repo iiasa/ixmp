@@ -54,24 +54,22 @@ jobs:
     - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: "**/setup.cfg"
 
     - uses: ts-graphviz/setup-graphviz@v1.1
 
     - uses: r-lib/actions/setup-r@v2
       id: setup-r
 
-    - name: Cache GAMS installer, Python packages, and R packages
-      uses: actions/cache@v2
+    - name: Cache GAMS installer and R packages
+      uses: actions/cache@v3
       with:
         path: |
           gams
-          ~/.cache/pip
-          ~/Library/Caches/pip
-          ~/appdata/local/pip/cache
           ${{ env.R_LIBS_USER }}
-        key: ${{ matrix.os }}-py${{ matrix.python-version }}-R${{ steps.setup-r.outputs.installed-r-version }}
+        key: ${{ matrix.os }}-R${{ steps.setup-r.outputs.installed-r-version }}
         restore-keys: |
-          ${{ matrix.os }}-py${{ matrix.python-version }}-
           ${{ matrix.os }}-
 
     - uses: iiasa/actions/setup-gams@main
@@ -83,8 +81,8 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
-    - name: Upgrade pip, wheel, setuptools-scm
-      run: python -m pip install --upgrade pip wheel setuptools-scm
+    - name: Upgrade pip, setuptools-scm, wheel
+      run: python -m pip install --upgrade pip setuptools-scm wheel
 
     - name: Install Python package and dependencies
       run: |

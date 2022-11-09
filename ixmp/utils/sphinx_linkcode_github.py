@@ -3,7 +3,7 @@
 
 import inspect
 import sys
-from functools import _lru_cache_wrapper, lru_cache
+from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
 from types import FunctionType
 from typing import TYPE_CHECKING, Optional, Tuple
@@ -111,6 +111,9 @@ class GitHubLinker:
             # Reference a wrapped function, rather than the wrapper, which may be in the
             # standard library somewhere
             obj = getattr(obj, "__wrapped__", obj)
+        elif isinstance(obj, partial):
+            # Reference the module in which the partial object is defined
+            obj = sys.modules[obj.__module__]
 
         try:
             # Identify the source file and source lines
@@ -124,8 +127,7 @@ class GitHubLinker:
             # module instead.
             # TODO extend using e.g. ast to identify the source lines
             if what not in {"attribute", "data"}:
-                print(type(obj))
-                print(type(obj).__mro__)
+                print(what, name, type(obj).__mro__)
                 raise
         except Exception as e:  # Other exceptions
             log.info(f"{name} {e}")

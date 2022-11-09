@@ -88,6 +88,10 @@ class TestBackend:
             "user", "foo bar baz".split(), "access"
         )
 
+    def test_get_log_level(self, be):
+        # The value may differ according to the the test environment, so only check type
+        assert isinstance(be.get_log_level(), str)
+
     def test_read_file(self, be):
         with pytest.raises(NotImplementedError):
             be.read_file(Path("foo"), ItemType.VAR)

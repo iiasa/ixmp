@@ -1,6 +1,6 @@
 import logging
 from os import PathLike
-from typing import TYPE_CHECKING, Dict, List, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -58,7 +58,9 @@ class Platform:
         "set_meta",
     ]
 
-    def __init__(self, name: str = None, backend: str = None, **backend_args):
+    def __init__(
+        self, name: Optional[str] = None, backend: Optional[str] = None, **backend_args
+    ):
         if name is None:
             if backend is None and not len(backend_args):
                 # No arguments given: use the default platform config
@@ -140,7 +142,10 @@ class Platform:
         return self._backend.get_log_level()
 
     def scenario_list(
-        self, default: bool = True, model: str = None, scen: str = None
+        self,
+        default: bool = True,
+        model: Optional[str] = None,
+        scen: Optional[str] = None,
     ) -> pd.DataFrame:
         """Return information about TimeSeries and Scenarios on the Platform.
 

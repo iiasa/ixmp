@@ -1,13 +1,14 @@
 """Testing Juypter notebooks."""
 import os
 import sys
+from warnings import warn
 
 import pytest
 
 nbformat = pytest.importorskip("nbformat")
 
 
-def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
+def run_notebook(nb_path, tmp_path, env=None, **kwargs):
     """Execute a Jupyter notebook via :mod:`nbclient` and collect output.
 
     Parameters
@@ -18,17 +19,23 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
         A directory in which to create temporary output.
     env : dict-like, optional
         Execution environment for :mod:`nbclient`. Default: :obj:`os.environ`.
-    kernel : str, optional
-        Jupyter kernel to use. Default: "python2" or "python3", matching the current
-        Python version.
+    kwargs :
+        Keyword arguments for :class:`nbclient.NotebookClient`. Defaults are set for:
 
-        .. warning:: Any existing configuration for this kernel—such as an IPython
-           start-up file—will be executed when the kernel starts. Code that enables
-           GUI features can interfere with :func:`run_notebook`.
-    allow_errors : bool, optional
-        Whether to pass the ``--allow-errors`` option to :mod:`nbclient`. If
-        :obj:`True`, the execution always succeeds, and cell output contains exception
-        information.
+        "allow_errors"
+           Default :data:`False`. If :obj:`True`, the execution always succeeds, and
+           cell output contains exception information rather than code outputs.
+
+        "kernel_version"
+           Jupyter kernel to use. Default: either "python2" or "python3", matching the
+           current Python major version.
+
+           .. warning:: Any existing configuration for this kernel on the local system—
+              such as an IPython start-up file—will be executed when the kernel starts.
+              Code that enables GUI features can interfere with :func:`run_notebook`.
+
+        "timeout"
+            in seconds; default 10.
 
     Returns
     -------
@@ -53,14 +60,20 @@ def run_notebook(nb_path, tmp_path, env=None, kernel=None, allow_errors=False):
     # Read the notebook
     nb = nbformat.read(nb_path, as_version=4)
 
+    # Set default keywords
+    kwargs.setdefault("allow_errors", False)
+    kernel = kwargs.pop("kernel", None)
+    if kernel:  # pragma: no cover
+        warn(
+            '"kernel" keyword argument to run_notebook(); use "kernel_name"',
+            DeprecationWarning,
+            2,
+        )
+    kwargs.setdefault("kernel_name", kernel or f"python{sys.version_info[0]}")
+    kwargs.setdefault("timeout", 10)
+
     # Create a client and use it to execute the notebook
-    client = NotebookClient(
-        nb,
-        timeout=10,
-        kernel_name=kernel or f"python{sys.version_info[0]}",
-        allow_errors=allow_errors,
-        resources=dict(metadata=dict(path=tmp_path)),
-    )
+    client = NotebookClient(nb, **kwargs, resources=dict(metadata=dict(path=tmp_path)))
 
     # Execute the notebook.
     # `env` is passed from nbclient to jupyter_client.launcher.launch_kernel()

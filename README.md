@@ -45,7 +45,7 @@ See [`doc/README.rst`](doc/README.rst) for further details.
 
 ## License
 
-Copyright © 2017–2022 IIASA Energy, Climate, and Environment (ECE) program
+Copyright © 2017–2023 IIASA Energy, Climate, and Environment (ECE) program
 
 `ixmp` is licensed under the Apache License, Version 2.0 (the "License"); you
 may not use the files in this repository except in compliance with the License.

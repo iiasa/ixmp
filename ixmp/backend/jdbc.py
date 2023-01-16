@@ -516,7 +516,7 @@ class JDBCBackend(CachingBackend):
                 raise ValueError("read from GDX requires a Scenario object")
             elif set(kwargs.keys()) != kw:
                 raise ValueError(
-                    f"keyword arguments {kwargs.keys()} do not " f"match required {kw}"
+                    f"keyword arguments {kwargs.keys()} do not match required {kw}"
                 )
 
             args = (

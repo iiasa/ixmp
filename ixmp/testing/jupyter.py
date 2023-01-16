@@ -1,6 +1,7 @@
 """Testing Juypter notebooks."""
 import os
 import sys
+from warnings import warn
 
 import pytest
 
@@ -25,7 +26,7 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
            Default :data:`False`. If :obj:`True`, the execution always succeeds, and
            cell output contains exception information rather than code outputs.
 
-        "kernel"
+        "kernel_version"
            Jupyter kernel to use. Default: either "python2" or "python3", matching the
            current Python major version.
 
@@ -61,7 +62,14 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
 
     # Set default keywords
     kwargs.setdefault("allow_errors", False)
-    kwargs.setdefault("kernel_name", f"python{sys.version_info[0]}")
+    kernel = kwargs.pop("kernel", None)
+    if kernel:
+        warn(
+            '"kernel" keyword argument to run_notebook(); use "kernel_name"',
+            DeprecationWarning,
+            2,
+        )
+    kwargs.setdefault("kernel_name", kernel or f"python{sys.version_info[0]}")
     kwargs.setdefault("timeout", 10)
 
     # Create a client and use it to execute the notebook

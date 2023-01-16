@@ -63,7 +63,7 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
     # Set default keywords
     kwargs.setdefault("allow_errors", False)
     kernel = kwargs.pop("kernel", None)
-    if kernel:
+    if kernel:  # pragma: no cover
         warn(
             '"kernel" keyword argument to run_notebook(); use "kernel_name"',
             DeprecationWarning,

@@ -12,7 +12,6 @@ from ixmp.testing import make_dantzig, populate_test_platform
 
 
 def test_check_year():
-
     # If y is a string value, raise a Value Error.
 
     y1 = "a"

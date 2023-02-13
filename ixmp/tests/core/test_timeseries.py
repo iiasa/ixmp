@@ -173,7 +173,7 @@ class TestTimeSeries:
         assert 0 == len(ts.timeseries())
 
     @pytest.mark.parametrize("format", ["long", "wide"])
-    def test_get(self, ts, format):
+    def test_get0(self, ts, format):
         data = DATA[0] if format == "long" else wide(DATA[0])
 
         ts.add_timeseries(data)
@@ -190,6 +190,13 @@ class TestTimeSeries:
         #    columns in unpredictable order. In pandas 1.2.0, this caused an exception;
         #    see pandas-dev/pandas#39168. Removed until the upstream bug is fixed.
         assert_frame_equal(exp, ts.timeseries(**args))
+
+    def test_get1(self, ts):
+        ts.add_timeseries(DATA[0])
+        ts.commit("")
+
+        # year filters with integer values are handled correctly (iiasa/ixmp#440)
+        ts.timeseries(year=[2020])
 
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_edit(self, mp, ts, format):

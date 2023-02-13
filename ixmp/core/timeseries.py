@@ -379,7 +379,7 @@ class TimeSeries:
             Variables to include in returned data.
         unit : str or list of str, optional
             Units to include in returned data.
-        year : str or int or list of (str or int), optional
+        year : int or list of int, optional
             Years to include in returned data.
         subannual : bool or 'auto', optional
             Whether to include column for sub-annual specification (if :class:`bool`);

@@ -403,7 +403,7 @@ class TimeSeries:
                 as_str_list(region) or [],
                 as_str_list(variable) or [],
                 as_str_list(unit) or [],
-                as_str_list(year) or [],
+                year if isinstance(year, Sequence) else [] if year is None else [year],
             ),
             columns=FIELDS["ts_get"],
         )

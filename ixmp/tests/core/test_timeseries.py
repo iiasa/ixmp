@@ -191,6 +191,24 @@ class TestTimeSeries:
         #    see pandas-dev/pandas#39168. Removed until the upstream bug is fixed.
         assert_frame_equal(exp, ts.timeseries(**args))
 
+    @pytest.mark.parametrize(
+        "year_arg",
+        [
+            [2020],  # Single element
+            [2010, 2020],  # Multiple elements
+            2020,  # bare int, not in a list
+            # java.lang.java.lang.ClassCastException
+            pytest.param(["2010"], marks=pytest.mark.xfail),
+        ],
+    )
+    def test_get_year(self, ts, year_arg):
+        """`year` arg to :meth:`.TimeSeries.timeseries` accepts only :class:`int`."""
+        ts.add_timeseries(DATA[0])
+        ts.commit("")
+
+        # year filters with integer values are handled correctly (iiasa/ixmp#440)
+        ts.timeseries(year=year_arg)
+
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_edit(self, mp, ts, format):
         """Tests that data can be overwritten."""

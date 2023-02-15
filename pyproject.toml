@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools-scm>=7",
+]
 
 # Replacement for setup.cfg
 #

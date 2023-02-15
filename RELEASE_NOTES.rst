@@ -4,6 +4,7 @@ Next release
 All changes
 -----------
 
+- Bugfix: `year` argument to :meth:`.TimeSeries.timeseries` accepts :class:`int` or :class:`list` of :class:`int` (:issue:`440`, :pull:`469`).
 - Adjust to pandas 1.5.0 (:pull:`458`).
 - New module :mod:`.util.sphinx_linkcode_github` to link documentation to source code on GitHub (:pull:`459`).
 

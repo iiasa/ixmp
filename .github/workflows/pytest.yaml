@@ -32,9 +32,14 @@ jobs:
         # requires a more elaborate build environment, currently out of scope
         # for the ixmp project.
         # - "3.11.0-alpha.1"  # Development version
+
         pandas-version:
         - ""
         - "==2.0.0rc0"
+
+        exclude:
+        - python-version: "3.7"
+          pandas-version: "==2.0.0rc0"
 
       fail-fast: false
 

@@ -208,7 +208,8 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_get_elements", "set", name, filters)
 
-    def add_set(
+    # FIXME reduce complexity from 17 to <=15
+    def add_set(  # noqa: C901
         self,
         name: str,
         key: Union[str, Sequence[str], Dict, pd.DataFrame],

@@ -8,6 +8,11 @@ on:
   schedule:
   - cron: "0 5 * * *"
 
+# Cancel previous runs that have not completed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   # See description in lint.yml
   depth: 100
@@ -47,11 +52,6 @@ jobs:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}-pandas${{ matrix.pandas-version }}
 
     steps:
-    - name: Cancel previous runs that have not completed
-      uses: styfle/cancel-workflow-action@0.11.0
-      with:
-        access_token: ${{ github.token }}
-
     - uses: actions/checkout@v3
       with:
         fetch-depth: ${{ env.depth }}

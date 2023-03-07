@@ -4,6 +4,9 @@ Next release
 All changes
 -----------
 
+- :mod:`ixmp` is tested and compatible with `pandas 2.0.0 <https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html>`__ (:pull:`471`).
+  Note that `pandas 1.4.0 dropped support for Python 3.7 <https://pandas.pydata.org/docs/whatsnew/v1.4.0.html#increased-minimum-version-for-python>`__: thus while :mod:`ixmp` still supports Python 3.7 this is achieved with pandas 1.3.x, which may not receive further updates (the last patch release was in December 2021).
+  Support for Python 3.7 will be dropped in a future version of :mod:`ixmp`, and users are encouraged to upgrade to a newer version of Python.
 - Bugfix: `year` argument to :meth:`.TimeSeries.timeseries` accepts :class:`int` or :class:`list` of :class:`int` (:issue:`440`, :pull:`469`).
 - Adjust to pandas 1.5.0 (:pull:`458`).
 - New module :mod:`.util.sphinx_linkcode_github` to link documentation to source code on GitHub (:pull:`459`).

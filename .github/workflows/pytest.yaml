@@ -8,6 +8,11 @@ on:
   schedule:
   - cron: "0 5 * * *"
 
+# Cancel previous runs that have not completed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   # See description in lint.yml
   depth: 100
@@ -24,26 +29,36 @@ jobs:
         - "3.7"  # Earliest version supported by ixmp
         - "3.8"
         - "3.9"
-        - "3.10"  # Latest release / latest supported by ixmp
+        - "3.10"  # Latest supported by ixmp
 
         # For fresh releases and development versions of Python, compiled
         # binary wheels are not available for some dependencies, e.g. llvmlite,
         # numba, numpy, and/or pandas. Compiling these on the job runner
         # requires a more elaborate build environment, currently out of scope
         # for the ixmp project.
-        # - "3.11.0-alpha.1"  # Development version
+        # - "3.11"  # Latest release; pending numba/numba#8304
+        # - "3.12.0-alpha.1"  # Development version
+
+        # commented: force a specific version of pandas, for e.g. pre-release
+        # testing
+        # pandas-version:
+        # - ""
+        # - "==2.0.0rc0"
+
+        exclude: [ ]
+        # # Specific version combinations that are invalid, e.g. pandas 2.0
+        # # requires Python >= 3.8
+        # - python-version: "3.7"
+        #   pandas-version: "==2.0.0rc0"
 
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-py${{ matrix.python-version }}
+    # commented: use with "pandas-version" in the matrix, above
+    # name: ${{ matrix.os }}-py${{ matrix.python-version }}-pandas${{ matrix.pandas-version }}
 
     steps:
-    - name: Cancel previous runs that have not completed
-      uses: styfle/cancel-workflow-action@0.11.0
-      with:
-        access_token: ${{ github.token }}
-
     - uses: actions/checkout@v3
       with:
         fetch-depth: ${{ env.depth }}
@@ -89,6 +104,8 @@ jobs:
     - name: Install Python package and dependencies
       run: |
         pip install .[tests]
+        # commented: use with "pandas-version" in the matrix, above
+        # pip install --upgrade pandas${{ matrix.pandas-version }}
         # TEMPORARY work around iiasa/ixmp#463
         pip install "JPype1 != 1.4.1"
 

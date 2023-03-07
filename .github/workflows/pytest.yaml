@@ -76,7 +76,7 @@ jobs:
 
     - uses: iiasa/actions/setup-gams@main
       with:
-        version: 25.1.1
+        version: 41.5.0
 
     - name: Set RETICULATE_PYTHON
       # Use the environment variable set by the setup-python action, above.

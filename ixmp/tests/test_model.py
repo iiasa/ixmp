@@ -122,12 +122,18 @@ class TestGAMSModel:
             dict(comment=None),
             dict(equ_list=None, var_list=["x"]),
             dict(equ_list=["demand", "supply"], var_list=[]),
+            dict(LP="HiGHS"),
         ],
-        ids=["null-comment", "null-list", "empty-list"],
+        ids=["null-comment", "null-list", "empty-list", "HiGHS"],
     )
-    def test_GAMSModel_solve(test_data_path, dantzig, kwargs):
+    def test_GAMSModel_solve(self, dantzig, kwargs):
         """Options to GAMSModel are handled without error."""
         dantzig.clone().solve(**kwargs, quiet=True)
+
+    def test_solve_highs(self, capfd, test_data_path, dantzig):
+        dantzig.clone().solve(LP="HiGHS")
+        captured = capfd.readouterr()
+        assert "HiGHS run time" in captured.out
 
     def test_error_message(self, test_data_path, test_mp):
         """GAMSModel.solve() displays a user-friendly message on error."""

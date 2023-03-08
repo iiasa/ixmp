@@ -107,6 +107,7 @@ module = [
   "pandas.*",
   "pint._vendor",
   "pyam",
+  "pyomo",
   "pretenders.*",
 ]
 ignore_missing_imports = true

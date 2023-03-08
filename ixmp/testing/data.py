@@ -155,7 +155,9 @@ def add_test_data(scen: Scenario):
     return t, t_foo, t_bar, x
 
 
-def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scenario:
+def make_dantzig(
+    mp: Platform, solve: bool = False, quiet: bool = False, scheme="dantzig-gams"
+) -> Scenario:
     """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters
@@ -191,7 +193,7 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
         **models["dantzig"],  # type: ignore [arg-type]
         version="new",
         annotation=annot,
-        scheme="dantzig",
+        scheme=scheme,
         with_data=True,
     )
 

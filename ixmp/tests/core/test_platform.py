@@ -195,7 +195,7 @@ def test_timeslices(test_mp):
     obs = timeslices[timeslices.category == "Common"]
     # result has all attributes of time slice
     assert all(obs.columns == ["name", "category", "duration"])
-    # result contains pre-defined YEAR time slice
+    # result contains pre-defined Year time slice
     assert all([list(obs.iloc[0]) == ["Year", "Common", 1.0]])
 
 

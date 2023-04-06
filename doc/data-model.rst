@@ -124,8 +124,8 @@ Sub-annual time slice
    - **duration**: a float number indicating the duration of the time slice, expressed in fraction of a year (dimensionless).
    - **category**: a string, identifying a set of time slices that together represent a division of one year.
 
-   The value “year” is automatically present, with duration ``1.0``.
-   Use of this value for the “subannual” identifier indicates that time-series or geodata **does not** have subannual resolution.
+   The value “Year” is automatically present, with duration ``1.0``.
+   Use of this value for the “subannual” identifier indicates that the time-series or geodata **does not** have subannual resolution.
 
 .. [3] The concept of a time slice is related to the concept represented by the index set 'time' in a :class:`message_ix.Scenario` to indicate a subannual time dimension.
    However, these are not linked automatically within :mod:`ixmp` or :mod:`message_ix` and must be defined independently.

@@ -1,7 +1,5 @@
 import logging
 
-from pkg_resources import DistributionNotFound, get_distribution
-
 from ixmp._config import config
 from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
 from ixmp.backend.jdbc import JDBCBackend
@@ -27,9 +25,11 @@ __all__ = [
     "show_versions",
 ]
 
+from importlib.metadata import PackageNotFoundError, version
+
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:  # pragma: no cover
+    __version__ = version(__name__)
+except PackageNotFoundError:
     # Package is not installed
     __version__ = "999"
 

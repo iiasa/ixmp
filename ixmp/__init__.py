@@ -32,7 +32,7 @@ __all__ = [
 
 try:
     __version__ = version(__name__)
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: no cover
     # Package is not installed
     __version__ = "999"
 

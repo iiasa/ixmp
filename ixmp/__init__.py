@@ -1,5 +1,10 @@
 import logging
 
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:  # Python 3.7
+    from importlib_metadata import PackageNotFoundError, version  # type: ignore
+
 from ixmp._config import config
 from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
 from ixmp.backend.jdbc import JDBCBackend
@@ -24,8 +29,6 @@ __all__ = [
     "log",
     "show_versions",
 ]
-
-from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version(__name__)

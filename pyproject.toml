@@ -41,8 +41,8 @@ dependencies = [
 
 [project.urls]
 homepage = "https://github.com/iiasa/ixmp"
-repository = "http://github.com/iiasa/ixmp"
-documentation = "http://docs.messageix.org/ixmp"
+repository = "https://github.com/iiasa/ixmp"
+documentation = "https://docs.messageix.org/ixmp"
 
 [project.optional-dependencies]
 docs = [

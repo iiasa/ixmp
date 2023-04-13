@@ -83,11 +83,8 @@ no_implicit_optional = false
 module = [
   "dask.*",
   "jpype",
-  "nbclient",
-  "nbformat",
   "memory_profiler",
   "pandas.*",
-  "pint._vendor",
   "pyam",
   "pretenders.*",
 ]

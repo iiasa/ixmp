@@ -1,13 +1,16 @@
 [build-system]
 requires = ["build", "setuptools-scm"]
 
-
 [project]
 dynamic = ["version"]
 name = "ixmp"
 description = "The ix modeling platform"
 authors = [
-  { name = "IIASA Energy, Climate, and Environment (ECE) program", email = "message_ix@iiasa.ac.at" },
+  { name = "IIASA Energy, Climate, and Environment (ECE) program" },
+]
+maintainers = [
+  {name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name"},
+  {name = "Fridolin Glatter", email = "glatter@iiasa.ac.at"},
 ]
 readme = "README.md"
 classifiers = [

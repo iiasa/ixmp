@@ -70,7 +70,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
-        cache-dependency-path: "**/setup.cfg"
+        cache-dependency-path: "**/pyproject.toml"
 
     - uses: ts-graphviz/setup-graphviz@v1.2.0
       with:
@@ -97,9 +97,6 @@ jobs:
       # Use the environment variable set by the setup-python action, above.
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
-
-    - name: Upgrade pip, setuptools-scm, wheel
-      run: python -m pip install --upgrade pip setuptools-scm wheel
 
     - name: Install Python package and dependencies
       run: |

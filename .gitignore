@@ -57,7 +57,8 @@ coverage.xml
 htmlcov
 prof/
 
-# JetBrains IDEs
+# Editors and IDEs
+.editorconfig
 *.iml
 /**/.idea
 

@@ -1,89 +1,74 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-  "setuptools>=42",
-  "setuptools-scm>=7",
+requires = ["build", "setuptools-scm"]
+
+[project]
+dynamic = ["version"]
+name = "ixmp"
+description = "The ix modeling platform"
+authors = [
+  { name = "IIASA Energy, Climate, and Environment (ECE) program" },
+]
+maintainers = [
+  {name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name"},
+  {name = "Fridolin Glatter", email = "glatter@iiasa.ac.at"},
+]
+readme = "README.md"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: R",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+  "click",
+  "genno >= 1.12.0",
+  'importlib_metadata; python_version < "3.8"',
+  "JPype1 >= 1.2.1",
+  "openpyxl",
+  "pandas >= 1.2",
+  "pint",
+  "PyYAML",
+  "xarray",
 ]
 
-# Replacement for setup.cfg
-#
-# Support for this section is experimental in setuptools 61–62.1.0. This should
-# not be enabled until that support is stable.
-#
-# [project]
-# name = "ixmp"
-# description = "ix modeling platform"
-# authors = [
-#   { email = "message_ix@iiasa.ac.at"},
-#   { name = "IIASA Energy, Climate, and Environment (ECE) program"},
-# ]
-# license = { text = "Apache" }
-# readme = { file = "README.md", content-type = "text/markdown" }
-# classifiers = [
-#     "Development Status :: 5 - Production/Stable",
-#     "Intended Audience :: Developers",
-#     "Intended Audience :: Science/Research",
-#     "License :: OSI Approved :: Apache Software License",
-#     "Natural Language :: English",
-#     "Operating System :: OS Independent",
-#     "Programming Language :: Python",
-#     "Programming Language :: Python :: 3",
-#     "Programming Language :: Python :: 3.7",
-#     "Programming Language :: Python :: 3.8",
-#     "Programming Language :: Python :: 3.9",
-#     "Programming Language :: Python :: 3.10",
-#     "Programming Language :: R",
-#     "Topic :: Scientific/Engineering",
-#     "Topic :: Scientific/Engineering :: Information Analysis",
-# ]
-# dependencies = [
-#   "click",
-#   "genno >= 1.11.0",
-#   "JPype1 >= 1.2.1",
-#   "openpyxl",
-#   "pandas >= 1.2",
-#   "pint",
-#   "PyYAML",
-#   "xarray",
-# ]
-# dynamic = ["version"]
-#
-# [project.urls]
-# documentation = "http://docs.messageix.org/ixmp"
-# repository = "http://github.com/iiasa/ixmp"
-#
-# [tool.setuptools]
-# zip-safe = true
-#
-# [project.optional-dependencies]
-# docs = [
-#   "numpydoc",
-#   "sphinx >= 3.0",
-#   "sphinx_rtd_theme",
-#   "sphinxcontrib-bibtex",
-# ]
-# report = ["genno[compat,graphviz]"]
-# tutorial = ["jupyter"]
-# tests = [
-#   # Duplicated from above; see pypa/setuptools#3221
-#   "numpydoc",
-#   "sphinx >= 3.0",
-#   "sphinx_rtd_theme",
-#   "sphinxcontrib-bibtex",
-#   "genno[compat,graphviz]",
-#   "jupyter",
-#   # Other test requirements
-#   "codecov",
-#   "memory_profiler",
-#   "nbclient >= 0.5",
-#   "pretenders >= 1.4.4",
-#   "pytest >= 5",
-#   "pytest-benchmark",
-#   "pytest-cov",
-# ]
-#
-# [project.scripts]
-# ixmp = "ixmp.cli:main"
+[project.urls]
+homepage = "https://github.com/iiasa/ixmp"
+repository = "https://github.com/iiasa/ixmp"
+documentation = "https://docs.messageix.org/ixmp"
+
+[project.optional-dependencies]
+docs = [
+  "GitPython",
+  "numpydoc",
+  "sphinx >= 3.0",
+  "sphinx_rtd_theme",
+  "sphinxcontrib-bibtex",
+]
+report = ["genno[compat,graphviz]"]
+tutorial = ["jupyter"]
+tests = [
+  "ixmp[docs,report,tutorial]",
+  "memory_profiler",
+  "nbclient >= 0.5",
+  "pretenders >= 1.4.4",
+  "pytest >= 5",
+  "pytest-benchmark",
+  "pytest-cov",
+]
+
+[project.scripts]
+ixmp = "ixmp.cli:main"
 
 [tool.coverage.report]
 omit = [
@@ -101,11 +86,8 @@ no_implicit_optional = false
 module = [
   "dask.*",
   "jpype",
-  "nbclient",
-  "nbformat",
   "memory_profiler",
   "pandas.*",
-  "pint._vendor",
   "pyam",
   "pretenders.*",
 ]
@@ -125,3 +107,8 @@ markers = [
   "rixmp: test of the ixmp R interface.",
   "performance: ixmp performance test.",
 ]
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.setuptools_scm]

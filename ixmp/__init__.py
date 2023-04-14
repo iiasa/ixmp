@@ -1,6 +1,9 @@
 import logging
 
-from pkg_resources import DistributionNotFound, get_distribution
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:  # Python 3.7
+    from importlib_metadata import PackageNotFoundError, version  # type: ignore
 
 from ixmp._config import config
 from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
@@ -28,8 +31,8 @@ __all__ = [
 ]
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:  # pragma: no cover
+    __version__ = version(__name__)
+except PackageNotFoundError:  # pragma: no cover
     # Package is not installed
     __version__ = "999"
 

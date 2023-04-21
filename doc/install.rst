@@ -84,13 +84,13 @@ After installing GAMS, we recommend that new users install Anaconda, and then us
 Advanced users may choose to install :mod:`ixmp` from source code (next section).
 
 4. Install Python via either `Miniconda`_ or `Anaconda`_. [1]_
-   We recommend the latest version; currently Python 3.8.
+   We recommend the latest version; currently Python 3.10. [2]_
 
 5. Open a command prompt.
    We recommend Windows users use the “Anaconda Prompt” to avoid issues with permissions and environment variables when installing and using :mod:`ixmp`.
    This program is available in the Windows Start menu after installing Anaconda.
 
-6. Configure conda to install :mod:`ixmp` from the conda-forge channel [2]_::
+6. Configure conda to install :mod:`ixmp` from the conda-forge channel [3]_::
 
     $ conda config --prepend channels conda-forge
 
@@ -106,7 +106,8 @@ Advanced users may choose to install :mod:`ixmp` from source code (next section)
     $ conda install -c conda-forge ixmp
 
 .. [1] See the `conda glossary`_ for the differences between Anaconda and Miniconda, and the definitions of the terms ‘channel’ and ‘environment’ here.
-.. [2] The ‘$’ character at the start of these lines indicates that the command text should be entered in the terminal or prompt, depending on the operating system.
+.. [2] On newer macOS systems with "Apple M1" processors: the Miniconda or Anaconda installers provided for M1 lead to errors in ixmp. Instead, we recommend to use the macOS installers for "x86_64" processors on these systems. See also :issue:`473`.
+.. [3] The ‘$’ character at the start of these lines indicates that the command text should be entered in the terminal or prompt, depending on the operating system.
        Do not retype the ‘$’ character itself.
 
 .. note:: When using Anaconda (not Miniconda), steps (5) through (8) can also be performed using the graphical Anaconda Navigator.

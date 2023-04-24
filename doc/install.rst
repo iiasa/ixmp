@@ -106,9 +106,11 @@ Advanced users may choose to install :mod:`ixmp` from source code (next section)
     $ conda install -c conda-forge ixmp
 
 .. [1] See the `conda glossary`_ for the differences between Anaconda and Miniconda, and the definitions of the terms ‘channel’ and ‘environment’ here.
-.. [2] On newer macOS systems with "Apple M1" processors: the Miniconda or Anaconda installers provided for M1 lead to errors in ixmp. Instead, we recommend to use the macOS installers for "x86_64" processors on these systems. See also :issue:`473`.
+.. [2] On newer macOS systems with "Apple M1" processors: the Miniconda or Anaconda installers provided for M1 lead to errors in ixmp.
+   Instead, we recommend to use the macOS installers for "x86_64" processors on these systems.
+   See also :issue:`473`.
 .. [3] The ‘$’ character at the start of these lines indicates that the command text should be entered in the terminal or prompt, depending on the operating system.
-       Do not retype the ‘$’ character itself.
+   Do not retype the ‘$’ character itself.
 
 .. note:: When using Anaconda (not Miniconda), steps (5) through (8) can also be performed using the graphical Anaconda Navigator.
    See the `Anaconda Navigator documentation`_ for how to perform the various steps.

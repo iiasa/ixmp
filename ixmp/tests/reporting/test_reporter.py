@@ -72,7 +72,11 @@ def test_platform_units(test_mp, caplog, ureg):
     msg = r"unit '{}' cannot be parsed; contains invalid character\(s\) '{}'"
 
     # Unit and components for the regex
-    bad_units = [("-", "-", "-"), ("???", r"\?\?\?", r"\?"), ("E$", r"E\$", r"\$")]
+    bad_units = [
+        ("-", "-", "-"),
+        ("???", r"\?\?\?", r"\?\?\?"),
+        ("E$", r"E\$", r"\$"),
+    ]
     for unit, expr, chars in bad_units:
         # Add the unit
         test_mp.add_unit(unit)

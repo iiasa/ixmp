@@ -69,12 +69,12 @@ def test_platform_units(test_mp, caplog, ureg):
     x = x.to_series().rename("value").reset_index()
 
     # Exception message, formatted as a regular expression
-    msg = r"unit '{}' cannot be parsed; contains invalid character\(s\) '{}'"
+    msg = r"unit '{}' cannot be parsed; contains invalid character\(s\) '{}+'"
 
     # Unit and components for the regex
     bad_units = [
         ("-", "-", "-"),
-        ("???", r"\?\?\?", r"\?\?\?"),
+        ("???", r"\?\?\?", r"\?"),
         # Disabled pending https://github.com/hgrecco/pint/issues/1766
         # ("E$", r"E\$", r"\$"),
     ]

@@ -75,7 +75,8 @@ def test_platform_units(test_mp, caplog, ureg):
     bad_units = [
         ("-", "-", "-"),
         ("???", r"\?\?\?", r"\?\?\?"),
-        ("E$", r"E\$", r"\$"),
+        # Disabled pending https://github.com/hgrecco/pint/issues/1766
+        # ("E$", r"E\$", r"\$"),
     ]
     for unit, expr, chars in bad_units:
         # Add the unit

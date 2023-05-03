@@ -32,8 +32,9 @@ classifiers = [
 ]
 dependencies = [
   "click",
-  "genno >= 1.12.0",
-  'importlib_metadata; python_version < "3.8"',
+  "genno <= 1.13; python_version < '3.8'",
+  "genno >= 1.16; python_version >= '3.8'",
+  "importlib_metadata; python_version < '3.8'",
   "JPype1 >= 1.2.1",
   "openpyxl",
   "pandas >= 1.2",

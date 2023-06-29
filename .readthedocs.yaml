@@ -4,4 +4,4 @@ python:
   install:
   - method: pip
     path: .
-    extra_requirements: [tests]
+    extra_requirements: [docs]

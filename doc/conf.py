@@ -16,7 +16,6 @@
 
 # Import so that autodoc can find code
 import ixmp
-import ixmp.testing
 
 # -- Project information ---------------------------------------------------------------
 

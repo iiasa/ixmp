@@ -94,8 +94,9 @@ jobs:
       shell: bash
 
     - name: Install Python package and dependencies
+      # [docs] contains [tests], which contains [report,tutorial]
       run: |
-        pip install .[tests]
+        pip install .[docs]
 
         # commented: use with "pandas-version" in the matrix, above
         # pip install --upgrade pandas${{ matrix.pandas-version }}

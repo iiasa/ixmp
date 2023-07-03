@@ -51,6 +51,7 @@ documentation = "https://docs.messageix.org/ixmp"
 
 [project.optional-dependencies]
 docs = [
+  "ixmp[tests]",
   "GitPython",
   "numpydoc",
   "sphinx >= 3.0",
@@ -60,7 +61,7 @@ docs = [
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
-  "ixmp[docs,report,tutorial]",
+  "ixmp[report,tutorial]",
   "memory_profiler",
   "nbclient >= 0.5",
   "pretenders >= 1.4.4",

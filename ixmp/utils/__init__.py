@@ -1,8 +1,9 @@
 import logging
 import re
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -10,6 +11,9 @@ import numpy as np
 import pandas as pd
 
 from ixmp.backend import ItemType
+
+if TYPE_CHECKING:
+    from ixmp import TimeSeries
 
 log = logging.getLogger(__name__)
 
@@ -157,6 +161,28 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         if name[0] == name[1] == "~ end":
             break
+
+
+@contextmanager
+def discard_on_error(ts: "TimeSeries"):
+    """Discard changes to `ts` on any exception and close the database connection.
+
+    For :mod:`JDBCBackend`, this can avoid leaving a scenario in the "locked" state in
+    the database.
+    """
+    mp = ts.platform
+    try:
+        yield
+    except Exception as e:
+        log.info(f"Avoid locking {ts!r} before raising {str(e).splitlines()[0]!r}")
+        try:
+            ts.discard_changes()
+            log.info("Discard scenario changes")
+        except Exception:
+            pass
+        mp.close_db()
+        log.info("Close database connection")
+        raise
 
 
 def maybe_check_out(timeseries, state=None):

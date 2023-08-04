@@ -1,4 +1,6 @@
 import logging
+import os
+import platform
 
 import numpy as np
 import pytest
@@ -93,6 +95,12 @@ def get_distance(scen):
     return scen.par("d").set_index(["i", "j"]).loc["san-diego", "topeka"]["value"]
 
 
+@pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
+    reason="Flaky; see iiasa/ixmp#489",
+)
 def test_multi_db_run(tmpdir):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")

@@ -385,7 +385,7 @@ class JDBCBackend(CachingBackend):
     def set_doc(self, domain, docs):
         dd = _domain_enum(domain)
         jdata = java.LinkedHashMap()
-        if type(docs) == dict:
+        if isinstance(docs, dict):
             docs = list(docs.items())
         for k, v in docs:
             jdata.put(str(k), str(v))

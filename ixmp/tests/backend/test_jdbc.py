@@ -16,18 +16,15 @@ from ixmp.backend.jdbc import DRIVER_CLASS, java
 from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 
-FLAKY = pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-
-
 log = logging.getLogger(__name__)
 
 
-@FLAKY
+@pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Linux",
+    reason="Flaky; see iiasa/ixmp#489",
+)
 def test_jvm_warn(recwarn):
     """Test that no warnings are issued on JVM start-up.
 
@@ -49,7 +46,12 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-@FLAKY
+@pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
+    reason="Flaky; see iiasa/ixmp#489",
+)
 def test_close(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
@@ -188,7 +190,12 @@ def test_invalid_properties_file(test_data_path):
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
-@FLAKY
+@pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
+    reason="Flaky; see iiasa/ixmp#489",
+)
 def test_connect_message(capfd, caplog):
     msg = "connected to database 'jdbc:hsqldb:mem://ixmptest' (user: ixmp)..."
 

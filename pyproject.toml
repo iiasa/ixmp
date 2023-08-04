@@ -68,6 +68,7 @@ tests = [
   "pytest >= 5",
   "pytest-benchmark",
   "pytest-cov",
+  "pytest-rerunfailures",
 ]
 
 [project.scripts]

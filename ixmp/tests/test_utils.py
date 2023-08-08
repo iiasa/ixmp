@@ -134,6 +134,47 @@ def test_diff_items(test_mp):
         pass  # No check of the contents
 
 
+def test_discard_on_error(caplog, test_mp):
+    caplog.set_level(logging.INFO, "ixmp.utils")
+
+    # Create a test scenario, checked-in state
+    s = make_dantzig(test_mp)
+    url = s.url
+
+    # Some actions that don't trigger exceptions
+    assert dict(value=90, unit="USD/km") == s.scalar("f")
+    s.check_out()
+    s.change_scalar("f", 100, "USD/km")
+
+    # Catch the deliberately-raised exception so that the test passes
+    with pytest.raises(KeyError):
+        # Trigger KeyError and the discard_on_error() behaviour
+        with utils.discard_on_error(s):
+            s.add_par("d", pd.DataFrame([["foo", "bar", 1.0, "kg"]]))
+
+    # Exception was caught and logged
+    assert caplog.messages[-3].startswith("Avoid locking ")
+    assert [
+        "Discard scenario changes",
+        "Close database connection",
+    ] == caplog.messages[-2:]
+
+    # Re-load the mp and the scenario
+    with pytest.raises(RuntimeError):
+        # Fails because the connection to test_mp was closed by discard_on_error()
+        s2 = Scenario(test_mp, **utils.parse_url(url)[1])
+
+    # Reopen the connection
+    test_mp.open_db()
+
+    # Now the scenario can be reloaded
+    s2 = Scenario(test_mp, **utils.parse_url(url)[1])
+    assert s2 is not s  # Different object instance than above
+
+    # Data modification above was discarded by discard_on_error()
+    assert dict(value=90, unit="USD/km") == s.scalar("f")
+
+
 def test_filtered():
     df = pd.DataFrame()
     assert df is utils.filtered(df, filters=None)

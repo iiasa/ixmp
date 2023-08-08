@@ -174,7 +174,10 @@ def discard_on_error(ts: "TimeSeries"):
     try:
         yield
     except Exception as e:
-        log.info(f"Avoid locking {ts!r} before raising {str(e).splitlines()[0]!r}")
+        log.info(
+            f"Avoid locking {ts!r} before raising {e.__class__.__name__}: "
+            + str(e).splitlines()[0].strip('"')
+        )
         try:
             ts.discard_changes()
             log.info("Discard scenario changes")

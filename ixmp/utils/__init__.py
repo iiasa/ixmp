@@ -180,7 +180,7 @@ def discard_on_error(ts: "TimeSeries"):
         )
         try:
             ts.discard_changes()
-            log.info("Discard scenario changes")
+            log.info(f"Discard {ts.__class__.__name__.lower()} changes")
         except Exception:
             pass
         mp.close_db()

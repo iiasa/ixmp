@@ -12,7 +12,7 @@ import pandas as pd
 
 from ixmp.backend import ItemType
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ixmp import TimeSeries
 
 log = logging.getLogger(__name__)

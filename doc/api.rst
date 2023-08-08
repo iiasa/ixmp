@@ -205,6 +205,7 @@ Utilities
 
    .. autosummary::
       diff
+      discard_on_error
       format_scenario_list
       maybe_check_out
       maybe_commit

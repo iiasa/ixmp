@@ -165,10 +165,26 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
 @contextmanager
 def discard_on_error(ts: "TimeSeries"):
-    """Discard changes to `ts` on any exception and close the database connection.
+    """Context manager to discard changes to `ts` and close the DB on any exception.
 
-    For :mod:`JDBCBackend`, this can avoid leaving a scenario in the "locked" state in
-    the database.
+    For :mod:`JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
+    database.
+
+    Examples
+    --------
+    >>> mp = ixmp.Platform()
+    >>> s = ixmp.Scenario(mp, ...)
+    >>> with discard_on_error(s):
+    ...     s.add_par(...)  # Any code
+    ...     s.not_a_method()  # Code that raises some exception
+
+    Before the the exception in the final line is raised (and possibly handled by
+    surrounding code):
+
+    - Any changes—for example, here changes due to the call to :meth:`.add_par`—are
+      discarded/not committed;
+    - ``s`` is guaranteed to be in a non-locked state; and
+    - :meth:`.close_db` is called on ``mp``.
     """
     mp = ts.platform
     try:
@@ -178,13 +194,17 @@ def discard_on_error(ts: "TimeSeries"):
             f"Avoid locking {ts!r} before raising {e.__class__.__name__}: "
             + str(e).splitlines()[0].strip('"')
         )
+
         try:
             ts.discard_changes()
+        except Exception:  # pragma: no cover
+            pass  # Some exception trying to discard changes()
+        else:
             log.info(f"Discard {ts.__class__.__name__.lower()} changes")
-        except Exception:
-            pass
+
         mp.close_db()
         log.info("Close database connection")
+
         raise
 
 

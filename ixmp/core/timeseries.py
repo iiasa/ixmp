@@ -208,10 +208,22 @@ class TimeSeries:
     ):
         """Context manager to wrap code in a 'transaction'.
 
-        If `condition` is :obj:`True`, the TimeSeries (or :class:`.Scenario`) is
-        checked out *before* the block begins. When the block ends, the object is
-        committed with `message`. If `condition` is :obj:`False`, nothing occurs before
-        or after the block.
+        Parameters
+        ----------
+        message : str
+            Commit message to use, if any commit is performed.
+        condition : bool
+            If :obj:`True` (the default):
+
+            - Before entering the code block, the TimeSeries (or :class:`.Scenario`) is
+              checked out.
+            - On exiting the code block normally (without an exception), changes are
+              committed with `message`.
+
+            If :obj:`False`, nothing occurs on entry or exit.
+        discard_on_error : bool
+            If :obj:`True` (default :obj:`False`), then the anti-locking behaviour of
+            :func:`.discard_on_error` also applies to any exception raised in the block.
 
         Example
         -------

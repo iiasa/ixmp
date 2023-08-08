@@ -1,8 +1,10 @@
-.. Next release
-.. ============
+Next release
+============
 
 .. All changes
 .. -----------
+
+- New :func:`.utils.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
 
 .. _v3.7.0:
 

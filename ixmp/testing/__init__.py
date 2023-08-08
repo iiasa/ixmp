@@ -86,7 +86,12 @@ __all__ = [
 def pytest_addoption(parser):
     """Add the ``--user-config`` command-line option to pytest."""
     parser.addoption(
-        "--user-config",
+        "--ixmp-jvm-mem",
+        action="store",
+        help="Heap space to allocated for the JDBCBackend/JVM.",
+    )
+    parser.addoption(
+        "--ixmp-user-config",
         action="store_true",
         help="Use the user's existing config/'local' platform.",
     )
@@ -96,7 +101,7 @@ def pytest_sessionstart(session):
     """Unset any configuration read from the user's directory."""
     from ixmp.backend import jdbc
 
-    if not session.config.option.user_config:
+    if not session.config.option.ixmp_user_config:
         ixmp_config.clear()
         # Further clear an automatic reference to the user's home directory. See fixture
         # tmp_env below.
@@ -164,7 +169,7 @@ def tmp_env(pytestconfig, tmp_path_factory):
     base_temp = tmp_path_factory.getbasetemp()
     os.environ["IXMP_DATA"] = str(base_temp)
 
-    if not pytestconfig.option.user_config:
+    if not pytestconfig.option.ixmp_user_config:
         # Set the path for the default/local platform in the test directory
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb

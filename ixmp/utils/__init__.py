@@ -1,8 +1,9 @@
 import logging
 import re
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -10,6 +11,9 @@ import numpy as np
 import pandas as pd
 
 from ixmp.backend import ItemType
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ixmp import TimeSeries
 
 log = logging.getLogger(__name__)
 
@@ -157,6 +161,51 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         if name[0] == name[1] == "~ end":
             break
+
+
+@contextmanager
+def discard_on_error(ts: "TimeSeries"):
+    """Context manager to discard changes to `ts` and close the DB on any exception.
+
+    For :mod:`JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
+    database.
+
+    Examples
+    --------
+    >>> mp = ixmp.Platform()
+    >>> s = ixmp.Scenario(mp, ...)
+    >>> with discard_on_error(s):
+    ...     s.add_par(...)  # Any code
+    ...     s.not_a_method()  # Code that raises some exception
+
+    Before the the exception in the final line is raised (and possibly handled by
+    surrounding code):
+
+    - Any changes—for example, here changes due to the call to :meth:`.add_par`—are
+      discarded/not committed;
+    - ``s`` is guaranteed to be in a non-locked state; and
+    - :meth:`.close_db` is called on ``mp``.
+    """
+    mp = ts.platform
+    try:
+        yield
+    except Exception as e:
+        log.info(
+            f"Avoid locking {ts!r} before raising {e.__class__.__name__}: "
+            + str(e).splitlines()[0].strip('"')
+        )
+
+        try:
+            ts.discard_changes()
+        except Exception:  # pragma: no cover
+            pass  # Some exception trying to discard changes()
+        else:
+            log.info(f"Discard {ts.__class__.__name__.lower()} changes")
+
+        mp.close_db()
+        log.info("Close database connection")
+
+        raise
 
 
 def maybe_check_out(timeseries, state=None):

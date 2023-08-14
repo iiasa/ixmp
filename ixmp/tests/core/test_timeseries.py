@@ -1,3 +1,5 @@
+import logging
+import re
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -312,6 +314,34 @@ class TestTimeSeries:
 
         # Result is empty
         assert ts.timeseries().empty
+
+    def test_transact_discard(self, caplog, mp, ts):
+        caplog.set_level(logging.INFO, "ixmp.utils")
+
+        df = expected(DATA[2050], ts)
+
+        ts.add_timeseries(DATA[2050])
+        ts.commit("")
+
+        # Catch the deliberately-raised exception so that the test passes
+        with pytest.raises(AttributeError):
+            with ts.transact(discard_on_error=True):
+                # Remove a single data point; this operation will not be committed
+                ts.remove_timeseries(df[df.year == 2010])
+
+                # Trigger AttributeError
+                ts.foo_bar()
+
+        # Reopen the database connection
+        mp.open_db()
+
+        # Exception was caught and logged
+        assert caplog.messages[-4].startswith("Avoid locking ")
+        assert re.match("Discard (timeseries|scenario) changes", caplog.messages[-3])
+        assert "Close database connection" == caplog.messages[-2]
+
+        # Data are unchanged
+        assert_frame_equal(expected(DATA[2050], ts), ts.timeseries())
 
     # Geodata
 

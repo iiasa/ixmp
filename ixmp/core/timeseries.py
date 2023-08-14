@@ -1,5 +1,5 @@
 import logging
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
@@ -203,13 +203,27 @@ class TimeSeries:
         self._backend("discard_changes")
 
     @contextmanager
-    def transact(self, message: str = "", condition: bool = True):
+    def transact(
+        self, message: str = "", condition: bool = True, discard_on_error: bool = False
+    ):
         """Context manager to wrap code in a 'transaction'.
 
-        If `condition` is :obj:`True`, the TimeSeries (or :class:`.Scenario`) is
-        checked out *before* the block begins. When the block ends, the object is
-        committed with `message`. If `condition` is :obj:`False`, nothing occurs before
-        or after the block.
+        Parameters
+        ----------
+        message : str
+            Commit message to use, if any commit is performed.
+        condition : bool
+            If :obj:`True` (the default):
+
+            - Before entering the code block, the TimeSeries (or :class:`.Scenario`) is
+              checked out.
+            - On exiting the code block normally (without an exception), changes are
+              committed with `message`.
+
+            If :obj:`False`, nothing occurs on entry or exit.
+        discard_on_error : bool
+            If :obj:`True` (default :obj:`False`), then the anti-locking behaviour of
+            :func:`.discard_on_error` also applies to any exception raised in the block.
 
         Example
         -------
@@ -221,10 +235,15 @@ class TimeSeries:
         >>> # Changes to `ts` have been committed
         """
         # TODO implement __enter__ and __exit__ to allow simpler "with ts: …"
+        from ixmp.utils import discard_on_error as discard_on_error_cm
+
         if condition:
             maybe_check_out(self)
         try:
-            yield
+            # Use the discard_on_error context manager (cm) if the parameter of the same
+            # name is True
+            with discard_on_error_cm(self) if discard_on_error else nullcontext():
+                yield
         finally:
             maybe_commit(self, condition, message)
 

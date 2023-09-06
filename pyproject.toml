@@ -5,12 +5,10 @@ requires = ["build", "setuptools-scm"]
 dynamic = ["version"]
 name = "ixmp"
 description = "The ix modeling platform"
-authors = [
-  { name = "IIASA Energy, Climate, and Environment (ECE) program" },
-]
+authors = [{ name = "IIASA Energy, Climate, and Environment (ECE) program" }]
 maintainers = [
-  {name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name"},
-  {name = "Fridolin Glatter", email = "glatter@iiasa.ac.at"},
+  { name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name" },
+  { name = "Fridolin Glatter", email = "glatter@iiasa.ac.at" },
 ]
 readme = "README.md"
 classifiers = [
@@ -75,9 +73,7 @@ tests = [
 ixmp = "ixmp.cli:main"
 
 [tool.coverage.report]
-omit = [
-  "ixmp/utils/sphinx_linkcode_github.py",
-]
+omit = ["ixmp/utils/sphinx_linkcode_github.py"]
 
 [tool.isort]
 profile = "black"
@@ -111,6 +107,16 @@ markers = [
   "rixmp: test of the ixmp R interface.",
   "performance: ixmp performance test.",
 ]
+
+[tool.ruff]
+select = ["C9", "E", "F", "I", "W"]
+
+[tool.ruff.mccabe]
+# FIXME the following exceed this limit
+# .backend.io.s_read_excel: 26
+# .backend.jdbc.JDBCBackend.item_get_elements: 19
+# .core.scenario.Scenario.add_set: 17
+max-complexity = 15
 
 [tool.setuptools.packages]
 find = {}

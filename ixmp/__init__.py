@@ -1,9 +1,5 @@
 import logging
-
-try:
-    from importlib.metadata import PackageNotFoundError, version
-except ImportError:  # Python 3.7
-    from importlib_metadata import PackageNotFoundError, version  # type: ignore
+from importlib.metadata import PackageNotFoundError, version
 
 from ixmp._config import config
 from ixmp.backend import BACKENDS, IAMC_IDX, ItemType

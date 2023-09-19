@@ -20,7 +20,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
@@ -29,11 +28,10 @@ classifiers = [
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
+requires-python = ">=3.8"
 dependencies = [
   "click",
-  "genno <= 1.13; python_version < '3.8'",
-  "genno >= 1.16; python_version >= '3.8'",
-  "importlib_metadata; python_version < '3.8'",
+  "genno >= 1.16",
   "JPype1 >= 1.2.1",
   "openpyxl",
   "pandas >= 1.2",

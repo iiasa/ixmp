@@ -50,8 +50,9 @@ rixmp/source/inst/docum/*.html
 # pytest and related
 .benchmarks
 .coverage*
-.pytest_cache
 .mypy_cache
+.pytest_cache
+.ruff_cache
 *.pid
 coverage.xml
 htmlcov

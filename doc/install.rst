@@ -31,6 +31,11 @@ Use cases for installing ixmp directly include:
 Install system dependencies
 ===========================
 
+Python
+------
+
+Python version 3.8 or later is required.
+
 GAMS (required)
 ---------------
 

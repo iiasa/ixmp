@@ -14,7 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # See description in lint.yml
   depth: 100
 
 jobs:
@@ -26,8 +25,7 @@ jobs:
         - ubuntu-latest
         - windows-latest
         python-version:
-        - "3.7"  # Earliest version supported by ixmp
-        - "3.8"
+        - "3.8"  # Earliest version supported by ixmp
         - "3.9"
         - "3.10"
         - "3.11"  # Latest supported by ixmp
@@ -96,6 +94,9 @@ jobs:
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |
+        # Work around https://bugs.launchpad.net/lxml/+bug/2035206
+        pip install "lxml != 4.9.3"
+
         pip install .[docs]
 
         # commented: use with "pandas-version" in the matrix, above
@@ -134,3 +135,19 @@ jobs:
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v3
+
+  pre-commit:
+    name: Code quality
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+
+    - name: Force recreation of pre-commit virtual environment for mypy
+      if: github.event_name == 'schedule'
+      run: gh cache list -L 999 | cut -f2 | grep pre-commit | xargs -I{} gh cache delete "{}" || true
+      env: { GH_TOKEN: "${{ github.token }}" }
+
+    - uses: pre-commit/action@v3.0.0

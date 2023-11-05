@@ -138,14 +138,17 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         )
 
         # Merge the data from each side
-        yield current_name, pd.merge(
-            left,
-            right,
-            how="outer",
-            **on_arg,
-            sort=True,
-            suffixes=("_a", "_b"),
-            indicator=True,
+        yield (
+            current_name,
+            pd.merge(
+                left,
+                right,
+                how="outer",
+                **on_arg,
+                sort=True,
+                suffixes=("_a", "_b"),
+                indicator=True,
+            ),
         )
 
         # Maybe advance each iterators
@@ -485,10 +488,11 @@ def format_scenario_list(
 
         return pd.Series(result)
 
+    # group_keys silences a warning in pandas 1.5.0
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
-        # group_keys silences a warning in pandas 1.5.0
-        .groupby(["model", "scenario"], group_keys=True).apply(describe)
+        .groupby(["model", "scenario"], group_keys=True)
+        .apply(describe)
     )
 
     if len(info):

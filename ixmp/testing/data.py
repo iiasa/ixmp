@@ -10,7 +10,7 @@ import xarray as xr
 
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
-from ixmp.reporting import Quantity
+from ixmp.report import Quantity
 
 #: Common (model name, scenario name) pairs for testing.
 SCEN = {

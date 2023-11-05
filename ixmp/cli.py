@@ -86,9 +86,8 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 @click.pass_obj
 def report(context, config, key):
     """Run reporting for KEY."""
-    # Import here to avoid importing reporting dependencies when running
-    # other commands
-    from ixmp.reporting import Reporter
+    # Import here to avoid importing reporting dependencies when running other commands
+    from ixmp import Reporter
 
     if not context:
         raise click.UsageError(

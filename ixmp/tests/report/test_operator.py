@@ -11,7 +11,7 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import Scenario
 from ixmp.model.dantzig import DATA as dantzig_data
-from ixmp.reporting.computations import map_as_qty, store_ts, update_scenario
+from ixmp.report.operator import map_as_qty, store_ts, update_scenario
 from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
 

@@ -10,7 +10,7 @@ from ixmp.model import MODELS
 from ixmp.model.base import ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import GAMSModel
-from ixmp.reporting import Reporter
+from ixmp.report import Reporter
 from ixmp.utils import show_versions
 
 __all__ = [

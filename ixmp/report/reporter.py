@@ -6,7 +6,9 @@ import pandas as pd
 from genno.core.computer import Computer, Key
 
 from ixmp.core.scenario import Scenario
-from ixmp.reporting.util import RENAME_DIMS, keys_for_quantity
+
+from . import operator
+from .util import RENAME_DIMS, keys_for_quantity
 
 
 class Reporter(Computer):
@@ -17,7 +19,7 @@ class Reporter(Computer):
 
         # Append ixmp.reporting.computations to the modules in which the Computer will
         # look up computations names.
-        self.require_compat("ixmp.reporting.computations")
+        self.require_compat(operator)
 
     @classmethod
     def from_scenario(cls, scenario: Scenario, **kwargs) -> "Reporter":

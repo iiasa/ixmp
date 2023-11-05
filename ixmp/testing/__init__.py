@@ -228,7 +228,7 @@ def protect_rename_dims():
     values to :data:`RENAME_DIMS`. Using this fixture ensures that the environment for
     other tests is not altered.
     """
-    from ixmp.reporting import RENAME_DIMS
+    from ixmp.report import RENAME_DIMS
 
     saved = deepcopy(RENAME_DIMS)  # Probably just copy() is sufficient
     yield

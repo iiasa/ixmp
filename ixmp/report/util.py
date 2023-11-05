@@ -36,7 +36,7 @@ def dims_for_qty(data):
 
 def keys_for_quantity(ix_type, name, scenario):
     """Return keys for *name* in *scenario*."""
-    from .computations import data_for_quantity
+    from .operator import data_for_quantity
 
     # Retrieve names of the indices of the ixmp item, without loading the data
     dims = dims_for_qty(scenario.idx_names(name))

@@ -6,8 +6,8 @@ import pytest
 from genno import ComputationError, configure
 
 import ixmp
-from ixmp.reporting.reporter import Reporter
-from ixmp.reporting.util import RENAME_DIMS
+from ixmp.report.reporter import Reporter
+from ixmp.report.util import RENAME_DIMS
 from ixmp.testing import add_test_data, assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")

@@ -2,8 +2,12 @@ import logging
 import re
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
+from importlib.abc import MetaPathFinder
+from importlib.machinery import ModuleSpec, SourceFileLoader
+from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Mapping, Tuple
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -646,3 +650,58 @@ def update_par(scenario, name, data):
 
     if len(tmp):
         scenario.add_par(name, tmp)
+
+
+class DeprecatedPathFinder(MetaPathFinder):
+    """Handle imports from deprecated module locations."""
+
+    map: Mapping[re.Pattern, str]
+
+    def __init__(self, package: str, name_map: Mapping[str, str]):
+        # Prepend the package name to the source and destination
+        self.map = {
+            re.compile(rf"{package}\.{k}"): f"{package}.{v}"
+            for k, v in name_map.items()
+        }
+
+    @lru_cache(maxsize=128)
+    def new_name(self, name):
+        # Apply each pattern in self.map successively
+        new_name = name
+        for pattern, repl in self.map.items():
+            new_name = pattern.sub(repl, new_name)
+
+        if name != new_name:
+            from warnings import warn
+
+            warn(
+                f"Importing from {name!r} is deprecated and will fail in a future "
+                f"version. Use {new_name!r}.",
+                DeprecationWarning,
+                2,
+            )
+
+        return new_name
+
+    def find_spec(self, name, path, target=None):
+        new_name = self.new_name(name)
+        if new_name == name:
+            return None  # No known transformation; let the importlib defaults handle.
+
+        # Get an import spec for the module
+        spec = find_spec(new_name)
+        if not spec:
+            return None
+
+        # Create a new spec that loads the module from its current location as if it
+        # were `name`
+        new_spec = ModuleSpec(
+            name=name,
+            # Create a new loader that loads from the actual file with the desired name
+            loader=SourceFileLoader(fullname=name, path=spec.origin),
+            origin=spec.origin,
+        )
+        # These can't be passed through the constructor
+        new_spec.submodule_search_locations = spec.submodule_search_locations
+
+        return new_spec

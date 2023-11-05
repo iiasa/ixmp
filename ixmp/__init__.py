@@ -1,4 +1,5 @@
 import logging
+import sys
 from importlib.metadata import PackageNotFoundError, version
 
 from ixmp._config import config
@@ -11,7 +12,7 @@ from ixmp.model.base import ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import GAMSModel
 from ixmp.report import Reporter
-from ixmp.utils import show_versions
+from ixmp.utils import DeprecatedPathFinder, show_versions
 
 __all__ = [
     "IAMC_IDX",
@@ -31,6 +32,17 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     # Package is not installed
     __version__ = "999"
+
+# Install a finder that locates modules given their old/deprecated names
+sys.meta_path.append(
+    DeprecatedPathFinder(
+        __package__,
+        {
+            r"reporting(\..*)?": r"report\1",
+            "report.computations": "report.operator",
+        },
+    )
+)
 
 # Register Backends provided by ixmp
 BACKENDS["jdbc"] = JDBCBackend

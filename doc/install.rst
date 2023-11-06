@@ -71,7 +71,7 @@ GAMS (required)
 Graphviz (optional)
 -------------------
 
-:meth:`ixmp.reporting.Reporter.visualize` uses `Graphviz`_, a program for graph visualization.
+:meth:`ixmp.Reporter.visualize` uses `Graphviz`_, a program for graph visualization.
 Installing ixmp causes the python :mod:`graphviz` package to be installed.
 If you want to use :meth:`.visualize` or run the test suite, the Graphviz program itself must also be installed; otherwise it is **optional**.
 

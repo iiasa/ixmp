@@ -1,9 +1,9 @@
 Reporting / postprocessing
 **************************
 
-.. currentmodule:: ixmp.reporting
+.. currentmodule:: ixmp.report
 
-:mod:`ixmp.reporting` provides features for computing derived values from the contents of a :class:`ixmp.Scenario`, *after* it has been solved using a model and the solution data has been stored.
+:mod:`ixmp.report` provides features for computing derived values from the contents of a :class:`ixmp.Scenario`, *after* it has been solved using a model and the solution data has been stored.
 It is built on the :mod:`genno` package, which has its own, separate documentation.
 This page provides only API documentation.
 
@@ -17,10 +17,10 @@ This page provides only API documentation.
 Top-level classes and functions
 ===============================
 
-.. automodule:: ixmp.reporting
+.. automodule:: ixmp.report
 
 The following top-level objects from :mod:`genno` may also be imported from
-:mod:`ixmp.reporting`.
+:mod:`ixmp.report`.
 
 .. autosummary::
 
@@ -31,13 +31,13 @@ The following top-level objects from :mod:`genno` may also be imported from
    ~genno.core.quantity.Quantity
    ~genno.config.configure
 
-:mod:`ixmp.reporting` additionally defines:
+:mod:`ixmp.report` additionally defines:
 
 .. autosummary::
 
    Reporter
 
-.. autoclass:: ixmp.reporting.Reporter
+.. autoclass:: ixmp.report.Reporter
    :members:
    :exclude-members: add_load_file
 
@@ -79,9 +79,9 @@ The following top-level objects from :mod:`genno` may also be imported from
 Configuration
 =============
 
-:mod:`ixmp.reporting` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
+:mod:`ixmp.report` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
 
-.. automethod:: ixmp.reporting.filters
+.. automethod:: ixmp.report.filters
 
    Reporter-specific configuration.
 
@@ -104,7 +104,7 @@ Configuration
         # Clear existing filters for the "commodity" dimension
         commodity: null
 
-.. automethod:: ixmp.reporting.rename_dims
+.. automethod:: ixmp.report.rename_dims
 
    Reporter-specific configuration.
 
@@ -116,19 +116,19 @@ Configuration
        rename_dims:
          i: i_renamed
 
-.. automethod:: ixmp.reporting.units
+.. automethod:: ixmp.report.units
 
    The only difference from :func:`genno.config.units` is that this handler keeps the configuration values stored in ``Reporter.graph["config"]``.
    This is so that :func:`.data_for_quantity` can make use of ``["units"]["apply"]``
 
 
-Computations
-============
+Operators
+=========
 
-.. automodule:: ixmp.reporting.computations
+.. automodule:: ixmp.report.operator
    :members:
 
-   :mod:`ixmp.reporting` defines these computations:
+   :mod:`ixmp.report` defines these operators:
 
    .. autosummary::
       data_for_quantity
@@ -136,34 +136,34 @@ Computations
       update_scenario
       store_ts
 
-   Basic computations are defined by :mod:`genno.computation`; and its compatibility modules; see there for details:
+   Basic operators are defined by :mod:`genno.operator` and its compatibility modules; see there for details:
 
    .. autosummary::
       ~genno.compat.plotnine.Plot
-      ~genno.computations.add
-      ~genno.computations.aggregate
-      ~genno.computations.apply_units
-      ~genno.compat.pyam.computations.as_pyam
-      ~genno.computations.broadcast_map
-      ~genno.computations.combine
-      ~genno.computations.concat
-      ~genno.computations.disaggregate_shares
-      ~genno.computations.div
-      ~genno.computations.group_sum
-      ~genno.computations.interpolate
-      ~genno.computations.load_file
-      ~genno.computations.mul
-      ~genno.computations.pow
-      ~genno.computations.product
-      ~genno.computations.relabel
-      ~genno.computations.rename_dims
-      ~genno.computations.ratio
-      ~genno.computations.select
-      ~genno.computations.sum
-      ~genno.computations.write_report
+      ~genno.operator.add
+      ~genno.operator.aggregate
+      ~genno.operator.apply_units
+      ~genno.compat.pyam.operator.as_pyam
+      ~genno.operator.broadcast_map
+      ~genno.operator.combine
+      ~genno.operator.concat
+      ~genno.operator.disaggregate_shares
+      ~genno.operator.div
+      ~genno.operator.group_sum
+      ~genno.operator.interpolate
+      ~genno.operator.load_file
+      ~genno.operator.mul
+      ~genno.operator.pow
+      ~genno.operator.product
+      ~genno.operator.relabel
+      ~genno.operator.rename_dims
+      ~genno.operator.ratio
+      ~genno.operator.select
+      ~genno.operator.sum
+      ~genno.operator.write_report
 
 Utilities
 =========
 
-.. automodule:: ixmp.reporting.util
+.. automodule:: ixmp.report.util
    :members:

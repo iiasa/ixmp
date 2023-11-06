@@ -17,8 +17,8 @@ class Reporter(Computer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Append ixmp.reporting.computations to the modules in which the Computer will
-        # look up computations names.
+        # Append ixmp.report.operator to the modules in which the Computer will look up
+        # names
         self.require_compat(operator)
 
     @classmethod

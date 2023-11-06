@@ -148,7 +148,7 @@ def test_store_ts(request, caplog, test_mp):
     # A message is logged
     r = caplog.record_tuples[-1]
     assert (
-        "ixmp.reporting.computations" == r[0]
+        "ixmp.report.operator" == r[0]
         and logging.ERROR == r[1]
         and r[2].startswith("Failed with ValueError('region = Moon')")
     ), caplog.record_tuples

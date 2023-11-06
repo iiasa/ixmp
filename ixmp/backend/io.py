@@ -3,7 +3,7 @@ from collections import deque
 
 import pandas as pd
 
-from ixmp.utils import as_str_list, maybe_check_out, maybe_commit
+from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from . import ItemType
 

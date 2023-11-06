@@ -3,7 +3,7 @@ import os
 import re
 from abc import ABC, abstractmethod
 
-from ixmp.utils import maybe_check_out, maybe_commit
+from ixmp.util import maybe_check_out, maybe_commit
 
 log = logging.getLogger(__name__)
 

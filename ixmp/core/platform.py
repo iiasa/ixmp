@@ -7,7 +7,7 @@ import pandas as pd
 
 from ixmp._config import config
 from ixmp.backend import BACKENDS, FIELDS, ItemType
-from ixmp.utils import as_str_list
+from ixmp.util import as_str_list
 
 if TYPE_CHECKING:  # pragma: no cover
     from ixmp.backend.base import Backend

@@ -12,7 +12,7 @@ from ixmp.backend import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.model import get_model
-from ixmp.utils import as_str_list, check_year
+from ixmp.util import as_str_list, check_year
 
 log = logging.getLogger(__name__)
 
@@ -422,8 +422,11 @@ class Scenario(TimeSeries):
                 continue
 
             # Retrieve the data, reducing the filters to only the dimensions of the item
-            yield name, self.par(
-                name, filters={k: v for k, v in filters.items() if k in idx_names}
+            yield (
+                name,
+                self.par(
+                    name, filters={k: v for k, v in filters.items() if k in idx_names}
+                ),
             )
 
     def add_par(

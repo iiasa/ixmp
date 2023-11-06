@@ -10,7 +10,7 @@ import pandas as pd
 
 from ixmp.backend import FIELDS, IAMC_IDX, ItemType
 from ixmp.core.platform import Platform
-from ixmp.utils import (
+from ixmp.util import (
     as_str_list,
     maybe_check_out,
     maybe_commit,
@@ -134,7 +134,7 @@ class TimeSeries:
         Parameters
         ----------
         url : str
-            See :meth:`parse_url <ixmp.utils.parse_url>`.
+            See :meth:`parse_url <ixmp.util.parse_url>`.
         errors : 'warn' or 'raise'
             If 'warn', a failure to load the TimeSeries is logged as a warning, and the
             platform is still returned. If 'raise', the exception is raised.
@@ -235,7 +235,7 @@ class TimeSeries:
         >>> # Changes to `ts` have been committed
         """
         # TODO implement __enter__ and __exit__ to allow simpler "with ts: …"
-        from ixmp.utils import discard_on_error as discard_on_error_cm
+        from ixmp.util import discard_on_error as discard_on_error_cm
 
         if condition:
             maybe_check_out(self)

@@ -338,7 +338,7 @@ def list_platforms():
 @click.pass_obj
 def list_scenarios(context, **kwargs):
     """List scenarios on the --platform."""
-    from ixmp.utils import format_scenario_list
+    from ixmp.util import format_scenario_list
 
     if not context:
         raise click.UsageError(

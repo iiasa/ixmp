@@ -6,7 +6,7 @@ import pint
 from genno.core.quantity import Quantity
 from genno.util import parse_units
 
-from ixmp.utils import to_iamc_layout
+from ixmp.util import to_iamc_layout
 
 from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
 

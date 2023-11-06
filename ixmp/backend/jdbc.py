@@ -17,7 +17,7 @@ import pandas as pd
 from ixmp.backend import FIELDS, ItemType
 from ixmp.backend.base import CachingBackend
 from ixmp.core.scenario import Scenario
-from ixmp.utils import as_str_list, filtered
+from ixmp.util import as_str_list, filtered
 
 log = logging.getLogger(__name__)
 
@@ -660,7 +660,10 @@ class JDBCBackend(CachingBackend):
 
         # Call either newTimeSeries or newScenario
         method = getattr(self.jobj, "new" + klass)
-        jobj = method(ts.model, ts.scenario, *args)
+        try:
+            jobj = method(ts.model, ts.scenario, *args)
+        except java.IxException as e:
+            _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
 

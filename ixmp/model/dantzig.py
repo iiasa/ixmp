@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ixmp.utils import maybe_check_out, maybe_commit, update_par
+from ixmp.util import maybe_check_out, maybe_commit, update_par
 
 from .gams import GAMSModel
 

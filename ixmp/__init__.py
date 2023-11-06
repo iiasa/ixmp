@@ -12,7 +12,7 @@ from ixmp.model.base import ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import GAMSModel
 from ixmp.report import Reporter
-from ixmp.utils import DeprecatedPathFinder, show_versions
+from ixmp.util import DeprecatedPathFinder, show_versions
 
 __all__ = [
     "IAMC_IDX",
@@ -40,6 +40,7 @@ sys.meta_path.append(
         {
             r"reporting(\..*)?": r"report\1",
             "report.computations": "report.operator",
+            r"utils(\..*)?": r"util\1",
         },
     )
 )
@@ -64,3 +65,12 @@ handler = logging.StreamHandler()
 handler.setLevel(logging.WARNING)
 log.addHandler(handler)
 log.setLevel(logging.WARNING)
+
+
+def __getattr__(name):
+    if name == "utils":
+        import ixmp.util
+
+        return ixmp.util
+    else:
+        raise AttributeError(name)

@@ -10,7 +10,7 @@ from typing import Any, MutableMapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError
-from ixmp.utils import as_str_list
+from ixmp.util import as_str_list
 
 log = logging.getLogger(__name__)
 

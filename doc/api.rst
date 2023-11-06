@@ -3,6 +3,8 @@
 Python (:mod:`ixmp` package)
 ============================
 
+.. automodule:: ixmp
+
 The |ixmp| application programming interface (API) is organized around three classes:
 
 .. autosummary::

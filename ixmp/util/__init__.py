@@ -678,7 +678,7 @@ class DeprecatedPathFinder(MetaPathFinder):
                 f"Importing from {name!r} is deprecated and will fail in a future "
                 f"version. Use {new_name!r}.",
                 DeprecationWarning,
-                2,
+                3,
             )
 
         return new_name

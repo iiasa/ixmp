@@ -41,7 +41,7 @@ def logger():
           ixmp_logger.setLevel(logging.INFO)
     """
     warn(
-        "ixmp.utils.logger() is deprecated as of 3.3.0, and will be removed in ixmp "
+        "ixmp.util.logger() is deprecated as of 3.3.0, and will be removed in ixmp "
         '5.0. Use logging.getLogger("ixmp").',
         DeprecationWarning,
     )
@@ -77,7 +77,7 @@ def as_str_list(arg, idx_names=None):
 def isscalar(x):
     """Returns True if `x` is a scalar."""
     warn(
-        "ixmp.utils.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
+        "ixmp.util.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
         DeprecationWarning,
     )
     return np.isscalar(x)

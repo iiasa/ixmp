@@ -5,7 +5,7 @@ Next release
 .. -----------
 
 - Support for Python 3.7 is dropped (:pull:`492`).
-- New :func:`.utils.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
+- New :func:`.util.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
 
 .. _v3.7.0:
 
@@ -73,7 +73,7 @@ v3.4.0 (2022-01-24)
 Migration notes
 ---------------
 
-:func:`ixmp.utils.isscalar` is deprecated.
+:func:`ixmp.util.isscalar` is deprecated.
 Code should use :func:`numpy.isscalar`.
 
 All changes
@@ -103,7 +103,7 @@ All changes
 - Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions`` (:pull:`416`).
 - Clean up test suite, improve performance, increase coverage (:pull:`416`).
 - Adjust documentation for deprecation of ``rixmp`` (:pull:`416`).
-- Deprecate :func:`.utils.logger` (:pull:`399`).
+- Deprecate :func:`.util.logger` (:pull:`399`).
 - Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
 - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows (:pull:`398`).
 - Format user-friendly exceptions when GAMSModel errors (:issue:`383`, :pull:`398`).
@@ -141,7 +141,7 @@ ixmp v3.1.0 coincides with message_ix v3.1.0.
 - Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets (:pull:`345`).
 - Expand documentation and revise installation instructions (:pull:`363`).
 - Raise Python exceptions from :class:`.JDBCBackend` (:pull:`362`).
-- Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export`` (:pull:`354`).
+- Add :meth:`Scenario.items`, :func:`.util.diff`, and allow using filters in CLI command ``ixmp export`` (:pull:`354`).
 - Add functionality for storing ‘meta’ (annotations of model names, scenario names, versions, and some combinations thereof) (:pull:`353`).
 
   - Add :meth:`.Backend.add_model_name`, :meth:`~.Backend.add_scenario_name`, :meth:`~.Backend.get_model_names`, :meth:`~.Backend.get_scenario_names`, :meth:`~.Backend.get_meta`, :meth:`~.Backend.set_meta`, :meth:`~.Backend.remove_meta`.

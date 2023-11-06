@@ -29,7 +29,7 @@ author = "ixmp Developers"
 # Add any Sphinx extension module names here, as strings. They can be extensions coming
 # with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "ixmp.utils.sphinx_linkcode_github",
+    "ixmp.util.sphinx_linkcode_github",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
@@ -110,7 +110,7 @@ intersphinx_mapping = {
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
-# -- Options for sphinx.ext.linkcode / ixmp.utils.sphinx_linkcode_github ---------------
+# -- Options for sphinx.ext.linkcode / ixmp.util.sphinx_linkcode_github ---------------
 
 linkcode_github_repo_slug = "iiasa/ixmp"
 

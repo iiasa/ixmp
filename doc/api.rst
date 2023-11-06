@@ -197,9 +197,9 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
 Utilities
 ---------
 
-.. currentmodule:: ixmp.utils
+.. currentmodule:: ixmp.util
 
-.. automodule:: ixmp.utils
+.. automodule:: ixmp.util
    :members:
    :exclude-members: as_str_list, check_year, isscalar, year_list, filtered
 
@@ -218,7 +218,7 @@ Utilities
 Utilities for documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: ixmp.utils.sphinx_linkcode_github
+.. automodule:: ixmp.util.sphinx_linkcode_github
    :members:
 
    To use this extension, add it to the ``extensions`` setting in the Sphinx configuration file (usually :file:`conf.py`), and set the required ``linkcode_github_repo_slug``:
@@ -227,7 +227,7 @@ Utilities for documentation
 
       extensions = [
           ...,
-          "ixmp.utils.sphinx_linkcode_github",
+          "ixmp.util.sphinx_linkcode_github",
           ...,
       ]
 

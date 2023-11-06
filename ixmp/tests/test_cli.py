@@ -99,7 +99,7 @@ def test_list(ixmp_cli, test_mp):
 
     # 'list' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(cmd)
-    assert result.exit_code == UsageError.exit_code
+    assert result.exit_code == UsageError.exit_code, (result.exception, result.output)
 
     # CLI works; nothing returned with a --match option that matches nothing
     result = ixmp_cli.invoke(["--platform", test_mp.name] + cmd)

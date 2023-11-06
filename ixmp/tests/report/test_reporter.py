@@ -101,7 +101,7 @@ def test_platform_units(test_mp, caplog, ureg):
     with caplog.at_level(logging.INFO):
         rep.get(x_key)
 
-    # NB cannot use assert_logs here. reporting.utils.parse_units uses the pint
+    # NB cannot use assert_logs here. report.util.parse_units uses the pint
     #    application registry, so depending which tests are run and in which order, this
     #    unit may already be defined.
     if len(caplog.messages):

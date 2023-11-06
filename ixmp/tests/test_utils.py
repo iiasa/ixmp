@@ -1,4 +1,4 @@
-"""Tests for ixmp.utils."""
+"""Tests for ixmp.util."""
 import logging
 
 import numpy as np
@@ -135,7 +135,7 @@ def test_diff_items(test_mp):
 
 
 def test_discard_on_error(caplog, test_mp):
-    caplog.set_level(logging.INFO, "ixmp.utils")
+    caplog.set_level(logging.INFO, "ixmp.util")
 
     # Create a test scenario, checked-in state
     s = make_dantzig(test_mp)

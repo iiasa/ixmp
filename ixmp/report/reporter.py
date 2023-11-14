@@ -27,14 +27,14 @@ class Reporter(Computer):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Scenario to introspect in creating the Reporter.
-        kwargs : optional
-            Passed to :meth:`Scenario.configure`.
+        kwargs :
+            Passed to :meth:`genno.Computer.configure`.
 
         Returns
         -------
-        .Reporter
+        Reporter
             A Reporter instance containing:
 
             - A 'scenario' key referring to the *scenario* object.
@@ -96,7 +96,7 @@ class Reporter(Computer):
     def finalize(self, scenario: Scenario) -> None:
         """Prepare the Reporter to act on `scenario`.
 
-        The :class:`.TimeSeries` (i.e. including :class:`ixmp.Scenario` and
+        The :class:`.TimeSeries` (thus also :class:`.Scenario` or
         :class:`message_ix.Scenario`) object `scenario` is stored with the key
         ``'scenario'``. All subsequent processing will act on data from this Scenario.
         """

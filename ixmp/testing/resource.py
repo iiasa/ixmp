@@ -1,6 +1,7 @@
 """Performance testing."""
 import logging
 from collections import namedtuple
+from typing import Any, Optional
 
 try:
     import resource
@@ -30,13 +31,13 @@ def format_meminfo(arr, cls=float):
 # Variables for memory_usage
 _COUNT = 0
 _PREV = np.zeros(6)
-_RT = None
+_RT: Optional[Any] = None
 
 
 def memory_usage(message="", reset=False):
     """Profile memory usage from within a test function.
 
-    The Python package ``memory_profiler`` and :mod:`jpype` are used to report memory
+    The Python package ``memory_profiler`` and JPype_ are used to report memory
     usage. A message is logged at the ``DEBUG`` level, similar to::
 
        DEBUG    ixmp.testing:testing.py:527  42 <message>
@@ -134,7 +135,7 @@ def memory_usage(message="", reset=False):
 
 @pytest.fixture(scope="function")
 def resource_limit(request):
-    """A fixture that limits Python :mod:`resources`.
+    """A fixture that limits Python :mod:`resources <resource>`.
 
     See the documentation (``pytest --help``) for the ``--resource-limit`` command-line
     option that selects (1) the specific resource and (2) the level of the limit.

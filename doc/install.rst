@@ -71,9 +71,9 @@ GAMS (required)
 Graphviz (optional)
 -------------------
 
-:meth:`ixmp.Reporter.visualize` uses `Graphviz`_, a program for graph visualization.
-Installing ixmp causes the python :mod:`graphviz` package to be installed.
-If you want to use :meth:`.visualize` or run the test suite, the Graphviz program itself must also be installed; otherwise it is **optional**.
+:meth:`ixmp.Reporter.visualize <genno.Computer.visualize>` uses `Graphviz`_, a program for graph visualization.
+Installing ixmp causes the `graphviz <https://graphviz.readthedocs.io>`__ Python package to be installed.
+If you want to use :meth:`~genno.Computer.visualize` or run the test suite, the Graphviz program itself must also be installed; otherwise it is **optional**.
 
 If you install :mod:`ixmp` using Anaconda, Graphviz is installed automatically via `its conda-forge package`_.
 For other methods of installation, see the `Graphviz download page`_ for downloads and instructions for your system.

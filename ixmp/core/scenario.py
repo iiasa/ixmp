@@ -31,7 +31,7 @@ class Scenario(TimeSeries):
         class in :data:`.MODELS` is used to initialize items in the Scenario.
     cache:
         .. deprecated:: 3.0
-           The `cache` keyword argument to :class:`Scenario` has no effect and raises a
+           The `cache` keyword argument to :class:`.Scenario` has no effect and raises a
            warning. Use `cache` as one of the `backend_args` to :class:`Platform` to
            disable/enable caching for storage backends that support it. Use
            :meth:`load_scenario_data` to load all data in the Scenario into an in-memory
@@ -97,7 +97,7 @@ class Scenario(TimeSeries):
         See Also
         --------
         TimeSeries.check_out
-        utils.maybe_check_out
+        util.maybe_check_out
         """
         if not timeseries_only and self.has_solution():
             raise ValueError(
@@ -376,9 +376,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter
-        filters : dict (str -> list of str), optional
-            Index names mapped to lists of index set elements. Elements not appearing
-            in the respective index set(s) are silently ignored.
+        filters : dict, optional
+            Keys are index names. Values are lists of index set elements. Elements not
+            appearing in the respective index set(s) are silently ignored.
         """
         if len(kwargs):
             warn(
@@ -394,17 +394,17 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        type : ItemType, optional
-            Types of items to iterate, e.g. :data:`ItemType.PAR` for parameters, the
-            only value currently supported.
+        type : .ItemType, optional
+            Types of items to iterate, for instance :attr:`.ItemType.PAR` for
+            parameters, the only value currently supported.
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
             :meth:`par`.
 
         Yields
         ------
-        (str, object)
-            Tuples of item name and data.
+        tuple
+            Each tuple consists of (item name, item data).
         """
         if type != ItemType.PAR:
             raise NotImplementedError(
@@ -443,10 +443,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key_or_data : str or iterable of str or range or dict or
-                      :class:`pandas.DataFrame`
+        key_or_data : str or iterable of str or range or dict or pandas.DataFrame
             Element(s) to be added.
-        value : numeric or iterable of numeric, optional
+        value : float or iterable of float, optional
             Values.
         unit : str or iterable of str, optional
             Unit symbols.
@@ -545,7 +544,7 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the scalar
-        val : number
+        val : float or int
             Initial value of the scalar.
         unit : str
             Unit of the scalar.
@@ -565,7 +564,8 @@ class Scenario(TimeSeries):
 
         Returns
         -------
-        {'value': value, 'unit': unit}
+        dict
+            with the keys "value" and "unit".
         """
         return self._backend("item_get_elements", "par", name, None)
 
@@ -578,7 +578,7 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the scalar.
-        val : number
+        val : float or int
             New value of the scalar.
         unit : str
             New unit of the scalar.
@@ -596,8 +596,11 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key : dataframe or key list or concatenated string, optional
-            Elements to be removed
+        key : pandas.DataFrame or list or str, optional
+            Elements to be removed. If a :class:`pandas.DataFrame`, must contain the
+            same columns (indices/dimensions) as the parameter. If a :class:`list`, a
+            single key for a single data point; the individual elements must correspond
+            to the indices/dimensions of the parameter.
         """
         if key is None:
             self._backend("delete_item", "par", name)
@@ -708,8 +711,8 @@ class Scenario(TimeSeries):
         annotation : str, optional
             Explanatory comment for the clone commit message to the database.
         keep_solution : bool, optional
-            If :py:const:`True`, include all timeseries data and the solution (vars and
-            equs) from the source scenario in the clone. If :py:const:`False`, only
+            If :obj:`True`, include all timeseries data and the solution (vars and
+            equs) from the source scenario in the clone. If :obj:`False`, only
             include timeseries data marked `meta=True` (see :meth:`.add_timeseries`).
         shift_first_model_year: int, optional
             If given, all timeseries data in the Scenario is omitted from the clone for
@@ -873,7 +876,7 @@ class Scenario(TimeSeries):
         ----------
         path : os.PathLike
             File to write. Must have suffix :file:`.xlsx`.
-        items : ItemType, optional
+        items : .ItemType, optional
             Types of items to write. Either :attr:`.SET` | :attr:`.PAR` (i.e. only sets
             and parameters), or :attr:`.MODEL` (also variables and equations, i.e.
             model solution data).

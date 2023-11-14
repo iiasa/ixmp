@@ -13,11 +13,11 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
 
     Parameters
     ----------
-    nb_path : path-like
+    nb_path : os.PathLike
         The notebook file to execute.
-    tmp_path : path-like
+    tmp_path : os.PathLike
         A directory in which to create temporary output.
-    env : dict-like, optional
+    env : dict, optional
         Execution environment for :mod:`nbclient`. Default: :obj:`os.environ`.
     kwargs :
         Keyword arguments for :class:`nbclient.NotebookClient`. Defaults are set for:

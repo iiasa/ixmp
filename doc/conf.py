@@ -3,17 +3,6 @@
 # This file only contains a selection of the most common options. For a full list see
 # the documentation: https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory, add
-# these directories to sys.path here. If the directory is relative to the documentation
-# root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-
 # Import so that autodoc can find code
 import ixmp
 
@@ -50,23 +39,27 @@ templates_path = ["_templates"]
 # html_extra_path.
 exclude_patterns = ["_build", "README.rst", "Thumbs.db", ".DS_Store"]
 
+nitpick_ignore_regex = {
+    # These occur because there is no .. py:module:: directive for the *top-level*
+    # module or package in the respective documentation and inventories.
+    # TODO Remove once the respective docs are fixed
+    ("py:mod", "message_ix"),
+}
+
 # A string of reStructuredText that will be included at the beginning of every source
 # file that is read.
 version = ixmp.__version__
-rst_prolog = r"""
-.. |MESSAGEix| replace:: MESSAGE\ :emphasis:`ix`
-
-.. |ixmp| replace:: :emphasis:`ix modeling platform`
-
-.. |version| replace:: {}
+rst_prolog = rf"""
+.. role:: py(code)
+   :language: python
 
 .. role:: strike
-
 .. role:: underline
 
-""".format(
-    version
-)
+.. |MESSAGEix| replace:: MESSAGE\ :emphasis:`ix`
+.. |ixmp| replace:: :emphasis:`ix modeling platform`
+.. |version| replace:: {version}
+"""
 
 # -- Options for HTML output -----------------------------------------------------------
 
@@ -98,21 +91,44 @@ extlinks = {
 
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
-    "genno": ("https://genno.readthedocs.io/en/latest", None),
+    "genno": ("https://genno.readthedocs.io/en/latest/", None),
     "jpype": ("https://jpype.readthedocs.io/en/latest", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
+    "message-ix-models": (
+        "https://docs.messageix.org/projects/models/en/latest/",
+        None,
+    ),
+    "nbclient": ("https://nbclient.readthedocs.io/en/latest/", None),
+    "nbformat": ("https://nbformat.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "openpyxl": ("https://openpyxl.readthedocs.io/en/stable/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "pint": ("https://pint.readthedocs.io/en/stable/", None),
+    "pyam": ("https://pyam-iamc.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "sparse": ("https://sparse.pydata.org/en/stable/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
-# -- Options for sphinx.ext.linkcode / ixmp.util.sphinx_linkcode_github ---------------
+# -- Options for sphinx.ext.linkcode / ixmp.util.sphinx_linkcode_github ----------------
 
 linkcode_github_repo_slug = "iiasa/ixmp"
+
+# -- Options for sphinx.ext.napoleon ---------------------------------------------------
+
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # Standard library
+    "callable": ":ref:`callable <python:callable-types>`",
+    "iterable": ":class:`collections.abc.Iterable`",
+    "sequence": ":class:`collections.abc.Sequence`",
+    # Upstream
+    "Quantity": ":class:`genno.Quantity`",
+    # This package
+    "Platform": "~ixmp.Platform",
+    "Scenario": "~ixmp.Scenario",
+}
 
 # -- Options for sphinx.ext.todo -------------------------------------------------------
 

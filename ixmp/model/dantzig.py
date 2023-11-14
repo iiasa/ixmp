@@ -62,7 +62,7 @@ DATA = {
 
 
 class DantzigModel(GAMSModel):
-    """Dantzig's cannery/transport problem as a :class:`GAMSModel`.
+    """Dantzig's cannery/transport problem as a :class:`.GAMSModel`.
 
     Provided for testing :mod:`ixmp` code.
     """

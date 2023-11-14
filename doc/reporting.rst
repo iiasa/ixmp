@@ -22,17 +22,19 @@ Top-level classes and functions
 The following top-level objects from :mod:`genno` may also be imported from
 :mod:`ixmp.report`.
 
+.. currentmodule:: genno
 .. autosummary::
 
-   ~genno.core.exceptions.ComputationError
-   ~genno.core.key.Key
-   ~genno.core.exceptions.KeyExistsError
-   ~genno.core.exceptions.MissingKeyError
-   ~genno.core.quantity.Quantity
-   ~genno.config.configure
+   ComputationError
+   Key
+   KeyExistsError
+   MissingKeyError
+   Quantity
+   configure
 
 :mod:`ixmp.report` additionally defines:
 
+.. currentmodule:: ixmp.report
 .. autosummary::
 
    Reporter
@@ -45,34 +47,37 @@ The following top-level objects from :mod:`genno` may also be imported from
 
    Using the :meth:`.from_scenario`, a Reporter is automatically populated with:
 
-   - :class:`Keys <.Key>` that retrieve the data for every :mod:`ixmp` item (parameter, variable, equation, or scalar) available in the Scenario.
+   - :class:`Keys <.genno.Key>` that retrieve the data for every :mod:`ixmp` item (parameter, variable, equation, or scalar) available in the Scenario.
 
    .. autosummary::
+
       finalize
       from_scenario
       set_filters
 
    The Computer class provides the following methods:
 
+   .. currentmodule:: genno
    .. autosummary::
-      ~genno.core.computer.Computer.add
-      ~genno.core.computer.Computer.add_file
-      ~genno.core.computer.Computer.add_product
-      ~genno.core.computer.Computer.add_queue
-      ~genno.core.computer.Computer.add_single
-      ~genno.core.computer.Computer.aggregate
-      ~genno.core.computer.Computer.apply
-      ~genno.core.computer.Computer.check_keys
-      ~genno.core.computer.Computer.configure
-      ~genno.core.computer.Computer.convert_pyam
-      ~genno.core.computer.Computer.describe
-      ~genno.core.computer.Computer.disaggregate
-      ~genno.core.computer.Computer.full_key
-      ~genno.core.computer.Computer.get
-      ~genno.core.computer.Computer.infer_keys
-      ~genno.core.computer.Computer.keys
-      ~genno.core.computer.Computer.visualize
-      ~genno.core.computer.Computer.write
+
+      ~Computer.add
+      ~Computer.add_file
+      ~Computer.add_product
+      ~Computer.add_queue
+      ~Computer.add_single
+      ~Computer.aggregate
+      ~Computer.apply
+      ~Computer.check_keys
+      ~Computer.configure
+      ~Computer.convert_pyam
+      ~Computer.describe
+      ~Computer.disaggregate
+      ~Computer.full_key
+      ~Computer.get
+      ~Computer.infer_keys
+      ~Computer.keys
+      ~Computer.visualize
+      ~Computer.write
 
 .. _reporting-config:
 
@@ -81,7 +86,7 @@ Configuration
 
 :mod:`ixmp.report` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
 
-.. automethod:: ixmp.report.filters
+.. autofunction:: ixmp.report.filters
 
    Reporter-specific configuration.
 
@@ -93,7 +98,7 @@ Configuration
    Keys are dimension IDs.
    Values are either lists of allowable labels along the respective dimension or :obj:`None` to clear any existing filters for that dimension.
 
-   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`.Reporter.configure`, or in a configuration file:
+   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`Reporter.configure <genno.Computer.configure>`, or in a configuration file:
 
    .. code-block:: yaml
 
@@ -131,6 +136,7 @@ Operators
    :mod:`ixmp.report` defines these operators:
 
    .. autosummary::
+
       data_for_quantity
       map_as_qty
       update_scenario
@@ -139,6 +145,7 @@ Operators
    Basic operators are defined by :mod:`genno.operator` and its compatibility modules; see there for details:
 
    .. autosummary::
+
       ~genno.compat.plotnine.Plot
       ~genno.operator.add
       ~genno.operator.aggregate

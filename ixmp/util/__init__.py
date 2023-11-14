@@ -94,7 +94,7 @@ def check_year(y, s):
 def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
-    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`. Only
+    :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
     parameters are compared. :func:`~pandas.merge` is called with the arguments
     ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
     performed on all columns except 'value' or 'unit'.
@@ -174,7 +174,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 def discard_on_error(ts: "TimeSeries"):
     """Context manager to discard changes to `ts` and close the DB on any exception.
 
-    For :mod:`JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
+    For :class:`.JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
     database.
 
     Examples
@@ -218,7 +218,7 @@ def discard_on_error(ts: "TimeSeries"):
 def maybe_check_out(timeseries, state=None):
     """Check out `timeseries` depending on `state`.
 
-    If `state` is :obj:`None`, then :meth:`check_out` is called.
+    If `state` is :obj:`None`, then :meth:`.TimeSeries.check_out` is called.
 
     Returns
     -------
@@ -288,7 +288,7 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
     Parameters
     ----------
     obj
-        Any value returned by :meth:`Scenario.par`. For a scalar (0-dimensional)
+        Any value returned by :meth:`.Scenario.par`. For a scalar (0-dimensional)
         parameter, this will be :class:`dict`.
 
     Returns
@@ -323,9 +323,9 @@ def parse_url(url):
     Returns
     -------
     platform_info : dict
-        Keyword argument 'name' for the :class:`Platform` constructor.
+        Keyword argument 'name' for the :class:`.Platform` constructor.
     scenario_info : dict
-        Keyword arguments for a :class:`Scenario` on the above platform:
+        Keyword arguments for a :class:`.Scenario` on the above platform:
         'model', 'scenario' and, optionally, 'version'.
 
     Raises
@@ -458,7 +458,7 @@ def format_scenario_list(
         scenario name matches are returned.
     default_only : bool, optional
         Only return TimeSeries where a default version has been set with
-        :meth:`TimeSeries.set_as_default`.
+        :meth:`.TimeSeries.set_as_default`.
     as_url : bool, optional
         Format results as ixmp URLs.
 

@@ -2,7 +2,7 @@ import logging
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Literal, Optional, Sequence, Tuple, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 class TimeSeries:
     """Collection of data in time series format.
 
-    TimeSeries is the parent/super-class of :class:`Scenario`.
+    TimeSeries is the parent/super-class of :class:`.Scenario`.
 
     Parameters
     ----------
@@ -116,7 +116,7 @@ class TimeSeries:
 
     @classmethod
     def from_url(
-        cls, url: str, errors="warn"
+        cls, url: str, errors: Literal["warn", "raise"] = "warn"
     ) -> Tuple[Optional["TimeSeries"], Platform]:
         """Instantiate a TimeSeries (or Scenario) given an ``ixmp://`` URL.
 
@@ -141,8 +141,12 @@ class TimeSeries:
 
         Returns
         -------
-        ts, platform : 2-tuple of (TimeSeries, :class:`Platform`)
-            The TimeSeries and Platform referred to by the URL.
+        tuple
+            with 2 elements:
+
+            - The :class:`.TimeSeries` referenced by the `url`.
+            - The :class:`.Platform` referenced by the `url`, on which the first element
+              is stored.
         """
         assert errors in ("warn", "raise"), "errors= must be 'warn' or 'raise'"
 
@@ -176,7 +180,7 @@ class TimeSeries:
 
         See Also
         --------
-        utils.maybe_check_out
+        util.maybe_check_out
         """
         self._backend("check_out", timeseries_only)
 
@@ -194,7 +198,7 @@ class TimeSeries:
 
         See Also
         --------
-        utils.maybe_commit
+        util.maybe_commit
         """
         self._backend("commit", comment)
 
@@ -305,7 +309,7 @@ class TimeSeries:
 
         Parameters
         ----------
-        df : :class:`pandas.DataFrame`
+        df : pandas.DataFrame
             Data to add. `df` must have the following columns:
 
             - `region` or `node`
@@ -319,9 +323,9 @@ class TimeSeries:
 
             To support subannual temporal resolution of timeseries data, a column
             `subannual` is optional in `df`. The entries in this column must have been
-            defined in the Platform instance using :meth:`add_timeslice` beforehand. If
+            defined in the Platform instance using :meth:`.add_timeslice` beforehand. If
             no column `subannual` is included in `df`, the data is assumed to contain
-            yearly values. See :meth:`timeslices` for a detailed description of the
+            yearly values. See :meth:`.timeslices` for a detailed description of the
             feature.
 
         meta : bool, optional
@@ -329,8 +333,8 @@ class TimeSeries:
             :meth:`Scenario.clone` is called for Scenarios created with
             ``scheme='MESSAGE'``.
 
-        year_lim : tuple of (int or None, int or None), optional
-            Respectively, minimum and maximum years to add from `df`; data for other
+        year_lim : tuple, optional
+            Respectively, earliest and latest years to add from `df`; data for other
             years is ignored.
         """
         meta = bool(meta)
@@ -567,7 +571,7 @@ class TimeSeries:
         name_or_dict : str or dict
             If :class:`dict`, a mapping of names/identifiers to values. Otherwise,
             use the metadata identifier.
-        value : str or number or bool, optional
+        value : str or float or int or bool, optional
             Metadata value.
         """
         if isinstance(name_or_dict, str):

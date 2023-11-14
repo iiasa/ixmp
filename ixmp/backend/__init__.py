@@ -5,7 +5,7 @@ from typing import Dict, List, Type, Union
 #: Lists of field names for tuples returned by Backend API methods.
 #:
 #: The key "write_file" refers to the columns appearing in the CSV output from
-#: :meth:`export_timeseries_data` when using :class:`.JDBCBackend`.
+#: :meth:`.export_timeseries_data` when using :class:`.JDBCBackend`.
 #:
 #: .. todo:: Make this consistent with other dimension orders and with :data:`IAMC_IDX`.
 FIELDS = {
@@ -42,7 +42,9 @@ FIELDS = {
     ),
 }
 
-#: Partial dimensions for “IAMC format”.
+#: Partial list of dimensions for the IAMC data structure, or “IAMC format”. This omits
+#: "year" and "subannual" which appear in some variants of the structure, but not in
+#: others.
 IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
 

@@ -174,11 +174,14 @@ def _wrap(value):
 class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQL databases.
 
+    This backend is based on the third-party `JPype <https://jpype.readthedocs.io>`_
+    Python package that allows interaction with Java code.
+
     Parameters
     ----------
     driver : 'oracle' or 'hsqldb'
         JDBC driver to use.
-    path : path-like, optional
+    path : os.PathLike, optional
         Path to the HyperSQL database.
     url : str, optional
         Partial or complete JDBC URL for the Oracle or HyperSQL database, e.g.
@@ -191,8 +194,8 @@ class JDBCBackend(CachingBackend):
         If :obj:`True` (the default), cache Python objects after conversion from Java
         objects.
     jvmargs : str, optional
-        Java Virtual Machine arguments. See :meth:`.start_jvm`.
-    dbprops : path-like, optional
+        Java Virtual Machine arguments. See :func:`.start_jvm`.
+    dbprops : os.PathLike, optional
         With ``driver='oracle'``, the path to a database properties file containing
         `driver`, `url`, `user`, and `password` information.
     """
@@ -555,7 +558,7 @@ class JDBCBackend(CachingBackend):
             - scenario : str
             - variable : list of str
             - default : bool. If :obj:`True`, only data from TimeSeries
-              versions with :meth:`set_default` are written.
+              versions with :meth:`.TimeSeries.set_as_default` are written.
 
         See also
         --------
@@ -1171,7 +1174,7 @@ class JDBCBackend(CachingBackend):
 
 
 def start_jvm(jvmargs=None):
-    """Start the Java Virtual Machine via :mod:`JPype`.
+    """Start the Java Virtual Machine via JPype_.
 
     Parameters
     ----------

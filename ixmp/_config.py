@@ -29,9 +29,10 @@ def _iter_config_paths():
         pass
 
     try:
-        yield "environment (XDG_DATA_HOME)", Path(
-            os.environ["XDG_DATA_HOME"], "ixmp"
-        ).resolve()
+        yield (
+            "environment (XDG_DATA_HOME)",
+            Path(os.environ["XDG_DATA_HOME"], "ixmp").resolve(),
+        )
     except KeyError:
         pass
 
@@ -273,7 +274,7 @@ class Config:
             Name of the new key.
         type_ : object
             Type of valid values for the key, e.g. :obj:`str` or :class:`pathlib.Path`.
-        default : any, optional
+        default : optional
             Default value for the key. If not supplied, the `type` is called to supply
             the default value, e.g. ``str()``.
 

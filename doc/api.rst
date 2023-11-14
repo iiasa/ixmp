@@ -74,6 +74,7 @@ TimeSeries
       commit
       discard_changes
       get_geodata
+      get_meta
       is_default
       last_update
       preload_timeseries
@@ -82,6 +83,7 @@ TimeSeries
       remove_timeseries
       run_id
       set_as_default
+      set_meta
       timeseries
       transact
       url
@@ -94,7 +96,7 @@ Scenario
    :show-inheritance:
    :members:
 
-   A Scenario is a :class:`TimeSeries` that also contains model data, including model solution data.
+   A Scenario is a :class:`.TimeSeries` that also contains model data, including model solution data.
    See the :ref:`data model documentation <data-model-data>`.
 
    The Scenario class provides methods to manipulate model data items:
@@ -115,7 +117,6 @@ Scenario
       clone
       equ
       equ_list
-      get_meta
       has_equ
       has_par
       has_set
@@ -138,18 +139,10 @@ Scenario
       scalar
       set
       set_list
-      set_meta
       solve
       to_excel
       var
       var_list
-
-
-.. currentmodule:: ixmp.backend.io
-
-.. automodule:: ixmp.backend.io
-   :members: EXCEL_MAX_ROWS
-
 
 .. _configuration:
 
@@ -195,6 +188,9 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
 .. autoclass:: ixmp._config.Config
    :members:
 
+.. autoclass:: ixmp._config.BaseValues
+   :members:
+
 
 Utilities
 ---------
@@ -206,6 +202,7 @@ Utilities
    :exclude-members: as_str_list, check_year, isscalar, year_list, filtered
 
    .. autosummary::
+
       diff
       discard_on_error
       format_scenario_list
@@ -248,3 +245,9 @@ Utilities for testing
 .. automodule:: ixmp.testing
    :members:
    :exclude-members: pytest_report_header, pytest_sessionstart
+   :special-members: add_test_data
+
+.. currentmodule:: ixmp.testing.data
+
+.. automodule:: ixmp.testing.data
+   :members: DATA, HIST_DF, TS_DF

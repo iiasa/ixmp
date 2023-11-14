@@ -1,41 +1,52 @@
 import logging
 from itertools import zip_longest
+from typing import TYPE_CHECKING, Literal, Mapping
 
 import pandas as pd
 import pint
-from genno.core.quantity import Quantity
+from genno import Quantity
 from genno.util import parse_units
 
 from ixmp.util import to_iamc_layout
 
 from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
 
+if TYPE_CHECKING:
+    from ixmp.core.scenario import Scenario
+
 log = logging.getLogger(__name__)
 
 
-def data_for_quantity(ix_type, name, column, scenario, config):
-    """Retrieve data from *scenario*.
+def data_for_quantity(
+    ix_type: Literal["equ", "par", "var"],
+    name: str,
+    column: Literal["mrg", "lvl", "value"],
+    scenario: "Scenario",
+    config: Mapping[str, Mapping],
+) -> Quantity:
+    """Retrieve data from `scenario`.
 
     Parameters
     ----------
-    ix_type : 'equ' or 'par' or 'var'
+    ix_type :
         Type of the ixmp object.
     name : str
         Name of the ixmp object.
-    column : 'mrg' or 'lvl' or 'value'
+    column :
         Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,and
         'level' otherwise.
     scenario : ixmp.Scenario
         Scenario containing data to be retrieved.
-    config : dict of (str -> dict)
-        The key 'filters' may contain a mapping from dimensions to iterables of allowed
-        values along each dimension. The key 'units'/'apply' may contain units to apply
-        to the quantity; any such units overwrite existing units, without conversion.
+    config :
+        Configuration. The key 'filters' may contain a mapping from dimensions to
+        iterables of allowed values along each dimension. The key 'units'/'apply' may
+        contain units to apply to the quantity; any such units overwrite existing units,
+        without conversion.
 
     Returns
     -------
-    :class:`Quantity`
-        Data for *name*.
+    ~genno.Quantity
+        Data for `name`.
     """
     log.debug(f"{name}: retrieve data")
 
@@ -123,7 +134,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
 
     try:
         # Remove length-1 dimensions for scalars
-        qty = qty.squeeze("index", drop=True)
+        # TODO Remove exclusion when genno provides a signature for Quantity.squeeze
+        qty = qty.squeeze("index", drop=True)  # type: ignore [attr-defined]
     except (KeyError, ValueError):
         # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
@@ -132,7 +144,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
 
 
 def map_as_qty(set_df: pd.DataFrame, full_set):
-    """Convert *set_df* to a :class:`.Quantity`.
+    """Convert *set_df* to a :class:`~.genno.Quantity`.
 
     For the MESSAGE sets named ``cat_*`` (see :ref:`message_ix:mapping-sets`)
     :meth:`ixmp.Scenario.set` returns a :class:`~pandas.DataFrame` with two columns:
@@ -148,7 +160,7 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
 
     See also
     --------
-    .broadcast_map
+    ~genno.operator.broadcast_map
     """
     set_from, set_to = set_df.columns
     names = [RENAME_DIMS.get(c, c) for c in set_df.columns]
@@ -180,7 +192,7 @@ def store_ts(scenario, *data, strict: bool = False) -> None:
         Scenario on which to store data.
     data : pandas.DataFrame or pyam.IamDataFrame
         1 or more objects containing data to store. If :class:`pandas.DataFrame`, the
-        data are passed through :func:`to_iamc_layout`.
+        data are passed through :func:`.to_iamc_layout`.
     strict: bool
         If :data:`True` (default :data:`False`), raise an exception if any of `data` are
         not successfully added. Otherwise, log on level :ref:`ERROR <python:levels>` and
@@ -216,8 +228,8 @@ def update_scenario(scenario, *quantities, params=[]):
 
     Parameters
     ----------
-    scenario : .Scenario
-    quantities : .Quantity or pd.DataFrame
+    scenario : Scenario
+    quantities : Quantity or pandas.DataFrame
         If DataFrame, must be valid input to :meth:`.Scenario.add_par`.
     params : list of str, optional
         For every element of `quantities` that is a pd.DataFrame, the element of

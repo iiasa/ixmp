@@ -1,7 +1,7 @@
 File formats and input/output
 *****************************
 
-In addition to the data management features provided by :doc:`api-backend`, ixmp is able to write and read :class:`TimeSeries` and :class:`Scenario` data to and from files.
+In addition to the data management features provided by :doc:`api-backend`, ixmp is able to write and read :class:`.TimeSeries` and :class:`.Scenario` data to and from files.
 This page describes those options and formats.
 
 Time series data
@@ -9,7 +9,7 @@ Time series data
 
 Time series data can be:
 
-- Read using :meth:`.import_timeseries`, or the CLI command ``ixmp import timeseries FILE`` for a single TimeSeries object.
+- Read using :meth:`.TimeSeries.read_file`, or the :doc:`CLI command <cli>` ``ixmp import timeseries FILE`` for a single TimeSeries object.
 - Written using :meth:`.export_timeseries_data` for multiple TimeSeries objects at once.
 
 Both CSV and Excel files in the IAMC time-series format are supported.

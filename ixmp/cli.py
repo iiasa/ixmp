@@ -14,6 +14,7 @@ class VersionType(click.ParamType):
     name = "version"  # https://github.com/pallets/click/issues/411
 
     def convert(self, value, param, ctx):
+        """Fail if `value` is not :class:`int` or 'all'."""
         if value == "new":
             return value
         elif isinstance(value, int):

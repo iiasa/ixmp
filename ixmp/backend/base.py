@@ -124,7 +124,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_doc(self, domain: str, name: str = None) -> Union[str, Dict]:
+    def get_doc(self, domain: str, name: Optional[str] = None) -> Union[str, Dict]:
         """Read documentation from database
 
         Parameters
@@ -183,7 +183,11 @@ class Backend(ABC):
 
     @abstractmethod
     def set_node(
-        self, name: str, parent: str = None, hierarchy: str = None, synonym: str = None
+        self,
+        name: str,
+        parent: Optional[str] = None,
+        hierarchy: Optional[str] = None,
+        synonym: Optional[str] = None,
     ) -> None:
         """Add a node name to the Platform.
 
@@ -791,7 +795,7 @@ class Backend(ABC):
         scenario: str,
         annotation: str,
         keep_solution: bool,
-        first_model_year: int = None,
+        first_model_year: Optional[int] = None,
     ) -> Scenario:
         """Clone `s`.
 
@@ -896,7 +900,7 @@ class Backend(ABC):
         s: Scenario,
         type: Literal["equ", "par", "set", "var"],
         name: str,
-        filters: Dict[str, List[Any]] = None,
+        filters: Optional[Dict[str, List[Any]]] = None,
     ) -> Union[Dict[str, Any], pd.Series, pd.DataFrame]:
         """Return elements of item `name`.
 
@@ -1278,9 +1282,9 @@ class CachingBackend(Backend):
     def cache_invalidate(
         self,
         ts: TimeSeries,
-        ix_type: str = None,
-        name: str = None,
-        filters: Dict = None,
+        ix_type: Optional[str] = None,
+        name: Optional[str] = None,
+        filters: Optional[Dict] = None,
     ) -> None:
         """Invalidate cached values.
 

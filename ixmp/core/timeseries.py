@@ -58,7 +58,7 @@ class TimeSeries:
         model: str,
         scenario: str,
         version: Optional[Union[int, str]] = None,
-        annotation: str = None,
+        annotation: Optional[str] = None,
         **kwargs,
     ):
         # Check arguments
@@ -382,10 +382,10 @@ class TimeSeries:
 
     def timeseries(
         self,
-        region: Union[str, Sequence[str]] = None,
-        variable: Union[str, Sequence[str]] = None,
-        unit: Union[str, Sequence[str]] = None,
-        year: Union[int, Sequence[int]] = None,
+        region: Optional[Union[str, Sequence[str]]] = None,
+        variable: Optional[Union[str, Sequence[str]]] = None,
+        unit: Optional[Union[str, Sequence[str]]] = None,
+        year: Optional[Union[int, Sequence[int]]] = None,
         iamc: bool = False,
         subannual: Union[bool, str] = "auto",
     ) -> pd.DataFrame:
@@ -547,7 +547,7 @@ class TimeSeries:
 
     # Metadata
 
-    def get_meta(self, name: str = None):
+    def get_meta(self, name: Optional[str] = None):
         """Get :ref:`data-meta` for this object.
 
         Metadata with the given `name`, attached to this (:attr:`model` name,

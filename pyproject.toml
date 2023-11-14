@@ -77,7 +77,6 @@ omit = ["ixmp/utils/sphinx_linkcode_github.py"]
 profile = "black"
 
 [tool.mypy]
-no_implicit_optional = false
 
 [[tool.mypy.overrides]]
 # Packages/modules for which no type hints are available.

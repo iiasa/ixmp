@@ -164,7 +164,10 @@ class Scenario(TimeSeries):
         return name in self.set_list()
 
     def init_set(
-        self, name: str, idx_sets: Sequence[str] = None, idx_names: Sequence[str] = None
+        self,
+        name: str,
+        idx_sets: Optional[Sequence[str]] = None,
+        idx_names: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new set.
 
@@ -189,7 +192,7 @@ class Scenario(TimeSeries):
         return self._backend("init_item", "set", name, idx_sets, idx_names)
 
     def set(
-        self, name: str, filters: Dict[str, Sequence[str]] = None, **kwargs
+        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> Union[List[str], pd.DataFrame]:
         """Return the (filtered) elements of a set.
 
@@ -213,7 +216,7 @@ class Scenario(TimeSeries):
         self,
         name: str,
         key: Union[str, Sequence[str], Dict, pd.DataFrame],
-        comment: str = None,
+        comment: Optional[str] = None,
     ) -> None:
         """Add elements to an existing set.
 
@@ -321,7 +324,9 @@ class Scenario(TimeSeries):
         self._backend("item_set_elements", "set", name, elements)
 
     def remove_set(
-        self, name: str, key: Union[str, Sequence[str], Dict, pd.DataFrame] = None
+        self,
+        name: str,
+        key: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
     ) -> None:
         """Delete set elements or an entire set.
 
@@ -347,7 +352,10 @@ class Scenario(TimeSeries):
         return name in self.par_list()
 
     def init_par(
-        self, name: str, idx_sets: Sequence[str], idx_names: Sequence[str] = None
+        self,
+        name: str,
+        idx_sets: Sequence[str],
+        idx_names: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new parameter.
 
@@ -365,7 +373,7 @@ class Scenario(TimeSeries):
         return self._backend("init_item", "par", name, idx_sets, idx_names)
 
     def par(
-        self, name: str, filters: Dict[str, Sequence[str]] = None, **kwargs
+        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> pd.DataFrame:
         """Return parameter data.
 
@@ -388,7 +396,9 @@ class Scenario(TimeSeries):
         return self._backend("item_get_elements", "par", name, filters)
 
     def items(
-        self, type: ItemType = ItemType.PAR, filters: Dict[str, Sequence[str]] = None
+        self,
+        type: ItemType = ItemType.PAR,
+        filters: Optional[Dict[str, Sequence[str]]] = None,
     ) -> Iterable[Tuple[str, Any]]:
         """Iterate over model data items.
 
@@ -432,10 +442,10 @@ class Scenario(TimeSeries):
     def add_par(
         self,
         name: str,
-        key_or_data: Union[str, Sequence[str], Dict, pd.DataFrame] = None,
+        key_or_data: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
         value=None,
-        unit: str = None,
-        comment: str = None,
+        unit: Optional[str] = None,
+        comment: Optional[str] = None,
     ) -> None:
         """Set the values of a parameter.
 
@@ -570,7 +580,7 @@ class Scenario(TimeSeries):
         return self._backend("item_get_elements", "par", name, None)
 
     def change_scalar(
-        self, name: str, val: Real, unit: str, comment: str = None
+        self, name: str, val: Real, unit: str, comment: Optional[str] = None
     ) -> None:
         """Set the value and unit of a scalar.
 
@@ -616,7 +626,10 @@ class Scenario(TimeSeries):
         return name in self.var_list()
 
     def init_var(
-        self, name: str, idx_sets: Sequence[str] = None, idx_names: Sequence[str] = None
+        self,
+        name: str,
+        idx_sets: Optional[Sequence[str]] = None,
+        idx_names: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new variable.
 
@@ -683,12 +696,12 @@ class Scenario(TimeSeries):
 
     def clone(
         self,
-        model: str = None,
-        scenario: str = None,
-        annotation: str = None,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        annotation: Optional[str] = None,
         keep_solution: bool = True,
-        shift_first_model_year: int = None,
-        platform: Platform = None,
+        shift_first_model_year: Optional[int] = None,
+        platform: Optional[Platform] = None,
     ) -> "Scenario":
         """Clone the current scenario and return the clone.
 
@@ -740,7 +753,7 @@ class Scenario(TimeSeries):
         """Return :obj:`True` if the Scenario contains model solution data."""
         return self._backend("has_solution")
 
-    def remove_solution(self, first_model_year: int = None) -> None:
+    def remove_solution(self, first_model_year: Optional[int] = None) -> None:
         """Remove the solution from the scenario.
 
         This function removes the solution (variables and equations) and timeseries
@@ -765,8 +778,8 @@ class Scenario(TimeSeries):
 
     def solve(
         self,
-        model: str = None,
-        callback: Callable = None,
+        model: Optional[str] = None,
+        callback: Optional[Callable] = None,
         cb_kwargs: Dict[str, Any] = {},
         **model_options,
     ) -> None:
@@ -867,8 +880,8 @@ class Scenario(TimeSeries):
         self,
         path: PathLike,
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Dict[str, Union[Sequence[str], "Scenario"]] = None,
-        max_row: int = None,
+        filters: Optional[Dict[str, Union[Sequence[str], "Scenario"]]] = None,
+        max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.
 

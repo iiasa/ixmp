@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from copy import copy
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, List, Mapping
+from typing import Generator, List, Mapping, Optional
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -1083,9 +1083,9 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(
         self,
-        model: str = None,
-        scenario: str = None,
-        version: int = None,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
         strict: bool = False,
     ) -> dict:
         self._validate_meta_args(model, scenario, version)
@@ -1100,7 +1100,11 @@ class JDBCBackend(CachingBackend):
         return {entry.getKey(): _unwrap(entry.getValue()) for entry in meta.entrySet()}
 
     def set_meta(
-        self, meta: dict, model: str = None, scenario: str = None, version: int = None
+        self,
+        meta: dict,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
     ) -> None:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
@@ -1116,7 +1120,11 @@ class JDBCBackend(CachingBackend):
             _raise_jexception(e)
 
     def remove_meta(
-        self, names, model: str = None, scenario: str = None, version: int = None
+        self,
+        names,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
     ):
         self._validate_meta_args(model, scenario, version)
         if version is not None:

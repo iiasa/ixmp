@@ -265,7 +265,7 @@ class Config:
         """Return the names of all registered configuration keys."""
         return self.values.keys()
 
-    def register(self, name: str, type_: type, default: Any = None, **kwargs):
+    def register(self, name: str, type_: type, default: Optional[Any] = None, **kwargs):
         """Register a new configuration key.
 
         Parameters

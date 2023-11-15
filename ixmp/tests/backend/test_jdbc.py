@@ -155,6 +155,12 @@ class TestJDBCBackend:
         ):
             ts.add_timeseries(data)  # Calls JDBCBackend.set_data
 
+    def test_set_unit(self, caplog, be):
+        be.set_unit("", "comment")
+        # No warning issued under pytest/driver=hsqldb; the exception only occurs with
+        # driver=oracle
+        assert [] == caplog.messages
+
     def test_read_file(self, tmp_path, be):
         """Cannot read CSV files."""
         with pytest.raises(NotImplementedError):

@@ -472,7 +472,14 @@ class JDBCBackend(CachingBackend):
             yield data
 
     def set_unit(self, name, comment):
-        self.jobj.addUnitToDB(name, comment)
+        try:
+            self.jobj.addUnitToDB(name, comment)
+        except Exception as e:  # pragma: no cover
+            if "Error assigning an unit-key-id mapping" in str(e) and "" == str(name):
+                # ixmp_source does not support adding "" with Oracle
+                log.warning(f"…skip {repr(name)} (ixmp.JDBCBackend with driver=oracle)")
+            else:
+                _raise_jexception(e)
 
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())

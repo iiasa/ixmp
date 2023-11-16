@@ -5,6 +5,7 @@ import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
 from copy import copy
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import Generator, List, Mapping, Optional
@@ -44,9 +45,10 @@ LOG_LEVELS = {
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
-    "at.ac.iiasa.ixmp.exceptions.IxException",
-    "at.ac.iiasa.ixmp.objects.Scenario",
     "at.ac.iiasa.ixmp.dto.TimesliceDTO",
+    "at.ac.iiasa.ixmp.exceptions.IxException",
+    "at.ac.iiasa.ixmp.modelspecs.MESSAGEspecs",
+    "at.ac.iiasa.ixmp.objects.Scenario",
     "at.ac.iiasa.ixmp.Platform",
     "java.lang.Double",
     "java.lang.Exception",
@@ -137,6 +139,19 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
         msg += exc.message()
 
     raise RuntimeError(msg) from None
+
+
+@lru_cache
+def _fixed_index_sets(scheme: str) -> Mapping[str, List[str]]:
+    """Return index sets for items that are fixed in the Java code.
+
+    See :meth:`JDBCBackend.init_item`. The return value is cached so the method is only
+    called once.
+    """
+    if scheme == "MESSAGE":
+        return {k: to_pylist(v) for k, v in java.MESSAGEspecs.getIndexDimMap().items()}
+    else:
+        return {}
 
 
 def _domain_enum(domain):
@@ -893,12 +908,29 @@ class JDBCBackend(CachingBackend):
         return to_pylist(getattr(self.jindex[s], f"get{type.title()}List")())
 
     def init_item(self, s, type, name, idx_sets, idx_names):
-        # generate index-set and index-name lists
+        # Generate index-set and index-name lists
         if isinstance(idx_sets, set) or isinstance(idx_names, set):
             raise TypeError("index dimension must be string or ordered lists")
 
+        # Check `idx_sets` against values hard-coded in ixmp_source
+        try:
+            sets = _fixed_index_sets(s.scheme)[name]
+        except KeyError:
+            pass
+        else:
+            if idx_sets == sets:
+                # Match → provide empty lists for idx_sets and idx_names. ixmp_source
+                # raises an exception if any values—even correct ones—are given.
+                idx_sets = idx_names = []
+            else:
+                raise NotImplementedError(
+                    f"Initialize {type} {name!r} with dimensions {idx_sets} != {sets}"
+                )
+
+        # Convert to Java data structure
         idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
 
+        # Handle `idx_names`, if any
         if idx_names:
             if len(idx_names) != len(idx_sets):
                 raise ValueError(

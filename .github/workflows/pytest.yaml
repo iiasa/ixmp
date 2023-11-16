@@ -28,7 +28,8 @@ jobs:
         - "3.8"  # Earliest version supported by ixmp
         - "3.9"
         - "3.10"
-        - "3.11"  # Latest supported by ixmp
+        - "3.11" # Latest supported by ixmp
+        # - "3.12"  # Pending JPype support; see iiasa/ixmp#501
 
         # commented: force a specific version of pandas, for e.g. pre-release
         # testing
@@ -91,12 +92,13 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
+    - name: Work around https://bugs.launchpad.net/lxml/+bug/2035206
+      if: matrix.python-version == '3.8'
+      run: pip install "lxml != 4.9.3"
+
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |
-        # Work around https://bugs.launchpad.net/lxml/+bug/2035206
-        pip install "lxml != 4.9.3"
-
         pip install .[docs]
 
         # commented: use with "pandas-version" in the matrix, above

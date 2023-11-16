@@ -241,7 +241,7 @@ class TestScenario:
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])
 
-    def test_items(self, scen):
+    def test_items0(self, scen):
         # Without filters
         iterator = scen.items()
 
@@ -270,9 +270,23 @@ class TestScenario:
 
         assert i == 1
 
-        with pytest.raises(NotImplementedError):
-            # NB next() is required here to attempt to generate the first item
-            next(scen.items(ixmp.ItemType.SET))
+    @pytest.mark.parametrize(
+        "item_type, indexed_by, exp",
+        (
+            (ixmp.ItemType.EQU, None, ["cost", "demand", "supply"]),
+            (ixmp.ItemType.PAR, None, ["a", "b", "d", "f"]),
+            (ixmp.ItemType.SET, None, ["i", "j"]),
+            (ixmp.ItemType.VAR, None, ["x", "z"]),
+            # With indexed_by=
+            (ixmp.ItemType.EQU, "i", ["supply"]),
+            (ixmp.ItemType.PAR, "i", ["a", "d"]),
+            (ixmp.ItemType.SET, "i", []),
+            (ixmp.ItemType.VAR, "i", ["x"]),
+        ),
+    )
+    def test_items1(self, scen, item_type, indexed_by, exp):
+        # Function runs and yields the expected sequence of item names
+        assert exp == list(scen.items(item_type, indexed_by=indexed_by, par_data=False))
 
     def test_var(self, scen):
         df = scen.var("x", filters={"i": ["seattle"]})

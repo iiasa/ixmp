@@ -369,9 +369,9 @@ def copy_platform(go, name_source, name_dest):
     msg = "" if go else "(dry run) "
 
     # Iterate over all files with `path_source` as a base name; skip .log and
-    # .properties files
+    # .properties files and .tmp directory
     for path in filter(
-        lambda p: p.suffix not in {".log", ".properies"},
+        lambda p: p.suffix not in {".log", ".properties", ".tmp"},
         path_source.parent.glob(f"{path_source.stem}.*"),
     ):
         # Destination path

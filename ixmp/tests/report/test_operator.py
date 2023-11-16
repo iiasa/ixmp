@@ -9,13 +9,74 @@ from genno import ComputationError, Computer, Quantity
 from genno.testing import assert_qty_equal
 from pandas.testing import assert_frame_equal
 
-from ixmp import Scenario
+from ixmp import Scenario, TimeSeries
 from ixmp.model.dantzig import DATA as dantzig_data
-from ixmp.report.operator import map_as_qty, store_ts, update_scenario
+from ixmp.report.operator import (
+    from_url,
+    get_ts,
+    map_as_qty,
+    remove_ts,
+    store_ts,
+    update_scenario,
+)
 from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
+
+
+def test_from_url(test_mp):
+    ts = make_dantzig(test_mp)
+
+    full_url = f"ixmp://{ts.platform.name}/{ts.url}"
+
+    # Operator runs
+    result = from_url(full_url)
+    # Result is of the default class
+    assert result.__class__ is TimeSeries
+    # Same object was retrieved
+    assert ts.url == result.url
+
+    # Same, but specifying Scenario
+    result = from_url(full_url, Scenario)
+    assert result.__class__ is Scenario
+    assert ts.url == result.url
+
+
+def test_get_remove_ts(caplog, test_mp):
+    ts = make_dantzig(test_mp)
+
+    caplog.set_level(logging.INFO, "ixmp")
+
+    # get_ts() runs
+    result0 = get_ts(ts)
+    assert_frame_equal(ts.timeseries(), result0)
+
+    # Can be used through a Computer
+
+    c = Computer()
+    c.require_compat("ixmp.report.operator")
+    c.add("scenario", ts)
+
+    key = c.add("test1", "get_ts", "scenario", filters=dict(variable="GDP"))
+    result1 = c.get(key)
+    assert 3 == len(result1)
+
+    # remove_ts() can be used through Computer
+    key = c.add("test2", "remove_ts", "scenario", after=1964)
+
+    # Task runs, logs
+    with assert_logs(caplog, "Remove 5 of 5 (1964 <= year) rows of time series data"):
+        c.get(key)
+
+    # See comment above; only one row is removed
+    assert 6 - 3 == len(ts.timeseries())
+
+    # remove_ts() can be used directly
+    remove_ts(ts)
+
+    # All non-'meta' data were removed
+    assert 3 == len(ts.timeseries())
 
 
 def test_map_as_qty():

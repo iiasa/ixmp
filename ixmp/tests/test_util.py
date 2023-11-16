@@ -11,6 +11,16 @@ from ixmp import Scenario, utils
 from ixmp.testing import make_dantzig, populate_test_platform
 
 
+class TestDeprecatedPathFinder:
+    def test_import(self):
+        with pytest.warns(
+            DeprecationWarning,
+            match="Importing from 'ixmp.reporting.computations' is deprecated and will "
+            "fail in a future version. Use 'ixmp.report.operator'.",
+        ):
+            import ixmp.reporting.computations  # type: ignore  # noqa: F401
+
+
 def test_check_year():
     # If y is a string value, raise a Value Error.
 

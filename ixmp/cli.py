@@ -325,6 +325,71 @@ def list_platforms():
         print(f"{key}: {info}")
 
 
+@platform_group.command("copy")
+@click.option("--go", is_flag=True, help="Actually manipulate files.")
+@click.argument("name_source", metavar="SRC")
+@click.argument("name_dest", metavar="DEST")
+def copy_platform(go, name_source, name_dest):
+    """Create the local JDBCBackend/HyperSQL platform DEST as a copy of SRC.
+
+    Any existing data at DEST are overwritten. Without --go, no action occurs.
+    """
+    import shutil
+    from copy import deepcopy
+
+    def _check(name):
+        """Retrieve platform configuration and check."""
+        _, cfg = ixmp.config.get_platform_info(name)
+
+        # Check that the source platform is supported
+        info = (cfg["class"], cfg["driver"])
+        if info != ("jdbc", "hsqldb"):
+            msg = f"platform {name!r} has class/driver {info} != ('jdbc', 'hsqldb')"
+            raise click.ClickException(msg)
+
+        return cfg
+
+    # Retrieve configuration for the source platform
+    cfg_source = _check(name_source)
+
+    try:
+        # Retrieve configuration for the destination platform
+        cfg_dest = _check(name_dest)
+        add_platform = False
+    except ValueError:
+        # Target platform does not exist; construct its configuration
+        cfg_dest = deepcopy(cfg_source)
+        cfg_dest["path"] = Path(cfg_dest["path"]).parent.joinpath(name_dest)
+        add_platform = True
+
+    # Base paths for file operations
+    path_source = Path(cfg_source["path"])
+    dir_dest = Path(cfg_dest["path"]).parent
+
+    msg = "" if go else "(dry run) "
+
+    # Iterate over all files with `path_source` as a base name; skip .log and
+    # .properties files
+    for path in filter(
+        lambda p: p.suffix not in {".log", ".properies"},
+        path_source.parent.glob(f"{path_source.stem}.*"),
+    ):
+        # Destination path
+        path_dest = dir_dest.joinpath(name_dest).with_suffix(path.suffix)
+
+        print(f"{msg}Copy {path} → {path_dest}")
+        if not go and path_dest.exists():
+            print(f"{' ' * len(msg)}(would replace existing file)")
+
+        if go:
+            shutil.copyfile(path, path_dest)
+
+    if go and add_platform:
+        # Store configuration for newly-created platform
+        ixmp.config.add_platform(name_dest, "jdbc", "hsqldb", cfg_dest["path"])
+        ixmp.config.save()
+
+
 @main.command("list")
 @click.option(
     "--match",

@@ -1,9 +1,10 @@
 import logging
+from functools import partialmethod
 from itertools import repeat, zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
 from warnings import warn
 
 import pandas as pd
@@ -154,14 +155,6 @@ class Scenario(TimeSeries):
             return [as_str_list(row, idx_names) for _, row in key_or_keys.iterrows()]
         else:
             return [str(key_or_keys)]
-
-    def set_list(self) -> List[str]:
-        """List all defined sets."""
-        return self._backend("list_items", "set")
-
-    def has_set(self, name: str) -> bool:
-        """Check whether the scenario has a set *name*."""
-        return name in self.set_list()
 
     def init_set(
         self,
@@ -343,14 +336,6 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "set", name, self._keys(name, key))
 
-    def par_list(self) -> List[str]:
-        """List all defined parameters."""
-        return self._backend("list_items", "par")
-
-    def has_par(self, name: str) -> bool:
-        """Check whether the scenario has a parameter with that name."""
-        return name in self.par_list()
-
     def init_par(
         self,
         name: str,
@@ -399,14 +384,17 @@ class Scenario(TimeSeries):
         self,
         type: ItemType = ItemType.PAR,
         filters: Optional[Dict[str, Sequence[str]]] = None,
-    ) -> Iterable[Tuple[str, Any]]:
+        *,
+        indexed_by: Optional[str] = None,
+        par_data: bool = True,
+    ) -> Iterable[str]:
         """Iterate over model data items.
 
         Parameters
         ----------
         type : .ItemType, optional
             Types of items to iterate, for instance :attr:`.ItemType.PAR` for
-            parameters, the only value currently supported.
+            parameters.
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
             :meth:`par`.
@@ -416,28 +404,73 @@ class Scenario(TimeSeries):
         tuple
             Each tuple consists of (item name, item data).
         """
-        if type != ItemType.PAR:
-            raise NotImplementedError(
-                f"Scenario.items(type={type}); only ItemType.PAR is supported"
+        if filters is None:
+            filters = dict()
+        elif type != ItemType.PAR:
+            log.warning(
+                "Scenario.items(…, filters=…) has no effect for item type"
+                + repr(type.name)
             )
 
-        filters = filters or dict()
+        names = sorted(self._backend("list_items", str(type.name).lower()))
 
-        names = sorted(self.par_list())
-
-        for name in sorted(names):
+        for name in names:
             idx_names = set(self.idx_names(name))
-            if len(filters) and not set(filters.keys()) & idx_names:
-                # No overlap between the filters and this item's dimensions
+            idx_sets = set(self.idx_sets(name))
+
+            # Skip if:
+            # - No overlap between given filters and this item's dimensions; or
+            # - indexed_by= is given but is not in the index sets of `name`.
+            if (len(filters) and not set(filters) & idx_names) or (
+                indexed_by not in (idx_sets | {None})
+            ):
                 continue
 
-            # Retrieve the data, reducing the filters to only the dimensions of the item
-            yield (
-                name,
-                self.par(
-                    name, filters={k: v for k, v in filters.items() if k in idx_names}
-                ),
-            )
+            if type is ItemType.PAR and par_data:
+                # Retrieve the data, reducing the filters to only the dimensions of the
+                # item
+                _filters = {k: v for k, v in filters.items() if k in idx_names}
+                yield (name, self.par(name, filters=_filters))  # type: ignore [misc]
+            else:
+                yield name
+
+    def has_item(self, name: str, item_type=ItemType.MODEL) -> bool:
+        """Check whether the Scenario has an item `name` of `item_type`.
+
+        See also
+        --------
+        items
+        """
+        return name in self.items(item_type, par_data=False)
+
+    #: Check whether the scenario has a equation `name`.
+    has_equ = partialmethod(has_item, item_type=ItemType.EQU)
+    #: Check whether the scenario has a parameter `name`.
+    has_par = partialmethod(has_item, item_type=ItemType.PAR)
+    #: Check whether the scenario has a set `name`.
+    has_set = partialmethod(has_item, item_type=ItemType.SET)
+    #: Check whether the scenario has a variable `name`.
+    has_var = partialmethod(has_item, item_type=ItemType.VAR)
+
+    def list_items(
+        self, item_type=ItemType.MODEL, indexed_by: Optional[str] = None
+    ) -> List[str]:
+        """List all defined items of type `item_type`.
+
+        See also
+        --------
+        items
+        """
+        return list(self.items(item_type, indexed_by=indexed_by, par_data=False))
+
+    #: List all defined equations.
+    equ_list = partialmethod(list_items, item_type=ItemType.EQU)
+    #: List all defined parameters.
+    par_list = partialmethod(list_items, item_type=ItemType.PAR)
+    #: List all defined sets.
+    set_list = partialmethod(list_items, item_type=ItemType.SET)
+    #: List all defined variables.
+    var_list = partialmethod(list_items, item_type=ItemType.VAR)
 
     def add_par(
         self,
@@ -617,14 +650,6 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "par", name, self._keys(name, key))
 
-    def var_list(self) -> List[str]:
-        """List all defined variables."""
-        return self._backend("list_items", "var")
-
-    def has_var(self, name: str) -> bool:
-        """Check whether the scenario has a variable with that name."""
-        return name in self.var_list()
-
     def init_var(
         self,
         name: str,
@@ -658,10 +683,6 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_get_elements", "var", name, filters)
 
-    def equ_list(self) -> List[str]:
-        """List all defined equations."""
-        return self._backend("list_items", "equ")
-
     def init_equ(self, name: str, idx_sets=None, idx_names=None) -> None:
         """Initialize a new equation.
 
@@ -677,10 +698,6 @@ class Scenario(TimeSeries):
         idx_sets = as_str_list(idx_sets) or []
         idx_names = as_str_list(idx_names)
         return self._backend("init_item", "equ", name, idx_sets, idx_names)
-
-    def has_equ(self, name: str) -> bool:
-        """Check whether the scenario has an equation with that name."""
-        return name in self.equ_list()
 
     def equ(self, name: str, filters=None, **kwargs) -> pd.DataFrame:
         """Return a dataframe of (filtered) elements for a specific equation.

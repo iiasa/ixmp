@@ -71,6 +71,10 @@ tests = [
 ixmp = "ixmp.cli:main"
 
 [tool.coverage.report]
+exclude_also = [
+  # Imports only used by type checkers
+  "if TYPE_CHECKING:",
+]
 omit = ["ixmp/utils/sphinx_linkcode_github.py"]
 
 [tool.isort]

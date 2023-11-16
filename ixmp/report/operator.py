@@ -1,12 +1,13 @@
 import logging
 from itertools import zip_longest
-from typing import TYPE_CHECKING, Literal, Mapping
+from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Set, Union
 
 import pandas as pd
 import pint
 from genno import Quantity
 from genno.util import parse_units
 
+from ixmp.core.timeseries import TimeSeries
 from ixmp.util import to_iamc_layout
 
 from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
@@ -143,6 +144,46 @@ def data_for_quantity(
     return qty
 
 
+# Non-weak references to objects to keep them alive
+_FROM_URL_REF: Set[Any] = set()
+
+
+def from_url(url: str, cls=TimeSeries) -> "TimeSeries":
+    """Return a :class:`.TimeSeries` or subclass instance, given its `url`.
+
+    Parameters
+    ----------
+    cls : type, optional
+        Subclass to instantiate and return; for instance, :class:`.Scenario`.
+    """
+    ts, mp = cls.from_url(url)
+    assert ts is not None
+    _FROM_URL_REF.add(ts)
+    _FROM_URL_REF.add(mp)
+    return ts
+
+
+def get_ts(
+    ts: "TimeSeries",
+    filters: Optional[dict] = None,
+    iamc: bool = False,
+    subannual: Union[bool, str] = "auto",
+) -> pd.DataFrame:
+    """Retrieve timeseries data from `ts`.
+
+    Corresponds to :meth:`.TimeSeries.timeseries`.
+
+    Parameters
+    ----------
+    filters :
+        Names and values for the `region`, `variable`, `unit`, and `year` keyword
+        arguments to :meth:`.timeseries`.
+    """
+    filters = filters or dict()
+
+    return ts.timeseries(iamc=iamc, subannual=subannual, **filters)
+
+
 def map_as_qty(set_df: pd.DataFrame, full_set):
     """Convert *set_df* to a :class:`~.genno.Quantity`.
 
@@ -178,6 +219,48 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
         .rename_axis(index=names)
         .pipe(Quantity)
     )
+
+
+def remove_ts(
+    ts: "TimeSeries",
+    data: Optional[pd.DataFrame] = None,
+    after: Optional[int] = None,
+) -> None:
+    """Remove all time series data from `ts`.
+
+    Note that data stored with :meth:`.add_timeseries` using :py:`meta=True` as a
+    keyword argument cannot be removed using :meth:`.TimeSeries.remove_timeseries`, and
+    thus also not with this operator.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, optional
+        Specific data to be removed. If not given, all time series data is removed.
+    after : int, optional
+        If given, only data with `year` labels equal to or greater than `after` are
+        removed.
+    """
+    if data is None:
+        data = ts.timeseries().drop("value", axis=1)
+
+    N = len(data)
+    count = f"{N}"
+
+    if after:
+        query = f"{after} <= year"
+        data = data.query(query)
+        count = f"{len(data)} of {N} ({query})"
+
+    log.info(f"Remove {count} rows of time series data from {ts.url}")
+
+    # TODO improve TimeSeries.transact() to allow timeseries_only=True; use here
+    ts.check_out(timeseries_only=True)
+    try:
+        ts.remove_timeseries(data)
+    except Exception:
+        ts.discard_changes()
+    else:
+        ts.commit(f"Remove time series data ({__name__}.remove_ts)")
 
 
 def store_ts(scenario, *data, strict: bool = False) -> None:

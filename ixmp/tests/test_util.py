@@ -7,7 +7,7 @@ import pandas.testing as pdt
 import pytest
 from pytest import mark, param
 
-from ixmp import Scenario, utils
+from ixmp import Scenario, util
 from ixmp.testing import make_dantzig, populate_test_platform
 
 
@@ -31,21 +31,21 @@ def test_check_year():
     y1 = "a"
     s1 = "a"
     with pytest.raises(ValueError):
-        assert utils.check_year(y1, s1)
+        assert util.check_year(y1, s1)
 
     # If y = None.
 
     y2 = None
     s2 = None
 
-    assert utils.check_year(y2, s2) is None
+    assert util.check_year(y2, s2) is None
 
     # If y is integer.
 
     y3 = 4
     s3 = 4
 
-    assert utils.check_year(y3, s3) is True
+    assert util.check_year(y3, s3) is True
 
 
 def test_diff_identical(test_mp):
@@ -54,12 +54,12 @@ def test_diff_identical(test_mp):
     scen_b = make_dantzig(test_mp)
 
     # Compare identical scenarios: produces data of same length
-    for name, df in utils.diff(scen_a, scen_b):
-        data_a = utils.maybe_convert_scalar(scen_a.par(name))
+    for name, df in util.diff(scen_a, scen_b):
+        data_a = util.maybe_convert_scalar(scen_a.par(name))
         assert len(data_a) == len(df)
 
     # Compare identical scenarios, with filters
-    iterator = utils.diff(scen_a, scen_b, filters=dict(i=["seattle"]))
+    iterator = util.diff(scen_a, scen_b, filters=dict(i=["seattle"]))
     for (name, df), (exp_name, N) in zip(iterator, [("a", 1), ("d", 3)]):
         assert exp_name == name and len(df) == N
 
@@ -109,14 +109,14 @@ def test_diff_data(test_mp):
     exp_d = exp_d.astype(dict(_merge=merge_cat))
 
     # Compare different scenarios without filters
-    for name, df in utils.diff(scen_a, scen_b):
+    for name, df in util.diff(scen_a, scen_b):
         if name == "b":
             pdt.assert_frame_equal(exp_b, df)
         elif name == "d":
             pdt.assert_frame_equal(exp_d, df)
 
     # Compare different scenarios with filters
-    iterator = utils.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
+    iterator = util.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
     for name, df in iterator:
         # Same as above, except only the filtered rows should appear
         if name == "b":
@@ -139,11 +139,11 @@ def test_diff_items(test_mp):
     scen_b.remove_par("d")
 
     # Compare different scenarios without filters
-    for name, df in utils.diff(scen_a, scen_b):
+    for name, df in util.diff(scen_a, scen_b):
         pass  # No check on the contents
 
     # Compare different scenarios with filters
-    iterator = utils.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
+    iterator = util.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
     for name, df in iterator:
         pass  # No check of the contents
 
@@ -163,7 +163,7 @@ def test_discard_on_error(caplog, test_mp):
     # Catch the deliberately-raised exception so that the test passes
     with pytest.raises(KeyError):
         # Trigger KeyError and the discard_on_error() behaviour
-        with utils.discard_on_error(s):
+        with util.discard_on_error(s):
             s.add_par("d", pd.DataFrame([["foo", "bar", 1.0, "kg"]]))
 
     # Exception was caught and logged
@@ -176,13 +176,13 @@ def test_discard_on_error(caplog, test_mp):
     # Re-load the mp and the scenario
     with pytest.raises(RuntimeError):
         # Fails because the connection to test_mp was closed by discard_on_error()
-        s2 = Scenario(test_mp, **utils.parse_url(url)[1])
+        s2 = Scenario(test_mp, **util.parse_url(url)[1])
 
     # Reopen the connection
     test_mp.open_db()
 
     # Now the scenario can be reloaded
-    s2 = Scenario(test_mp, **utils.parse_url(url)[1])
+    s2 = Scenario(test_mp, **util.parse_url(url)[1])
     assert s2 is not s  # Different object instance than above
 
     # Data modification above was discarded by discard_on_error()
@@ -191,17 +191,17 @@ def test_discard_on_error(caplog, test_mp):
 
 def test_filtered():
     df = pd.DataFrame()
-    assert df is utils.filtered(df, filters=None)
+    assert df is util.filtered(df, filters=None)
 
 
 def test_isscalar():
     with pytest.warns(DeprecationWarning):
-        assert False is utils.isscalar([3, 4])
+        assert False is util.isscalar([3, 4])
 
 
 def test_logger_deprecated():
     with pytest.warns(DeprecationWarning):
-        utils.logger()
+        util.logger()
 
 
 m_s = dict(model="m", scenario="s")
@@ -245,7 +245,7 @@ URLS = [
 
 @pytest.mark.parametrize("url, p, s", URLS)
 def test_parse_url(url, p, s):
-    platform_info, scenario_info = utils.parse_url(url)
+    platform_info, scenario_info = util.parse_url(url)
 
     # Expected platform and scenario information is returned
     assert platform_info == p
@@ -271,7 +271,7 @@ def test_format_scenario_list(test_mp_f):
         "2 scenario name(s)",
         "2 (model, scenario) combination(s)",
         "4 total scenarios",
-    ] == utils.format_scenario_list(mp)
+    ] == util.format_scenario_list(mp)
 
     # With as_url=True
     assert list(
@@ -282,17 +282,17 @@ def test_format_scenario_list(test_mp_f):
                 "ixmp://{}/canning problem/standard#2",
             ],
         )
-    ) == utils.format_scenario_list(mp, as_url=True)
+    ) == util.format_scenario_list(mp, as_url=True)
 
 
 def test_maybe_commit(caplog, test_mp):
     s = Scenario(test_mp, "maybe_commit", "maybe_commit", version="new")
 
     # A new Scenario is not committed, so this works
-    assert utils.maybe_commit(s, True, message="foo") is True
+    assert util.maybe_commit(s, True, message="foo") is True
 
     # *s* is already commited. No commit is performed, but the function call
     # succeeds and a message is logged
     caplog.set_level(logging.INFO, logger="ixmp")
-    assert utils.maybe_commit(s, True, message="foo") is False
+    assert util.maybe_commit(s, True, message="foo") is False
     assert caplog.messages[-1].startswith("maybe_commit() didn't commit: ")

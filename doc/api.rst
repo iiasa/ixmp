@@ -99,13 +99,15 @@ Scenario
    A Scenario is a :class:`.TimeSeries` that also contains model data, including model solution data.
    See the :ref:`data model documentation <data-model-data>`.
 
-   The Scenario class provides methods to manipulate model data items:
+   The Scenario class provides methods to manipulate :ref:`model data items <data-item>`.
+   In addition to generic methods (:meth:`init_item`, :meth:`items`, :meth:`list_items`, :meth:`has_item`), there are methods for each of the four item types:
 
    - Set: :meth:`init_set`, :meth:`add_set`, :meth:`set`, :meth:`remove_set`, :meth:`has_set`
    - Parameter:
 
      - ≥1-dimensional: :meth:`init_par`, :meth:`add_par`, :meth:`par`, :meth:`remove_par`, :meth:`par_list`, and :meth:`has_par`.
      - 0-dimensional: :meth:`init_scalar`, :meth:`change_scalar`, and :meth:`scalar`.
+       These are thin wrappers around the corresponding ``*_par`` methods, which can also be used to manipulate 0-dimensional parameters.
 
    - Variable: :meth:`init_var`, :meth:`var`, :meth:`var_list`, and :meth:`has_var`.
    - Equation: :meth:`init_equ`, :meth:`equ`, :meth:`equ_list`, and :meth:`has_equ`.
@@ -116,33 +118,25 @@ Scenario
       change_scalar
       clone
       equ
-      equ_list
-      has_equ
-      has_par
-      has_set
+      has_item
       has_solution
-      has_var
       idx_names
       idx_sets
-      init_equ
-      init_par
+      init_item
       init_scalar
-      init_set
-      init_var
+      items
+      list_items
       load_scenario_data
       par
-      par_list
       read_excel
       remove_par
       remove_set
       remove_solution
       scalar
       set
-      set_list
       solve
       to_excel
       var
-      var_list
 
 .. _configuration:
 

@@ -1,11 +1,31 @@
 Next release
 ============
 
-.. All changes
-.. -----------
+Migration notes
+---------------
+Update code that imports from the following modules:
+
+- :py:`ixmp.reporting` → use :py:`ixmp.report`.
+- :py:`ixmp.reporting.computations` → use :py:`ixmp.report.operator`.
+- :py:`ixmp.utils` → use :py:`ixmp.util`.
+
+Code that imports from the old locations will continue to work, but will raise :class:`DeprecationWarning`.
+
+All changes
+-----------
 
 - Support for Python 3.7 is dropped (:pull:`492`).
+- Rename :mod:`ixmp.report` and :mod:`ixmp.util` (:pull:`500`).
+- New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.store_ts` (:pull:`500`).
+- New CLI command :program:`ixmp platform copy` and :doc:`CLI documentation <cli>` (:pull:`500`).
+- New argument :py:`indexed_by=...` to :meth:`.Scenario.items` (thus :meth:`.Scenario.par_list` and similar methods) to iterate over (or list) only items that are indexed by a particular set (:issue:`402`, :pull:`500`).
 - New :func:`.util.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
+- Work around limitations of :class:`.JDBCBackend` (:pull:`500`):
+
+  - Unit :py:`""` cannot be added with the Oracle driver (:issue:`425`).
+  - Certain items (variables) could not be initialized when providing :py:`idx_sets=...`, even if those match the sets fixed by the underlying Java code.
+    With this fix, a matching list is silently accepted; a different list raises :class:`NotImplementedError`.
+- Improved type hinting for static typing of code that uses :mod:`ixmp` (:issue:`465`, :pull:`500`).
 
 .. _v3.7.0:
 

@@ -337,7 +337,7 @@ class Scenario(TimeSeries):
         filters: Optional[Dict[str, Sequence[str]]] = None,
         *,
         indexed_by: Optional[str] = None,
-        par_data: bool = True,
+        par_data: Optional[bool] = None,
     ) -> Iterable[str]:
         """Iterate over model data items.
 
@@ -348,13 +348,24 @@ class Scenario(TimeSeries):
             parameters.
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
-            :meth:`par`.
+            :meth:`par`. Only value for :attr:`.ItemType.PAR`.
+        indexed_by : str, optional
+            If given, only iterate over items where one of the item dimensions is
+            `indexed_by` the set of this name.
+        par_data : bool, optional
+            If :any:`True` (the default) and `type` is :data:`.ItemType.PAR`, also
+            iterate over data for each parameter.
 
         Yields
         ------
+        str
+            if `type` is not :attr:`.ItemType.PAR`, or `par_data` is :any:`False`:
+            names of items.
         tuple
-            Each tuple consists of (item name, item data).
+            if `type` is :attr:`.ItemType.PAR` and `par_data` is :any:`True`:
+            each tuple is (item name, item data).
         """
+        # Handle `filters` argument
         if filters is None:
             filters = dict()
         elif type != ItemType.PAR:
@@ -363,8 +374,22 @@ class Scenario(TimeSeries):
                 + repr(type.name).lower()
             )
 
+        # Handle `par_data` argument
+        if type == ItemType.PAR and par_data is None:
+            warn(
+                "using default par_data=True. In a future version of ixmp, "
+                "par_data=False will be default.",
+                FutureWarning,
+                2,
+            )
+            par_data = True
+        elif par_data is None:
+            par_data = False
+
+        # Sorted list of items from the back end
         names = sorted(self._backend("list_items", str(type.name).lower()))
 
+        # Iterate over items
         for name in names:
             idx_names = set(self.idx_names(name))
             idx_sets = set(self.idx_sets(name))
@@ -383,10 +408,21 @@ class Scenario(TimeSeries):
                 _filters = {k: v for k, v in filters.items() if k in idx_names}
                 yield (name, self.par(name, filters=_filters))  # type: ignore [misc]
             else:
+                # Only the name of the item
                 yield name
 
     def has_item(self, name: str, item_type=ItemType.MODEL) -> bool:
         """Check whether the Scenario has an item `name` of `item_type`.
+
+        In general, user code **should** call one of :meth:`.has_equ`, :meth:`.has_par`,
+        :meth:`.has_set`, or :meth:`.has_var` instead of calling this method directly.
+
+        Returns
+        -------
+        True
+            if the Scenario contains an item of `item_type` with name `name`.
+        False
+            otherwise
 
         See also
         --------
@@ -394,13 +430,13 @@ class Scenario(TimeSeries):
         """
         return name in self.items(item_type, par_data=False)
 
-    #: Check whether the scenario has a equation `name`.
+    #: Check whether the scenario has a equation `name`. See :meth:`has_item`.
     has_equ = partialmethod(has_item, item_type=ItemType.EQU)
-    #: Check whether the scenario has a parameter `name`.
+    #: Check whether the scenario has a parameter `name`. See :meth:`has_item`.
     has_par = partialmethod(has_item, item_type=ItemType.PAR)
-    #: Check whether the scenario has a set `name`.
+    #: Check whether the scenario has a set `name`. See :meth:`has_item`.
     has_set = partialmethod(has_item, item_type=ItemType.SET)
-    #: Check whether the scenario has a variable `name`.
+    #: Check whether the scenario has a variable `name`. See :meth:`has_item`.
     has_var = partialmethod(has_item, item_type=ItemType.VAR)
 
     def init_item(
@@ -450,17 +486,17 @@ class Scenario(TimeSeries):
             "init_item", str(item_type.name).lower(), name, idx_sets, idx_names
         )
 
-    #: Initialize a new equation.
+    #: Initialize a new equation. See :meth:`init_item`.
     init_equ = partialmethod(init_item, ItemType.EQU)
-    #: Initialize a new parameter.
+    #: Initialize a new parameter. See :meth:`init_item`.
     init_par = partialmethod(init_item, ItemType.PAR)
-    #: Initialize a new set.
+    #: Initialize a new set. See :meth:`init_item`.
     init_set = partialmethod(init_item, ItemType.SET)
-    #: Initialize a new variable.
+    #: Initialize a new variable. See :meth:`init_item`.
     init_var = partialmethod(init_item, ItemType.VAR)
 
     def list_items(
-        self, item_type=ItemType.MODEL, indexed_by: Optional[str] = None
+        self, item_type: ItemType, indexed_by: Optional[str] = None
     ) -> List[str]:
         """List all defined items of type `item_type`.
 
@@ -470,14 +506,14 @@ class Scenario(TimeSeries):
         """
         return list(self.items(item_type, indexed_by=indexed_by, par_data=False))
 
-    #: List all defined equations.
-    equ_list = partialmethod(list_items, item_type=ItemType.EQU)
-    #: List all defined parameters.
-    par_list = partialmethod(list_items, item_type=ItemType.PAR)
-    #: List all defined sets.
-    set_list = partialmethod(list_items, item_type=ItemType.SET)
-    #: List all defined variables.
-    var_list = partialmethod(list_items, item_type=ItemType.VAR)
+    #: List all defined equations. See :meth:`list_items`.
+    equ_list = partialmethod(list_items, ItemType.EQU)
+    #: List all defined parameters. See :meth:`list_items`.
+    par_list = partialmethod(list_items, ItemType.PAR)
+    #: List all defined sets. See :meth:`list_items`.
+    set_list = partialmethod(list_items, ItemType.SET)
+    #: List all defined variables. See :meth:`list_items`.
+    var_list = partialmethod(list_items, ItemType.VAR)
 
     def add_par(
         self,

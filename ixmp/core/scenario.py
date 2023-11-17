@@ -156,34 +156,6 @@ class Scenario(TimeSeries):
         else:
             return [str(key_or_keys)]
 
-    def init_set(
-        self,
-        name: str,
-        idx_sets: Optional[Sequence[str]] = None,
-        idx_names: Optional[Sequence[str]] = None,
-    ) -> None:
-        """Initialize a new set.
-
-        Parameters
-        ----------
-        name : str
-            Name of the set.
-        idx_sets : sequence of str or str, optional
-            Names of other sets that index this set.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-
-        Raises
-        ------
-        ValueError
-            If the set (or another object with the same *name*) already exists.
-        RuntimeError
-            If the Scenario is not checked out (see :meth:`~TimeSeries.check_out`).
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "set", name, idx_sets, idx_names)
-
     def set(
         self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> Union[List[str], pd.DataFrame]:
@@ -336,27 +308,6 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "set", name, self._keys(name, key))
 
-    def init_par(
-        self,
-        name: str,
-        idx_sets: Sequence[str],
-        idx_names: Optional[Sequence[str]] = None,
-    ) -> None:
-        """Initialize a new parameter.
-
-        Parameters
-        ----------
-        name : str
-            Name of the parameter.
-        idx_sets : sequence of str or str, optional
-            Names of sets that index this parameter.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "par", name, idx_sets, idx_names)
-
     def par(
         self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> pd.DataFrame:
@@ -451,6 +402,62 @@ class Scenario(TimeSeries):
     has_set = partialmethod(has_item, item_type=ItemType.SET)
     #: Check whether the scenario has a variable `name`.
     has_var = partialmethod(has_item, item_type=ItemType.VAR)
+
+    def init_item(
+        self,
+        item_type: ItemType,
+        name: str,
+        idx_sets: Optional[Sequence[str]] = None,
+        idx_names: Optional[Sequence[str]] = None,
+    ):
+        """Initialize a new item `name` of type `item_type`.
+
+        In general, user code **should** call one of :meth:`.init_set`,
+        :meth:`.init_par`, :meth:`.init_var`, or :meth:`.init_equ` instead of calling
+        this method directly.
+
+        Parameters
+        ----------
+        item_type : ItemType
+            The type of the item.
+        name : str
+            Name of the item.
+        idx_sets : sequence of str or str, optional
+            Name(s) of index sets for a 1+-dimensional item. If none are given, the item
+            is scalar (zero dimensional).
+        idx_names : sequence of str or str, optional
+            Names of the dimensions indexed by `idx_sets`. If given, they must be the
+            same length as `idx_sets`.
+
+        Raises
+        ------
+        ValueError
+            - if `idx_names` are given but do not match the length of `idx_sets`.
+            - if an item with the same `name`, of any `item_type`, already exists.
+        RuntimeError
+            if the Scenario is not checked out (see :meth:`~TimeSeries.check_out`).
+        """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
+
+        if idx_names and len(idx_names) != len(idx_sets):
+            raise ValueError(
+                f"index names {repr(idx_names)} must have same length as index sets"
+                f" {repr(idx_sets)}"
+            )
+
+        return self._backend(
+            "init_item", str(item_type.name).lower(), name, idx_sets, idx_names
+        )
+
+    #: Initialize a new equation.
+    init_equ = partialmethod(init_item, ItemType.EQU)
+    #: Initialize a new parameter.
+    init_par = partialmethod(init_item, ItemType.PAR)
+    #: Initialize a new set.
+    init_set = partialmethod(init_item, ItemType.SET)
+    #: Initialize a new variable.
+    init_var = partialmethod(init_item, ItemType.VAR)
 
     def list_items(
         self, item_type=ItemType.MODEL, indexed_by: Optional[str] = None
@@ -581,7 +588,7 @@ class Scenario(TimeSeries):
         self._backend("item_set_elements", "par", name, elements)
 
     def init_scalar(self, name: str, val: Real, unit: str, comment=None) -> None:
-        """Initialize a new scalar.
+        """Initialize a new scalar and set its value.
 
         Parameters
         ----------
@@ -650,27 +657,6 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "par", name, self._keys(name, key))
 
-    def init_var(
-        self,
-        name: str,
-        idx_sets: Optional[Sequence[str]] = None,
-        idx_names: Optional[Sequence[str]] = None,
-    ) -> None:
-        """Initialize a new variable.
-
-        Parameters
-        ----------
-        name : str
-            Name of the variable.
-        idx_sets : sequence of str or str, optional
-            Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "var", name, idx_sets, idx_names)
-
     def var(self, name: str, filters=None, **kwargs):
         """Return a dataframe of (filtered) elements for a specific variable.
 
@@ -682,22 +668,6 @@ class Scenario(TimeSeries):
             index names mapped list of index set elements
         """
         return self._backend("item_get_elements", "var", name, filters)
-
-    def init_equ(self, name: str, idx_sets=None, idx_names=None) -> None:
-        """Initialize a new equation.
-
-        Parameters
-        ----------
-        name : str
-            Name of the equation.
-        idx_sets : sequence of str or str, optional
-            Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "equ", name, idx_sets, idx_names)
 
     def equ(self, name: str, filters=None, **kwargs) -> pd.DataFrame:
         """Return a dataframe of (filtered) elements for a specific equation.

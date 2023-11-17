@@ -7,7 +7,16 @@ from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Mapping, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+)
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -16,7 +25,7 @@ import pandas as pd
 
 from ixmp.backend import ItemType
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ixmp import TimeSeries
 
 log = logging.getLogger(__name__)
@@ -48,8 +57,8 @@ def logger():
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names=None):
-    """Convert various *arg* to list of str.
+def as_str_list(arg, idx_names: Optional[Iterable[str]] = None):
+    """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
 

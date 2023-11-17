@@ -908,10 +908,6 @@ class JDBCBackend(CachingBackend):
         return to_pylist(getattr(self.jindex[s], f"get{type.title()}List")())
 
     def init_item(self, s, type, name, idx_sets, idx_names):
-        # Generate index-set and index-name lists
-        if isinstance(idx_sets, set) or isinstance(idx_names, set):
-            raise TypeError("index dimension must be string or ordered lists")
-
         # Check `idx_sets` against values hard-coded in ixmp_source
         try:
             sets = _fixed_index_sets(s.scheme)[name]
@@ -927,21 +923,11 @@ class JDBCBackend(CachingBackend):
                     f"Initialize {type} {name!r} with dimensions {idx_sets} != {sets}"
                 )
 
-        # Convert to Java data structure
+        # Convert to Java data structures
         idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
+        idx_names = to_jlist(idx_names) if idx_names else idx_sets
 
-        # Handle `idx_names`, if any
-        if idx_names:
-            if len(idx_names) != len(idx_sets):
-                raise ValueError(
-                    f"index names {repr(idx_names)} must have same length as index sets"
-                    f" {repr(idx_sets)}"
-                )
-            idx_names = to_jlist(idx_names)
-        else:
-            idx_names = idx_sets
-
-        # Initialize the Item
+        # Retrieve the method that initializes the Item, something like "initializePar"
         func = getattr(self.jindex[s], f"initialize{type.title()}")
 
         # The constructor returns a reference to the Java Item, but these aren't exposed

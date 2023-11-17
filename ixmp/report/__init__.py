@@ -48,7 +48,9 @@ def filters(c: Computer, filters: dict):
 @genno.config.handles("rename_dims", iterate=False)
 def rename_dims(c: Computer, info: dict):
     """Handle the entire ``rename_dims:`` config section."""
-    RENAME_DIMS.update(info)
+    from ixmp.report import util
+
+    util.RENAME_DIMS.update(info)
 
 
 # keep=True is different vs. genno.config

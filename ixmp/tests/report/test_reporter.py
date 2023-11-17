@@ -7,7 +7,6 @@ from genno import ComputationError, configure
 
 import ixmp
 from ixmp.report.reporter import Reporter
-from ixmp.report.util import RENAME_DIMS
 from ixmp.testing import add_test_data, assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
@@ -23,8 +22,9 @@ def scenario(test_mp):
     yield scen
 
 
+@pytest.mark.usefixtures("protect_rename_dims")
 def test_configure(test_mp, test_data_path):
-    # Configure globally; reads 'rename_dims' section
+    # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
 
     # Reporting uses the RENAME_DIMS mapping of 'i' to 'i_renamed'
@@ -36,9 +36,6 @@ def test_configure(test_mp, test_data_path):
     # Original name 'i' are not found in the reporter
     assert "d:i-j" not in rep, rep.graph.keys()
     pytest.raises(KeyError, rep.get, "i")
-
-    # Remove the configuration for renaming 'i', so that other tests work
-    RENAME_DIMS.pop("i")
 
 
 def test_reporter_from_scenario(scenario):
@@ -180,9 +177,9 @@ san-diego  chicago     1\.8
 seattle    chicago     1\.7
            new-york    2\.5
            topeka      1\.8
-(Name: value, )?dtype: float64(, units: dimensionsless)?""",
+(Name: value, )?dtype: float64(, units: dimensionless)?""",
         result.output,
-    )
+    ), result.output
 
 
 def test_filters(test_mp, tmp_path, caplog):

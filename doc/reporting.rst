@@ -61,23 +61,29 @@ The following top-level objects from :mod:`genno` may also be imported from
    .. autosummary::
 
       ~Computer.add
-      ~Computer.add_file
-      ~Computer.add_product
       ~Computer.add_queue
       ~Computer.add_single
-      ~Computer.aggregate
       ~Computer.apply
       ~Computer.check_keys
       ~Computer.configure
-      ~Computer.convert_pyam
       ~Computer.describe
-      ~Computer.disaggregate
       ~Computer.full_key
       ~Computer.get
       ~Computer.infer_keys
       ~Computer.keys
       ~Computer.visualize
       ~Computer.write
+
+   The following methods are deprecated; equivalent or better functionality is available through :meth:`.Computer.add`.
+   See the genno documentation for each method for suggested changes/migrations.
+
+   .. autosummary::
+
+      ~Computer.add_file
+      ~Computer.add_product
+      ~Computer.aggregate
+      ~Computer.convert_pyam
+      ~Computer.disaggregate
 
 .. _reporting-config:
 
@@ -138,9 +144,12 @@ Operators
    .. autosummary::
 
       data_for_quantity
+      from_url
+      get_ts
       map_as_qty
       update_scenario
       store_ts
+      remove_ts
 
    Basic operators are defined by :mod:`genno.operator` and its compatibility modules; see there for details:
 
@@ -171,6 +180,37 @@ Operators
 
 Utilities
 =========
+
+.. currentmodule:: ixmp.report.common
+
+.. autodata:: RENAME_DIMS
+
+   User code **should** avoid directly manipulating :data:`RENAME_DIMS`.
+   Instead, call :func:`.configure`:
+
+   .. code-block:: python
+
+      # Rename dimension "long_dimension_name" to "ldn"
+      configure(rename_dims={"long_dimension_name": "ldn"})
+
+   As well, importing the variable into the global namespace of another module creates a copy of the dictionary that may become out of sync with other changes.
+   Thus, instead of:
+
+   .. code-block:: python
+
+      from ixmp.report import RENAME_DIMS
+
+      def my_operator(...):
+          # Code that references RENAME_DIMS
+
+   Do this:
+
+   .. code-block:: python
+
+      def my_operator(...):
+          from ixmp.report import common
+
+          # Code that references common.RENAME_DIMS
 
 .. automodule:: ixmp.report.util
    :members:

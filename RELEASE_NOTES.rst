@@ -16,7 +16,7 @@ All changes
 
 - Support for Python 3.7 is dropped (:pull:`492`).
 - Rename :mod:`ixmp.report` and :mod:`ixmp.util` (:pull:`500`).
-- New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.store_ts` (:pull:`500`).
+- New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.remove_ts` (:pull:`500`).
 - New CLI command :program:`ixmp platform copy` and :doc:`CLI documentation <cli>` (:pull:`500`).
 - New argument :py:`indexed_by=...` to :meth:`.Scenario.items` (thus :meth:`.Scenario.par_list` and similar methods) to iterate over (or list) only items that are indexed by a particular set (:issue:`402`, :pull:`500`).
 - New :func:`.util.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).

@@ -8,9 +8,10 @@ from genno import Quantity
 from genno.util import parse_units
 
 from ixmp.core.timeseries import TimeSeries
+from ixmp.report import common
 from ixmp.util import to_iamc_layout
 
-from .util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
+from .util import dims_for_qty, get_reversed_rename_dims
 
 if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
@@ -126,7 +127,7 @@ def data_for_quantity(
     # Set index if 1 or more dimensions
     if len(dims):
         # First rename, then set index
-        data = data.rename(columns=RENAME_DIMS).set_index(dims)
+        data = data.rename(columns=common.RENAME_DIMS).set_index(dims)
 
     # Convert to a Quantity, assign attrbutes and name
     qty = Quantity(
@@ -204,7 +205,7 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
     ~genno.operator.broadcast_map
     """
     set_from, set_to = set_df.columns
-    names = [RENAME_DIMS.get(c, c) for c in set_df.columns]
+    names = [common.RENAME_DIMS.get(c, c) for c in set_df.columns]
 
     # Add an 'all' mapping
     set_df = pd.concat(

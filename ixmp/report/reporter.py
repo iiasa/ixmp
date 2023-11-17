@@ -6,9 +6,10 @@ import pandas as pd
 from genno.core.computer import Computer, Key
 
 from ixmp.core.scenario import Scenario
+from ixmp.report import common
 
 from . import operator
-from .util import RENAME_DIMS, keys_for_quantity
+from .util import keys_for_quantity
 
 
 class Reporter(Computer):
@@ -89,7 +90,7 @@ class Reporter(Computer):
                 # TODO write tests for this
                 pass
 
-            rep.add(RENAME_DIMS.get(name, name), elements)
+            rep.add(common.RENAME_DIMS.get(name, name), elements)
 
         return rep
 

@@ -9,12 +9,12 @@ from genno import (
     configure,
 )
 
+from ixmp.report import common
+
 from .reporter import Reporter
-from .util import RENAME_DIMS
 
 __all__ = [
     # ixmp-specific
-    "RENAME_DIMS",
     "Reporter",
     # Re-exports from genno
     "ComputationError",
@@ -48,9 +48,7 @@ def filters(c: Computer, filters: dict):
 @genno.config.handles("rename_dims", iterate=False)
 def rename_dims(c: Computer, info: dict):
     """Handle the entire ``rename_dims:`` config section."""
-    from ixmp.report import util
-
-    util.RENAME_DIMS.update(info)
+    common.RENAME_DIMS.update(info)
 
 
 # keep=True is different vs. genno.config
@@ -58,3 +56,10 @@ def rename_dims(c: Computer, info: dict):
 def units(c: Computer, info: dict):
     """Handle the entire ``units:`` config section."""
     genno.config.units(c, info)
+
+
+def __getattr__(name: str):
+    if name == "RENAME_DIMS":
+        return common.RENAME_DIMS
+    else:
+        raise AttributeError(name)

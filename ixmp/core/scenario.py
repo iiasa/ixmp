@@ -408,8 +408,8 @@ class Scenario(TimeSeries):
             filters = dict()
         elif type != ItemType.PAR:
             log.warning(
-                "Scenario.items(…, filters=…) has no effect for item type"
-                + repr(type.name)
+                "Scenario.items(…, filters=…) has no effect for item type "
+                + repr(type.name).lower()
             )
 
         names = sorted(self._backend("list_items", str(type.name).lower()))

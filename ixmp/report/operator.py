@@ -258,7 +258,7 @@ def remove_ts(
     ts.check_out(timeseries_only=True)
     try:
         ts.remove_timeseries(data)
-    except Exception:
+    except Exception:  # pragma: no cover
         ts.discard_changes()
     else:
         ts.commit(f"Remove time series data ({__name__}.remove_ts)")

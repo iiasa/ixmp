@@ -687,7 +687,7 @@ class JDBCBackend(CachingBackend):
         method = getattr(self.jobj, "new" + klass)
         try:
             jobj = method(ts.model, ts.scenario, *args)
-        except java.IxException as e:
+        except java.IxException as e:  # pragma: no cover
             _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)

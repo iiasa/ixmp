@@ -288,6 +288,17 @@ class TestScenario:
         # Function runs and yields the expected sequence of item names
         assert exp == list(scen.items(item_type, indexed_by=indexed_by, par_data=False))
 
+    def test_items2(self, caplog, scen):
+        item_type = ixmp.ItemType.SET
+
+        list(scen.items(item_type, filters={"foo": "bar"}))
+
+        # Warning is logged
+        assert (
+            "Scenario.items(…, filters=…) has no effect for item type 'set'"
+            in caplog.messages
+        )
+
     def test_var(self, scen):
         df = scen.var("x", filters={"i": ["seattle"]})
 

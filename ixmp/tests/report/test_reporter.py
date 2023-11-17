@@ -27,6 +27,11 @@ def test_configure(test_mp, test_data_path):
     # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
 
+    # Test direct import
+    from ixmp.report import RENAME_DIMS
+
+    assert "i" in RENAME_DIMS
+
     # Reporting uses the RENAME_DIMS mapping of 'i' to 'i_renamed'
     scen = make_dantzig(test_mp)
     rep = Reporter.from_scenario(scen)

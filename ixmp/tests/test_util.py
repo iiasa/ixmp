@@ -20,6 +20,10 @@ class TestDeprecatedPathFinder:
         ):
             import ixmp.reporting.computations  # type: ignore  # noqa: F401
 
+    def test_importerror(self):
+        with pytest.warns(DeprecationWarning), pytest.raises(ImportError):
+            import ixmp.reporting.foo  # type: ignore  # noqa: F401
+
 
 def test_check_year():
     # If y is a string value, raise a Value Error.

@@ -556,7 +556,10 @@ class JDBCBackend(CachingBackend):
             if len(kwargs):
                 raise ValueError(f"extra keyword arguments {kwargs}")
 
-            self.jindex[ts].readSolutionFromGDX(*args)
+            try:
+                self.jindex[ts].readSolutionFromGDX(*args)
+            except java.Exception as e:
+                _raise_jexception(e)
 
             self.cache_invalidate(ts)
         else:

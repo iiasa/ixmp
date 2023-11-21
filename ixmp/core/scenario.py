@@ -353,7 +353,7 @@ class Scenario(TimeSeries):
             If given, only iterate over items where one of the item dimensions is
             `indexed_by` the set of this name.
         par_data : bool, optional
-            If :any:`True` (the default) and `type` is :data:`.ItemType.PAR`, also
+            If :any:`True` (the default) and `type` is :attr:`.ItemType.PAR`, also
             iterate over data for each parameter.
 
         Yields
@@ -454,7 +454,7 @@ class Scenario(TimeSeries):
 
         Parameters
         ----------
-        item_type : ItemType
+        item_type : .ItemType
             The type of the item.
         name : str
             Name of the item.

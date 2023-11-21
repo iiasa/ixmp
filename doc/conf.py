@@ -39,12 +39,8 @@ templates_path = ["_templates"]
 # html_extra_path.
 exclude_patterns = ["_build", "README.rst", "Thumbs.db", ".DS_Store"]
 
-nitpick_ignore_regex = {
-    # These occur because there is no .. py:module:: directive for the *top-level*
-    # module or package in the respective documentation and inventories.
-    # TODO Remove once the respective docs are fixed
-    ("py:mod", "message_ix"),
-}
+# Warn about *all* references where the target cannot be found
+nitpicky = True
 
 # A string of reStructuredText that will be included at the beginning of every source
 # file that is read.

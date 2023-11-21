@@ -12,7 +12,7 @@ def dims_for_qty(data):
     If *data* is a :class:`pandas.DataFrame`, its columns are processed;
     otherwise it must be a list.
 
-    :data:`RENAME_DIMS` is used to rename dimensions.
+    :data:`.RENAME_DIMS` is used to rename dimensions.
     """
     if isinstance(data, pd.DataFrame):
         # List of the dimensions

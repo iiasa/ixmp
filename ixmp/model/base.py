@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 class ModelError(Exception):
-    """Error in model code, e.g. :meth:`.Model.run`."""
+    """Error in model code—that is, :meth:`.Model.run` or other code called by it."""
 
 
 class Model(ABC):

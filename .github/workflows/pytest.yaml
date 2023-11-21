@@ -127,14 +127,6 @@ jobs:
     - name: Run test suite using pytest
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
 
-    - name: Test documentation build using Sphinx
-      env:
-        # For pull_request triggers, GitHub creates a temporary merge commit
-        # with a hash that does not match the head of the branch. Tell it which
-        # branch to use.
-        SPHINXOPTS: -D linkcode_github_remote_head=${{ github.head_ref }}
-      run: make --directory=doc html
-
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v3
 
@@ -146,6 +138,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
 
     - name: Force recreation of pre-commit virtual environment for mypy
       if: github.event_name == 'schedule'

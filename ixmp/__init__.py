@@ -69,8 +69,9 @@ log.setLevel(logging.WARNING)
 
 def __getattr__(name):
     if name == "utils":
-        import ixmp.util
+        # Import via the old name to trigger DeprecatedPathFinder
+        import ixmp.utils as util  # type: ignore [import-not-found]
 
-        return ixmp.util
+        return util
     else:
         raise AttributeError(name)

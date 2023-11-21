@@ -20,6 +20,13 @@ class TestDeprecatedPathFinder:
         ):
             import ixmp.reporting.computations  # type: ignore  # noqa: F401
 
+    @pytest.mark.filterwarnings("ignore")
+    def test_import1(self):
+        """utils can be imported from ixmp, but raises DeprecationWarning."""
+        from ixmp import utils
+
+        assert "diff" in dir(utils)
+
     def test_importerror(self):
         with pytest.warns(DeprecationWarning), pytest.raises(ImportError):
             import ixmp.reporting.foo  # type: ignore  # noqa: F401

@@ -147,7 +147,7 @@ class TestScenario:
         with pytest.raises(ValueError, match="'foo' already exists"):
             scen.init_set("foo")
 
-    def test_init_par(self, scen):
+    def test_init_par(self, scen) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
 
@@ -156,6 +156,10 @@ class TestScenario:
 
         # Return type of idx_sets is still list
         assert scen.idx_sets("foo") == ["i", "j"]
+
+        # Mismatched sets and names
+        with pytest.raises(ValueError, match="must have the same length"):
+            scen.init_par("bar", idx_sets=("i", "j"), idx_names=("a", "b", "c"))
 
     def test_init_scalar(self, scen):
         scen2 = scen.clone(keep_solution=False)
@@ -246,11 +250,12 @@ class TestScenario:
         iterator = scen.items()
 
         # next() can be called → an iterator was returned
-        next(iterator)
+        with pytest.warns(FutureWarning, match="par_data=False will be the default"):
+            next(iterator)
 
         # Iterator returns the expected parameter names
         exp = ["a", "b", "d", "f"]
-        for i, (name, data) in enumerate(scen.items()):
+        for i, (name, data) in enumerate(scen.items(par_data=True)):
             # Name is correct in the expected order
             assert exp[i] == name
             # Data is one of the return types of .par()
@@ -260,7 +265,7 @@ class TestScenario:
         assert i == 3
 
         # With filters
-        iterator = scen.items(filters=dict(i=["seattle"]))
+        iterator = scen.items(filters=dict(i=["seattle"]), par_data=True)
         exp = [("a", 1), ("d", 3)]
         for i, (name, data) in enumerate(iterator):
             # Name is correct in the expected order

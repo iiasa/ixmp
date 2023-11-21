@@ -7,7 +7,7 @@ try:
     import resource
 
     has_resource_module = True
-except ImportError:
+except ImportError:  # pragma: no cover
     # Windows
     has_resource_module = False
 

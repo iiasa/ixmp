@@ -201,6 +201,11 @@ class TestJDBCBackend:
         with pytest.raises(NotImplementedError):
             be.write_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
 
+    # Specific to JDBCBackend
+    def test_gc(self, monkeypatch, be):
+        monkeypatch.setattr(ixmp.backend.jdbc, "_GC_AGGRESSIVE", True)
+        be.gc()
+
 
 def test_exceptions(test_mp):
     """Ensure that Python exceptions are raised for some actions."""

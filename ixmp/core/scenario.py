@@ -378,7 +378,7 @@ class Scenario(TimeSeries):
         if type == ItemType.PAR and par_data is None:
             warn(
                 "using default par_data=True. In a future version of ixmp, "
-                "par_data=False will be default.",
+                "par_data=False will be the default.",
                 FutureWarning,
                 2,
             )
@@ -478,7 +478,7 @@ class Scenario(TimeSeries):
 
         if idx_names and len(idx_names) != len(idx_sets):
             raise ValueError(
-                f"index names {repr(idx_names)} must have same length as index sets"
+                f"index names {repr(idx_names)} must have the same length as index sets"
                 f" {repr(idx_sets)}"
             )
 

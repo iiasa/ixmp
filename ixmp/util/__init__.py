@@ -115,8 +115,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """
     # Iterators; index 0 corresponds to `a`, 1 to `b`
     items = [
-        a.items(filters=filters, type=ItemType.PAR),
-        b.items(filters=filters, type=ItemType.PAR),
+        a.items(filters=filters, type=ItemType.PAR, par_data=True),
+        b.items(filters=filters, type=ItemType.PAR, par_data=True),
     ]
     # State variables for loop
     name = ["", ""]

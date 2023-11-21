@@ -4,6 +4,7 @@ import os
 import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
+from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -139,6 +140,15 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
         msg += exc.message()
 
     raise RuntimeError(msg) from None
+
+
+@contextmanager
+def _handle_jexception():
+    """Context manager form of :func:`_raise_jexception`."""
+    try:
+        yield
+    except java.Exception as e:
+        _raise_jexception(e)
 
 
 @lru_cache
@@ -475,10 +485,8 @@ class JDBCBackend(CachingBackend):
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
-        try:
+        with _handle_jexception():
             scenarios = self.jobj.getScenarioList(default, model, scenario)
-        except java.IxException as e:
-            _raise_jexception(e)
 
         for s in scenarios:
             data = []
@@ -537,7 +545,7 @@ class JDBCBackend(CachingBackend):
         if path.suffix == ".gdx" and item_type is ItemType.MODEL:
             kw = {"check_solution", "comment", "equ_list", "var_list"}
 
-            if not isinstance(ts, Scenario):
+            if not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("read from GDX requires a Scenario object")
             elif set(kwargs.keys()) != kw:
                 raise ValueError(
@@ -556,10 +564,8 @@ class JDBCBackend(CachingBackend):
             if len(kwargs):
                 raise ValueError(f"extra keyword arguments {kwargs}")
 
-            try:
+            with _handle_jexception():
                 self.jindex[ts].readSolutionFromGDX(*args)
-            except java.Exception as e:
-                _raise_jexception(e)
 
             self.cache_invalidate(ts)
         else:
@@ -601,7 +607,7 @@ class JDBCBackend(CachingBackend):
         if path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):
                 raise NotImplementedError("write to GDX with filters")
-            elif not isinstance(ts, Scenario):
+            elif not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("write to GDX requires a Scenario object")
 
             # include_var_equ=False -> do not include variables/equations in GDX
@@ -688,10 +694,8 @@ class JDBCBackend(CachingBackend):
 
         # Call either newTimeSeries or newScenario
         method = getattr(self.jobj, "new" + klass)
-        try:
+        with _handle_jexception():
             jobj = method(ts.model, ts.scenario, *args)
-        except java.IxException as e:  # pragma: no cover
-            _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
 
@@ -703,12 +707,11 @@ class JDBCBackend(CachingBackend):
 
         # either getTimeSeries or getScenario
         method = getattr(self.jobj, "get" + ts.__class__.__name__)
-        try:
+
+        # Re-raise as a ValueError for bad model or scenario name, or other
+        with _handle_jexception():
             # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
-        except java.IxException as e:
-            # Re-raise as a ValueError for bad model or scenario name, or other
-            _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
 
@@ -719,10 +722,8 @@ class JDBCBackend(CachingBackend):
         self.gc()
 
     def check_out(self, ts, timeseries_only):
-        try:
+        with _handle_jexception():
             self.jindex[ts].checkOut(timeseries_only)
-        except java.IxException as e:
-            _raise_jexception(e)
 
     def commit(self, ts, comment):
         try:
@@ -1120,10 +1121,8 @@ class JDBCBackend(CachingBackend):
         if version is not None:
             version = java.Long(version)
 
-        try:
+        with _handle_jexception():
             meta = self.jobj.getMeta(model, scenario, version, strict)
-        except java.IxException as e:
-            _raise_jexception(e)
 
         return {entry.getKey(): _unwrap(entry.getValue()) for entry in meta.entrySet()}
 
@@ -1142,10 +1141,8 @@ class JDBCBackend(CachingBackend):
         for k, v in meta.items():
             jmeta.put(str(k), _wrap(v))
 
-        try:
+        with _handle_jexception():
             self.jobj.setMeta(model, scenario, version, jmeta)
-        except java.IxException as e:
-            _raise_jexception(e)
 
     def remove_meta(
         self,

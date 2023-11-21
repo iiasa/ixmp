@@ -10,7 +10,7 @@ import xarray as xr
 
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
-from ixmp.reporting import Quantity
+from ixmp.report import Quantity
 
 #: Common (model name, scenario name) pairs for testing.
 SCEN = {
@@ -20,14 +20,18 @@ SCEN = {
 models = SCEN
 
 _MS: List[Any] = [models["dantzig"]["model"], models["dantzig"]["scenario"]]
+
+#: Time series data for testing.
 HIST_DF = pd.DataFrame(
     [_MS + ["DantzigLand", "GDP", "USD", 850.0, 900.0, 950.0]],
     columns=IAMC_IDX + [2000, 2005, 2010],
 )
+#: Time series data for testing.
 INP_DF = pd.DataFrame(
     [_MS + ["DantzigLand", "Demand", "cases", 850.0, 900.0]],
     columns=IAMC_IDX + [2000, 2005],
 )
+#: Time series data for testing.
 TS_DF = (
     pd.concat([HIST_DF, INP_DF], sort=False)
     .sort_values(by="variable")
@@ -126,6 +130,7 @@ def add_random_model_data(scenario, length):
 
 
 def add_test_data(scen: Scenario):
+    """Populate `scen` with test data."""
     # New sets
     t_foo = ["foo{}".format(i) for i in (1, 2, 3)]
     t_bar = ["bar{}".format(i) for i in (4, 5, 6)]
@@ -160,7 +165,7 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
 
     Parameters
     ----------
-    mp : .Platform
+    mp : Platform
         Platform on which to create the scenario.
     solve : bool, optional
         If :obj:`True`. then solve the scenario before returning. Default :obj:`False`.
@@ -169,7 +174,7 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
 
     Returns
     -------
-    .Scenario
+    Scenario
 
     See also
     --------
@@ -225,7 +230,7 @@ def populate_test_platform(platform):
     - 3 versions of the Dantzig cannery/transport Scenario.
 
       - Version 2 is the default.
-      - All have :obj:`HIST_DF` and :obj:`TS_DF` as time-series data.
+      - All have :data:`.HIST_DF` and :data:`.TS_DF` as time-series data.
 
     - 1 version of a TimeSeries with model name 'Douglas Adams' and scenario
       name 'Hitchhiker', containing 2 values.
@@ -283,9 +288,9 @@ def random_model_data(length):
 
 
 def random_ts_data(length):
-    """A :class:`pandas.DataFrame` of time series data with *length* rows.
+    """A :class:`pandas.DataFrame` of time series data with `length` rows.
 
-    Suitable for passage to :meth:`TimeSeries.add_timeseries`.
+    Suitable for passage to :meth:`.TimeSeries.add_timeseries`.
     """
     return pd.DataFrame.from_dict(
         dict(

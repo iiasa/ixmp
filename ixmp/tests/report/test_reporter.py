@@ -6,8 +6,7 @@ import pytest
 from genno import ComputationError, configure
 
 import ixmp
-from ixmp.reporting.reporter import Reporter
-from ixmp.reporting.util import RENAME_DIMS
+from ixmp.report.reporter import Reporter
 from ixmp.testing import add_test_data, assert_logs, make_dantzig
 
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
@@ -23,9 +22,15 @@ def scenario(test_mp):
     yield scen
 
 
+@pytest.mark.usefixtures("protect_rename_dims")
 def test_configure(test_mp, test_data_path):
-    # Configure globally; reads 'rename_dims' section
+    # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
+
+    # Test direct import
+    from ixmp.report import RENAME_DIMS
+
+    assert "i" in RENAME_DIMS
 
     # Reporting uses the RENAME_DIMS mapping of 'i' to 'i_renamed'
     scen = make_dantzig(test_mp)
@@ -36,9 +41,6 @@ def test_configure(test_mp, test_data_path):
     # Original name 'i' are not found in the reporter
     assert "d:i-j" not in rep, rep.graph.keys()
     pytest.raises(KeyError, rep.get, "i")
-
-    # Remove the configuration for renaming 'i', so that other tests work
-    RENAME_DIMS.pop("i")
 
 
 def test_reporter_from_scenario(scenario):
@@ -101,7 +103,7 @@ def test_platform_units(test_mp, caplog, ureg):
     with caplog.at_level(logging.INFO):
         rep.get(x_key)
 
-    # NB cannot use assert_logs here. reporting.utils.parse_units uses the pint
+    # NB cannot use assert_logs here. report.util.parse_units uses the pint
     #    application registry, so depending which tests are run and in which order, this
     #    unit may already be defined.
     if len(caplog.messages):
@@ -180,9 +182,9 @@ san-diego  chicago     1\.8
 seattle    chicago     1\.7
            new-york    2\.5
            topeka      1\.8
-(Name: value, )?dtype: float64(, units: dimensionsless)?""",
+(Name: value, )?dtype: float64(, units: dimensionless)?""",
         result.output,
-    )
+    ), result.output
 
 
 def test_filters(test_mp, tmp_path, caplog):

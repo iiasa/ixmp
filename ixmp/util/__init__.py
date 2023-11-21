@@ -2,8 +2,21 @@ import logging
 import re
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
+from importlib.abc import MetaPathFinder
+from importlib.machinery import ModuleSpec, SourceFileLoader
+from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+)
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -12,7 +25,7 @@ import pandas as pd
 
 from ixmp.backend import ItemType
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ixmp import TimeSeries
 
 log = logging.getLogger(__name__)
@@ -37,15 +50,15 @@ def logger():
           ixmp_logger.setLevel(logging.INFO)
     """
     warn(
-        "ixmp.utils.logger() is deprecated as of 3.3.0, and will be removed in ixmp "
+        "ixmp.util.logger() is deprecated as of 3.3.0, and will be removed in ixmp "
         '5.0. Use logging.getLogger("ixmp").',
         DeprecationWarning,
     )
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names=None):
-    """Convert various *arg* to list of str.
+def as_str_list(arg, idx_names: Optional[Iterable[str]] = None):
+    """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
 
@@ -73,7 +86,7 @@ def as_str_list(arg, idx_names=None):
 def isscalar(x):
     """Returns True if `x` is a scalar."""
     warn(
-        "ixmp.utils.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
+        "ixmp.util.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
         DeprecationWarning,
     )
     return np.isscalar(x)
@@ -90,7 +103,7 @@ def check_year(y, s):
 def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
-    :func:`diff` combines :func:`pandas.merge` and :meth:`Scenario.items`. Only
+    :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
     parameters are compared. :func:`~pandas.merge` is called with the arguments
     ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
     performed on all columns except 'value' or 'unit'.
@@ -102,8 +115,8 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     """
     # Iterators; index 0 corresponds to `a`, 1 to `b`
     items = [
-        a.items(filters=filters, type=ItemType.PAR),
-        b.items(filters=filters, type=ItemType.PAR),
+        a.items(filters=filters, type=ItemType.PAR, par_data=True),
+        b.items(filters=filters, type=ItemType.PAR, par_data=True),
     ]
     # State variables for loop
     name = ["", ""]
@@ -138,14 +151,17 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
         )
 
         # Merge the data from each side
-        yield current_name, pd.merge(
-            left,
-            right,
-            how="outer",
-            **on_arg,
-            sort=True,
-            suffixes=("_a", "_b"),
-            indicator=True,
+        yield (
+            current_name,
+            pd.merge(
+                left,
+                right,
+                how="outer",
+                **on_arg,
+                sort=True,
+                suffixes=("_a", "_b"),
+                indicator=True,
+            ),
         )
 
         # Maybe advance each iterators
@@ -167,7 +183,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 def discard_on_error(ts: "TimeSeries"):
     """Context manager to discard changes to `ts` and close the DB on any exception.
 
-    For :mod:`JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
+    For :class:`.JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
     database.
 
     Examples
@@ -211,7 +227,7 @@ def discard_on_error(ts: "TimeSeries"):
 def maybe_check_out(timeseries, state=None):
     """Check out `timeseries` depending on `state`.
 
-    If `state` is :obj:`None`, then :meth:`check_out` is called.
+    If `state` is :obj:`None`, then :meth:`.TimeSeries.check_out` is called.
 
     Returns
     -------
@@ -281,7 +297,7 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
     Parameters
     ----------
     obj
-        Any value returned by :meth:`Scenario.par`. For a scalar (0-dimensional)
+        Any value returned by :meth:`.Scenario.par`. For a scalar (0-dimensional)
         parameter, this will be :class:`dict`.
 
     Returns
@@ -316,9 +332,9 @@ def parse_url(url):
     Returns
     -------
     platform_info : dict
-        Keyword argument 'name' for the :class:`Platform` constructor.
+        Keyword argument 'name' for the :class:`.Platform` constructor.
     scenario_info : dict
-        Keyword arguments for a :class:`Scenario` on the above platform:
+        Keyword arguments for a :class:`.Scenario` on the above platform:
         'model', 'scenario' and, optionally, 'version'.
 
     Raises
@@ -451,7 +467,7 @@ def format_scenario_list(
         scenario name matches are returned.
     default_only : bool, optional
         Only return TimeSeries where a default version has been set with
-        :meth:`TimeSeries.set_as_default`.
+        :meth:`.TimeSeries.set_as_default`.
     as_url : bool, optional
         Format results as ixmp URLs.
 
@@ -485,10 +501,11 @@ def format_scenario_list(
 
         return pd.Series(result)
 
+    # group_keys silences a warning in pandas 1.5.0
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
-        # group_keys silences a warning in pandas 1.5.0
-        .groupby(["model", "scenario"], group_keys=True).apply(describe)
+        .groupby(["model", "scenario"], group_keys=True)
+        .apply(describe)
     )
 
     if len(info):
@@ -642,3 +659,58 @@ def update_par(scenario, name, data):
 
     if len(tmp):
         scenario.add_par(name, tmp)
+
+
+class DeprecatedPathFinder(MetaPathFinder):
+    """Handle imports from deprecated module locations."""
+
+    map: Mapping[re.Pattern, str]
+
+    def __init__(self, package: str, name_map: Mapping[str, str]):
+        # Prepend the package name to the source and destination
+        self.map = {
+            re.compile(rf"{package}\.{k}"): f"{package}.{v}"
+            for k, v in name_map.items()
+        }
+
+    @lru_cache(maxsize=128)
+    def new_name(self, name):
+        # Apply each pattern in self.map successively
+        new_name = name
+        for pattern, repl in self.map.items():
+            new_name = pattern.sub(repl, new_name)
+
+        if name != new_name:
+            from warnings import warn
+
+            warn(
+                f"Importing from {name!r} is deprecated and will fail in a future "
+                f"version. Use {new_name!r}.",
+                DeprecationWarning,
+                3,
+            )
+
+        return new_name
+
+    def find_spec(self, name, path, target=None):
+        new_name = self.new_name(name)
+        if new_name == name:
+            return None  # No known transformation; let the importlib defaults handle.
+
+        # Get an import spec for the module
+        spec = find_spec(new_name)
+        if not spec:
+            return None
+
+        # Create a new spec that loads the module from its current location as if it
+        # were `name`
+        new_spec = ModuleSpec(
+            name=name,
+            # Create a new loader that loads from the actual file with the desired name
+            loader=SourceFileLoader(fullname=name, path=spec.origin),
+            origin=spec.origin,
+        )
+        # These can't be passed through the constructor
+        new_spec.submodule_search_locations = spec.submodule_search_locations
+
+        return new_spec

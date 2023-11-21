@@ -1,12 +1,9 @@
 from functools import lru_cache, partial
-from typing import Dict
 
 import pandas as pd
 from genno import Key
 
-#: Dimensions to rename when extracting raw data from Scenario objects.
-#: Mapping from Scenario dimension name -> preferred dimension name.
-RENAME_DIMS: Dict[str, str] = {}
+from ixmp.report import common
 
 
 def dims_for_qty(data):
@@ -15,7 +12,7 @@ def dims_for_qty(data):
     If *data* is a :class:`pandas.DataFrame`, its columns are processed;
     otherwise it must be a list.
 
-    genno.RENAME_DIMS is used to rename dimensions.
+    :data:`.RENAME_DIMS` is used to rename dimensions.
     """
     if isinstance(data, pd.DataFrame):
         # List of the dimensions
@@ -31,12 +28,12 @@ def dims_for_qty(data):
             continue
 
     # Rename dimensions
-    return [RENAME_DIMS.get(d, d) for d in dims]
+    return [common.RENAME_DIMS.get(d, d) for d in dims]
 
 
 def keys_for_quantity(ix_type, name, scenario):
     """Return keys for *name* in *scenario*."""
-    from .computations import data_for_quantity
+    from .operator import data_for_quantity
 
     # Retrieve names of the indices of the ixmp item, without loading the data
     dims = dims_for_qty(scenario.idx_names(name))
@@ -70,4 +67,11 @@ def keys_for_quantity(ix_type, name, scenario):
 
 @lru_cache(1)
 def get_reversed_rename_dims():
-    return {v: k for k, v in RENAME_DIMS.items()}
+    return {v: k for k, v in common.RENAME_DIMS.items()}
+
+
+def __getattr__(name: str):
+    if name == "RENAME_DIMS":
+        return common.RENAME_DIMS
+    else:
+        raise AttributeError(name)

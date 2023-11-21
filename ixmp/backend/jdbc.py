@@ -4,10 +4,12 @@ import os
 import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
+from contextlib import contextmanager
 from copy import copy
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, List, Mapping
+from typing import Generator, List, Mapping, Optional
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -17,7 +19,7 @@ import pandas as pd
 from ixmp.backend import FIELDS, ItemType
 from ixmp.backend.base import CachingBackend
 from ixmp.core.scenario import Scenario
-from ixmp.utils import as_str_list, filtered
+from ixmp.util import as_str_list, filtered
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +46,10 @@ LOG_LEVELS = {
 java = SimpleNamespace()
 
 JAVA_CLASSES = [
-    "at.ac.iiasa.ixmp.exceptions.IxException",
-    "at.ac.iiasa.ixmp.objects.Scenario",
     "at.ac.iiasa.ixmp.dto.TimesliceDTO",
+    "at.ac.iiasa.ixmp.exceptions.IxException",
+    "at.ac.iiasa.ixmp.modelspecs.MESSAGEspecs",
+    "at.ac.iiasa.ixmp.objects.Scenario",
     "at.ac.iiasa.ixmp.Platform",
     "java.lang.Double",
     "java.lang.Exception",
@@ -139,6 +142,28 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
     raise RuntimeError(msg) from None
 
 
+@contextmanager
+def _handle_jexception():
+    """Context manager form of :func:`_raise_jexception`."""
+    try:
+        yield
+    except java.Exception as e:
+        _raise_jexception(e)
+
+
+@lru_cache
+def _fixed_index_sets(scheme: str) -> Mapping[str, List[str]]:
+    """Return index sets for items that are fixed in the Java code.
+
+    See :meth:`JDBCBackend.init_item`. The return value is cached so the method is only
+    called once.
+    """
+    if scheme == "MESSAGE":
+        return {k: to_pylist(v) for k, v in java.MESSAGEspecs.getIndexDimMap().items()}
+    else:
+        return {}
+
+
 def _domain_enum(domain):
     domain_enum = java.DocumentationKey.DocumentationDomain
     try:
@@ -174,11 +199,14 @@ def _wrap(value):
 class JDBCBackend(CachingBackend):
     """Backend using JPype/JDBC to connect to Oracle and HyperSQL databases.
 
+    This backend is based on the third-party `JPype <https://jpype.readthedocs.io>`_
+    Python package that allows interaction with Java code.
+
     Parameters
     ----------
     driver : 'oracle' or 'hsqldb'
         JDBC driver to use.
-    path : path-like, optional
+    path : os.PathLike, optional
         Path to the HyperSQL database.
     url : str, optional
         Partial or complete JDBC URL for the Oracle or HyperSQL database, e.g.
@@ -191,8 +219,8 @@ class JDBCBackend(CachingBackend):
         If :obj:`True` (the default), cache Python objects after conversion from Java
         objects.
     jvmargs : str, optional
-        Java Virtual Machine arguments. See :meth:`.start_jvm`.
-    dbprops : path-like, optional
+        Java Virtual Machine arguments. See :func:`.start_jvm`.
+    dbprops : os.PathLike, optional
         With ``driver='oracle'``, the path to a database properties file containing
         `driver`, `url`, `user`, and `password` information.
     """
@@ -457,10 +485,8 @@ class JDBCBackend(CachingBackend):
 
     def get_scenarios(self, default, model, scenario):
         # List<Map<String, Object>>
-        try:
+        with _handle_jexception():
             scenarios = self.jobj.getScenarioList(default, model, scenario)
-        except java.IxException as e:
-            _raise_jexception(e)
 
         for s in scenarios:
             data = []
@@ -469,7 +495,14 @@ class JDBCBackend(CachingBackend):
             yield data
 
     def set_unit(self, name, comment):
-        self.jobj.addUnitToDB(name, comment)
+        try:
+            self.jobj.addUnitToDB(name, comment)
+        except Exception as e:  # pragma: no cover
+            if "Error assigning an unit-key-id mapping" in str(e) and "" == str(name):
+                # ixmp_source does not support adding "" with Oracle
+                log.warning(f"…skip {repr(name)} (ixmp.JDBCBackend with driver=oracle)")
+            else:
+                _raise_jexception(e)
 
     def get_units(self):
         return to_pylist(self.jobj.getUnitList())
@@ -512,7 +545,7 @@ class JDBCBackend(CachingBackend):
         if path.suffix == ".gdx" and item_type is ItemType.MODEL:
             kw = {"check_solution", "comment", "equ_list", "var_list"}
 
-            if not isinstance(ts, Scenario):
+            if not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("read from GDX requires a Scenario object")
             elif set(kwargs.keys()) != kw:
                 raise ValueError(
@@ -531,7 +564,8 @@ class JDBCBackend(CachingBackend):
             if len(kwargs):
                 raise ValueError(f"extra keyword arguments {kwargs}")
 
-            self.jindex[ts].readSolutionFromGDX(*args)
+            with _handle_jexception():
+                self.jindex[ts].readSolutionFromGDX(*args)
 
             self.cache_invalidate(ts)
         else:
@@ -555,7 +589,7 @@ class JDBCBackend(CachingBackend):
             - scenario : str
             - variable : list of str
             - default : bool. If :obj:`True`, only data from TimeSeries
-              versions with :meth:`set_default` are written.
+              versions with :meth:`.TimeSeries.set_as_default` are written.
 
         See also
         --------
@@ -573,7 +607,7 @@ class JDBCBackend(CachingBackend):
         if path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
             if len(filters):
                 raise NotImplementedError("write to GDX with filters")
-            elif not isinstance(ts, Scenario):
+            elif not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("write to GDX requires a Scenario object")
 
             # include_var_equ=False -> do not include variables/equations in GDX
@@ -660,7 +694,8 @@ class JDBCBackend(CachingBackend):
 
         # Call either newTimeSeries or newScenario
         method = getattr(self.jobj, "new" + klass)
-        jobj = method(ts.model, ts.scenario, *args)
+        with _handle_jexception():
+            jobj = method(ts.model, ts.scenario, *args)
 
         self._index_and_set_attrs(jobj, ts)
 
@@ -672,12 +707,11 @@ class JDBCBackend(CachingBackend):
 
         # either getTimeSeries or getScenario
         method = getattr(self.jobj, "get" + ts.__class__.__name__)
-        try:
+
+        # Re-raise as a ValueError for bad model or scenario name, or other
+        with _handle_jexception():
             # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
-        except java.IxException as e:
-            # Re-raise as a ValueError for bad model or scenario name, or other
-            _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
 
@@ -688,10 +722,8 @@ class JDBCBackend(CachingBackend):
         self.gc()
 
     def check_out(self, ts, timeseries_only):
-        try:
+        with _handle_jexception():
             self.jindex[ts].checkOut(timeseries_only)
-        except java.IxException as e:
-            _raise_jexception(e)
 
     def commit(self, ts, comment):
         try:
@@ -880,23 +912,26 @@ class JDBCBackend(CachingBackend):
         return to_pylist(getattr(self.jindex[s], f"get{type.title()}List")())
 
     def init_item(self, s, type, name, idx_sets, idx_names):
-        # generate index-set and index-name lists
-        if isinstance(idx_sets, set) or isinstance(idx_names, set):
-            raise TypeError("index dimension must be string or ordered lists")
-
-        idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
-
-        if idx_names:
-            if len(idx_names) != len(idx_sets):
-                raise ValueError(
-                    f"index names {repr(idx_names)} must have same length as index sets"
-                    f" {repr(idx_sets)}"
-                )
-            idx_names = to_jlist(idx_names)
+        # Check `idx_sets` against values hard-coded in ixmp_source
+        try:
+            sets = _fixed_index_sets(s.scheme)[name]
+        except KeyError:
+            pass
         else:
-            idx_names = idx_sets
+            if idx_sets == sets:
+                # Match → provide empty lists for idx_sets and idx_names. ixmp_source
+                # raises an exception if any values—even correct ones—are given.
+                idx_sets = idx_names = []
+            else:
+                raise NotImplementedError(
+                    f"Initialize {type} {name!r} with dimensions {idx_sets} != {sets}"
+                )
 
-        # Initialize the Item
+        # Convert to Java data structures
+        idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
+        idx_names = to_jlist(idx_names) if idx_names else idx_sets
+
+        # Retrieve the method that initializes the Item, something like "initializePar"
         func = getattr(self.jindex[s], f"initialize{type.title()}")
 
         # The constructor returns a reference to the Java Item, but these aren't exposed
@@ -1077,24 +1112,26 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(
         self,
-        model: str = None,
-        scenario: str = None,
-        version: int = None,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
         strict: bool = False,
     ) -> dict:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
 
-        try:
+        with _handle_jexception():
             meta = self.jobj.getMeta(model, scenario, version, strict)
-        except java.IxException as e:
-            _raise_jexception(e)
 
         return {entry.getKey(): _unwrap(entry.getValue()) for entry in meta.entrySet()}
 
     def set_meta(
-        self, meta: dict, model: str = None, scenario: str = None, version: int = None
+        self,
+        meta: dict,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
     ) -> None:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
@@ -1104,13 +1141,15 @@ class JDBCBackend(CachingBackend):
         for k, v in meta.items():
             jmeta.put(str(k), _wrap(v))
 
-        try:
+        with _handle_jexception():
             self.jobj.setMeta(model, scenario, version, jmeta)
-        except java.IxException as e:
-            _raise_jexception(e)
 
     def remove_meta(
-        self, names, model: str = None, scenario: str = None, version: int = None
+        self,
+        names,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        version: Optional[int] = None,
     ):
         self._validate_meta_args(model, scenario, version)
         if version is not None:
@@ -1168,7 +1207,7 @@ class JDBCBackend(CachingBackend):
 
 
 def start_jvm(jvmargs=None):
-    """Start the Java Virtual Machine via :mod:`JPype`.
+    """Start the Java Virtual Machine via JPype_.
 
     Parameters
     ----------

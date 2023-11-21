@@ -1,9 +1,9 @@
 Reporting / postprocessing
 **************************
 
-.. currentmodule:: ixmp.reporting
+.. currentmodule:: ixmp.report
 
-:mod:`ixmp.reporting` provides features for computing derived values from the contents of a :class:`ixmp.Scenario`, *after* it has been solved using a model and the solution data has been stored.
+:mod:`ixmp.report` provides features for computing derived values from the contents of a :class:`ixmp.Scenario`, *after* it has been solved using a model and the solution data has been stored.
 It is built on the :mod:`genno` package, which has its own, separate documentation.
 This page provides only API documentation.
 
@@ -17,27 +17,29 @@ This page provides only API documentation.
 Top-level classes and functions
 ===============================
 
-.. automodule:: ixmp.reporting
+.. automodule:: ixmp.report
 
 The following top-level objects from :mod:`genno` may also be imported from
-:mod:`ixmp.reporting`.
+:mod:`ixmp.report`.
 
+.. currentmodule:: genno
 .. autosummary::
 
-   ~genno.core.exceptions.ComputationError
-   ~genno.core.key.Key
-   ~genno.core.exceptions.KeyExistsError
-   ~genno.core.exceptions.MissingKeyError
-   ~genno.core.quantity.Quantity
-   ~genno.config.configure
+   ComputationError
+   Key
+   KeyExistsError
+   MissingKeyError
+   Quantity
+   configure
 
-:mod:`ixmp.reporting` additionally defines:
+:mod:`ixmp.report` additionally defines:
 
+.. currentmodule:: ixmp.report
 .. autosummary::
 
    Reporter
 
-.. autoclass:: ixmp.reporting.Reporter
+.. autoclass:: ixmp.report.Reporter
    :members:
    :exclude-members: add_load_file
 
@@ -45,43 +47,52 @@ The following top-level objects from :mod:`genno` may also be imported from
 
    Using the :meth:`.from_scenario`, a Reporter is automatically populated with:
 
-   - :class:`Keys <.Key>` that retrieve the data for every :mod:`ixmp` item (parameter, variable, equation, or scalar) available in the Scenario.
+   - :class:`Keys <.genno.Key>` that retrieve the data for every :mod:`ixmp` item (parameter, variable, equation, or scalar) available in the Scenario.
 
    .. autosummary::
+
       finalize
       from_scenario
       set_filters
 
    The Computer class provides the following methods:
 
+   .. currentmodule:: genno
    .. autosummary::
-      ~genno.core.computer.Computer.add
-      ~genno.core.computer.Computer.add_file
-      ~genno.core.computer.Computer.add_product
-      ~genno.core.computer.Computer.add_queue
-      ~genno.core.computer.Computer.add_single
-      ~genno.core.computer.Computer.aggregate
-      ~genno.core.computer.Computer.apply
-      ~genno.core.computer.Computer.check_keys
-      ~genno.core.computer.Computer.configure
-      ~genno.core.computer.Computer.convert_pyam
-      ~genno.core.computer.Computer.describe
-      ~genno.core.computer.Computer.disaggregate
-      ~genno.core.computer.Computer.full_key
-      ~genno.core.computer.Computer.get
-      ~genno.core.computer.Computer.infer_keys
-      ~genno.core.computer.Computer.keys
-      ~genno.core.computer.Computer.visualize
-      ~genno.core.computer.Computer.write
+
+      ~Computer.add
+      ~Computer.add_queue
+      ~Computer.add_single
+      ~Computer.apply
+      ~Computer.check_keys
+      ~Computer.configure
+      ~Computer.describe
+      ~Computer.full_key
+      ~Computer.get
+      ~Computer.infer_keys
+      ~Computer.keys
+      ~Computer.visualize
+      ~Computer.write
+
+   The following methods are deprecated; equivalent or better functionality is available through :meth:`.Computer.add`.
+   See the genno documentation for each method for suggested changes/migrations.
+
+   .. autosummary::
+
+      ~Computer.add_file
+      ~Computer.add_product
+      ~Computer.aggregate
+      ~Computer.convert_pyam
+      ~Computer.disaggregate
 
 .. _reporting-config:
 
 Configuration
 =============
 
-:mod:`ixmp.reporting` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
+:mod:`ixmp.report` adds handlers for two configuration sections, and modifies the behaviour of one from :mod:`genno`
 
-.. automethod:: ixmp.reporting.filters
+.. autofunction:: ixmp.report.filters
 
    Reporter-specific configuration.
 
@@ -93,7 +104,7 @@ Configuration
    Keys are dimension IDs.
    Values are either lists of allowable labels along the respective dimension or :obj:`None` to clear any existing filters for that dimension.
 
-   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`.Reporter.configure`, or in a configuration file:
+   This configuration can be applied through :meth:`.Reporter.set_filters`; :meth:`Reporter.configure <genno.Computer.configure>`, or in a configuration file:
 
    .. code-block:: yaml
 
@@ -104,7 +115,7 @@ Configuration
         # Clear existing filters for the "commodity" dimension
         commodity: null
 
-.. automethod:: ixmp.reporting.rename_dims
+.. automethod:: ixmp.report.rename_dims
 
    Reporter-specific configuration.
 
@@ -116,54 +127,90 @@ Configuration
        rename_dims:
          i: i_renamed
 
-.. automethod:: ixmp.reporting.units
+.. automethod:: ixmp.report.units
 
    The only difference from :func:`genno.config.units` is that this handler keeps the configuration values stored in ``Reporter.graph["config"]``.
    This is so that :func:`.data_for_quantity` can make use of ``["units"]["apply"]``
 
 
-Computations
-============
+Operators
+=========
 
-.. automodule:: ixmp.reporting.computations
+.. automodule:: ixmp.report.operator
    :members:
 
-   :mod:`ixmp.reporting` defines these computations:
+   :mod:`ixmp.report` defines these operators:
 
    .. autosummary::
+
       data_for_quantity
+      from_url
+      get_ts
       map_as_qty
       update_scenario
       store_ts
+      remove_ts
 
-   Basic computations are defined by :mod:`genno.computation`; and its compatibility modules; see there for details:
+   Basic operators are defined by :mod:`genno.operator` and its compatibility modules; see there for details:
 
    .. autosummary::
+
       ~genno.compat.plotnine.Plot
-      ~genno.computations.add
-      ~genno.computations.aggregate
-      ~genno.computations.apply_units
-      ~genno.compat.pyam.computations.as_pyam
-      ~genno.computations.broadcast_map
-      ~genno.computations.combine
-      ~genno.computations.concat
-      ~genno.computations.disaggregate_shares
-      ~genno.computations.div
-      ~genno.computations.group_sum
-      ~genno.computations.interpolate
-      ~genno.computations.load_file
-      ~genno.computations.mul
-      ~genno.computations.pow
-      ~genno.computations.product
-      ~genno.computations.relabel
-      ~genno.computations.rename_dims
-      ~genno.computations.ratio
-      ~genno.computations.select
-      ~genno.computations.sum
-      ~genno.computations.write_report
+      ~genno.operator.add
+      ~genno.operator.aggregate
+      ~genno.operator.apply_units
+      ~genno.compat.pyam.operator.as_pyam
+      ~genno.operator.broadcast_map
+      ~genno.operator.combine
+      ~genno.operator.concat
+      ~genno.operator.disaggregate_shares
+      ~genno.operator.div
+      ~genno.operator.group_sum
+      ~genno.operator.interpolate
+      ~genno.operator.load_file
+      ~genno.operator.mul
+      ~genno.operator.pow
+      ~genno.operator.product
+      ~genno.operator.relabel
+      ~genno.operator.rename_dims
+      ~genno.operator.ratio
+      ~genno.operator.select
+      ~genno.operator.sum
+      ~genno.operator.write_report
 
 Utilities
 =========
 
-.. automodule:: ixmp.reporting.util
+.. currentmodule:: ixmp.report.common
+
+.. autodata:: RENAME_DIMS
+
+   User code **should** avoid directly manipulating :data:`RENAME_DIMS`.
+   Instead, call :func:`.configure`:
+
+   .. code-block:: python
+
+      # Rename dimension "long_dimension_name" to "ldn"
+      configure(rename_dims={"long_dimension_name": "ldn"})
+
+   As well, importing the variable into the global namespace of another module creates a copy of the dictionary that may become out of sync with other changes.
+   Thus, instead of:
+
+   .. code-block:: python
+
+      from ixmp.report import RENAME_DIMS
+
+      def my_operator(...):
+          # Code that references RENAME_DIMS
+
+   Do this:
+
+   .. code-block:: python
+
+      def my_operator(...):
+          from ixmp.report import common
+
+          # Code that references common.RENAME_DIMS
+
+.. automodule:: ixmp.report.util
    :members:

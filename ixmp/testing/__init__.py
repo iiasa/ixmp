@@ -69,7 +69,10 @@ __all__ = [
     "TS_DF",
     "add_random_model_data",
     "add_test_data",
+    "assert_logs",
+    "create_test_platform",
     "get_cell_output",
+    "ixmp_cli",
     "make_dantzig",
     "models",
     "populate_test_platform",
@@ -77,6 +80,8 @@ __all__ = [
     "random_ts_data",
     "resource_limit",
     "run_notebook",
+    "test_mp",
+    "tmp_env",
 ]
 
 
@@ -150,7 +155,7 @@ def test_data_path():
 
 @pytest.fixture(scope="module")
 def test_mp(request, tmp_env, test_data_path):
-    """An empty :class:`Platform` connected to a temporary, in-memory database.
+    """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
@@ -228,7 +233,7 @@ def protect_rename_dims():
     values to :data:`RENAME_DIMS`. Using this fixture ensures that the environment for
     other tests is not altered.
     """
-    from ixmp.reporting import RENAME_DIMS
+    from ixmp.report import RENAME_DIMS
 
     saved = deepcopy(RENAME_DIMS)  # Probably just copy() is sufficient
     yield

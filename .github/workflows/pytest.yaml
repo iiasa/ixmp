@@ -28,7 +28,8 @@ jobs:
         - "3.8"  # Earliest version supported by ixmp
         - "3.9"
         - "3.10"
-        - "3.11"  # Latest supported by ixmp
+        - "3.11" # Latest supported by ixmp
+        # - "3.12"  # Pending JPype support; see iiasa/ixmp#501
 
         # commented: force a specific version of pandas, for e.g. pre-release
         # testing
@@ -91,12 +92,13 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
+    - name: Work around https://bugs.launchpad.net/lxml/+bug/2035206
+      if: matrix.python-version == '3.8'
+      run: pip install "lxml != 4.9.3"
+
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |
-        # Work around https://bugs.launchpad.net/lxml/+bug/2035206
-        pip install "lxml != 4.9.3"
-
         pip install .[docs]
 
         # commented: use with "pandas-version" in the matrix, above
@@ -125,14 +127,6 @@ jobs:
     - name: Run test suite using pytest
       run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
 
-    - name: Test documentation build using Sphinx
-      env:
-        # For pull_request triggers, GitHub creates a temporary merge commit
-        # with a hash that does not match the head of the branch. Tell it which
-        # branch to use.
-        SPHINXOPTS: -D linkcode_github_remote_head=${{ github.head_ref }}
-      run: make --directory=doc html
-
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v3
 
@@ -144,6 +138,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
 
     - name: Force recreation of pre-commit virtual environment for mypy
       if: github.event_name == 'schedule'

@@ -147,7 +147,7 @@ class TestScenario:
         with pytest.raises(ValueError, match="'foo' already exists"):
             scen.init_set("foo")
 
-    def test_init_par(self, scen):
+    def test_init_par(self, scen) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
 
@@ -156,6 +156,10 @@ class TestScenario:
 
         # Return type of idx_sets is still list
         assert scen.idx_sets("foo") == ["i", "j"]
+
+        # Mismatched sets and names
+        with pytest.raises(ValueError, match="must have the same length"):
+            scen.init_par("bar", idx_sets=("i", "j"), idx_names=("a", "b", "c"))
 
     def test_init_scalar(self, scen):
         scen2 = scen.clone(keep_solution=False)
@@ -241,16 +245,17 @@ class TestScenario:
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])
 
-    def test_items(self, scen):
+    def test_items0(self, scen):
         # Without filters
         iterator = scen.items()
 
         # next() can be called → an iterator was returned
-        next(iterator)
+        with pytest.warns(FutureWarning, match="par_data=False will be the default"):
+            next(iterator)
 
         # Iterator returns the expected parameter names
         exp = ["a", "b", "d", "f"]
-        for i, (name, data) in enumerate(scen.items()):
+        for i, (name, data) in enumerate(scen.items(par_data=True)):
             # Name is correct in the expected order
             assert exp[i] == name
             # Data is one of the return types of .par()
@@ -260,7 +265,7 @@ class TestScenario:
         assert i == 3
 
         # With filters
-        iterator = scen.items(filters=dict(i=["seattle"]))
+        iterator = scen.items(filters=dict(i=["seattle"]), par_data=True)
         exp = [("a", 1), ("d", 3)]
         for i, (name, data) in enumerate(iterator):
             # Name is correct in the expected order
@@ -270,9 +275,34 @@ class TestScenario:
 
         assert i == 1
 
-        with pytest.raises(NotImplementedError):
-            # NB next() is required here to attempt to generate the first item
-            next(scen.items(ixmp.ItemType.SET))
+    @pytest.mark.parametrize(
+        "item_type, indexed_by, exp",
+        (
+            (ixmp.ItemType.EQU, None, ["cost", "demand", "supply"]),
+            (ixmp.ItemType.PAR, None, ["a", "b", "d", "f"]),
+            (ixmp.ItemType.SET, None, ["i", "j"]),
+            (ixmp.ItemType.VAR, None, ["x", "z"]),
+            # With indexed_by=
+            (ixmp.ItemType.EQU, "i", ["supply"]),
+            (ixmp.ItemType.PAR, "i", ["a", "d"]),
+            (ixmp.ItemType.SET, "i", []),
+            (ixmp.ItemType.VAR, "i", ["x"]),
+        ),
+    )
+    def test_items1(self, scen, item_type, indexed_by, exp):
+        # Function runs and yields the expected sequence of item names
+        assert exp == list(scen.items(item_type, indexed_by=indexed_by, par_data=False))
+
+    def test_items2(self, caplog, scen):
+        item_type = ixmp.ItemType.SET
+
+        list(scen.items(item_type, filters={"foo": "bar"}))
+
+        # Warning is logged
+        assert (
+            "Scenario.items(…, filters=…) has no effect for item type 'set'"
+            in caplog.messages
+        )
 
     def test_var(self, scen):
         df = scen.var("x", filters={"i": ["seattle"]})

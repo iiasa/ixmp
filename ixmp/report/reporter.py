@@ -6,7 +6,10 @@ import pandas as pd
 from genno.core.computer import Computer, Key
 
 from ixmp.core.scenario import Scenario
-from ixmp.reporting.util import RENAME_DIMS, keys_for_quantity
+from ixmp.report import common
+
+from . import operator
+from .util import keys_for_quantity
 
 
 class Reporter(Computer):
@@ -15,9 +18,9 @@ class Reporter(Computer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Append ixmp.reporting.computations to the modules in which the Computer will
-        # look up computations names.
-        self.require_compat("ixmp.reporting.computations")
+        # Append ixmp.report.operator to the modules in which the Computer will look up
+        # names
+        self.require_compat(operator)
 
     @classmethod
     def from_scenario(cls, scenario: Scenario, **kwargs) -> "Reporter":
@@ -25,14 +28,14 @@ class Reporter(Computer):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Scenario to introspect in creating the Reporter.
-        kwargs : optional
-            Passed to :meth:`Scenario.configure`.
+        kwargs :
+            Passed to :meth:`genno.Computer.configure`.
 
         Returns
         -------
-        .Reporter
+        Reporter
             A Reporter instance containing:
 
             - A 'scenario' key referring to the *scenario* object.
@@ -87,14 +90,14 @@ class Reporter(Computer):
                 # TODO write tests for this
                 pass
 
-            rep.add(RENAME_DIMS.get(name, name), elements)
+            rep.add(common.RENAME_DIMS.get(name, name), elements)
 
         return rep
 
     def finalize(self, scenario: Scenario) -> None:
         """Prepare the Reporter to act on `scenario`.
 
-        The :class:`.TimeSeries` (i.e. including :class:`ixmp.Scenario` and
+        The :class:`.TimeSeries` (thus also :class:`.Scenario` or
         :class:`message_ix.Scenario`) object `scenario` is stored with the key
         ``'scenario'``. All subsequent processing will act on data from this Scenario.
         """

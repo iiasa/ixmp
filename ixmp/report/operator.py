@@ -1,40 +1,54 @@
 import logging
 from itertools import zip_longest
+from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Set, Union
 
 import pandas as pd
 import pint
-from genno.core.quantity import Quantity
+from genno import Quantity
 from genno.util import parse_units
 
-from ixmp.reporting.util import RENAME_DIMS, dims_for_qty, get_reversed_rename_dims
-from ixmp.utils import to_iamc_layout
+from ixmp.core.timeseries import TimeSeries
+from ixmp.report import common
+from ixmp.util import to_iamc_layout
+
+from .util import dims_for_qty, get_reversed_rename_dims
+
+if TYPE_CHECKING:
+    from ixmp.core.scenario import Scenario
 
 log = logging.getLogger(__name__)
 
 
-def data_for_quantity(ix_type, name, column, scenario, config):
-    """Retrieve data from *scenario*.
+def data_for_quantity(
+    ix_type: Literal["equ", "par", "var"],
+    name: str,
+    column: Literal["mrg", "lvl", "value"],
+    scenario: "Scenario",
+    config: Mapping[str, Mapping],
+) -> Quantity:
+    """Retrieve data from `scenario`.
 
     Parameters
     ----------
-    ix_type : 'equ' or 'par' or 'var'
+    ix_type :
         Type of the ixmp object.
     name : str
         Name of the ixmp object.
-    column : 'mrg' or 'lvl' or 'value'
+    column :
         Data to retrieve. 'mrg' and 'lvl' are valid only for ``ix_type='equ'``,and
         'level' otherwise.
     scenario : ixmp.Scenario
         Scenario containing data to be retrieved.
-    config : dict of (str -> dict)
-        The key 'filters' may contain a mapping from dimensions to iterables of allowed
-        values along each dimension. The key 'units'/'apply' may contain units to apply
-        to the quantity; any such units overwrite existing units, without conversion.
+    config :
+        Configuration. The key 'filters' may contain a mapping from dimensions to
+        iterables of allowed values along each dimension. The key 'units'/'apply' may
+        contain units to apply to the quantity; any such units overwrite existing units,
+        without conversion.
 
     Returns
     -------
-    :class:`Quantity`
-        Data for *name*.
+    ~genno.Quantity
+        Data for `name`.
     """
     log.debug(f"{name}: retrieve data")
 
@@ -113,7 +127,7 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     # Set index if 1 or more dimensions
     if len(dims):
         # First rename, then set index
-        data = data.rename(columns=RENAME_DIMS).set_index(dims)
+        data = data.rename(columns=common.RENAME_DIMS).set_index(dims)
 
     # Convert to a Quantity, assign attrbutes and name
     qty = Quantity(
@@ -122,7 +136,8 @@ def data_for_quantity(ix_type, name, column, scenario, config):
 
     try:
         # Remove length-1 dimensions for scalars
-        qty = qty.squeeze("index", drop=True)
+        # TODO Remove exclusion when genno provides a signature for Quantity.squeeze
+        qty = qty.squeeze("index", drop=True)  # type: ignore [attr-defined]
     except (KeyError, ValueError):
         # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
@@ -130,8 +145,48 @@ def data_for_quantity(ix_type, name, column, scenario, config):
     return qty
 
 
+# Non-weak references to objects to keep them alive
+_FROM_URL_REF: Set[Any] = set()
+
+
+def from_url(url: str, cls=TimeSeries) -> "TimeSeries":
+    """Return a :class:`.TimeSeries` or subclass instance, given its `url`.
+
+    Parameters
+    ----------
+    cls : type, optional
+        Subclass to instantiate and return; for instance, :class:`.Scenario`.
+    """
+    ts, mp = cls.from_url(url)
+    assert ts is not None
+    _FROM_URL_REF.add(ts)
+    _FROM_URL_REF.add(mp)
+    return ts
+
+
+def get_ts(
+    ts: "TimeSeries",
+    filters: Optional[dict] = None,
+    iamc: bool = False,
+    subannual: Union[bool, str] = "auto",
+) -> pd.DataFrame:
+    """Retrieve timeseries data from `ts`.
+
+    Corresponds to :meth:`.TimeSeries.timeseries`.
+
+    Parameters
+    ----------
+    filters :
+        Names and values for the `region`, `variable`, `unit`, and `year` keyword
+        arguments to :meth:`.timeseries`.
+    """
+    filters = filters or dict()
+
+    return ts.timeseries(iamc=iamc, subannual=subannual, **filters)
+
+
 def map_as_qty(set_df: pd.DataFrame, full_set):
-    """Convert *set_df* to a :class:`.Quantity`.
+    """Convert *set_df* to a :class:`~.genno.Quantity`.
 
     For the MESSAGE sets named ``cat_*`` (see :ref:`message_ix:mapping-sets`)
     :meth:`ixmp.Scenario.set` returns a :class:`~pandas.DataFrame` with two columns:
@@ -147,10 +202,10 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
 
     See also
     --------
-    .broadcast_map
+    ~genno.operator.broadcast_map
     """
     set_from, set_to = set_df.columns
-    names = [RENAME_DIMS.get(c, c) for c in set_df.columns]
+    names = [common.RENAME_DIMS.get(c, c) for c in set_df.columns]
 
     # Add an 'all' mapping
     set_df = pd.concat(
@@ -167,6 +222,48 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
     )
 
 
+def remove_ts(
+    ts: "TimeSeries",
+    data: Optional[pd.DataFrame] = None,
+    after: Optional[int] = None,
+) -> None:
+    """Remove all time series data from `ts`.
+
+    Note that data stored with :meth:`.add_timeseries` using :py:`meta=True` as a
+    keyword argument cannot be removed using :meth:`.TimeSeries.remove_timeseries`, and
+    thus also not with this operator.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, optional
+        Specific data to be removed. If not given, all time series data is removed.
+    after : int, optional
+        If given, only data with `year` labels equal to or greater than `after` are
+        removed.
+    """
+    if data is None:
+        data = ts.timeseries().drop("value", axis=1)
+
+    N = len(data)
+    count = f"{N}"
+
+    if after:
+        query = f"{after} <= year"
+        data = data.query(query)
+        count = f"{len(data)} of {N} ({query})"
+
+    log.info(f"Remove {count} rows of time series data from {ts.url}")
+
+    # TODO improve TimeSeries.transact() to allow timeseries_only=True; use here
+    ts.check_out(timeseries_only=True)
+    try:
+        ts.remove_timeseries(data)
+    except Exception:  # pragma: no cover
+        ts.discard_changes()
+    else:
+        ts.commit(f"Remove time series data ({__name__}.remove_ts)")
+
+
 def store_ts(scenario, *data, strict: bool = False) -> None:
     """Store time series `data` on `scenario`.
 
@@ -179,7 +276,7 @@ def store_ts(scenario, *data, strict: bool = False) -> None:
         Scenario on which to store data.
     data : pandas.DataFrame or pyam.IamDataFrame
         1 or more objects containing data to store. If :class:`pandas.DataFrame`, the
-        data are passed through :func:`to_iamc_layout`.
+        data are passed through :func:`.to_iamc_layout`.
     strict: bool
         If :data:`True` (default :data:`False`), raise an exception if any of `data` are
         not successfully added. Otherwise, log on level :ref:`ERROR <python:levels>` and
@@ -215,8 +312,8 @@ def update_scenario(scenario, *quantities, params=[]):
 
     Parameters
     ----------
-    scenario : .Scenario
-    quantities : .Quantity or pd.DataFrame
+    scenario : Scenario
+    quantities : Quantity or pandas.DataFrame
         If DataFrame, must be valid input to :meth:`.Scenario.add_par`.
     params : list of str, optional
         For every element of `quantities` that is a pd.DataFrame, the element of

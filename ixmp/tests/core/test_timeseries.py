@@ -316,7 +316,7 @@ class TestTimeSeries:
         assert ts.timeseries().empty
 
     def test_transact_discard(self, caplog, mp, ts):
-        caplog.set_level(logging.INFO, "ixmp.utils")
+        caplog.set_level(logging.INFO, "ixmp.util")
 
         df = expected(DATA[2050], ts)
 

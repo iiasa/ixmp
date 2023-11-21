@@ -7,7 +7,7 @@ import pandas as pd
 
 from ixmp._config import config
 from ixmp.backend import BACKENDS, FIELDS, ItemType
-from ixmp.utils import as_str_list
+from ixmp.util import as_str_list
 
 if TYPE_CHECKING:  # pragma: no cover
     from ixmp.backend.base import Backend
@@ -25,9 +25,9 @@ class Platform:
     2. One or more **model(s)**; codes in Python or other languages or frameworks that
        run, via :meth:`Scenario.solve`, on the data stored in the Platform.
 
-    The Platform parameters control these components. :class:`TimeSeries` and
-    :class:`Scenario` objects tied to a single Platform; to move data between platforms,
-    see :meth:`Scenario.clone`.
+    The Platform parameters control these components. :class:`.TimeSeries` and
+    :class:`.Scenario` objects tied to a single Platform; to move data between
+    platforms, see :meth:`Scenario.clone`.
 
     Parameters
     ----------
@@ -166,7 +166,7 @@ class Platform:
             Scenario information, with the columns:
 
             - ``model``, ``scenario``, ``version``, and ``scheme``—Scenario identifiers;
-              see :class:`.Timeseries and :class:`.Scenario`.
+              see :class:`.TimeSeries` and :class:`.Scenario`.
             - ``is_default``—:obj:`True` if the ``version`` is the default version for
               the (``model``, ``scenario``).
             - ``is_locked``—:obj:`True` if the Scenario has been locked for use.
@@ -186,8 +186,8 @@ class Platform:
         self,
         path: PathLike,
         default: bool = True,
-        model: str = None,
-        scenario: str = None,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
         variable=None,
         unit=None,
         region=None,
@@ -226,7 +226,7 @@ class Platform:
             Only return data for unit name(s) in this list.
         region: list of str, optional
             Only return data for region(s) in this list.
-        export_all_runs: boolean, optional
+        export_all_runs: bool, optional
             Export all existing model+scenario run combinations.
         """
         if export_all_runs and (model or scenario):
@@ -311,10 +311,10 @@ class Platform:
         ----------
         region : str
             Name of the region.
-        parent : str, default 'World'
-            Assign a 'parent' region.
         hierarchy : str
             Hierarchy level of the region (e.g., country, R11, basin)
+        parent : str, optional
+            Assign a 'parent' region.
         """
         if not self._existing_node(region):
             self._backend.set_node(region, parent, hierarchy)

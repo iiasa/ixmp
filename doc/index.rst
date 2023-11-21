@@ -33,10 +33,11 @@ Getting started
 
    install
    tutorials
+   cli
 
 - :doc:`install`
 - :doc:`tutorials`
-
+- :doc:`cli`
 
 Scientific programming API
 --------------------------
@@ -54,7 +55,7 @@ Scientific programming API
    reporting
    data-model
 
-The `ixmp` has application programming interfaces (API) for efficient scientific workflows and data processing.
+The `ixmp` has application programming interfaces (API) for scientific workflows and data processing.
 
 - :doc:`api`
 - :doc:`api-r`

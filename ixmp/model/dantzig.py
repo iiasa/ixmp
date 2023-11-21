@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ixmp.utils import maybe_check_out, maybe_commit, update_par
+from ixmp.util import maybe_check_out, maybe_commit, update_par
 
 from .gams import GAMSModel
 
@@ -62,7 +62,7 @@ DATA = {
 
 
 class DantzigModel(GAMSModel):
-    """Dantzig's cannery/transport problem as a :class:`GAMSModel`.
+    """Dantzig's cannery/transport problem as a :class:`.GAMSModel`.
 
     Provided for testing :mod:`ixmp` code.
     """

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -99,7 +100,7 @@ def test_list(ixmp_cli, test_mp):
 
     # 'list' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(cmd)
-    assert result.exit_code == UsageError.exit_code
+    assert result.exit_code == UsageError.exit_code, (result.exception, result.output)
 
     # CLI works; nothing returned with a --match option that matches nothing
     result = ixmp_cli.invoke(["--platform", test_mp.name] + cmd)
@@ -161,6 +162,41 @@ def test_platform(ixmp_cli, tmp_path):
     # Extra args to 'remove' are invalid
     r = call("remove", "p2", "BADARG", exit_0=False)
     assert UsageError.exit_code == r.exit_code
+
+
+def test_platform_copy(ixmp_cli, tmp_path):
+    """Test 'platform' command."""
+
+    def call(*args, exit_0=True):
+        result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
+        assert not exit_0 or result.exit_code == 0, result.output
+        return result
+
+    # Add some temporary platform configuration
+    call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
+    call("add", "p2", "jdbc", "hsqldb", tmp_path.joinpath("p2"))
+    # Force connection to p2 so that files are created
+    ixmp_cli.invoke(["--platform=p2", "list"])
+
+    # Dry-run produces expected output
+    r = call("copy", "p2", "p3")
+    assert re.search("Copy .*p2.script → .*p3.script", r.output)
+    with pytest.raises(ValueError):
+        # New platform configuration is not saved
+        ixmp.config.get_platform_info("p3")
+
+    # --go actually copies files, saves new platform config
+    r = call("copy", "--go", "p2", "p3")
+    assert tmp_path.joinpath("p3.script").exists()
+    assert ixmp.config.get_platform_info("p3")
+
+    # Dry-run again with existing config and files
+    r = call("copy", "p2", "p3")
+    assert "would replace existing file" in r.output
+
+    # Copying a non-HyperSQL-backed platform fails
+    with pytest.raises(AssertionError):
+        call("copy", "p1", "p3")
 
 
 def test_import_ts(ixmp_cli, test_mp, test_data_path):

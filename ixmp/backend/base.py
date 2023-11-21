@@ -10,6 +10,7 @@ from typing import (
     Hashable,
     Iterable,
     List,
+    Literal,
     MutableMapping,
     Optional,
     Sequence,
@@ -60,14 +61,14 @@ class Backend(ABC):
         """OPTIONAL: Handle platform/backend config arguments.
 
         Returns a :class:`dict` to be stored in the configuration file. This
-        :class:`dict` **must** be valid as keyword arguments to the :meth:`__init__` of
-        a backend subclass.
+        :class:`dict` **must** be valid as keyword arguments to the :py:`__init__()`
+        method of a Backend subclass.
 
         The default implementation expects both `args` and `kwargs` to be empty.
 
         See also
         --------
-        Config.add_platform
+        .Config.add_platform
         """
         msg = "Unhandled {} args to Backend.handle_config(): {!r}"
         if len(args):
@@ -83,7 +84,8 @@ class Backend(ABC):
 
         Parameters
         ----------
-        level : int or Python logging level
+        level : int
+            A Python :mod:`logging` level.
 
         See also
         --------
@@ -116,13 +118,13 @@ class Backend(ABC):
         ----------
         domain : str
             Documentation domain, e.g. model, scenario, etc.
-        docs : dict or array of tuples
+        docs : dict or iterable of tuple
             Dictionary or tuple array containing mapping between name of domain object
             (e.g. model name) and string representing fragment of documentation.
         """
 
     @abstractmethod
-    def get_doc(self, domain: str, name: str = None) -> Union[str, Dict]:
+    def get_doc(self, domain: str, name: Optional[str] = None) -> Union[str, Dict]:
         """Read documentation from database
 
         Parameters
@@ -181,7 +183,11 @@ class Backend(ABC):
 
     @abstractmethod
     def set_node(
-        self, name: str, parent: str = None, hierarchy: str = None, synonym: str = None
+        self,
+        name: str,
+        parent: Optional[str] = None,
+        hierarchy: Optional[str] = None,
+        synonym: Optional[str] = None,
     ) -> None:
         """Add a node name to the Platform.
 
@@ -409,7 +415,7 @@ class Backend(ABC):
             .xlsx  Microsoft Office Open XML spreadsheet
             ====== ===
 
-        item_type : ItemType
+        item_type : .ItemType
             Type(s) of items to read.
 
         Raises
@@ -449,7 +455,7 @@ class Backend(ABC):
         ----------
         path : os.PathLike
             File for output. The filename suffix determines the output format.
-        item_type : ItemType
+        item_type : .ItemType
             Type(s) of items to write.
 
         Raises
@@ -481,9 +487,9 @@ class Backend(ABC):
     def init(self, ts: TimeSeries, annotation: str) -> None:
         """Create a new TimeSeries (or Scenario) `ts`.
 
-        init **may** modify the :attr:`~TimeSeries.version` attribute of `ts`.
+        init **may** modify the :attr:`~.TimeSeries.version` attribute of `ts`.
 
-        If `ts` is a :class:`Scenario`; the Backend **must** store the
+        If `ts` is a :class:`.Scenario`; the Backend **must** store the
         :attr:`.Scenario.scheme` attribute.
 
         Parameters
@@ -552,7 +558,7 @@ class Backend(ABC):
 
     @abstractmethod
     def discard_changes(self, ts: TimeSeries) -> None:
-        """Discard changes to `ts` since the last :meth:`ts_check_out`."""
+        """Discard changes to `ts` since the last :meth:`check_out`."""
 
     @abstractmethod
     def set_as_default(self, ts: TimeSeries) -> None:
@@ -590,7 +596,7 @@ class Backend(ABC):
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
-        :class:`TimeSeries` object. A 2-tuple is returned of the object (or
+        :class:`.TimeSeries` object. A 2-tuple is returned of the object (or
         :obj:`None`) and the remaining filters.
         """
         ts = None
@@ -688,8 +694,8 @@ class Backend(ABC):
             Name of time slice.
         unit : str
             Unit symbol.
-        data : dict (int -> float)
-            Mapping from year to value.
+        data :
+            Mapping from year (:class:`int`) to value (:class:`float`).
         meta : bool
             :obj:`True` to mark `data` as metadata.
         """
@@ -789,7 +795,7 @@ class Backend(ABC):
         scenario: str,
         annotation: str,
         keep_solution: bool,
-        first_model_year: int = None,
+        first_model_year: Optional[int] = None,
     ) -> Scenario:
         """Clone `s`.
 
@@ -811,8 +817,10 @@ class Backend(ABC):
 
         Returns
         -------
-        Same class as `s`
-            The cloned Scenario.
+        Scenario
+            The cloned Scenario. If `s` is an instance of a subclass of
+            :class:`ixmp.Scenario`, the returned object **must** be of the same
+            subclass.
         """
 
     @abstractmethod
@@ -888,22 +896,27 @@ class Backend(ABC):
 
     @abstractmethod
     def item_get_elements(
-        self, s: Scenario, type: str, name: str, filters: Dict[str, List[Any]] = None
+        self,
+        s: Scenario,
+        type: Literal["equ", "par", "set", "var"],
+        name: str,
+        filters: Optional[Dict[str, List[Any]]] = None,
     ) -> Union[Dict[str, Any], pd.Series, pd.DataFrame]:
         """Return elements of item `name`.
 
         Parameters
         ----------
-        type : 'equ' or 'par' or 'set' or 'var'
+        type : str
+            Type of the item.
         name : str
             Name of the item.
-        filters : dict (str -> list), optional
-            If provided, a mapping from dimension names to allowed values along that
-            dimension.
+        filters : dict, optional
+            If provided, a mapping from dimension names (class:`str`) to allowed values
+            along that dimension (:class:`list`).
 
             item_get_elements **must** silently accept values that are *not* members of
             the set indexing a dimension. Elements which are not :class:`str` **must**
-            be handled as equivalent to their string representation; i.e.
+            be handled as equivalent to their string representation; that is,
             item_get_elements must return the same data for ``filters={'foo': [42]}``
             and ``filters={'foo': ['42']}``.
 
@@ -941,7 +954,7 @@ class Backend(ABC):
         type : 'par' or 'set'
         name : str
             Name of the items.
-        elements : iterable of 4-tuple
+        elements : iterable of tuple
             The members of each tuple are:
 
             ======= ========================== ===
@@ -967,8 +980,8 @@ class Backend(ABC):
 
         See also
         --------
-        s_init_item
-        s_item_delete_elements
+        init_item
+        item_delete_elements
         """
 
     @abstractmethod
@@ -987,8 +1000,8 @@ class Backend(ABC):
 
         See also
         --------
-        s_init_item
-        s_item_set_elements
+        init_item
+        item_set_elements
         """
 
     @abstractmethod
@@ -1015,19 +1028,20 @@ class Backend(ABC):
 
         Parameters
         ----------
-        model : str or None
+        model : str, optional
             Model name of metadata target.
-        scenario : str or None
+        scenario : str, optional
             Scenario name of metadata target.
-        version : int or None
+        version : int, optional
             :attr:`.TimeSeries.version` of metadata target.
         strict : bool
             Only retrieve metadata from the specified target.
 
         Returns
         -------
-        dict (str -> any)
-            Mapping from metadata names/identifiers to values.
+        dict
+            Mapping from metadata names/identifiers (:class:`str`) to values
+            (:class:`Any`).
 
         Raises
         ------
@@ -1268,9 +1282,9 @@ class CachingBackend(Backend):
     def cache_invalidate(
         self,
         ts: TimeSeries,
-        ix_type: str = None,
-        name: str = None,
-        filters: Dict = None,
+        ix_type: Optional[str] = None,
+        name: Optional[str] = None,
+        filters: Optional[Dict] = None,
     ) -> None:
         """Invalidate cached values.
 

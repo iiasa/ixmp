@@ -2,14 +2,18 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Dict, Mapping
 
-from ixmp.utils import maybe_check_out, maybe_commit
+from ixmp.util import maybe_check_out, maybe_commit
+
+if TYPE_CHECKING:
+    from ixmp.core.scenario import Scenario
 
 log = logging.getLogger(__name__)
 
 
 class ModelError(Exception):
-    """Error in model code, e.g. :meth:`.Model.run`."""
+    """Error in model code—that is, :meth:`.Model.run` or other code called by it."""
 
 
 class Model(ABC):
@@ -32,7 +36,7 @@ class Model(ABC):
 
     @classmethod
     def clean_path(cls, value: str) -> str:
-        """Subtitute invalid characters in `value` with "_"."""
+        """Substitute invalid characters in `value` with "_"."""
         chars = r'<>"/\|?*' + (":" if os.name == "nt" else "")
         return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
@@ -53,7 +57,7 @@ class Model(ABC):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Object on which to enforce data consistency.
         """
 
@@ -71,7 +75,7 @@ class Model(ABC):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Object to initialize.
 
         See also
@@ -81,7 +85,7 @@ class Model(ABC):
         log.debug(f"No initialization for {repr(scenario.scheme)}-scheme Scenario")
 
     @classmethod
-    def initialize_items(cls, scenario, items):
+    def initialize_items(cls, scenario: "Scenario", items: Mapping[str, Dict]) -> None:
         """Helper for :meth:`initialize`.
 
         All of the `items` are added to `scenario`. Existing items are not modified.
@@ -93,13 +97,13 @@ class Model(ABC):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Object to initialize.
-        items : dict of (str -> dict)
-            Each key is the name of an ixmp item (set, parameter, equation, or
-            variable) to initialize. Each dict **must** have the key 'ix_type'; one of
-            'set', 'par', 'equ', or 'var'; any other entries are keyword arguments to
-            the methods :meth:`.init_set` etc.
+        items :
+            Keys are names of ixmp items (set, parameter, equation, or variable) to
+            initialize. Values are :class:`dict`, and each **must** have the key
+            'ix_type' (one of 'set', 'par', 'equ', or 'var'); any other entries are
+            keyword arguments to the corresponding methods such as :meth:`.init_set`.
 
         Raises
         ------
@@ -191,6 +195,6 @@ class Model(ABC):
 
         Parameters
         ----------
-        scenario : .Scenario
+        scenario : Scenario
             Scenario object to solve by running the Model.
         """

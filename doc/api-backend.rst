@@ -20,7 +20,7 @@ Provided backends
 .. currentmodule:: ixmp.backend.jdbc
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
-   :members: read_file, write_file
+   :members: handle_config, read_file, write_file
 
    JDBCBackend supports:
 
@@ -59,7 +59,10 @@ Provided backends
       read_file
       write_file
 
-.. automethod:: ixmp.backend.jdbc.start_jvm
+.. autofunction:: ixmp.backend.jdbc.start_jvm
+
+
+.. currentmodule:: ixmp.backend
 
 Backend API
 -----------
@@ -72,6 +75,7 @@ Backend API
    ixmp.backend.base.CachingBackend
    ixmp.backend.ItemType
    ixmp.backend.FIELDS
+   ixmp.backend.IAMC_IDX
 
 - :class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
   This means its methods can take many types of arguments, check, and transform them—in a way that provides modeler-users with easy, intuitive workflows.
@@ -90,7 +94,7 @@ Backend API
    In the following, the bold-face words **required**, **optional**, etc. have specific meanings as described in `IETF RFC 2119 <https://tools.ietf.org/html/rfc2119>`_.
 
    Backend is an **abstract** class; this means it **must** be subclassed.
-   Most of its methods are decorated with :meth:`abc.abstractmethod`; this means they are **required** and **must** be overridden by subclasses.
+   Most of its methods are decorated with :any:`abc.abstractmethod`; this means they are **required** and **must** be overridden by subclasses.
 
    Others, marked below with "OPTIONAL:", are not so decorated.
    For these methods, the behaviour in the base Backend—often, nothing—is an acceptable default behaviour.
@@ -191,13 +195,23 @@ Backend API
    :members:
    :private-members:
 
-   CachingBackend stores cache values for multiple :class:`.TimeSeries`/:class:`Scenario` objects, and for multiple values of a *filters* argument.
+   CachingBackend stores cache values for multiple :class:`.TimeSeries`/:class:`.Scenario` objects, and for multiple values of a *filters* argument.
 
    Subclasses **must** call :meth:`cache`, :meth:`cache_get`, and :meth:`cache_invalidate` as appropriate to manage the cache; CachingBackend does not enforce any such logic.
+
+
+.. automodule:: ixmp.backend
+   :members: FIELDS, IAMC_IDX
 
 .. autoclass:: ixmp.backend.ItemType
    :members:
    :undoc-members:
    :member-order: bysource
 
-.. autodata:: ixmp.backend.FIELDS
+.. currentmodule:: ixmp.backend.io
+
+Common input/output routines for backends
+-----------------------------------------
+
+.. automodule:: ixmp.backend.io
+   :members:

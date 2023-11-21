@@ -5,12 +5,12 @@ import shutil
 import tempfile
 from copy import copy
 from pathlib import Path
-from subprocess import CalledProcessError, check_call
+from subprocess import CalledProcessError, run
 from typing import Any, MutableMapping
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError
-from ixmp.utils import as_str_list
+from ixmp.util import as_str_list
 
 log = logging.getLogger(__name__)
 
@@ -188,21 +188,30 @@ class GAMSModel(Model):
             # Not set; use `quiet` to determine the value
             self.gams_args.append(f"LogOption={'2' if self.quiet else '4'}")
 
-    def format_exception(self, exc, model_file):
+    def format_exception(self, exc, model_file, backend_class):
         """Format a user-friendly exception when GAMS errors."""
-        msg = [
-            f"GAMS errored with return code {exc.returncode}:",
-            # Convert a Windows return code >256 to its equivalent on *nix platforms
-            f"    {RETURN_CODE[exc.returncode % 256]}",
-            "",
-            "For details, see the terminal output above, plus:",
-            f"Input data: {self.in_file}",
-        ]
+        lst_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".lst")
+        lp_5 = "LP status (5): optimal with unscaled infeasibilities"
+
+        if getattr(exc, "returncode", 0) > 0:
+            # Convert a Windows return code >256 to its POSIX equivalent
+            msg = [
+                f"GAMS errored with return code {exc.returncode}:",
+                f"    {RETURN_CODE[exc.returncode % 256]}",
+            ]
+        elif lst_file.exists() and lp_5 in lst_file.read_text():  # pragma: no cover
+            msg = [
+                "GAMS returned 0 but indicated:",
+                f"    {lp_5}",
+                f"and {backend_class.__name__} could not read the solution.",
+            ]
 
         # Add a reference to the listing file, if it exists
-        lst_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".lst")
-        if lst_file.exists():
-            msg.insert(-1, f"Listing   : {lst_file}")
+        msg.extend(
+            ["", "For details, see the terminal output above, plus:"]
+            + ([f"Listing   : {lst_file}"] if lst_file.exists() else [])
+            + [f"Input data: {self.in_file}"]
+        )
 
         return ModelError("\n".join(msg))
 
@@ -290,21 +299,24 @@ class GAMSModel(Model):
 
         try:
             # Invoke GAMS
-            check_call(command, shell=os.name == "nt", cwd=self.cwd)
-        except CalledProcessError as exc:
-            # Do not remove self.temp_dir; the user may want to inspect the GDX file
-            raise self.format_exception(exc, model_file) from None
+            run(command, shell=os.name == "nt", cwd=self.cwd, check=True)
 
-        # Read model solution
-        scenario.platform._backend.read_file(
-            self.out_file,
-            ItemType.MODEL,
-            **s_arg,
-            check_solution=self.check_solution,
-            comment=self.comment or "",
-            equ_list=as_str_list(self.equ_list) or [],
-            var_list=as_str_list(self.var_list) or [],
-        )
+            # Read model solution
+            scenario.platform._backend.read_file(
+                self.out_file,
+                ItemType.MODEL,
+                **s_arg,
+                check_solution=self.check_solution,
+                comment=self.comment or "",
+                equ_list=as_str_list(self.equ_list) or [],
+                var_list=as_str_list(self.var_list) or [],
+            )
+        except (CalledProcessError, RuntimeError) as exc:
+            # CalledProcessError from run(); RuntimeError from read_file()
+            # Do not remove self.temp_dir; the user may want to inspect the GDX file
+            raise self.format_exception(
+                exc, model_file, scenario.platform._backend.__class__
+            ) from None
 
         # Finished: remove the temporary directory, if any
         self.remove_temp_dir()

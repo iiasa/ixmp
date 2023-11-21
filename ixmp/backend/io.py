@@ -3,7 +3,7 @@ from collections import deque
 
 import pandas as pd
 
-from ixmp.utils import as_str_list, maybe_check_out, maybe_commit
+from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from . import ItemType
 
@@ -19,8 +19,8 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
 
     See also
     --------
-    TimeSeries.add_timeseries
-    TimeSeries.read_file
+    .TimeSeries.add_timeseries
+    .TimeSeries.read_file
     """
 
     if path.suffix == ".csv":
@@ -44,7 +44,7 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
 
     See also
     --------
-    Scenario.to_excel
+    .Scenario.to_excel
     """
     # Default: empty dict
     filters = filters or dict()
@@ -180,7 +180,7 @@ def s_read_excel(  # noqa: C901
 
     See also
     --------
-    Scenario.read_excel
+    .Scenario.read_excel
     """
     log.info(f"Read data from {path}")
 

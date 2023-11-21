@@ -1,11 +1,33 @@
 Next release
 ============
 
-.. All changes
-.. -----------
+Migration notes
+---------------
+Update code that imports from the following modules:
+
+- :py:`ixmp.reporting` → use :py:`ixmp.report`.
+- :py:`ixmp.reporting.computations` → use :py:`ixmp.report.operator`.
+- :py:`ixmp.utils` → use :py:`ixmp.util`.
+
+Code that imports from the old locations will continue to work, but will raise :class:`DeprecationWarning`.
+
+All changes
+-----------
 
 - Support for Python 3.7 is dropped (:pull:`492`).
-- New :func:`.utils.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
+- Rename :mod:`ixmp.report` and :mod:`ixmp.util` (:pull:`500`).
+- New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.remove_ts` (:pull:`500`).
+- New CLI command :program:`ixmp platform copy` and :doc:`CLI documentation <cli>` (:pull:`500`).
+- New argument :py:`indexed_by=...` to :meth:`.Scenario.items` (thus :meth:`.Scenario.par_list` and similar methods) to iterate over (or list) only items that are indexed by a particular set (:issue:`402`, :pull:`500`).
+- New :func:`.util.discard_on_error` and matching argument to :meth:`.TimeSeries.transact` to avoid locking :class:`.TimeSeries` / :class:`.Scenario` on failed operations with :class:`.JDBCBackend` (:pull:`488`).
+- Work around limitations of :class:`.JDBCBackend` (:pull:`500`):
+
+  - Unit :py:`""` cannot be added with the Oracle driver (:issue:`425`).
+  - Certain items (variables) could not be initialized when providing :py:`idx_sets=...`, even if those match the sets fixed by the underlying Java code.
+    With this fix, a matching list is silently accepted; a different list raises :class:`NotImplementedError`.
+  - When a :class:`.GAMSModel` is solved with an LP status of 5 (optimal, but with infeasibilities after unscaling), :class:`.JDBCBackend` would attempt to read the output GDX file and fail, leading to an uninformative error message (:issue:`98`).
+    Now :class:`.ModelError` is raised describing the situation.
+- Improved type hinting for static typing of code that uses :mod:`ixmp` (:issue:`465`, :pull:`500`).
 
 .. _v3.7.0:
 
@@ -34,8 +56,8 @@ All changes
 - Optionally tolerate failures to add individual items in :func:`.store_ts` reporting computation (:pull:`451`); use ``timeseries_only=True`` in check-out to function with :class:`.Scenario` with solution data stored.
 - Bugfix: :class:`.Config` squashed configuration values read from :file:`config.json`, if the respective keys were registered in downstream packages, e.g. :mod:`message_ix`.
   Allow the values loaded from file to persist (:pull:`451`).
-- Adjust to genno 1.12 and set this as the minimum required version for :mod:`ixmp.reporting` (:pull:`451`).
-- Add :meth:`.enforce` to the :class:`~.base.Model` API for enforcing structure/data consistency before :meth:`.Model.solve` (:pull:`450`).
+- Adjust to genno 1.12 and set this as the minimum required version for :mod:`ixmp.reporting <ixmp.report>` (:pull:`451`).
+- Add :meth:`.enforce` to the :class:`~.base.Model` API for enforcing structure/data consistency before :meth:`.Model.run` (:pull:`450`).
 
 .. _v3.5.0:
 
@@ -73,7 +95,7 @@ v3.4.0 (2022-01-24)
 Migration notes
 ---------------
 
-:func:`ixmp.utils.isscalar` is deprecated.
+:py:`ixmp.util.isscalar()` is deprecated.
 Code should use :func:`numpy.isscalar`.
 
 All changes
@@ -100,14 +122,14 @@ All changes
 -----------
 
 - Add ``ixmp config show`` CLI command (:pull:`416`).
-- Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`show_versions` / ``ixmp show-versions`` (:pull:`416`).
+- Add :mod:`genno` and :mod:`message_ix_models` to the output of :func:`.show_versions` / ``ixmp show-versions`` (:pull:`416`).
 - Clean up test suite, improve performance, increase coverage (:pull:`416`).
 - Adjust documentation for deprecation of ``rixmp`` (:pull:`416`).
-- Deprecate :func:`.utils.logger` (:pull:`399`).
-- Add a `quiet` option to :meth:`.GAMSModel.solve` and use in testing (:pull:`399`).
+- Deprecate :func:`.util.logger` (:pull:`399`).
+- Add a `quiet` option to :class:`.GAMSModel` and use in testing (:pull:`399`).
 - Fix :class:`.GAMSModel` would try to write GDX data to filenames containing invalid characters on Windows (:pull:`398`).
 - Format user-friendly exceptions when GAMSModel errors (:issue:`383`, :pull:`398`).
-- Adjust :mod:`ixmp.reporting` to use :mod:`genno` (:pull:`397`).
+- Adjust :mod:`ixmp.reporting <ixmp.report>` to use :mod:`genno` (:pull:`397`).
 - Fix two minor bugs in reporting (:pull:`396`).
 
 .. _v3.2.0:
@@ -121,7 +143,7 @@ All changes
 - Increase JPype minimum version to 1.2.1 (:pull:`394`).
 - Adjust test suite for pandas v1.2.0 (:pull:`391`).
 - Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data (:pull:`374`).
-- Depend on :mod:`openpyxl` instead of :mod:`xlrd` and :mod:`xlsxwriter` for Excel I/O; :mod:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx` (:pull:`389`).
+- Depend on :mod:`openpyxl` instead of :py:`xlrd` and :py:`xlsxwriter` for Excel I/O; :py:`xlrd` versions 2.0.0 and later do not support :file:`.xlsx` (:pull:`389`).
 - Add a parameter for exporting all model+scenario run versions to :meth:`.Platform.export_timeseries_data`, and fix a bug where exporting all runs happens uninteneded (:pull:`367`).
 - Silence noisy output from ignored exceptions on JDBCBackend/JVM shutdown (:pull:`378`).
 - Add a utility method, :func:`.gams_version`, to check the installed version of GAMS (:pull:`376`).
@@ -141,18 +163,18 @@ ixmp v3.1.0 coincides with message_ix v3.1.0.
 - Fix a bug in :meth:`.read_excel` when parameter data is spread across multiple sheets (:pull:`345`).
 - Expand documentation and revise installation instructions (:pull:`363`).
 - Raise Python exceptions from :class:`.JDBCBackend` (:pull:`362`).
-- Add :meth:`Scenario.items`, :func:`.utils.diff`, and allow using filters in CLI command ``ixmp export`` (:pull:`354`).
+- Add :meth:`.Scenario.items`, :func:`.util.diff`, and allow using filters in CLI command ``ixmp export`` (:pull:`354`).
 - Add functionality for storing ‘meta’ (annotations of model names, scenario names, versions, and some combinations thereof) (:pull:`353`).
 
   - Add :meth:`.Backend.add_model_name`, :meth:`~.Backend.add_scenario_name`, :meth:`~.Backend.get_model_names`, :meth:`~.Backend.get_scenario_names`, :meth:`~.Backend.get_meta`, :meth:`~.Backend.set_meta`, :meth:`~.Backend.remove_meta`.
   - Allow these to be called from :class:`.Platform` instances.
-  - Remove :meth:`.Scenario.delete_meta`.
+  - Remove :py:`Scenario.delete_meta()`.
 
-- Avoid modifying indexers dictionary in :meth:`.AttrSeries.sel` (:pull:`349`).
+- Avoid modifying indexers dictionary in :meth:`AttrSeries.sel <genno.core.attrseries.AttrSeries.sel>` (:pull:`349`).
 - Add region/unit parameters to :meth:`.Platform.export_timeseries_data` (:pull:`343`).
 - Preserve dtypes of index columns in :func:`.data_for_quantity` (:pull:`347`).
 - ``ixmp show-versions`` includes the path to the default JVM used by JDBCBackend/JPype (:pull:`339`).
-- Make :class:`reporting.Quantity` classes interchangeable (:pull:`317`).
+- Make :class:`reporting.Quantity <genno.Quantity>` classes interchangeable (:pull:`317`).
 - Use GitHub Actions for continuous testing and integration (:pull:`330`).
 
 .. _v3.0.0:
@@ -203,18 +225,18 @@ All changes
 
 - Bump JPype dependency to 0.7.5 (:pull:`327`).
 - Improve memory management in :class:`.JDBCBackend` (:pull:`298`).
-- Raise user-friendly exceptions from :meth:`.Reporter.get` in Jupyter notebooks and other read–evaluate–print loops (REPLs) (:pull:`316`).
+- Raise user-friendly exceptions from :meth:`Reporter.get <genno.Computer.get>` in Jupyter notebooks and other read–evaluate–print loops (REPLs) (:pull:`316`).
 - Ensure :meth:`.Model.initialize` is always called for new *and* cloned objects (:pull:`315`).
 - Add CLI command `ixmp show-versions` to print ixmp and dependency versions for debugging (:pull:`320`).
 - Bulk saving for metadata and exposing documentation AP (:pull:`314`)I
-- Add :meth:`~.computations.apply_units`, :meth:`~computations.select` reporting calculations; expand :meth:`.Reporter.add` (:pull:`312`).
-- :meth:`.Reporter.add_product` accepts a :class:`.Key` with a tag; :func:`~.computations.aggregate` preserves :class:`.Quantity` attributes (:pull:`310`).
+- Add :func:`~.genno.operator.apply_units`, :func:`~.genno.operator.select` reporting operators; expand :meth:`Reporter.add <genno.Computer.add>` (:pull:`312`).
+- :func:`Reporter.add_product <genno.operator.mul>` accepts a :class:`~.genno.Key` with a tag; :func:`~.genno.operator.aggregate` preserves :class:`~.genno.Quantity` attributes (:pull:`310`).
 - Add CLI command ``ixmp solve`` to run model solver (:pull:`304`).
-- Add `dims` and `units` arguments to :meth:`Reporter.add_file`; remove :meth:`Reporter.read_config` (redundant with :meth:`Reporter.configure`) (:pull:`303`).
+- Add `dims` and `units` arguments to :func:`Reporter.add_file <genno.operator.load_file>`; remove :py:`Reporter.read_config()` (redundant with :meth:`Reporter.configure <genno.Computer.configure>`) (:pull:`303`).
 - Add option to include `subannual` column in dataframe returned by :meth:`.TimeSeries.timeseries` (:pull:`295`).
 - Add :meth:`.Scenario.to_excel` and :meth:`.read_excel`; this functionality is transferred to ixmp from :mod:`message_ix` and enhanced for dealing with maximum row limits in Excel (:pull:`286`, :pull:`297`, :pull:`309`).
 - Include all tests in the ixmp package (:pull:`270`).
-- Add :meth:`Model.initialize` API to help populate new Scenarios according to a model scheme (:pull:`212`).
+- Add :meth:`.Model.initialize` API to help populate new Scenarios according to a model scheme (:pull:`212`).
 - Apply units to reported quantities (:pull:`267`).
 - Increase minimum pandas version to 1.0; adjust for `API changes and deprecations <https://pandas.pydata.org/pandas-docs/version/1.0.0/whatsnew/v1.0.0.html#backwards-incompatible-api-changes>`_ (:pull:`261`).
 - Add :meth:`.export_timeseries_data` to write data for multiple scenarios to CSV (:pull:`243`).

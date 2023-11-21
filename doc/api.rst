@@ -3,6 +3,8 @@
 Python (:mod:`ixmp` package)
 ============================
 
+.. automodule:: ixmp
+
 The |ixmp| application programming interface (API) is organized around three classes:
 
 .. autosummary::
@@ -72,6 +74,7 @@ TimeSeries
       commit
       discard_changes
       get_geodata
+      get_meta
       is_default
       last_update
       preload_timeseries
@@ -80,6 +83,7 @@ TimeSeries
       remove_timeseries
       run_id
       set_as_default
+      set_meta
       timeseries
       transact
       url
@@ -92,16 +96,18 @@ Scenario
    :show-inheritance:
    :members:
 
-   A Scenario is a :class:`TimeSeries` that also contains model data, including model solution data.
+   A Scenario is a :class:`.TimeSeries` that also contains model data, including model solution data.
    See the :ref:`data model documentation <data-model-data>`.
 
-   The Scenario class provides methods to manipulate model data items:
+   The Scenario class provides methods to manipulate :ref:`model data items <data-item>`.
+   In addition to generic methods (:meth:`init_item`, :meth:`items`, :meth:`list_items`, :meth:`has_item`), there are methods for each of the four item types:
 
    - Set: :meth:`init_set`, :meth:`add_set`, :meth:`set`, :meth:`remove_set`, :meth:`has_set`
    - Parameter:
 
      - ≥1-dimensional: :meth:`init_par`, :meth:`add_par`, :meth:`par`, :meth:`remove_par`, :meth:`par_list`, and :meth:`has_par`.
      - 0-dimensional: :meth:`init_scalar`, :meth:`change_scalar`, and :meth:`scalar`.
+       These are thin wrappers around the corresponding ``*_par`` methods, which can also be used to manipulate 0-dimensional parameters.
 
    - Variable: :meth:`init_var`, :meth:`var`, :meth:`var_list`, and :meth:`has_var`.
    - Equation: :meth:`init_equ`, :meth:`equ`, :meth:`equ_list`, and :meth:`has_equ`.
@@ -112,42 +118,25 @@ Scenario
       change_scalar
       clone
       equ
-      equ_list
-      get_meta
-      has_equ
-      has_par
-      has_set
+      has_item
       has_solution
-      has_var
       idx_names
       idx_sets
-      init_equ
-      init_par
+      init_item
       init_scalar
-      init_set
-      init_var
+      items
+      list_items
       load_scenario_data
       par
-      par_list
       read_excel
       remove_par
       remove_set
       remove_solution
       scalar
       set
-      set_list
-      set_meta
       solve
       to_excel
       var
-      var_list
-
-
-.. currentmodule:: ixmp.backend.io
-
-.. automodule:: ixmp.backend.io
-   :members: EXCEL_MAX_ROWS
-
 
 .. _configuration:
 
@@ -193,17 +182,21 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
 .. autoclass:: ixmp._config.Config
    :members:
 
+.. autoclass:: ixmp._config.BaseValues
+   :members:
+
 
 Utilities
 ---------
 
-.. currentmodule:: ixmp.utils
+.. currentmodule:: ixmp.util
 
-.. automodule:: ixmp.utils
+.. automodule:: ixmp.util
    :members:
    :exclude-members: as_str_list, check_year, isscalar, year_list, filtered
 
    .. autosummary::
+
       diff
       discard_on_error
       format_scenario_list
@@ -218,7 +211,7 @@ Utilities
 Utilities for documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: ixmp.utils.sphinx_linkcode_github
+.. automodule:: ixmp.util.sphinx_linkcode_github
    :members:
 
    To use this extension, add it to the ``extensions`` setting in the Sphinx configuration file (usually :file:`conf.py`), and set the required ``linkcode_github_repo_slug``:
@@ -227,7 +220,7 @@ Utilities for documentation
 
       extensions = [
           ...,
-          "ixmp.utils.sphinx_linkcode_github",
+          "ixmp.util.sphinx_linkcode_github",
           ...,
       ]
 
@@ -246,3 +239,9 @@ Utilities for testing
 .. automodule:: ixmp.testing
    :members:
    :exclude-members: pytest_report_header, pytest_sessionstart
+   :special-members: add_test_data
+
+.. currentmodule:: ixmp.testing.data
+
+.. automodule:: ixmp.testing.data
+   :members: DATA, HIST_DF, TS_DF

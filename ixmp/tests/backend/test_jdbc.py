@@ -141,6 +141,36 @@ class TestJDBCBackend:
 
         assert dict(driver="hsqldb", path=tmp_path) == klass.handle_config(args, kwargs)
 
+    @pytest.mark.parametrize(
+        "name, idx_sets",
+        (
+            ("C", ["node", "year"]),
+            ("COST_NODAL", ["node", "year"]),
+            ("COST_NODAL_NET", ["node", "year"]),
+            ("DEMAND", ["node", "commodity", "level", "year", "time"]),
+            ("GDP", ["node", "year"]),
+            ("I", ["node", "year"]),
+            # Expected exception class raised on invalid arguments
+            pytest.param(
+                "C",
+                ["node", "year", "technology"],
+                marks=pytest.mark.xfail(raises=NotImplementedError),
+            ),
+        ),
+    )
+    def test_init_item(self, mp, be, name, idx_sets):
+        """init_item() supports items that have fixed indices in ixmp_source."""
+
+        # Create an ixmp.Scenario, coerce its scheme to MESSAGE, and then call
+        # Backend.init(). This creates a Java MsgScenario object by circumventing
+        # safeguards in Scenario.__init__().
+        s = ixmp.Scenario(mp, "model name", "scenario name", version="new")
+        s.scheme = "MESSAGE"
+        be.init(s, "")
+
+        # Initialize the item; succeeds
+        be.init_item(s, type="var", name=name, idx_sets=idx_sets, idx_names=idx_sets)
+
     def test_set_data_inf(self, mp):
         """:meth:`JDBCBackend.set_data` errors on :data:`numpy.inf` values."""
         # Make `mp` think it is connected to an Oracle database
@@ -155,6 +185,12 @@ class TestJDBCBackend:
         ):
             ts.add_timeseries(data)  # Calls JDBCBackend.set_data
 
+    def test_set_unit(self, caplog, be):
+        be.set_unit("", "comment")
+        # No warning issued under pytest/driver=hsqldb; the exception only occurs with
+        # driver=oracle
+        assert [] == caplog.messages
+
     def test_read_file(self, tmp_path, be):
         """Cannot read CSV files."""
         with pytest.raises(NotImplementedError):
@@ -164,6 +200,11 @@ class TestJDBCBackend:
         """Cannot write CSV files."""
         with pytest.raises(NotImplementedError):
             be.write_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
+
+    # Specific to JDBCBackend
+    def test_gc(self, monkeypatch, be):
+        monkeypatch.setattr(ixmp.backend.jdbc, "_GC_AGGRESSIVE", True)
+        be.gc()
 
 
 def test_exceptions(test_mp):

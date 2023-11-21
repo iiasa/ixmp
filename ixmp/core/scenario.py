@@ -1,9 +1,10 @@
 import logging
+from functools import partialmethod
 from itertools import repeat, zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
 from warnings import warn
 
 import pandas as pd
@@ -12,7 +13,7 @@ from ixmp.backend import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.model import get_model
-from ixmp.utils import as_str_list, check_year
+from ixmp.util import as_str_list, check_year
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class Scenario(TimeSeries):
         class in :data:`.MODELS` is used to initialize items in the Scenario.
     cache:
         .. deprecated:: 3.0
-           The `cache` keyword argument to :class:`Scenario` has no effect and raises a
+           The `cache` keyword argument to :class:`.Scenario` has no effect and raises a
            warning. Use `cache` as one of the `backend_args` to :class:`Platform` to
            disable/enable caching for storage backends that support it. Use
            :meth:`load_scenario_data` to load all data in the Scenario into an in-memory
@@ -97,7 +98,7 @@ class Scenario(TimeSeries):
         See Also
         --------
         TimeSeries.check_out
-        utils.maybe_check_out
+        util.maybe_check_out
         """
         if not timeseries_only and self.has_solution():
             raise ValueError(
@@ -155,41 +156,8 @@ class Scenario(TimeSeries):
         else:
             return [str(key_or_keys)]
 
-    def set_list(self) -> List[str]:
-        """List all defined sets."""
-        return self._backend("list_items", "set")
-
-    def has_set(self, name: str) -> bool:
-        """Check whether the scenario has a set *name*."""
-        return name in self.set_list()
-
-    def init_set(
-        self, name: str, idx_sets: Sequence[str] = None, idx_names: Sequence[str] = None
-    ) -> None:
-        """Initialize a new set.
-
-        Parameters
-        ----------
-        name : str
-            Name of the set.
-        idx_sets : sequence of str or str, optional
-            Names of other sets that index this set.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-
-        Raises
-        ------
-        ValueError
-            If the set (or another object with the same *name*) already exists.
-        RuntimeError
-            If the Scenario is not checked out (see :meth:`~TimeSeries.check_out`).
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "set", name, idx_sets, idx_names)
-
     def set(
-        self, name: str, filters: Dict[str, Sequence[str]] = None, **kwargs
+        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> Union[List[str], pd.DataFrame]:
         """Return the (filtered) elements of a set.
 
@@ -213,7 +181,7 @@ class Scenario(TimeSeries):
         self,
         name: str,
         key: Union[str, Sequence[str], Dict, pd.DataFrame],
-        comment: str = None,
+        comment: Optional[str] = None,
     ) -> None:
         """Add elements to an existing set.
 
@@ -321,7 +289,9 @@ class Scenario(TimeSeries):
         self._backend("item_set_elements", "set", name, elements)
 
     def remove_set(
-        self, name: str, key: Union[str, Sequence[str], Dict, pd.DataFrame] = None
+        self,
+        name: str,
+        key: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
     ) -> None:
         """Delete set elements or an entire set.
 
@@ -338,34 +308,8 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "set", name, self._keys(name, key))
 
-    def par_list(self) -> List[str]:
-        """List all defined parameters."""
-        return self._backend("list_items", "par")
-
-    def has_par(self, name: str) -> bool:
-        """Check whether the scenario has a parameter with that name."""
-        return name in self.par_list()
-
-    def init_par(
-        self, name: str, idx_sets: Sequence[str], idx_names: Sequence[str] = None
-    ) -> None:
-        """Initialize a new parameter.
-
-        Parameters
-        ----------
-        name : str
-            Name of the parameter.
-        idx_sets : sequence of str or str, optional
-            Names of sets that index this parameter.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "par", name, idx_sets, idx_names)
-
     def par(
-        self, name: str, filters: Dict[str, Sequence[str]] = None, **kwargs
+        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
     ) -> pd.DataFrame:
         """Return parameter data.
 
@@ -376,9 +320,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter
-        filters : dict (str -> list of str), optional
-            Index names mapped to lists of index set elements. Elements not appearing
-            in the respective index set(s) are silently ignored.
+        filters : dict, optional
+            Keys are index names. Values are lists of index set elements. Elements not
+            appearing in the respective index set(s) are silently ignored.
         """
         if len(kwargs):
             warn(
@@ -388,51 +332,196 @@ class Scenario(TimeSeries):
         return self._backend("item_get_elements", "par", name, filters)
 
     def items(
-        self, type: ItemType = ItemType.PAR, filters: Dict[str, Sequence[str]] = None
-    ) -> Iterable[Tuple[str, Any]]:
+        self,
+        type: ItemType = ItemType.PAR,
+        filters: Optional[Dict[str, Sequence[str]]] = None,
+        *,
+        indexed_by: Optional[str] = None,
+        par_data: Optional[bool] = None,
+    ) -> Iterable[str]:
         """Iterate over model data items.
 
         Parameters
         ----------
-        type : ItemType, optional
-            Types of items to iterate, e.g. :data:`ItemType.PAR` for parameters, the
-            only value currently supported.
+        type : .ItemType, optional
+            Types of items to iterate, for instance :attr:`.ItemType.PAR` for
+            parameters.
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
-            :meth:`par`.
+            :meth:`par`. Only value for :attr:`.ItemType.PAR`.
+        indexed_by : str, optional
+            If given, only iterate over items where one of the item dimensions is
+            `indexed_by` the set of this name.
+        par_data : bool, optional
+            If :any:`True` (the default) and `type` is :attr:`.ItemType.PAR`, also
+            iterate over data for each parameter.
 
         Yields
         ------
-        (str, object)
-            Tuples of item name and data.
+        str
+            if `type` is not :attr:`.ItemType.PAR`, or `par_data` is :any:`False`:
+            names of items.
+        tuple
+            if `type` is :attr:`.ItemType.PAR` and `par_data` is :any:`True`:
+            each tuple is (item name, item data).
         """
-        if type != ItemType.PAR:
-            raise NotImplementedError(
-                f"Scenario.items(type={type}); only ItemType.PAR is supported"
+        # Handle `filters` argument
+        if filters is None:
+            filters = dict()
+        elif type != ItemType.PAR:
+            log.warning(
+                "Scenario.items(…, filters=…) has no effect for item type "
+                + repr(type.name).lower()
             )
 
-        filters = filters or dict()
+        # Handle `par_data` argument
+        if type == ItemType.PAR and par_data is None:
+            warn(
+                "using default par_data=True. In a future version of ixmp, "
+                "par_data=False will be the default.",
+                FutureWarning,
+                2,
+            )
+            par_data = True
+        elif par_data is None:
+            par_data = False
 
-        names = sorted(self.par_list())
+        # Sorted list of items from the back end
+        names = sorted(self._backend("list_items", str(type.name).lower()))
 
-        for name in sorted(names):
+        # Iterate over items
+        for name in names:
             idx_names = set(self.idx_names(name))
-            if len(filters) and not set(filters.keys()) & idx_names:
-                # No overlap between the filters and this item's dimensions
+            idx_sets = set(self.idx_sets(name))
+
+            # Skip if:
+            # - No overlap between given filters and this item's dimensions; or
+            # - indexed_by= is given but is not in the index sets of `name`.
+            if (len(filters) and not set(filters) & idx_names) or (
+                indexed_by not in (idx_sets | {None})
+            ):
                 continue
 
-            # Retrieve the data, reducing the filters to only the dimensions of the item
-            yield name, self.par(
-                name, filters={k: v for k, v in filters.items() if k in idx_names}
+            if type is ItemType.PAR and par_data:
+                # Retrieve the data, reducing the filters to only the dimensions of the
+                # item
+                _filters = {k: v for k, v in filters.items() if k in idx_names}
+                yield (name, self.par(name, filters=_filters))  # type: ignore [misc]
+            else:
+                # Only the name of the item
+                yield name
+
+    def has_item(self, name: str, item_type=ItemType.MODEL) -> bool:
+        """Check whether the Scenario has an item `name` of `item_type`.
+
+        In general, user code **should** call one of :meth:`.has_equ`, :meth:`.has_par`,
+        :meth:`.has_set`, or :meth:`.has_var` instead of calling this method directly.
+
+        Returns
+        -------
+        True
+            if the Scenario contains an item of `item_type` with name `name`.
+        False
+            otherwise
+
+        See also
+        --------
+        items
+        """
+        return name in self.items(item_type, par_data=False)
+
+    #: Check whether the scenario has a equation `name`. See :meth:`has_item`.
+    has_equ = partialmethod(has_item, item_type=ItemType.EQU)
+    #: Check whether the scenario has a parameter `name`. See :meth:`has_item`.
+    has_par = partialmethod(has_item, item_type=ItemType.PAR)
+    #: Check whether the scenario has a set `name`. See :meth:`has_item`.
+    has_set = partialmethod(has_item, item_type=ItemType.SET)
+    #: Check whether the scenario has a variable `name`. See :meth:`has_item`.
+    has_var = partialmethod(has_item, item_type=ItemType.VAR)
+
+    def init_item(
+        self,
+        item_type: ItemType,
+        name: str,
+        idx_sets: Optional[Sequence[str]] = None,
+        idx_names: Optional[Sequence[str]] = None,
+    ):
+        """Initialize a new item `name` of type `item_type`.
+
+        In general, user code **should** call one of :meth:`.init_set`,
+        :meth:`.init_par`, :meth:`.init_var`, or :meth:`.init_equ` instead of calling
+        this method directly.
+
+        Parameters
+        ----------
+        item_type : .ItemType
+            The type of the item.
+        name : str
+            Name of the item.
+        idx_sets : sequence of str or str, optional
+            Name(s) of index sets for a 1+-dimensional item. If none are given, the item
+            is scalar (zero dimensional).
+        idx_names : sequence of str or str, optional
+            Names of the dimensions indexed by `idx_sets`. If given, they must be the
+            same length as `idx_sets`.
+
+        Raises
+        ------
+        ValueError
+            - if `idx_names` are given but do not match the length of `idx_sets`.
+            - if an item with the same `name`, of any `item_type`, already exists.
+        RuntimeError
+            if the Scenario is not checked out (see :meth:`~TimeSeries.check_out`).
+        """
+        idx_sets = as_str_list(idx_sets) or []
+        idx_names = as_str_list(idx_names)
+
+        if idx_names and len(idx_names) != len(idx_sets):
+            raise ValueError(
+                f"index names {repr(idx_names)} must have the same length as index sets"
+                f" {repr(idx_sets)}"
             )
+
+        return self._backend(
+            "init_item", str(item_type.name).lower(), name, idx_sets, idx_names
+        )
+
+    #: Initialize a new equation. See :meth:`init_item`.
+    init_equ = partialmethod(init_item, ItemType.EQU)
+    #: Initialize a new parameter. See :meth:`init_item`.
+    init_par = partialmethod(init_item, ItemType.PAR)
+    #: Initialize a new set. See :meth:`init_item`.
+    init_set = partialmethod(init_item, ItemType.SET)
+    #: Initialize a new variable. See :meth:`init_item`.
+    init_var = partialmethod(init_item, ItemType.VAR)
+
+    def list_items(
+        self, item_type: ItemType, indexed_by: Optional[str] = None
+    ) -> List[str]:
+        """List all defined items of type `item_type`.
+
+        See also
+        --------
+        items
+        """
+        return list(self.items(item_type, indexed_by=indexed_by, par_data=False))
+
+    #: List all defined equations. See :meth:`list_items`.
+    equ_list = partialmethod(list_items, ItemType.EQU)
+    #: List all defined parameters. See :meth:`list_items`.
+    par_list = partialmethod(list_items, ItemType.PAR)
+    #: List all defined sets. See :meth:`list_items`.
+    set_list = partialmethod(list_items, ItemType.SET)
+    #: List all defined variables. See :meth:`list_items`.
+    var_list = partialmethod(list_items, ItemType.VAR)
 
     def add_par(
         self,
         name: str,
-        key_or_data: Union[str, Sequence[str], Dict, pd.DataFrame] = None,
+        key_or_data: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
         value=None,
-        unit: str = None,
-        comment: str = None,
+        unit: Optional[str] = None,
+        comment: Optional[str] = None,
     ) -> None:
         """Set the values of a parameter.
 
@@ -440,10 +529,9 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key_or_data : str or iterable of str or range or dict or
-                      :class:`pandas.DataFrame`
+        key_or_data : str or iterable of str or range or dict or pandas.DataFrame
             Element(s) to be added.
-        value : numeric or iterable of numeric, optional
+        value : float or iterable of float, optional
             Values.
         unit : str or iterable of str, optional
             Unit symbols.
@@ -536,13 +624,13 @@ class Scenario(TimeSeries):
         self._backend("item_set_elements", "par", name, elements)
 
     def init_scalar(self, name: str, val: Real, unit: str, comment=None) -> None:
-        """Initialize a new scalar.
+        """Initialize a new scalar and set its value.
 
         Parameters
         ----------
         name : str
             Name of the scalar
-        val : number
+        val : float or int
             Initial value of the scalar.
         unit : str
             Unit of the scalar.
@@ -562,12 +650,13 @@ class Scenario(TimeSeries):
 
         Returns
         -------
-        {'value': value, 'unit': unit}
+        dict
+            with the keys "value" and "unit".
         """
         return self._backend("item_get_elements", "par", name, None)
 
     def change_scalar(
-        self, name: str, val: Real, unit: str, comment: str = None
+        self, name: str, val: Real, unit: str, comment: Optional[str] = None
     ) -> None:
         """Set the value and unit of a scalar.
 
@@ -575,7 +664,7 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the scalar.
-        val : number
+        val : float or int
             New value of the scalar.
         unit : str
             New unit of the scalar.
@@ -593,39 +682,16 @@ class Scenario(TimeSeries):
         ----------
         name : str
             Name of the parameter.
-        key : dataframe or key list or concatenated string, optional
-            Elements to be removed
+        key : pandas.DataFrame or list or str, optional
+            Elements to be removed. If a :class:`pandas.DataFrame`, must contain the
+            same columns (indices/dimensions) as the parameter. If a :class:`list`, a
+            single key for a single data point; the individual elements must correspond
+            to the indices/dimensions of the parameter.
         """
         if key is None:
             self._backend("delete_item", "par", name)
         else:
             self._backend("item_delete_elements", "par", name, self._keys(name, key))
-
-    def var_list(self) -> List[str]:
-        """List all defined variables."""
-        return self._backend("list_items", "var")
-
-    def has_var(self, name: str) -> bool:
-        """Check whether the scenario has a variable with that name."""
-        return name in self.var_list()
-
-    def init_var(
-        self, name: str, idx_sets: Sequence[str] = None, idx_names: Sequence[str] = None
-    ) -> None:
-        """Initialize a new variable.
-
-        Parameters
-        ----------
-        name : str
-            Name of the variable.
-        idx_sets : sequence of str or str, optional
-            Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "var", name, idx_sets, idx_names)
 
     def var(self, name: str, filters=None, **kwargs):
         """Return a dataframe of (filtered) elements for a specific variable.
@@ -638,30 +704,6 @@ class Scenario(TimeSeries):
             index names mapped list of index set elements
         """
         return self._backend("item_get_elements", "var", name, filters)
-
-    def equ_list(self) -> List[str]:
-        """List all defined equations."""
-        return self._backend("list_items", "equ")
-
-    def init_equ(self, name: str, idx_sets=None, idx_names=None) -> None:
-        """Initialize a new equation.
-
-        Parameters
-        ----------
-        name : str
-            Name of the equation.
-        idx_sets : sequence of str or str, optional
-            Name(s) of index sets for a 1+-dimensional variable.
-        idx_names : sequence of str or str, optional
-            Names of the dimensions indexed by `idx_sets`.
-        """
-        idx_sets = as_str_list(idx_sets) or []
-        idx_names = as_str_list(idx_names)
-        return self._backend("init_item", "equ", name, idx_sets, idx_names)
-
-    def has_equ(self, name: str) -> bool:
-        """Check whether the scenario has an equation with that name."""
-        return name in self.equ_list()
 
     def equ(self, name: str, filters=None, **kwargs) -> pd.DataFrame:
         """Return a dataframe of (filtered) elements for a specific equation.
@@ -677,12 +719,12 @@ class Scenario(TimeSeries):
 
     def clone(
         self,
-        model: str = None,
-        scenario: str = None,
-        annotation: str = None,
+        model: Optional[str] = None,
+        scenario: Optional[str] = None,
+        annotation: Optional[str] = None,
         keep_solution: bool = True,
-        shift_first_model_year: int = None,
-        platform: Platform = None,
+        shift_first_model_year: Optional[int] = None,
+        platform: Optional[Platform] = None,
     ) -> "Scenario":
         """Clone the current scenario and return the clone.
 
@@ -705,8 +747,8 @@ class Scenario(TimeSeries):
         annotation : str, optional
             Explanatory comment for the clone commit message to the database.
         keep_solution : bool, optional
-            If :py:const:`True`, include all timeseries data and the solution (vars and
-            equs) from the source scenario in the clone. If :py:const:`False`, only
+            If :obj:`True`, include all timeseries data and the solution (vars and
+            equs) from the source scenario in the clone. If :obj:`False`, only
             include timeseries data marked `meta=True` (see :meth:`.add_timeseries`).
         shift_first_model_year: int, optional
             If given, all timeseries data in the Scenario is omitted from the clone for
@@ -734,7 +776,7 @@ class Scenario(TimeSeries):
         """Return :obj:`True` if the Scenario contains model solution data."""
         return self._backend("has_solution")
 
-    def remove_solution(self, first_model_year: int = None) -> None:
+    def remove_solution(self, first_model_year: Optional[int] = None) -> None:
         """Remove the solution from the scenario.
 
         This function removes the solution (variables and equations) and timeseries
@@ -759,8 +801,8 @@ class Scenario(TimeSeries):
 
     def solve(
         self,
-        model: str = None,
-        callback: Callable = None,
+        model: Optional[str] = None,
+        callback: Optional[Callable] = None,
         cb_kwargs: Dict[str, Any] = {},
         **model_options,
     ) -> None:
@@ -861,8 +903,8 @@ class Scenario(TimeSeries):
         self,
         path: PathLike,
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Dict[str, Union[Sequence[str], "Scenario"]] = None,
-        max_row: int = None,
+        filters: Optional[Dict[str, Union[Sequence[str], "Scenario"]]] = None,
+        max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.
 
@@ -870,7 +912,7 @@ class Scenario(TimeSeries):
         ----------
         path : os.PathLike
             File to write. Must have suffix :file:`.xlsx`.
-        items : ItemType, optional
+        items : .ItemType, optional
             Types of items to write. Either :attr:`.SET` | :attr:`.PAR` (i.e. only sets
             and parameters), or :attr:`.MODEL` (also variables and equations, i.e.
             model solution data).

@@ -25,6 +25,8 @@ All changes
   - Unit :py:`""` cannot be added with the Oracle driver (:issue:`425`).
   - Certain items (variables) could not be initialized when providing :py:`idx_sets=...`, even if those match the sets fixed by the underlying Java code.
     With this fix, a matching list is silently accepted; a different list raises :class:`NotImplementedError`.
+  - When a :class:`.GAMSModel` is solved with an LP status of 5 (optimal, but with infeasibilities after unscaling), :class:`.JDBCBackend` would attempt to read the output GDX file and fail, leading to an uninformative error message (:issue:`98`).
+    Now :class:`.ModelError` is raised describing the situation.
 - Improved type hinting for static typing of code that uses :mod:`ixmp` (:issue:`465`, :pull:`500`).
 
 .. _v3.7.0:

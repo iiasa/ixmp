@@ -31,6 +31,9 @@ Model API
 
 .. currentmodule:: ixmp.model.base
 
+.. automodule:: ixmp.model.base
+   :members: ModelError
+
 .. autoclass:: ixmp.model.base.Model
    :members: name, __init__, run, initialize, initialize_items, enforce
 

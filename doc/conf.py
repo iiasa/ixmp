@@ -3,8 +3,9 @@
 # This file only contains a selection of the most common options. For a full list see
 # the documentation: https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# Import so that autodoc can find code
-import ixmp
+import importlib.metadata
+from pathlib import Path
+from typing import Optional
 
 # -- Project information ---------------------------------------------------------------
 
@@ -44,7 +45,7 @@ nitpicky = True
 
 # A string of reStructuredText that will be included at the beginning of every source
 # file that is read.
-version = ixmp.__version__
+version = importlib.metadata.version("ixmp")
 rst_prolog = rf"""
 .. role:: py(code)
    :language: python
@@ -85,9 +86,25 @@ extlinks = {
 
 # -- Options for sphinx.ext.intersphinx ------------------------------------------------
 
+
+def local_inv(name: str, *parts: str) -> Optional[str]:
+    """Construct the path to a local intersphinx inventory."""
+
+    from importlib.util import find_spec
+
+    spec = find_spec(name)
+    if spec is None:
+        return None
+
+    if 0 == len(parts):
+        parts = ("doc", "_build", "html")
+    assert spec.origin is not None
+    return str(Path(spec.origin).parents[1].joinpath(*parts, "objects.inv"))
+
+
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
-    "genno": ("https://genno.readthedocs.io/en/latest/", None),
+    "genno": ("https://genno.readthedocs.io/en/latest/", (local_inv("genno"), None)),
     "jpype": ("https://jpype.readthedocs.io/en/latest", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
     "message-ix-models": (

@@ -248,8 +248,6 @@ class GAMSModel(Model):
                 if "already exists" not in e.args[0]:
                     raise
 
-            self.scenario.remove_set(name, self.scenario.set(name))
-
             # Handle each identified package
             for package in self.record_version_packages:
                 try:
@@ -329,6 +327,10 @@ class GAMSModel(Model):
                 "GAMSModel requires a Backend that can write to GDX files, e.g. "
                 "JDBCBackend"
             )
+        else:
+            # Remove ixmp_version set entirely
+            with scenario.transact():
+                scenario.remove_set("ixmp_version")
 
         try:
             # Invoke GAMS

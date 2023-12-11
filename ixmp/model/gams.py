@@ -154,6 +154,10 @@ class GAMSModel(Model):
         Equations to be imported from the `out_file`. Default: all.
     var_list : list of str, optional
         Variables to be imported from the `out_file`. Default: all.
+    record_version_packages : list of str, optional
+        Python packages. The versions of these packages (according to
+        :func:`importlib.metadata.version`) are recorded in a special ``ixmp_version``
+        set in the solved :class:`.Scenario`. Default: :py:`["ixmp"]`
     """  # noqa: E501
 
     #: Model name.
@@ -174,6 +178,7 @@ class GAMSModel(Model):
         "var_list": None,
         "quiet": False,
         "use_temp_dir": True,
+        "record_version_packages": ["ixmp"],
     }
 
     def __init__(self, name_=None, **model_options):
@@ -230,6 +235,31 @@ class GAMSModel(Model):
             # Something like a Path; don't format it
             return value
 
+    def record_versions(self):
+        """Store version information as set elements to be written to GDX."""
+        from importlib.metadata import PackageNotFoundError, version
+
+        name = "ixmp_version"
+        with self.scenario.transact():
+            try:
+                # Initialize the set
+                self.scenario.init_set(name, ["*", "*"], ["package", "version"])
+            except ValueError as e:
+                if "already exists" not in e.args[0]:
+                    raise
+
+            self.scenario.remove_set(name, self.scenario.set(name))
+
+            # Handle each identified package
+            for package in self.record_version_packages:
+                try:
+                    # Retrieve the version; replace characters not supported by GAMS
+                    package_version = version(package).replace(".", "-")
+                except PackageNotFoundError:
+                    package_version = "(not installed)"  # Not installed
+                # Add to the set
+                self.scenario.add_set(name, (package, package_version))
+
     def remove_temp_dir(self, msg="after run()"):
         """Remove the temporary directory, if any."""
         try:
@@ -250,6 +280,9 @@ class GAMSModel(Model):
         """Execute the model."""
         # Store the scenario so its attributes can be referenced by format()
         self.scenario = scenario
+
+        # Record versions of packages listed in `record_version_packages`
+        self.record_versions()
 
         # Format or retrieve the model file option
         model_file = Path(self.format_option("model_file"))

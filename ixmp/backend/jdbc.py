@@ -952,7 +952,13 @@ class JDBCBackend(CachingBackend):
                 _raise_jexception(e)
 
     def delete_item(self, s, type, name):
-        getattr(self.jindex[s], f"remove{type.title()}")(name)
+        try:
+            getattr(self.jindex[s], f"remove{type.title()}")(name)
+        except jpype.JException as e:
+            if "There exists no" in e.args[0]:
+                raise KeyError(name)
+            else:
+                _raise_jexception(e)
         self.cache_invalidate(s, type, name)
 
     def item_index(self, s, name, sets_or_names):

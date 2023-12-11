@@ -604,7 +604,7 @@ class JDBCBackend(CachingBackend):
 
         ts, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
         if path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
-            if len(filters):
+            if len(filters):  # pragma: no cover
                 raise NotImplementedError("write to GDX with filters")
             elif not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("write to GDX requires a Scenario object")
@@ -957,7 +957,7 @@ class JDBCBackend(CachingBackend):
         except jpype.JException as e:
             if "There exists no" in e.args[0]:
                 raise KeyError(name)
-            else:
+            else:  # pragma: no cover
                 _raise_jexception(e)
         self.cache_invalidate(s, type, name)
 

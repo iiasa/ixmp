@@ -244,7 +244,9 @@ class GAMSModel(Model):
             try:
                 # Initialize the set
                 self.scenario.init_set(name, ["*", "*"], ["package", "version"])
-            except ValueError as e:
+            except ValueError as e:  # pragma: no cover
+                # NB this will only occur if the user directly creates the set; the one
+                #    created here is deleted in run()
                 if "already exists" not in e.args[0]:
                     raise
 

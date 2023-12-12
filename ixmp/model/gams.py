@@ -193,16 +193,19 @@ class GAMSModel(Model):
             # Not set; use `quiet` to determine the value
             self.gams_args.append(f"LogOption={'2' if self.quiet else '4'}")
 
-    def format_exception(self, exc, model_file, backend_class):
+    def format_exception(
+        self, exc: Exception, model_file: Path, backend_class: type
+    ) -> Exception:
         """Format a user-friendly exception when GAMS errors."""
         lst_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".lst")
         lp_5 = "LP status (5): optimal with unscaled infeasibilities"
 
-        if getattr(exc, "returncode", 0) > 0:
+        rc = getattr(exc, "returncode", 0)
+        if rc > 0:
             # Convert a Windows return code >256 to its POSIX equivalent
             msg = [
-                f"GAMS errored with return code {exc.returncode}:",
-                f"    {RETURN_CODE[exc.returncode % 256]}",
+                f"GAMS errored with return code {rc}:",
+                f"    {RETURN_CODE[rc % 256]}",
             ]
         elif lst_file.exists() and lp_5 in lst_file.read_text():  # pragma: no cover
             msg = [
@@ -210,6 +213,8 @@ class GAMSModel(Model):
                 f"    {lp_5}",
                 f"and {backend_class.__name__} could not read the solution.",
             ]
+        else:
+            return exc  # Other exception
 
         # Add a reference to the listing file, if it exists
         msg.extend(

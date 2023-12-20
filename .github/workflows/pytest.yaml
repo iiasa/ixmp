@@ -93,8 +93,8 @@ jobs:
       shell: bash
 
     - name: Work around https://bugs.launchpad.net/lxml/+bug/2035206
-      if: matrix.python-version == '3.8'
-      run: pip install "lxml != 4.9.3"
+      if: matrix.python-version == '3.8' && matrix.os == 'macos-latest'
+      run: pip install "lxml == 4.9.2"
 
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]

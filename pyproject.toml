@@ -78,11 +78,6 @@ exclude_also = [
 ]
 omit = ["ixmp/util/sphinx_linkcode_github.py"]
 
-[tool.isort]
-profile = "black"
-
-[tool.mypy]
-
 [[tool.mypy.overrides]]
 # Packages/modules for which no type hints are available.
 module = [

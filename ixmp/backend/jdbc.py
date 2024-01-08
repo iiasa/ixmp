@@ -127,8 +127,7 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
     # Try to re-raise as a ValueError for bad model or scenario name
     arg = exc.args[0] if isinstance(exc.args[0], str) else ""
-    match = re.search(r"getting '([^']*)' in table '([^']*)'", arg)
-    if match:
+    if match := re.search(r"getting '([^']*)' in table '([^']*)'", arg):
         param = match.group(2).lower()
         if param in {"model", "scenario"}:
             raise ValueError(f"{param}={repr(match.group(1))}") from None

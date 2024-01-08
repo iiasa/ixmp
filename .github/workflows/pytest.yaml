@@ -104,10 +104,6 @@ jobs:
         # commented: use with "pandas-version" in the matrix, above
         # pip install --upgrade pandas${{ matrix.pandas-version }}
 
-    - name: TEMPORARY Work around iiasa/ixmp#463
-      if: matrix.python-version != '3.11'
-      run: pip install "JPype1 != 1.4.1"
-
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))

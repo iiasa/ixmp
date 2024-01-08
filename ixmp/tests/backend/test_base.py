@@ -69,7 +69,9 @@ class BE2(Backend):
 def test_class():
     # An incomplete Backend subclass can't be instantiated
     with pytest.raises(
-        TypeError, match="Can't instantiate abstract class BE1 with abstract methods"
+        TypeError,
+        match="Can't instantiate abstract class BE1 with(out an implementation for)? "
+        "abstract methods",
     ):
         BE1()
 

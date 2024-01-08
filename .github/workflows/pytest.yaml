@@ -28,8 +28,8 @@ jobs:
         - "3.8"  # Earliest version supported by ixmp
         - "3.9"
         - "3.10"
-        - "3.11" # Latest supported by ixmp
-        # - "3.12"  # Pending JPype support; see iiasa/ixmp#501
+        - "3.11"
+        - "3.12"  # Latest supported by ixmp
 
         # commented: force a specific version of pandas, for e.g. pre-release
         # testing

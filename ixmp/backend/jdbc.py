@@ -127,8 +127,7 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
     # Try to re-raise as a ValueError for bad model or scenario name
     arg = exc.args[0] if isinstance(exc.args[0], str) else ""
-    match = re.search(r"getting '([^']*)' in table '([^']*)'", arg)
-    if match:
+    if match := re.search(r"getting '([^']*)' in table '([^']*)'", arg):
         param = match.group(2).lower()
         if param in {"model", "scenario"}:
             raise ValueError(f"{param}={repr(match.group(1))}") from None
@@ -301,7 +300,7 @@ class JDBCBackend(CachingBackend):
                 f"{e}\nCheck that dependencies of ixmp.jar are "
                 f"included in {Path(__file__).parents[2] / 'lib'}"
             )
-        except jpype.JException as e:  # pragma: no cover
+        except java.Exception as e:  # pragma: no cover
             # Handle Java exceptions
             jclass = e.__class__.__name__
             if jclass.endswith("HikariPool.PoolInitializationException"):
@@ -708,10 +707,18 @@ class JDBCBackend(CachingBackend):
         # either getTimeSeries or getScenario
         method = getattr(self.jobj, "get" + ts.__class__.__name__)
 
-        # Re-raise as a ValueError for bad model or scenario name, or other
-        with _handle_jexception():
+        # Re-raise as a ValueError for bad model or scenario name, or other with
+        # with _handle_jexception():
+        try:
             # Either the 2- or 3- argument form, depending on args
             jobj = method(*args)
+        except SystemError:
+            # JPype 1.5.0 with Python 3.12: "<built-in method __subclasscheck__ of
+            # _jpype._JClass object at …> returned a result with an exception set"
+            # At least transmute to a ValueError
+            raise ValueError("model, scenario, or version not found")
+        except BaseException as e:
+            _raise_jexception(e)
 
         self._index_and_set_attrs(jobj, ts)
 
@@ -938,7 +945,7 @@ class JDBCBackend(CachingBackend):
         # by Backend, so don't return here
         try:
             func(name, idx_sets, idx_names)
-        except jpype.JException as e:
+        except java.Exception as e:
             if "already exists" in e.args[0]:
                 raise ValueError(f"{repr(name)} already exists")
             else:

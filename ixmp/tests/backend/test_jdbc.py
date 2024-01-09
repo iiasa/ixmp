@@ -2,6 +2,7 @@ import gc
 import logging
 import os
 import platform
+import sys
 from sys import getrefcount
 from typing import Tuple
 
@@ -370,6 +371,12 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
+@pytest.mark.xfail(
+    condition=sys.version_info.minor <= 10,
+    raises=AssertionError,
+    # See also test_base.TestCachingBackend.test_del_ts
+    reason="https://github.com/iiasa/ixmp/issues/463",
+)
 def test_del_ts():
     mp = ixmp.Platform(
         backend="jdbc",

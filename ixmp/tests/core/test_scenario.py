@@ -1,4 +1,5 @@
 import re
+import sys
 
 import numpy.testing as npt
 import pandas as pd
@@ -93,10 +94,15 @@ class TestScenario:
         with pytest.raises(Exception, match=expected):
             scen, mp = ixmp.Scenario.from_url(url + "#10000", errors="raise")
 
-        # Giving an invalid scenario with errors='warn' raises an exception
+        # Giving an invalid scenario with errors='warn' causes a message to be logged
         msg = (
-            "ValueError: scenario='Hitchhikerfoo'\n"
-            f"when loading Scenario from url: {repr(url + 'foo')}"
+            "ValueError: "
+            + (
+                "scenario='Hitchhikerfoo'"
+                if sys.version_info.minor != 12
+                else "model, scenario, or version not found"
+            )
+            + f"\nwhen loading Scenario from url: {repr(url + 'foo')}"
         )
         with assert_logs(caplog, msg):
             scen, mp = ixmp.Scenario.from_url(url + "foo")

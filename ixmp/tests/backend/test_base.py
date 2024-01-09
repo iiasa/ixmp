@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import pytest
@@ -69,7 +70,9 @@ class BE2(Backend):
 def test_class():
     # An incomplete Backend subclass can't be instantiated
     with pytest.raises(
-        TypeError, match="Can't instantiate abstract class BE1 with abstract methods"
+        TypeError,
+        match="Can't instantiate abstract class BE1 with(out an implementation for)? "
+        "abstract methods",
     ):
         BE1()
 
@@ -144,6 +147,12 @@ class TestCachingBackend:
 
         # Cache size has increased
         assert cache_size_pre + 1 == len(backend._cache)
+
+        # JPype ≥ 1.4.1 with Python ≤ 3.10 produces danging traceback/frame references
+        # to `s` that prevent it being GC'd at "del s" below. See
+        # https://github.com/iiasa/ixmp/issues/463 and test_jdbc.test_del_ts
+        if sys.version_info.minor <= 10:
+            s.__del__()  # Force deletion of cached objects associated with `s`
 
         # Delete the object; associated cache is freed
         del s

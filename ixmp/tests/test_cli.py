@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -403,7 +404,12 @@ def test_solve(ixmp_cli, test_mp):
     ]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 1, result.output
-    assert "Error: model='non-existing'" in result.output
+    exp = (
+        "='non-existing'"
+        if sys.version_info.minor != 12
+        else ", scenario, or version not found"
+    )
+    assert f"Error: model{exp}" in result.output
 
     result = ixmp_cli.invoke([f"--url=ixmp://{test_mp.name}/foo/bar", "solve"])
     assert UsageError.exit_code == result.exit_code, result.output

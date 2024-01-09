@@ -16,7 +16,9 @@ def test_base_model():
         pass
 
     with pytest.raises(
-        TypeError, match="Can't instantiate abstract class M1 " "with abstract methods"
+        TypeError,
+        match="Can't instantiate abstract class M1 with(out an implementation for)? "
+        "abstract methods",
     ):
         M1()
 

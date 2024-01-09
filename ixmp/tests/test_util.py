@@ -92,17 +92,17 @@ def test_diff_data(test_mp):
     # Expected results
     exp_b = pd.DataFrame(
         [
-            ["chicago", 300.0, "cases", np.NaN, None, "left_only"],
-            ["new-york", np.NaN, None, 325.0, "cases", "right_only"],
+            ["chicago", 300.0, "cases", np.nan, np.nan, "left_only"],
+            ["new-york", np.nan, np.nan, 325.0, "cases", "right_only"],
             ["topeka", 275.0, "cases", 275.0, "cases", "both"],
         ],
         columns="j value_a unit_a value_b unit_b _merge".split(),
     )
     exp_d = pd.DataFrame(
         [
-            ["san-diego", "chicago", np.NaN, None, 1.8, "km", "right_only"],
-            ["san-diego", "new-york", np.NaN, None, 2.5, "km", "right_only"],
-            ["san-diego", "topeka", np.NaN, None, 1.4, "km", "right_only"],
+            ["san-diego", "chicago", np.nan, np.nan, 1.8, "km", "right_only"],
+            ["san-diego", "new-york", np.nan, np.nan, 2.5, "km", "right_only"],
+            ["san-diego", "topeka", np.nan, np.nan, 1.4, "km", "right_only"],
             ["seattle", "chicago", 1.7, "km", 123.4, "km", "both"],
             ["seattle", "new-york", 2.5, "km", 123.4, "km", "both"],
             ["seattle", "topeka", 1.8, "km", 123.4, "km", "both"],

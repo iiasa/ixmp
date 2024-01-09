@@ -6,7 +6,7 @@ import tempfile
 from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, run
-from typing import Any, MutableMapping
+from typing import Any, MutableMapping, Optional
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError
@@ -15,8 +15,8 @@ from ixmp.util import as_str_list
 log = logging.getLogger(__name__)
 
 
-def gams_version():
-    """Return the GAMS version as a string, e.g. '24.7.4'."""
+def gams_version() -> Optional[str]:
+    """Return the GAMS version as a string, for instance "24.7.4"."""
     # NB check_output(['gams'], ...) does not work, because GAMS writes directly to the
     #    console instead of to stdout. check_output(['gams', '-LogOption=3'], ...) does
     #    not work, because GAMS does not accept options without an input file to
@@ -44,8 +44,10 @@ def gams_version():
     tmp_dir.rmdir()
 
     # Find and return the version string
-    pattern = r"^GAMS ([\d\.]+)\s*Copyright"
-    return re.search(pattern, output, re.MULTILINE).groups()[0]
+    if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
+        return match.group(0)
+    else:
+        return None
 
 
 #: Return codes used by GAMS, from
@@ -93,28 +95,26 @@ RETURN_CODE = {key % 256: value for key, value in RETURN_CODE.items()}
 
 
 class GAMSModel(Model):
-    """General class for ixmp models using `GAMS <https://gams.com/>`_.
+    """Generic base class for :mod:`ixmp` models using `GAMS <https://gams.com>`_.
 
-    GAMSModel solves a Scenario using the following steps:
+    GAMSModel solves a :class:`.Scenario` using the following steps:
 
     1. All Scenario data is written to a model input file in GDX format.
-    2. A GAMS program is run to perform calculations, producing output in a
-       GDX file.
-    3. Output, or solution, data is read from the GDX file and stored in the
-       Scenario.
+    2. A GAMS program is run to perform calculations, producing output in a GDX file.
+    3. Output, or solution, data is read from the GDX file and stored in the Scenario.
 
-    When created and :meth:`run`, GAMSModel constructs file paths and other
-    necessary values using format strings. The :attr:`defaults` may be
-    overridden by the keyword arguments to the constructor:
+    When created and :meth:`run`, GAMSModel constructs file paths and other necessary
+    values using format strings. The :attr:`defaults` may be overridden by the keyword
+    arguments to the constructor:
 
     Other parameters
     ----------------
     name : str, optional
-        Override the :attr:`name` attribute to provide the `model_name` for
-        format strings.
+        Override the :attr:`name` attribute to provide the `model_name` for format
+        strings.
     model_file : str, optional
-        Path to GAMS file, including '.gms' extension. Default: ``'{model_name}.gms'``
-        in the current directory.
+        Path to GAMS file, including :file:`.gms` extension. Default:
+        :file:`{model_name}.gms` in the current directory.
     case : str, optional
         Run or case identifier to use in GDX file names. Default:
         ``'{scenario.model}_{scenario.name}'``, where `scenario` is the
@@ -138,12 +138,12 @@ class GAMSModel(Model):
         control solver options or behaviour. See the `GAMS Documentation <https://www.gams.com/latest/docs/UG_GamsCall.html#UG_GamsCall_ListOfCommandLineParameters>`_.
         For example:
 
-        - ``["iterLim=10"]`` limits the solver to 10 iterations.
+        - :py:`gams_args=["iterLim=10"]` limits the solver to 10 iterations.
     quiet: bool, optional
-        If :obj:`True`, add "LogOption=2" to `gams_args` to redirect most console
-        output during the model run to the log file. Default :obj:`False`, so
-        "LogOption=4" is added. Any "LogOption" value provided explicitly via
-        `gams_args` takes precedence.
+        If :obj:`True`, add "LogOption=2" to `gams_args` to redirect most console output
+        during the model run to the log file. Default :obj:`False`, so "LogOption=4" is
+        added. Any "LogOption" value provided explicitly via `gams_args` takes
+        precedence.
     check_solution : bool, optional
         If :obj:`True`, raise an exception if the GAMS solver did not reach optimality.
         (Only for MESSAGE-scheme Scenarios.)
@@ -155,9 +155,8 @@ class GAMSModel(Model):
     var_list : list of str, optional
         Variables to be imported from the `out_file`. Default: all.
     record_version_packages : list of str, optional
-        Python packages. The versions of these packages (according to
-        :func:`importlib.metadata.version`) are recorded in a special ``ixmp_version``
-        set in the solved :class:`.Scenario`. Default: :py:`["ixmp"]`
+        Names of Python packages to record versions. Default: :py:`["ixmp"]`.
+        See :meth:`record_versions`.
     """  # noqa: E501
 
     #: Model name.
@@ -200,8 +199,7 @@ class GAMSModel(Model):
         lst_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".lst")
         lp_5 = "LP status (5): optimal with unscaled infeasibilities"
 
-        rc = getattr(exc, "returncode", 0)
-        if rc > 0:
+        if rc := getattr(exc, "returncode", 0):
             # Convert a Windows return code >256 to its POSIX equivalent
             msg = [
                 f"GAMS errored with return code {rc}:",
@@ -241,7 +239,13 @@ class GAMSModel(Model):
             return value
 
     def record_versions(self):
-        """Store version information as set elements to be written to GDX."""
+        """Store Python package versions as set elements to be written to GDX.
+
+        The values are stored in a 2-dimensional set named ``ixmp_version``, where the
+        first element is the package name, and the second is its version according to
+        :func:`importlib.metadata.version`). If the package is not installed, the
+        string "(not installed)" is stored.
+        """
         from importlib.metadata import PackageNotFoundError, version
 
         name = "ixmp_version"
@@ -282,7 +286,18 @@ class GAMSModel(Model):
         self.remove_temp_dir("at GAMSModel teardown")
 
     def run(self, scenario):
-        """Execute the model."""
+        """Execute the model.
+
+        Among other steps:
+
+        - :meth:`record_versions` is called.
+        - Data is written to a GDX file using the associated :class:`.Backend`.
+        - The ``ixmp_version`` set created by :meth:`record_versions` is deleted.
+        - :program:`gams` is invoked to execute the model file.
+        - If :program:`gams` completes successfully:
+
+          - GAMS output/model solution data is read from a GDX file.
+        """
         # Store the scenario so its attributes can be referenced by format()
         self.scenario = scenario
 

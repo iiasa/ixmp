@@ -17,6 +17,8 @@ All changes
 - :mod:`ixmp` is tested and compatible with `Python 3.12 <https://www.python.org/downloads/release/python-3120/>`__ (:pull:`504`).
 - Support for Python 3.7 is dropped (:pull:`492`), as it has reached end-of-life.
 - Rename :mod:`ixmp.report` and :mod:`ixmp.util` (:pull:`500`).
+- New option :py:`record_version_packages` to :class:`.GAMSModel` (:pull:`502`).
+  Versions of the named Python packages are recorded in a special set in GDX-format input and output files to help associate these files with generating code.
 - New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.remove_ts` (:pull:`500`).
 - New CLI command :program:`ixmp platform copy` and :doc:`CLI documentation <cli>` (:pull:`500`).
 - New argument :py:`indexed_by=...` to :meth:`.Scenario.items` (thus :meth:`.Scenario.par_list` and similar methods) to iterate over (or list) only items that are indexed by a particular set (:issue:`402`, :pull:`500`).

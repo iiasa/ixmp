@@ -574,7 +574,7 @@ class Scenario(TimeSeries):
                 # Multiple values
                 values = value
 
-            data = pd.DataFrame(zip(keys, values), columns=["key", "value"])
+            data = pd.DataFrame(zip_longest(keys, values), columns=["key", "value"])
             if data.isna().any(axis=None):
                 raise ValueError("Length mismatch between keys and values")
 

@@ -14,7 +14,8 @@ Code that imports from the old locations will continue to work, but will raise :
 All changes
 -----------
 
-- Support for Python 3.7 is dropped (:pull:`492`).
+- :mod:`ixmp` is tested and compatible with `Python 3.12 <https://www.python.org/downloads/release/python-3120/>`__ (:pull:`504`).
+- Support for Python 3.7 is dropped (:pull:`492`), as it has reached end-of-life.
 - Rename :mod:`ixmp.report` and :mod:`ixmp.util` (:pull:`500`).
 - New reporting operators :func:`.from_url`, :func:`.get_ts`, and :func:`.remove_ts` (:pull:`500`).
 - New CLI command :program:`ixmp platform copy` and :doc:`CLI documentation <cli>` (:pull:`500`).
@@ -28,7 +29,7 @@ All changes
   - When a :class:`.GAMSModel` is solved with an LP status of 5 (optimal, but with infeasibilities after unscaling), :class:`.JDBCBackend` would attempt to read the output GDX file and fail, leading to an uninformative error message (:issue:`98`).
     Now :class:`.ModelError` is raised describing the situation.
 - Improved type hinting for static typing of code that uses :mod:`ixmp` (:issue:`465`, :pull:`500`).
-- :mod:`ixmp` requires on JPype1 1.4.0 or earlier, for Python 3.10 and earlier (:pull:`504`).
+- :mod:`ixmp` requires JPype1 1.4.0 or earlier, for Python 3.10 and earlier (:pull:`504`).
   With JPype1 1.4.1 and later, memory management in :class:`.CachingBackend` may not function as intended (:issue:`463`), which could lead to high memory use where many, large :class:`.Scenario` objects are created and used in a single Python program.
   (For Python 3.11 and later, any version of JPype1 from the prior minimum (1.2.1) to the latest is supported.)
 

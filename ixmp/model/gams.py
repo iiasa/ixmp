@@ -46,7 +46,7 @@ def gams_version() -> Optional[str]:
     # Find and return the version string
     if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
         return match.group(0)
-    else:
+    else:  # pragma: no cover
         return None
 
 
@@ -211,7 +211,7 @@ class GAMSModel(Model):
                 f"    {lp_5}",
                 f"and {backend_class.__name__} could not read the solution.",
             ]
-        else:
+        else:  # pragma: no cover
             return exc  # Other exception
 
         # Add a reference to the listing file, if it exists

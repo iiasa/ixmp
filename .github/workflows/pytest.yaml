@@ -117,7 +117,13 @@ jobs:
       shell: Rscript {0}
 
     - name: Run test suite using pytest
-      run: pytest ixmp -m "not performance" --verbose -rA --cov-report=xml --color=yes
+      run: |
+        pytest ixmp \
+          -m "not performance" \
+          --color=yes -rA --verbose \
+          --cov-report=xml \
+          --numprocesses=auto
+      shell: bash
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v3

@@ -67,6 +67,7 @@ tests = [
   "pytest-benchmark",
   "pytest-cov",
   "pytest-rerunfailures",
+  "pytest-xdist",
 ]
 
 [project.scripts]

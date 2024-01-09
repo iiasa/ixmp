@@ -10,7 +10,7 @@ from typing import Optional
 # -- Project information ---------------------------------------------------------------
 
 project = "ixmp"
-copyright = "2017–2023, IIASA Energy, Climate, and Environment (ECE) program"
+copyright = "2017–2024, IIASA Energy, Climate, and Environment (ECE) program"
 author = "ixmp Developers"
 
 

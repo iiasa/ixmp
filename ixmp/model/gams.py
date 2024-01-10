@@ -45,7 +45,7 @@ def gams_version() -> Optional[str]:
 
     # Find and return the version string
     if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
-        return match.group(0)
+        return match.group(1)
     else:  # pragma: no cover
         return None
 

@@ -129,7 +129,7 @@ def data_for_quantity(
         # First rename, then set index
         data = data.rename(columns=common.RENAME_DIMS).set_index(dims)
 
-    # Convert to a Quantity, assign attrbutes and name
+    # Convert to a Quantity, assign attributes and name
     qty = Quantity(
         data[column], name=name + ("-margin" if column == "mrg" else ""), attrs=attrs
     )

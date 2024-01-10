@@ -23,6 +23,8 @@ Sets
     j   markets
 ;
 
+Set ixmp_version(*,*) "Versions of Python packages";
+
 Parameters
     a(i)   capacity of plant i in cases
     b(j)   demand at market j in cases
@@ -45,6 +47,7 @@ $IF NOT set out $SETGLOBAL out 'ix_transport_results.gdx'
 
 $GDXIN '%in%'
 $LOAD i, j, a, b, d, f
+$LOAD ixmp_version
 $GDXIN
 
 Parameter c(i,j)  transport cost in thousands of dollars per case ;

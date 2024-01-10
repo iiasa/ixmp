@@ -55,7 +55,7 @@ The following top-level objects from :mod:`genno` may also be imported from
       from_scenario
       set_filters
 
-   The Computer class provides the following methods:
+   The Reporter class inherits from Computer the following methods:
 
    .. currentmodule:: genno
    .. autosummary::
@@ -74,7 +74,7 @@ The following top-level objects from :mod:`genno` may also be imported from
       ~Computer.visualize
       ~Computer.write
 
-   The following methods are deprecated; equivalent or better functionality is available through :meth:`.Computer.add`.
+   The following methods are deprecated; equivalent or better functionality is available through :meth:`Reporter.add <genno.Computer.add>`.
    See the genno documentation for each method for suggested changes/migrations.
 
    .. autosummary::
@@ -132,6 +132,10 @@ Configuration
    The only difference from :func:`genno.config.units` is that this handler keeps the configuration values stored in ``Reporter.graph["config"]``.
    This is so that :func:`.data_for_quantity` can make use of ``["units"]["apply"]``
 
+.. automethod:: ixmp.report.configure
+
+   This is the same as :func:`genno.configure`.
+
 
 Operators
 =========
@@ -186,7 +190,7 @@ Utilities
 .. autodata:: RENAME_DIMS
 
    User code **should** avoid directly manipulating :data:`RENAME_DIMS`.
-   Instead, call :func:`.configure`:
+   Instead, call :func:`~genno.configure`:
 
    .. code-block:: python
 

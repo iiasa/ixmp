@@ -1,5 +1,7 @@
 import re
 import sys
+from pathlib import Path
+from shutil import copyfile
 
 import numpy.testing as npt
 import pandas as pd
@@ -434,6 +436,40 @@ class TestScenario:
 
         # Succeeds with add_units=True
         s.read_excel(tmp_path, add_units=True, init_items=True)
+
+    def test_solve(self, tmp_path, scen):
+        from subprocess import run
+
+        # Copy the dantzig model file into the `tmp_path`
+        model_file = tmp_path.joinpath("dantzig.gms")
+        copyfile(
+            Path(ixmp.__file__).parent.joinpath("model", "dantzig.gms"), model_file
+        )
+
+        scen.remove_solution()
+
+        # Scenario solves successfully
+        scen.solve(
+            model_file=model_file,
+            # When this is True, GAMSModel automatically cleans up the temporary
+            # directory in which the model runs, including the I/O GDX files. Leave
+            # them in `tmp_path` so they can be inspected
+            use_temp_dir=False,
+            # Include the name of a non-existent/not installed package: this should be
+            # handled without triggering an error.
+            record_version_packages=("ixmp", "notapackage"),
+        )
+
+        # Check both the GDX input and output files
+        for part in "in", "out":
+            path = str(model_file.with_name(f"dantzig_{part}.gdx"))
+
+            # ixmp_version is present in the GDX file
+            result = run(["gdxdump", path, "Symb=ixmp_version"], capture_output=True)
+
+            # ixmp_version contains the expected contents
+            assert "'ixmp'.'3-" in result.stdout.decode()
+            assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
     def test_meta(self, mp, test_dict):

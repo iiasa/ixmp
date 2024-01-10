@@ -103,6 +103,9 @@ class GitHubLinker:
 
         Records the file and source line numbers containing `obj`.
         """
+        # TODO Handle wrapper_descriptor, e.g.
+        #      message_ix_models.tests.model.test_bare.TestConfig.__init__
+
         # Identify the object for which to locate code
         if isinstance(obj, property):
             # Reference the getter method

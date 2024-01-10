@@ -172,6 +172,11 @@ class TestJDBCBackend:
         # Initialize the item; succeeds
         be.init_item(s, type="var", name=name, idx_sets=idx_sets, idx_names=idx_sets)
 
+    def test_delete_item(self, mp, be):
+        s = ixmp.Scenario(mp, "model name", "scenario name", version="new")
+        with pytest.raises(KeyError):
+            be.delete_item(s, "set", "foo")
+
     def test_set_data_inf(self, mp):
         """:meth:`JDBCBackend.set_data` errors on :data:`numpy.inf` values."""
         # Make `mp` think it is connected to an Oracle database

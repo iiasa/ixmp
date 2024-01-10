@@ -98,8 +98,12 @@ def test_model_initialize(test_mp, caplog):
 
 
 def test_gams_version():
-    # Returns a version string like X.Y.Z
-    assert len(gams_version().split(".")) == 3
+    parts = gams_version().split(".")
+
+    # Returns a version string like X.Y.Z, in which each part is a number (no leading or
+    # trailing text)
+    assert 3 == len(parts)
+    assert [int(p) for p in parts]
 
 
 class TestGAMSModel:

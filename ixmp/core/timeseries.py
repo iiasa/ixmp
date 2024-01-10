@@ -277,7 +277,7 @@ class TimeSeries:
         Examples
         --------
         To form a complete URL (e.g. to use with :meth:`.from_url`), use a configured
-        :class:`Platform` name:
+        :class:`.ixmp.Platform` name:
 
         >>> platform_name = "my-ixmp-platform"
         >>> mp = Platform(platform_name)

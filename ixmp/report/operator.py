@@ -150,7 +150,7 @@ _FROM_URL_REF: Set[Any] = set()
 
 
 def from_url(url: str, cls=TimeSeries) -> "TimeSeries":
-    """Return a :class:`.TimeSeries` or subclass instance, given its `url`.
+    """Return a :class:`.ixmp.TimeSeries` or subclass instance, given its `url`.
 
     Parameters
     ----------

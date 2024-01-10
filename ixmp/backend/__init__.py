@@ -54,7 +54,7 @@ BACKENDS: Dict[str, Type] = {}
 
 
 class ItemType(IntFlag):
-    """Type of data items in :class:`.TimeSeries` and :class:`.Scenario`."""
+    """Type of data items in :class:`.ixmp.TimeSeries` and :class:`.ixmp.Scenario`."""
 
     # NB the docstring comments ('#:') are placed as they are to ensure the
     #    output is readable.

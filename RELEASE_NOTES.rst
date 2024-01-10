@@ -5,9 +5,9 @@ Migration notes
 ---------------
 Update code that imports from the following modules:
 
-- :py:`ixmp.reporting` → use :py:`ixmp.report`.
-- :py:`ixmp.reporting.computations` → use :py:`ixmp.report.operator`.
-- :py:`ixmp.utils` → use :py:`ixmp.util`.
+- :py:`ixmp.reporting` → use :mod:`ixmp.report`.
+- :py:`ixmp.reporting.computations` → use :mod:`ixmp.report.operator`.
+- :py:`ixmp.utils` → use :mod:`ixmp.util`.
 
 Code that imports from the old locations will continue to work, but will raise :class:`DeprecationWarning`.
 

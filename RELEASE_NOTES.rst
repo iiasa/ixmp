@@ -1,8 +1,10 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- To aid debugging when execution fails, :class:`.GAMSModel` also displays the path to the GAMS log file (:pull:`513`).
 
 .. _v3.8.0:
 

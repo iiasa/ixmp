@@ -196,6 +196,7 @@ class GAMSModel(Model):
         self, exc: Exception, model_file: Path, backend_class: type
     ) -> Exception:
         """Format a user-friendly exception when GAMS errors."""
+        log_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".log")
         lst_file = Path(self.cwd).joinpath(model_file.name).with_suffix(".lst")
         lp_5 = "LP status (5): optimal with unscaled infeasibilities"
 
@@ -214,10 +215,11 @@ class GAMSModel(Model):
         else:  # pragma: no cover
             return exc  # Other exception
 
-        # Add a reference to the listing file, if it exists
+        # Add a reference to the listing and log files, if they exist
         msg.extend(
             ["", "For details, see the terminal output above, plus:"]
             + ([f"Listing   : {lst_file}"] if lst_file.exists() else [])
+            + ([f"Log file  : {log_file}"] if log_file.exists() else [])
             + [f"Input data: {self.in_file}"]
         )
 

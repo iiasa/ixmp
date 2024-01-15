@@ -144,7 +144,7 @@ class TestGAMSModel:
         # Expected paths for error message
         paths = map(
             lambda name: re.escape(str(test_data_path.joinpath(name))),
-            ["_abort.lst", "default_in.gdx"],
+            ["_abort.lst", "_abort.log", "default_in.gdx"],
         )
 
         with pytest.raises(
@@ -154,8 +154,7 @@ class TestGAMSModel:
 
 For details, see the terminal output above, plus:
 Listing   : {}
-Input data: {}""".format(
-                *paths
-            ),
+Log file  : {}
+Input data: {}""".format(*paths),
         ):
             s.solve(model_file=test_data_path / "_abort.gms", use_temp_dir=False)

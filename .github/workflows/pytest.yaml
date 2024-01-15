@@ -117,12 +117,13 @@ jobs:
       shell: Rscript {0}
 
     - name: Run test suite using pytest
+    # FIXME: Use --numprocesses=auto once flaky tests are fixed
       run: |
         pytest ixmp \
           -m "not performance" \
           --color=yes -rA --verbose \
           --cov-report=xml \
-          --numprocesses=auto
+          --numprocesses=1
       shell: bash
 
     - name: Upload test coverage to Codecov.io

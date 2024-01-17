@@ -32,7 +32,7 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
   "click",
-  "genno >= 1.16",
+  "genno >= 1.20",
   "JPype1 >= 1.2.1",
   "JPype1 <= 1.4.0; python_version < '3.11'",
   "openpyxl",

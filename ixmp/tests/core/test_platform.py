@@ -58,6 +58,10 @@ class TestPlatform:
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
 
+    def test_scenario_list(self, mp):
+        scenario = mp.scenario_list()
+        assert isinstance(scenario, pd.DataFrame)
+
 
 @pytest.fixture
 def log_level_mp(test_mp):

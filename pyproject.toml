@@ -57,10 +57,11 @@ docs = [
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]
+ixmp4 = ["ixmp4"]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
-  "ixmp[report,tutorial]",
+  "ixmp[ixmp4,report,tutorial]",
   "memory_profiler",
   "nbclient >= 0.5",
   "pytest >= 5",

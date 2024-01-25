@@ -3,7 +3,7 @@
 import logging
 import re
 from sys import getrefcount
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -20,6 +20,17 @@ if TYPE_CHECKING:
 
 
 class TestPlatform:
+    @pytest.fixture(params=list(ixmp.BACKENDS))
+    def mp(self, request, test_mp) -> Generator[ixmp.Platform, None, None]:
+        """Fixture that yields 2 different platforms: one JDBC-backed, one ixmp4."""
+        backend = request.param
+
+        if backend == "jdbc":
+            yield test_mp
+        elif backend == "ixmp4":
+            # TODO Use a fixture similar to test_mp (with same contents) backed by ixmp4
+            yield ixmp.Platform(backend="ixmp4")
+
     def test_init0(self):
         with pytest.raises(
             ValueError,

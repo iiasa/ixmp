@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 class TestPlatform:
     def test_init(self):
         with pytest.raises(
-            ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
+            ValueError,
+            match=re.escape("backend class 'foo' not among ['ixmp4', 'jdbc']"),
         ):
             ixmp.Platform(backend="foo")
 

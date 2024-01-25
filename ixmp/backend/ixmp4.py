@@ -19,6 +19,8 @@ class IXMP4Backend(CachingBackend):
 
         # Add an ixmp4.Platform using ixmp4's own configuration code
         # TODO Move this to a test fixture
+        # NB ixmp.tests.conftest.test_sqlite_mp exists, but is not importable (missing
+        #    __init__.py)
         import ixmp4.conf
 
         dsn = "sqlite:///:memory:"
@@ -29,6 +31,15 @@ class IXMP4Backend(CachingBackend):
 
         # Instantiate and store
         self._platform = ixmp4.Platform(name)
+
+    def get_scenarios(self, default, model, scenario):
+        # Current fails with:
+        # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: run
+        # [SQL: SELECT DISTINCT run.model__id, run.scenario__id, run.version,
+        # run.is_default, run.id
+        # FROM run
+        # WHERE run.is_default = 1 ORDER BY run.id ASC]
+        return self._platform.runs.list()
 
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):
@@ -55,7 +66,6 @@ class IXMP4Backend(CachingBackend):
     get_meta = _ni
     get_model_names = _ni
     get_nodes = _ni
-    get_scenarios = _ni
     get_scenario_names = _ni
     get_timeslices = _ni
     get_units = _ni

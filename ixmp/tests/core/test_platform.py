@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class TestPlatform:
-    def test_init(self):
+    def test_init0(self):
         with pytest.raises(
             ValueError,
             match=re.escape("backend class 'foo' not among ['ixmp4', 'jdbc']"),
@@ -30,6 +30,17 @@ class TestPlatform:
         # name="default" is used, referring to "local"
         mp = ixmp.Platform()
         assert "local" == mp.name
+
+    @pytest.mark.parametrize(
+        "backend, backend_args",
+        (
+            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
+            ("ixmp4", dict()),
+        ),
+    )
+    def test_init1(self, backend, backend_args):
+        # Platform can be instantiated
+        ixmp.Platform(backend=backend, **backend_args)
 
     def test_getattr(self, test_mp):
         """Test __getattr__."""

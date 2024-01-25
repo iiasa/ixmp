@@ -1,8 +1,34 @@
+from typing import TYPE_CHECKING
+
 from ixmp.backend.base import CachingBackend
+
+if TYPE_CHECKING:
+    import ixmp4
 
 
 class IXMP4Backend(CachingBackend):
     """Backend using :mod:`ixmp4`."""
+
+    _platform: "ixmp4.Platform"
+
+    def __init__(self):
+        import ixmp4
+
+        # TODO Obtain `name` from the ixmp.Platform creating this Backend
+        name = "test"
+
+        # Add an ixmp4.Platform using ixmp4's own configuration code
+        # TODO Move this to a test fixture
+        import ixmp4.conf
+
+        dsn = "sqlite:///:memory:"
+        try:
+            ixmp4.conf.settings.toml.add_platform(name, dsn)
+        except ixmp4.core.exceptions.PlatformNotUnique:
+            pass
+
+        # Instantiate and store
+        self._platform = ixmp4.Platform(name)
 
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):

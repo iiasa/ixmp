@@ -2,7 +2,6 @@ name: Build package / publish
 
 on:
   push:
-    branches: [ main ]
     tags: [ "v*" ]
   release:
     types: [ published ]
@@ -10,6 +9,9 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   publish:

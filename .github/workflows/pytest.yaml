@@ -62,7 +62,7 @@ jobs:
         cache: pip
         cache-dependency-path: "**/pyproject.toml"
 
-    - uses: ts-graphviz/setup-graphviz@v1.2.0
+    - uses: ts-graphviz/setup-graphviz@v2
       with:
         macos-skip-brew-update: true
 
@@ -72,7 +72,7 @@ jobs:
         r-version: '4.2.3'
 
     - name: Cache GAMS installer and R packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           gams
@@ -125,7 +125,7 @@ jobs:
       shell: bash
 
     - name: Upload test coverage to Codecov.io
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
 
   pre-commit:
     name: Code quality

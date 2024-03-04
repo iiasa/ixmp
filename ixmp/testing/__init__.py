@@ -116,7 +116,7 @@ def pytest_sessionstart(session):
     jdbc._GC_AGGRESSIVE = False
 
 
-def pytest_report_header(config, startdir):
+def pytest_report_header(config, start_path):
     """Add the ixmp configuration to the pytest report header."""
     return f"ixmp config: {repr(ixmp_config.values)}"
 

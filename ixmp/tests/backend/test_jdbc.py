@@ -47,13 +47,7 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_close(test_mp_f, capfd):
+def test_close_default_logging(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
     mp = test_mp_f
@@ -68,9 +62,21 @@ def test_close(test_mp_f, capfd):
     captured = capfd.readouterr()
     assert captured.out == ""
 
-    # With log level INFO, a message is printed
+
+def test_close_increased_logging(test_mp_f, capfd):
+    """Platform.close_db() doesn't throw needless exceptions."""
+    # Use the session-scoped fixture to avoid affecting other tests in this file
+    mp = test_mp_f
+
+    # Close once
+    mp.close_db()
+
+    # Set higher log level INFO
     level = mp.get_log_level()
     mp.set_log_level(logging.INFO)
+
+    # Close again, once already closed
+    # With logging.INFO, a message is printed
     mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
@@ -237,19 +243,16 @@ def test_invalid_properties_file(test_data_path):
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_connect_message(capfd, caplog):
-    msg = "connected to database 'jdbc:hsqldb:mem://ixmptest' (user: ixmp)..."
+def test_connect_message(capfd, caplog, request):
+    msg = (
+        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}' (user: ixmp)..."
+    )
 
     ixmp.Platform(
+        name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url="jdbc:hsqldb:mem://ixmptest",
+        url=f"jdbc:hsqldb:mem://{request.node.name}",
         log_level="INFO",
     )
 
@@ -262,9 +265,10 @@ def test_connect_message(capfd, caplog):
     #    in the above call. Try again now that the level is INFO:
 
     ixmp.Platform(
+        name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url="jdbc:hsqldb:mem://ixmptest",
+        url=f"jdbc:hsqldb:mem://{request.node.name}",
     )
 
     # Instead, log messages are printed to stdout

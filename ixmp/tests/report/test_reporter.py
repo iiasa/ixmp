@@ -23,7 +23,7 @@ def scenario(test_mp):
 
 
 @pytest.mark.usefixtures("protect_rename_dims")
-def test_configure(test_mp, test_data_path) -> None:
+def test_configure(test_mp, test_data_path, request) -> None:
     # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
 
@@ -33,7 +33,7 @@ def test_configure(test_mp, test_data_path) -> None:
     assert "i" in RENAME_DIMS
 
     # Reporting uses the RENAME_DIMS mapping of 'i' to 'i_renamed'
-    scen = make_dantzig(test_mp)
+    scen = make_dantzig(test_mp, request=request)
     rep = Reporter.from_scenario(scen)
     assert "d:i_renamed-j" in rep, rep.graph.keys()
     assert ["seattle", "san-diego"] == rep.get("i_renamed")
@@ -142,10 +142,10 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     assert unit.dimensionality == {"[USD]": 1, "[pkm]": -1}
 
 
-def test_cli(ixmp_cli, test_mp, test_data_path) -> None:
+def test_cli(ixmp_cli, test_mp, test_data_path, request) -> None:
     # Put something in the database
     test_mp.open_db()
-    make_dantzig(test_mp)
+    make_dantzig(test_mp, request=request)
     test_mp.close_db()
 
     platform_name = test_mp.name

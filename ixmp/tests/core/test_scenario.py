@@ -696,7 +696,7 @@ def test_filter_str(scen_empty):
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
-def test_solve_callback(test_mp):
+def test_solve_callback(test_mp, request):
     """Test the callback argument to Scenario.solve().
 
     In real usage, callback() would compute some kind of convergence criterion. This
@@ -705,7 +705,7 @@ def test_solve_callback(test_mp):
     equals an expected value, and the model has 'converged'.
     """
     # Set up the Dantzig problem
-    scen = make_dantzig(test_mp)
+    scen = make_dantzig(test_mp, request=request)
 
     # Solve the scenario as configured
     solve_args = dict(model="dantzig", quiet=True)

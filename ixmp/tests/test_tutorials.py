@@ -7,15 +7,10 @@ import pytest
 
 from ixmp.testing import get_cell_output, run_notebook
 
-FLAKY = pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
-    reason="Flaky; see iiasa/ixmp#489",
-)
+group_base_name = platform.system() + platform.python_version()
 
 
-@FLAKY
+@pytest.mark.xdist_group(name=f"{group_base_name}-0")
 def test_py_transport(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / "transport" / "py_transport.ipynb"
     nb, errors = run_notebook(fname, tmp_path, tmp_env)
@@ -25,7 +20,7 @@ def test_py_transport(tutorial_path, tmp_path, tmp_env):
     assert np.isclose(get_cell_output(nb, -5)["lvl"], 153.6750030517578)
 
 
-@FLAKY
+@pytest.mark.xdist_group(name=f"{group_base_name}-0")
 def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / "transport" / "py_transport_scenario.ipynb"
     nb, errors = run_notebook(fname, tmp_path, tmp_env)
@@ -35,7 +30,7 @@ def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
     assert np.isclose(get_cell_output(nb, "scen-detroit-z")["lvl"], 161.324)
 
 
-@FLAKY
+@pytest.mark.xdist_group(name=f"{group_base_name}-1")
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(
@@ -47,7 +42,7 @@ def test_R_transport(tutorial_path, tmp_path, tmp_env):
     assert errors == []
 
 
-@FLAKY
+@pytest.mark.xdist_group(name=f"{group_base_name}-1")
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(

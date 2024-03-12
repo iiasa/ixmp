@@ -273,7 +273,7 @@ def test_connect_message(capfd, caplog):
 
 
 @pytest.mark.parametrize("arg", [True, False])
-def test_cache_arg(arg):
+def test_cache_arg(arg, request):
     """Test 'cache' argument, passed to CachingBackend."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -281,7 +281,7 @@ def test_cache_arg(arg):
         url="jdbc:hsqldb:mem://test_cache_false",
         cache=arg,
     )
-    scen = make_dantzig(mp)
+    scen = make_dantzig(mp, request=request)
 
     # Maybe put something in the cache
     scen.par("a")
@@ -339,8 +339,8 @@ def test_init(tmp_env, args, kwargs, action, kind, match):
         ixmp.Platform(*args, **kwargs)
 
 
-def test_gh_216(test_mp):
-    scen = make_dantzig(test_mp)
+def test_gh_216(test_mp, request):
+    scen = make_dantzig(test_mp, request=request)
 
     filters = dict(i=["seattle", "beijing"])
 
@@ -382,7 +382,7 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     # See also test_base.TestCachingBackend.test_del_ts
     reason="https://github.com/iiasa/ixmp/issues/463",
 )
-def test_del_ts():
+def test_del_ts(request):
     mp = ixmp.Platform(
         backend="jdbc",
         driver="hsqldb",
@@ -394,9 +394,9 @@ def test_del_ts():
 
     # Create a list of some Scenario objects
     N = 8
-    scenarios = [make_dantzig(mp)]
+    scenarios = [make_dantzig(mp, request=request)]
     for i in range(1, N):
-        scenarios.append(scenarios[0].clone(scenario=f"clone {i}"))
+        scenarios.append(scenarios[0].clone(scenario=f"{request.node.name} clone {i}"))
 
     # Number of referenced objects has increased by 8
     assert len(mp._backend.jindex) == N_obj + N
@@ -648,8 +648,8 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
-def test_docs(test_mp):
-    scen = make_dantzig(test_mp)
+def test_docs(test_mp, request):
+    scen = make_dantzig(test_mp, request=request)
     # test model docs
     test_mp.set_doc("model", {scen.model: "Dantzig model"})
     assert test_mp.get_doc("model") == {"canning problem": "Dantzig model"}
@@ -672,9 +672,9 @@ def test_docs(test_mp):
     assert ex.value.args[0] == exp
 
 
-def test_cache_clear(test_mp):
+def test_cache_clear(test_mp, request):
     """Removing set elements causes the cache to be cleared entirely."""
-    scen = make_dantzig(test_mp)
+    scen = make_dantzig(test_mp, request=request)
 
     # Load an item so that it is cached
     d0 = scen.par("d")

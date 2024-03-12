@@ -165,8 +165,9 @@ def test_platform(ixmp_cli, tmp_path):
     assert UsageError.exit_code == r.exit_code
 
 
-def test_platform_copy(ixmp_cli, tmp_path):
+def test_platform_copy(ixmp_cli, tmp_path, request):
     """Test 'platform' command."""
+    test_specific_name = request.node.name
 
     def call(*args, exit_0=True):
         result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
@@ -174,30 +175,47 @@ def test_platform_copy(ixmp_cli, tmp_path):
         return result
 
     # Add some temporary platform configuration
-    call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
-    call("add", "p2", "jdbc", "hsqldb", tmp_path.joinpath("p2"))
+    call(
+        "add",
+        f"p1-{test_specific_name}",
+        "jdbc",
+        "oracle",
+        "HOSTNAME",
+        "USER",
+        "PASSWORD",
+    )
+    call(
+        "add",
+        f"p2-{test_specific_name}",
+        "jdbc",
+        "hsqldb",
+        tmp_path.joinpath(f"p2-{test_specific_name}"),
+    )
     # Force connection to p2 so that files are created
-    ixmp_cli.invoke(["--platform=p2", "list"])
+    ixmp_cli.invoke([f"--platform=p2-{test_specific_name}", "list"])
 
     # Dry-run produces expected output
-    r = call("copy", "p2", "p3")
-    assert re.search("Copy .*p2.script → .*p3.script", r.output)
+    r = call("copy", f"p2-{test_specific_name}", f"p3-{test_specific_name}")
+    assert re.search(
+        f"Copy .*p2-{test_specific_name}.script → .*p3-{test_specific_name}.script",
+        r.output,
+    )
     with pytest.raises(ValueError):
         # New platform configuration is not saved
-        ixmp.config.get_platform_info("p3")
+        ixmp.config.get_platform_info(f"p3-{test_specific_name}")
 
     # --go actually copies files, saves new platform config
-    r = call("copy", "--go", "p2", "p3")
-    assert tmp_path.joinpath("p3.script").exists()
-    assert ixmp.config.get_platform_info("p3")
+    r = call("copy", "--go", f"p2-{test_specific_name}", f"p3-{test_specific_name}")
+    assert tmp_path.joinpath(f"p3-{test_specific_name}.script").exists()
+    assert ixmp.config.get_platform_info(f"p3-{test_specific_name}")
 
     # Dry-run again with existing config and files
-    r = call("copy", "p2", "p3")
+    r = call("copy", f"p2-{test_specific_name}", f"p3-{test_specific_name}")
     assert "would replace existing file" in r.output
 
     # Copying a non-HyperSQL-backed platform fails
     with pytest.raises(AssertionError):
-        call("copy", "p1", "p3")
+        call("copy", f"p1-{test_specific_name}", f"p3-{test_specific_name}")
 
 
 def test_import_ts(ixmp_cli, test_mp, test_data_path):

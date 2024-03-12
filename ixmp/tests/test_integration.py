@@ -24,12 +24,18 @@ def test_run_clone(caplog, test_mp, request):
     mp = test_mp
     scen = make_dantzig(mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
-    assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
     # cloning with `keep_solution=True` keeps all timeseries and the solution
     scen2 = scen.clone(keep_solution=True)
     assert np.isclose(scen2.var("z")["lvl"], 153.675)
-    assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
     # version attribute of the clone increments the original (GitHub #211)
     assert scen2.version == scen.version + 1
@@ -45,14 +51,19 @@ def test_run_clone(caplog, test_mp, request):
     # timeseries set as `meta=True`
     scen3 = scen.clone(keep_solution=False)
     assert np.isnan(scen3.var("z")["lvl"])
-    assert_frame_equal(scen3.timeseries(iamc=True), HIST_DF)
+    assert_frame_equal(
+        scen3.timeseries(iamc=True), HIST_DF.assign(scenario=scen.scenario)
+    )
 
     # cloning with `keep_solution=False` and `first_model_year`
     # drops the solution and removes all timeseries not marked `meta=True`
     # in the model horizon (i.e, `year >= first_model_year`)
     scen4 = scen.clone(keep_solution=False, shift_first_model_year=2005)
     assert np.isnan(scen4.var("z")["lvl"])
-    assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
+    assert_frame_equal(
+        scen4.timeseries(iamc=True),
+        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
 
 def test_run_remove_solution(test_mp, request):
@@ -70,7 +81,9 @@ def test_run_remove_solution(test_mp, request):
     scen2.remove_solution()
     assert not scen2.has_solution()
     assert np.isnan(scen2.var("z")["lvl"])
-    assert_frame_equal(scen2.timeseries(iamc=True), HIST_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True), HIST_DF.assign(scenario=scen.scenario)
+    )
 
     # remove the solution with a specific year as first model year, check that
     # variables are empty and timeseries not marked `meta=True` are removed
@@ -78,7 +91,10 @@ def test_run_remove_solution(test_mp, request):
     scen3.remove_solution(first_model_year=2005)
     assert not scen3.has_solution()
     assert np.isnan(scen3.var("z")["lvl"])
-    assert_frame_equal(scen3.timeseries(iamc=True), TS_DF_CLEARED)
+    assert_frame_equal(
+        scen3.timeseries(iamc=True),
+        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
 
 def scenario_list(mp):
@@ -116,7 +132,8 @@ def test_multi_db_run(tmpdir, request):
     # reopen the connection to the second platform and reload scenario
     _mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     assert_multi_db(mp1, _mp2)
-    args = dict(**models["dantzig"]).update(scenario=request.node.name)
+    args = models["dantzig"].copy()
+    args.update(scenario=request.node.name)
     scen2 = ixmp.Scenario(_mp2, **args)
 
     # check that sets, variables and parameter were copied correctly
@@ -128,7 +145,10 @@ def test_multi_db_run(tmpdir, request):
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par("f")["value"] == 90.0
     assert scen2.par("f")["unit"] == "USD/km"
-    assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen2.scenario, scen2.scenario]),
+    )
 
 
 def test_multi_db_edit_source(tmpdir, request):

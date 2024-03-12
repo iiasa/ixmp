@@ -135,14 +135,14 @@ class TestCachingBackend:
 
         backend.cache_invalidate(ts, "par", "baz", dict(x=["x1", "x2"], y=["y1", "y2"]))
 
-    def test_del_ts(self, test_mp):
+    def test_del_ts(self, test_mp, request):
         """Test CachingBackend.del_ts()."""
         # Since CachingBackend is an abstract class, test it via JDBCBackend
         backend = test_mp._backend
         cache_size_pre = len(backend._cache)
 
         # Load data, thereby adding to the cache
-        s = make_dantzig(test_mp)
+        s = make_dantzig(test_mp, request=request)
         s.par("d")
 
         # Cache size has increased

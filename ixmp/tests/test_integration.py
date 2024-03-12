@@ -1,6 +1,4 @@
 import logging
-import os
-import platform
 
 import numpy as np
 import pytest
@@ -14,7 +12,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_clone(caplog, test_mp):
+def test_run_clone(caplog, test_mp, request):
     caplog.set_level(logging.WARNING)
 
     # this test is designed to cover the full functionality of the GAMS API
@@ -24,7 +22,7 @@ def test_run_clone(caplog, test_mp):
     # - reads back the solution from the output
     # - performs the test on the objective value and the timeseries data
     mp = test_mp
-    scen = make_dantzig(mp, solve=True, quiet=True)
+    scen = make_dantzig(mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
     assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
 
@@ -57,10 +55,10 @@ def test_run_clone(caplog, test_mp):
     assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
 
 
-def test_run_remove_solution(test_mp):
+def test_run_remove_solution(test_mp, request):
     # create a new instance of the transport problem and solve it
     mp = test_mp
-    scen = make_dantzig(mp, solve=True, quiet=True)
+    scen = make_dantzig(mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists
@@ -95,16 +93,10 @@ def get_distance(scen):
     return scen.par("d").set_index(["i", "j"]).loc["san-diego", "topeka"]["value"]
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_multi_db_run(tmpdir):
+def test_multi_db_run(tmpdir, request):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1, solve=True, quiet=True)
+    scen1 = make_dantzig(mp1, solve=True, quiet=True, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     # add other unit to make sure that the mapping is correct during clone
@@ -124,7 +116,8 @@ def test_multi_db_run(tmpdir):
     # reopen the connection to the second platform and reload scenario
     _mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     assert_multi_db(mp1, _mp2)
-    scen2 = ixmp.Scenario(_mp2, **models["dantzig"])
+    args = dict(**models["dantzig"]).update(scenario=request.node.name)
+    scen2 = ixmp.Scenario(_mp2, **args)
 
     # check that sets, variables and parameter were copied correctly
     assert_array_equal(scen1.set("i"), scen2.set("i"))
@@ -138,10 +131,10 @@ def test_multi_db_run(tmpdir):
     assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
 
 
-def test_multi_db_edit_source(tmpdir):
+def test_multi_db_edit_source(tmpdir, request):
     # create a new instance of the transport problem
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1)
+    scen1 = make_dantzig(mp1, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     scen2 = scen1.clone(platform=mp2)
@@ -163,10 +156,10 @@ def test_multi_db_edit_source(tmpdir):
     assert_multi_db(mp1, mp2)
 
 
-def test_multi_db_edit_target(tmpdir):
+def test_multi_db_edit_target(tmpdir, request):
     # create a new instance of the transport problem
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1)
+    scen1 = make_dantzig(mp1, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     scen2 = scen1.clone(platform=mp2)

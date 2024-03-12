@@ -56,10 +56,10 @@ def test_check_year():
     assert util.check_year(y3, s3) is True
 
 
-def test_diff_identical(test_mp):
+def test_diff_identical(test_mp, request):
     """diff() of identical Scenarios."""
-    scen_a = make_dantzig(test_mp)
-    scen_b = make_dantzig(test_mp)
+    scen_a = make_dantzig(test_mp, request=request)
+    scen_b = make_dantzig(test_mp, request=request)
 
     # Compare identical scenarios: produces data of same length
     for name, df in util.diff(scen_a, scen_b):
@@ -72,10 +72,10 @@ def test_diff_identical(test_mp):
         assert exp_name == name and len(df) == N
 
 
-def test_diff_data(test_mp):
+def test_diff_data(test_mp, request):
     """diff() when Scenarios contain the same items, but different data."""
-    scen_a = make_dantzig(test_mp)
-    scen_b = make_dantzig(test_mp)
+    scen_a = make_dantzig(test_mp, request=request)
+    scen_b = make_dantzig(test_mp, request=request)
 
     # Modify `scen_a` and `scen_b`
     scen_a.check_out()
@@ -133,10 +133,10 @@ def test_diff_data(test_mp):
             pdt.assert_frame_equal(exp_d.iloc[[0, 3], :].reset_index(drop=True), df)
 
 
-def test_diff_items(test_mp):
+def test_diff_items(test_mp, request):
     """diff() when Scenarios contain the different items."""
-    scen_a = make_dantzig(test_mp)
-    scen_b = make_dantzig(test_mp)
+    scen_a = make_dantzig(test_mp, request=request)
+    scen_b = make_dantzig(test_mp, request=request)
 
     # Modify `scen_a` and `scen_b`
     scen_a.check_out()
@@ -156,11 +156,11 @@ def test_diff_items(test_mp):
         pass  # No check of the contents
 
 
-def test_discard_on_error(caplog, test_mp):
+def test_discard_on_error(caplog, test_mp, request):
     caplog.set_level(logging.INFO, "ixmp.util")
 
     # Create a test scenario, checked-in state
-    s = make_dantzig(test_mp)
+    s = make_dantzig(test_mp, request=request)
     url = s.url
 
     # Some actions that don't trigger exceptions

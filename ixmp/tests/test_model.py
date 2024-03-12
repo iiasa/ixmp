@@ -23,9 +23,9 @@ def test_base_model():
         M1()
 
 
-def test_model_initialize(test_mp, caplog):
+def test_model_initialize(test_mp, caplog, request):
     # Model.initialize runs on an empty Scenario
-    s = make_dantzig(test_mp)
+    s = make_dantzig(test_mp, request=request)
     b1 = s.par("b")
     assert len(b1) == 3
 
@@ -108,8 +108,8 @@ def test_gams_version():
 
 class TestGAMSModel:
     @pytest.fixture(scope="class")
-    def dantzig(self, test_mp):
-        yield make_dantzig(test_mp)
+    def dantzig(self, test_mp, request):
+        yield make_dantzig(test_mp, request=request)
 
     @pytest.mark.parametrize("char", r'<>"/\|?*')
     def test_filename_invalid_char(self, dantzig, char):

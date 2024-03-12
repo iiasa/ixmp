@@ -214,6 +214,7 @@ class Platform:
             - subannual
             - year
             - value
+
         default : bool, optional
             :obj:`True` to include only TimeSeries versions marked as default.
         model: str, optional

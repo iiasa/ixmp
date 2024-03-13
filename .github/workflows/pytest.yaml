@@ -90,6 +90,10 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
+    - name: Work around IAMconsortium/pyam#834
+      if: matrix.python-version != '3.8'
+      run: pip install dask-expr
+
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |

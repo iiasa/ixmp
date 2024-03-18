@@ -138,7 +138,7 @@ class TestCachingBackend:
     def test_del_ts(self, test_mp, request):
         """Test CachingBackend.del_ts()."""
         # Since CachingBackend is an abstract class, test it via JDBCBackend
-        backend = test_mp._backend
+        backend: CachingBackend = test_mp._backend  # type: ignore
         cache_size_pre = len(backend._cache)
 
         # Load data, thereby adding to the cache
@@ -155,7 +155,7 @@ class TestCachingBackend:
             s.__del__()  # Force deletion of cached objects associated with `s`
 
         # Delete the object; associated cache is freed
-        del s
+        backend.del_ts(s)
 
         # Objects were invalidated/removed from cache
         assert cache_size_pre == len(backend._cache)

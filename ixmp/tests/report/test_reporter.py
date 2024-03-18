@@ -159,7 +159,7 @@ def test_cli(ixmp_cli, test_mp, test_data_path, request) -> None:
         "--model",
         "canning problem",
         "--scenario",
-        "standard",
+        f"{request.node.name}",
         "report",
         "--config",
         str(test_data_path / "report-config-0.yaml"),

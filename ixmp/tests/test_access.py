@@ -1,6 +1,4 @@
 import logging
-import os
-import platform
 import sys
 from subprocess import Popen
 from time import sleep
@@ -52,13 +50,7 @@ def mock(server):
     yield httpmock
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_check_single_model_access(mock, tmp_path, test_data_path):
+def test_check_single_model_access(mock, tmp_path, test_data_path, request):
     mock.when(
         "POST /access/list",
         body='.+"test_user".+',
@@ -71,7 +63,10 @@ def test_check_single_model_access(mock, tmp_path, test_data_path):
     ).reply("[false]", headers={"Content-Type": "application/json"}, times=FOREVER)
 
     test_props = create_test_platform(
-        tmp_path, test_data_path, "access", auth_url=mock.pretend_url
+        tmp_path,
+        test_data_path,
+        f"{request.node.name}_access",
+        auth_url=mock.pretend_url,
     )
 
     mp = ixmp.Platform(backend="jdbc", dbprops=test_props)

@@ -65,7 +65,7 @@ def test_check_single_model_access(mock, tmp_path, test_data_path, request):
     test_props = create_test_platform(
         tmp_path,
         test_data_path,
-        f"{request.node.name}_access",
+        f"{request.node.name}",
         auth_url=mock.pretend_url,
     )
 
@@ -81,7 +81,7 @@ def test_check_single_model_access(mock, tmp_path, test_data_path, request):
     assert not granted
 
 
-def test_check_multi_model_access(mock, tmp_path, test_data_path):
+def test_check_multi_model_access(mock, tmp_path, test_data_path, request):
     mock.when(
         "POST /access/list",
         body='.+"test_user".+',
@@ -98,7 +98,7 @@ def test_check_multi_model_access(mock, tmp_path, test_data_path):
     )
 
     test_props = create_test_platform(
-        tmp_path, test_data_path, "access", auth_url=mock.pretend_url
+        tmp_path, test_data_path, f"{request.node.name}", auth_url=mock.pretend_url
     )
 
     mp = ixmp.Platform(backend="jdbc", dbprops=test_props)

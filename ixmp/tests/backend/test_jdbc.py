@@ -248,8 +248,10 @@ def test_connect_message(capfd, caplog, request):
         f"connected to database 'jdbc:hsqldb:mem://{request.node.name}' (user: ixmp)..."
     )
 
+    # TODO Specifying a name will fail because the test is looking for a platform with
+    # that name which doesn't exist yet.
     ixmp.Platform(
-        name=request.node.name,
+        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
         url=f"jdbc:hsqldb:mem://{request.node.name}",
@@ -265,7 +267,7 @@ def test_connect_message(capfd, caplog, request):
     #    in the above call. Try again now that the level is INFO:
 
     ixmp.Platform(
-        name=request.node.name,
+        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
         url=f"jdbc:hsqldb:mem://{request.node.name}",

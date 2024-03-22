@@ -424,7 +424,7 @@ def test_del_ts(request):
 
         # Now delete the Scenario object
         # del s # should work, but doesn't always resolve to s.__del__()
-        s.__del__()
+        mp._backend.del_ts(s)
 
         # Number of referenced objects decreases by 1
         assert len(mp._backend.jindex) == N_obj + N - (i + 1)

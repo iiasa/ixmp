@@ -1,11 +1,12 @@
 # Methods are in alphabetical order
 from itertools import product
 from math import ceil
-from typing import Any, List
+from typing import Any, List, Optional
 
 import numpy as np
 import pandas as pd
 import pint
+import pytest
 import xarray as xr
 
 from ixmp import Platform, Scenario, TimeSeries
@@ -160,7 +161,12 @@ def add_test_data(scen: Scenario):
     return t, t_foo, t_bar, x
 
 
-def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scenario:
+def make_dantzig(
+    mp: Platform,
+    solve: bool = False,
+    quiet: bool = False,
+    request: Optional["pytest.FixtureRequest"] = None,
+) -> Scenario:
     """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
     Parameters
@@ -171,6 +177,8 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
         If :obj:`True`. then solve the scenario before returning. Default :obj:`False`.
     quiet : bool, optional
         If :obj:`True`, suppress console output when solving.
+    request : :class:`pytest.FixtureRequest`, optional
+        If present, use for a distinct scenario name for each test.
 
     Returns
     -------
@@ -191,13 +199,19 @@ def make_dantzig(mp: Platform, solve: bool = False, quiet: bool = False) -> Scen
     # Initialize a new Scenario, and use the DantzigModel class' initialize()
     # method to populate it
     annot = "Dantzig's transportation problem for illustration and testing"
-    scen = Scenario(
-        mp,
-        **models["dantzig"],  # type: ignore [arg-type]
+    args = dict(
+        **models["dantzig"],
         version="new",
         annotation=annot,
         scheme="dantzig",
         with_data=True,
+    )
+    if request:
+        # Use a distinct scenario name for a particular test
+        args.update(scenario=request.node.name)
+    scen = Scenario(
+        mp,
+        **args,  # type: ignore [arg-type]
     )
 
     # commit the scenario

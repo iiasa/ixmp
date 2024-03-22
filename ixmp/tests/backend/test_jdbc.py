@@ -395,8 +395,10 @@ def test_del_ts(request):
         url="jdbc:hsqldb:mem:test_del_ts",
     )
 
+    backend: ixmp.backend.jdbc.JDBCBackend = mp._backend  # type: ignore
+
     # Number of Java objects referenced by the JDBCBackend
-    N_obj = len(mp._backend.jindex)
+    N_obj = len(backend.jindex)
 
     # Create a list of some Scenario objects
     N = 8
@@ -405,7 +407,7 @@ def test_del_ts(request):
         scenarios.append(scenarios[0].clone(scenario=f"{request.node.name} clone {i}"))
 
     # Number of referenced objects has increased by 8
-    assert len(mp._backend.jindex) == N_obj + N
+    assert len(backend.jindex) == N_obj + N
 
     # Pop and free the objects
     for i in range(N):
@@ -420,23 +422,23 @@ def test_del_ts(request):
         s_id = id(s)
 
         # Underlying Java object
-        s_jobj = mp._backend.jindex[s]
+        s_jobj = backend.jindex[s]
 
         # Now delete the Scenario object
         # del s # should work, but doesn't always resolve to s.__del__()
-        mp._backend.del_ts(s)
+        backend.del_ts(s)
 
         # Number of referenced objects decreases by 1
-        assert len(mp._backend.jindex) == N_obj + N - (i + 1)
+        assert len(backend.jindex) == N_obj + N - (i + 1)
         # ID is no longer in JDBCBackend.jindex
-        assert s_id not in mp._backend.jindex
+        assert s_id not in backend.jindex
 
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1
         del s_jobj
 
     # Backend is again empty
-    assert len(mp._backend.jindex) == N_obj
+    assert len(backend.jindex) == N_obj
 
 
 # NB coverage is omitted because this test is not included in the standard suite

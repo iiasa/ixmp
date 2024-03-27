@@ -143,7 +143,10 @@ Operators
 .. automodule:: ixmp.report.operator
    :members:
 
-   :mod:`ixmp.report` defines these operators:
+   More than 30 operators are defined by :mod:`genno.operator` and its compatibility modules including :mod:`genno.compat.plotnine` and :mod:`genno.compat.sdmx`.
+   See the genno documentation for details.
+
+   :mod:`ixmp.report` defines these additional operators:
 
    .. autosummary::
 
@@ -151,36 +154,9 @@ Operators
       from_url
       get_ts
       map_as_qty
-      update_scenario
-      store_ts
       remove_ts
-
-   Basic operators are defined by :mod:`genno.operator` and its compatibility modules; see there for details:
-
-   .. autosummary::
-
-      ~genno.compat.plotnine.Plot
-      ~genno.operator.add
-      ~genno.operator.aggregate
-      ~genno.operator.apply_units
-      ~genno.compat.pyam.operator.as_pyam
-      ~genno.operator.broadcast_map
-      ~genno.operator.combine
-      ~genno.operator.concat
-      ~genno.operator.disaggregate_shares
-      ~genno.operator.div
-      ~genno.operator.group_sum
-      ~genno.operator.interpolate
-      ~genno.operator.load_file
-      ~genno.operator.mul
-      ~genno.operator.pow
-      ~genno.operator.product
-      ~genno.operator.relabel
-      ~genno.operator.rename_dims
-      ~genno.operator.ratio
-      ~genno.operator.select
-      ~genno.operator.sum
-      ~genno.operator.write_report
+      store_ts
+      update_scenario
 
 Utilities
 =========

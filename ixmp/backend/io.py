@@ -112,7 +112,9 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
             sheet_name = name + (f"({sheet_num})" if sheet_num > 1 else "")
 
             # Subset the data (only on rows, if a DataFrame) and write
-            data.iloc[first_row:last_row].to_excel(writer, sheet_name, index=False)
+            data.iloc[first_row:last_row].to_excel(
+                writer, sheet_name=sheet_name, index=False
+            )
 
     # Discard entries that were not written
     for name in omitted:

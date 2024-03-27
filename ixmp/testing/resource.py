@@ -1,4 +1,5 @@
 """Performance testing."""
+
 import logging
 from collections import namedtuple
 from typing import Any, Optional

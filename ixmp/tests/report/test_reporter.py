@@ -23,7 +23,7 @@ def scenario(test_mp):
 
 
 @pytest.mark.usefixtures("protect_rename_dims")
-def test_configure(test_mp, test_data_path):
+def test_configure(test_mp, test_data_path) -> None:
     # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
 
@@ -43,7 +43,7 @@ def test_configure(test_mp, test_data_path):
     pytest.raises(KeyError, rep.get, "i")
 
 
-def test_reporter_from_scenario(scenario):
+def test_reporter_from_scenario(scenario) -> None:
     r = Reporter.from_scenario(scenario)
 
     r.finalize(scenario)
@@ -51,7 +51,7 @@ def test_reporter_from_scenario(scenario):
     assert "scenario" in r.graph
 
 
-def test_platform_units(test_mp, caplog, ureg):
+def test_platform_units(test_mp, caplog, ureg) -> None:
     """Test handling of units from ixmp.Platform.
 
     test_mp is loaded with some units including '-', '???', 'G$', etc. which
@@ -142,7 +142,7 @@ def test_platform_units(test_mp, caplog, ureg):
     assert unit.dimensionality == {"[USD]": 1, "[pkm]": -1}
 
 
-def test_cli(ixmp_cli, test_mp, test_data_path):
+def test_cli(ixmp_cli, test_mp, test_data_path) -> None:
     # Put something in the database
     test_mp.open_db()
     make_dantzig(test_mp)
@@ -187,7 +187,7 @@ seattle    chicago     1\.7
     ), result.output
 
 
-def test_filters(test_mp, tmp_path, caplog):
+def test_filters(test_mp, tmp_path, caplog) -> None:
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, "Reporting filters", "Reporting filters", "new")
     t, t_foo, t_bar, x = add_test_data(scen)

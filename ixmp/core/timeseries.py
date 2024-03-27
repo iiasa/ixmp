@@ -365,16 +365,15 @@ class TimeSeries:
         df.columns = df.columns.astype(int)
 
         # Identify columns to drop
-        to_drop = set()
-        if year_lim[0]:
-            to_drop |= set(filter(lambda y: y < year_lim[0], df.columns))
-        if year_lim[1]:
-            to_drop |= set(filter(lambda y: y > year_lim[1], df.columns))
+        def predicate(y: Any) -> bool:
+            return y < (year_lim[0] or y) or (year_lim[1] or y) < y
 
-        df.drop(to_drop, axis=1, inplace=True)
+        df.drop(list(filter(predicate, df.columns)), axis=1, inplace=True)
 
         # Add one time series per row
-        for (r, v, u, sa), data in df.iterrows():
+        for key, data in df.iterrows():
+            assert isinstance(key, tuple)
+            r, v, u, sa = key
             # Values as float; exclude NA
             self._backend(
                 "set_data", r, v, data.astype(float).dropna().to_dict(), u, sa, meta
@@ -429,19 +428,16 @@ class TimeSeries:
                 year if isinstance(year, Sequence) else [] if year is None else [year],
             ),
             columns=FIELDS["ts_get"],
-        )
-        df["model"] = self.model
-        df["scenario"] = self.scenario
+        ).assign(model=self.model, scenario=self.scenario)
 
         # drop `subannual` column if not requested (False) or required ('auto')
         if subannual is not True:
             has_subannual = not all(df["subannual"] == "Year")
             if subannual is False and has_subannual:
-                msg = (
-                    "timeseries data has subannual values, ",
-                    "use `subannual=True or 'auto'`",
+                raise ValueError(
+                    "timeseries data has subannual values, use `subannual=True or "
+                    "'auto'`"
                 )
-                raise ValueError(msg)
             if not has_subannual:
                 df.drop("subannual", axis=1, inplace=True)
 
@@ -450,8 +446,11 @@ class TimeSeries:
             index = IAMC_IDX
             if "subannual" in df.columns:
                 index = index + ["subannual"]
-            df = df.pivot_table(index=index, columns="year")["value"].reset_index()
-            df.columns.names = [None]
+            df = (
+                df.pivot_table(index=index, columns="year")["value"]
+                .reset_index()
+                .rename_axis(columns=None)
+            )
 
         return df
 

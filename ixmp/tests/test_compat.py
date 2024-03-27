@@ -1,4 +1,5 @@
 """Tests for compatibility with other packages, especially :mod:`message_ix`."""
+
 from pathlib import Path
 
 import pytest

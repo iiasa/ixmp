@@ -10,10 +10,11 @@ repos:
     language: python
     entry: bash -c ". ${PRE_COMMIT_MYPY_VENV:-/dev/null}/bin/activate 2>/dev/null; mypy $0 $@"
     additional_dependencies:
-    - mypy >= 1.8.0
+    - mypy >= 1.9.0
     - genno
     - GitPython
     - nbclient
+    - pandas-stubs
     - pytest
     - sphinx
     - xarray

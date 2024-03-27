@@ -83,12 +83,10 @@ omit = ["ixmp/util/sphinx_linkcode_github.py"]
 [[tool.mypy.overrides]]
 # Packages/modules for which no type hints are available.
 module = [
-  "dask.*",
   "jpype",
   "memory_profiler",
-  "pandas.*",
-  "pyam",
   "pretenders.*",
+  "pyam",
 ]
 ignore_missing_imports = true
 

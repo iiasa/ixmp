@@ -107,15 +107,13 @@ markers = [
   "performance: ixmp performance test.",
 ]
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]
-
-[tool.ruff.mccabe]
 # FIXME the following exceed this limit
 # .backend.io.s_read_excel: 26
 # .backend.jdbc.JDBCBackend.item_get_elements: 19
 # .core.scenario.Scenario.add_set: 17
-max-complexity = 15
+mccabe.max-complexity = 15
 
 [tool.setuptools.packages]
 find = {}

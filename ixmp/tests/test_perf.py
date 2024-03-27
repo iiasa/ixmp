@@ -1,4 +1,5 @@
 """Performance tests."""
+
 from functools import partial
 
 import pytest

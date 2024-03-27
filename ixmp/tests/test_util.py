@@ -1,4 +1,5 @@
 """Tests for ixmp.util."""
+
 import logging
 
 import numpy as np

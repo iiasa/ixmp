@@ -1,4 +1,5 @@
 """Tests of :class:`ixmp.Platform`."""
+
 import logging
 import re
 from sys import getrefcount

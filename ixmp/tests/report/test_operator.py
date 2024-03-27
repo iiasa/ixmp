@@ -2,10 +2,11 @@ import logging
 import re
 from functools import partial
 
+import genno
 import pandas as pd
 import pyam
 import pytest
-from genno import ComputationError, Computer, Quantity
+from genno import ComputationError, Computer
 from genno.testing import assert_qty_equal
 from pandas.testing import assert_frame_equal
 
@@ -25,7 +26,7 @@ from ixmp.testing import assert_logs, make_dantzig
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
 
-def test_from_url(test_mp):
+def test_from_url(test_mp) -> None:
     ts = make_dantzig(test_mp)
 
     full_url = f"ixmp://{ts.platform.name}/{ts.url}"
@@ -43,7 +44,7 @@ def test_from_url(test_mp):
     assert ts.url == result.url
 
 
-def test_get_remove_ts(caplog, test_mp):
+def test_get_remove_ts(caplog, test_mp) -> None:
     ts = make_dantzig(test_mp)
 
     caplog.set_level(logging.INFO, "ixmp")
@@ -79,7 +80,7 @@ def test_get_remove_ts(caplog, test_mp):
     assert 3 == len(ts.timeseries())
 
 
-def test_map_as_qty():
+def test_map_as_qty() -> None:
     b = ["b1", "b2", "b3", "b4"]
     input = pd.DataFrame(
         [["f1", "b1"], ["f1", "b2"], ["f2", "b3"]], columns=["foo", "bar"]
@@ -87,7 +88,7 @@ def test_map_as_qty():
 
     result = map_as_qty(input, b)
 
-    exp = Quantity(
+    exp = genno.Quantity(
         pd.DataFrame(
             [
                 ["f1", "b1", 1],
@@ -105,7 +106,7 @@ def test_map_as_qty():
     assert_qty_equal(exp, result)
 
 
-def test_update_scenario(caplog, test_mp):
+def test_update_scenario(caplog, test_mp) -> None:
     scen = make_dantzig(test_mp)
     scen.check_out()
     scen.add_set("j", "toronto")
@@ -144,7 +145,7 @@ def test_update_scenario(caplog, test_mp):
     data["value"] *= 2.0
 
     # Convert to a Quantity object and re-add
-    q = Quantity(data.set_index(["i", "j"])["value"], name="d", units="km")
+    q = genno.Quantity(data.set_index(["i", "j"])["value"], name="d", units="km")
     c.add("input", q)
 
     # Revise the task; the parameter name ('demand') is read from the Quantity
@@ -158,7 +159,7 @@ def test_update_scenario(caplog, test_mp):
     assert_frame_equal(scen.par("d"), data)
 
 
-def test_store_ts(request, caplog, test_mp):
+def test_store_ts(request, caplog, test_mp) -> None:
     # Computer and target scenario
     c = Computer()
 

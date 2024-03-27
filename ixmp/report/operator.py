@@ -2,9 +2,9 @@ import logging
 from itertools import zip_longest
 from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Set, Union
 
+import genno
 import pandas as pd
 import pint
-from genno import Quantity
 from genno.util import parse_units
 
 from ixmp.core.timeseries import TimeSeries
@@ -14,6 +14,8 @@ from ixmp.util import to_iamc_layout
 from .util import dims_for_qty, get_reversed_rename_dims
 
 if TYPE_CHECKING:
+    from genno.types import AnyQuantity
+
     from ixmp.core.scenario import Scenario
 
 log = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ def data_for_quantity(
     column: Literal["mrg", "lvl", "value"],
     scenario: "Scenario",
     config: Mapping[str, Mapping],
-) -> Quantity:
+) -> "AnyQuantity":
     """Retrieve data from `scenario`.
 
     Parameters
@@ -47,7 +49,7 @@ def data_for_quantity(
 
     Returns
     -------
-    ~genno.Quantity
+    .Quantity
         Data for `name`.
     """
     log.debug(f"{name}: retrieve data")
@@ -130,14 +132,13 @@ def data_for_quantity(
         data = data.rename(columns=common.RENAME_DIMS).set_index(dims)
 
     # Convert to a Quantity, assign attributes and name
-    qty = Quantity(
+    qty = genno.Quantity(
         data[column], name=name + ("-margin" if column == "mrg" else ""), attrs=attrs
     )
 
     try:
         # Remove length-1 dimensions for scalars
-        # TODO Remove exclusion when genno provides a signature for Quantity.squeeze
-        qty = qty.squeeze("index", drop=True)  # type: ignore [attr-defined]
+        qty = qty.squeeze("index", drop=True)
     except (KeyError, ValueError):
         # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
@@ -185,8 +186,8 @@ def get_ts(
     return ts.timeseries(iamc=iamc, subannual=subannual, **filters)
 
 
-def map_as_qty(set_df: pd.DataFrame, full_set):
-    """Convert *set_df* to a :class:`~.genno.Quantity`.
+def map_as_qty(set_df: pd.DataFrame, full_set) -> "AnyQuantity":
+    """Convert `set_df` to a :class:`.Quantity`.
 
     For the MESSAGE sets named ``cat_*`` (see :ref:`message_ix:mapping-sets`)
     :meth:`ixmp.Scenario.set` returns a :class:`~pandas.DataFrame` with two columns:
@@ -218,7 +219,7 @@ def map_as_qty(set_df: pd.DataFrame, full_set):
     return (
         set_df.set_index([set_from, set_to])["value"]
         .rename_axis(index=names)
-        .pipe(Quantity)
+        .pipe(genno.Quantity)
     )
 
 
@@ -307,13 +308,13 @@ def store_ts(scenario, *data, strict: bool = False) -> None:
     scenario.commit(f"Data added using {__name__}")
 
 
-def update_scenario(scenario, *quantities, params=[]):
+def update_scenario(scenario, *quantities, params=[]) -> None:
     """Update *scenario* with computed data from reporting *quantities*.
 
     Parameters
     ----------
     scenario : Scenario
-    quantities : Quantity or pandas.DataFrame
+    quantities : .Quantity or pandas.DataFrame
         If DataFrame, must be valid input to :meth:`.Scenario.add_par`.
     params : list of str, optional
         For every element of `quantities` that is a pd.DataFrame, the element of

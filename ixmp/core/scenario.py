@@ -1,10 +1,20 @@
 import logging
 from functools import partialmethod
-from itertools import repeat, zip_longest
+from itertools import zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Union,
+)
 from warnings import warn
 
 import pandas as pd
@@ -181,7 +191,7 @@ class Scenario(TimeSeries):
         self,
         name: str,
         key: Union[str, Sequence[str], Dict, pd.DataFrame],
-        comment: Optional[str] = None,
+        comment: Union[str, Sequence[str], None] = None,
     ) -> None:
         """Add elements to an existing set.
 
@@ -209,83 +219,93 @@ class Scenario(TimeSeries):
 
         if isinstance(key, list) and len(key) == 0:
             return  # No elements to add
+        elif comment and isinstance(key, (dict, pd.DataFrame)) and "comment" in key:
+            # Ambiguous arguments
+            raise ValueError("ambiguous; both key['comment'] and comment= given")
 
         # Get index names for set *name*, may raise KeyError
         idx_names = self.idx_names(name)
+
+        # List of keys
+        keys: MutableSequence[Union[str, MutableSequence[str]]] = []
+        # List of comments for each key
+        comments: List[Optional[str]] = []
 
         # Check arguments and convert to two lists: keys and comments
         if len(idx_names) == 0:
             # Basic set. Keys must be strings.
             if isinstance(key, (dict, pd.DataFrame)):
                 raise TypeError(
-                    f"keys for basic set {repr(name)} must be str or list of str; got "
+                    f"keys for basic set {name!r} must be str or list of str; got "
                     f"{type(key)}"
                 )
 
             # Ensure keys is a list of str
-            keys = as_str_list(key)
+            keys.extend(as_str_list(key))
         else:
             # Set defined over 1+ other sets
-
-            # Check for ambiguous arguments
-            if comment and isinstance(key, (dict, pd.DataFrame)) and "comment" in key:
-                raise ValueError("ambiguous; both key['comment'] and comment= given")
-
             if isinstance(key, pd.DataFrame):
                 # DataFrame of key values and perhaps comments
                 try:
                     # Pop a 'comment' column off the DataFrame, convert to list
-                    comment = key.pop("comment").to_list()
+                    comments.extend(key.pop("comment"))
                 except KeyError:
                     pass
 
                 # Convert key to list of list of key values
-                keys = []
                 for row in key.to_dict(orient="records"):
                     keys.append(as_str_list(row, idx_names=idx_names))
             elif isinstance(key, dict):
                 # Dict of lists of key values
 
                 # Pop a 'comment' list from the dict
-                comment = key.pop("comment", None)
+                comments.extend(key.pop("comment", []))
 
                 # Convert to list of list of key values
-                keys = list(map(as_str_list, zip(*[key[i] for i in idx_names])))
-            elif isinstance(key[0], str):
-                # List of key values; wrap
-                keys = [as_str_list(key)]
-            elif isinstance(key[0], list):
-                # List of lists of key values; convert to list of list of str
-                keys = list(map(as_str_list, key))
+                keys.extend(map(as_str_list, zip(*[key[i] for i in idx_names])))
             elif isinstance(key, str) and len(idx_names) == 1:
                 # Bare key given for a 1D set; wrap for convenience
-                keys = [[key]]
+                keys.append([key])
+            elif isinstance(key[0], str):
+                # List of key values; wrap
+                keys.append(as_str_list(key))
+            elif isinstance(key[0], list):
+                # List of lists of key values; convert to list of list of str
+                keys.extend(map(as_str_list, key))
             else:
                 # Other, invalid value
                 raise ValueError(key)
 
-        # Process comments to a list of str, or let them all be None
-        comments = as_str_list(comment) if comment else repeat(None, len(keys))
+        if isinstance(comment, str) or comment is None:
+            comments.append(comment)
+        else:
+            # Sequence of comments
+            comments.extend(comment)
+
+        # Convert a None value into a list of None matching `keys`
+        if comments == [None]:
+            comments = comments * len(keys)
+
+        # Elements to send to backend
+        elements = []
 
         # Combine iterators to tuples. If the lengths are mismatched, the sentinel
         # value 'False' is filled in
-        to_add = list(zip_longest(keys, comments, fillvalue=(False,)))
-
-        # Check processed arguments
-        for e, c in to_add:
-            # Check for sentinel values
-            if e == (False,):
-                raise ValueError(f"Comment {repr(c)} without matching key")
+        for k, c in list(zip_longest(keys, comments, fillvalue=(False,))):
+            # Check for sentinel value
+            if k == (False,):
+                raise ValueError(f"Comment {c!r} without matching key")
             elif c == (False,):
-                raise ValueError(f"Key {repr(e)} without matching comment")
-            elif len(idx_names) and len(idx_names) != len(e):
+                raise ValueError(f"Key {k!r} without matching comment")
+            elif len(idx_names) and len(idx_names) != len(k):
                 raise ValueError(
-                    f"{len(e)}-D key {repr(e)} invalid for "
-                    f"{len(idx_names)}-D set {name}{repr(idx_names)}"
+                    f"{len(k)}-D key {k!r} invalid for {len(idx_names)}-D set "
+                    f"{name}{idx_names!r}"
                 )
 
+            elements.append((k, None, None, c))
+
         # Send to backend
-        elements = ((kc[0], None, None, kc[1]) for kc in to_add)
         self._backend("item_set_elements", "set", name, elements)
 
     def remove_set(
@@ -569,7 +589,7 @@ class Scenario(TimeSeries):
                     keys = [keys]
 
                 # Use the same value for all keys
-                values = [float(value)] * len(keys)
+                values: List[Any] = [float(value)] * len(keys)
             else:
                 # Multiple values
                 values = value

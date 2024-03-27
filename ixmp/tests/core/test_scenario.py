@@ -239,6 +239,23 @@ class TestScenario:
         scen.init_par("foo", idx_sets=["i", "i", "j"], idx_names=["i0", "i1", "j"])
         scen.add_par("foo", pd.DataFrame(columns=["i0", "i1", "j"]), value=1.0)
 
+    def test_add_set(self, scen_empty) -> None:
+        # NB See also test_set(), below
+        scen = scen_empty
+
+        # Initialize a 0-D set
+        scen.init_set("i")
+        scen.init_set("foo", idx_sets=["i"])
+
+        # Exception raised on invalid arguments
+        with pytest.raises(ValueError, match="ambiguous; both key.*"):
+            scen.add_set("i", pd.DataFrame(columns=["i", "comment"]), comment="FOO")
+
+        # Bare str for 1-D set key is wrapped automatically
+        scen.add_set("i", "i0")
+        scen.add_set("foo", "i0")
+        assert {"i0"} == set(scen.set("foo")["i"])
+
     # Retrieve data
     def test_idx(self, scen):
         assert scen.idx_sets("d") == ["i", "j"]
@@ -549,7 +566,7 @@ def test_gh_210(scen_empty):
     assert all(foo_data.columns == columns)
 
 
-def test_set(scen_empty):
+def test_set(scen_empty) -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
 

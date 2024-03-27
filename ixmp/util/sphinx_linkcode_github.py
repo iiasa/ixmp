@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from sphinx.util import logging
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     import sphinx.application
 
 log = logging.getLogger(__name__)

@@ -50,6 +50,7 @@ documentation = "https://docs.messageix.org/ixmp"
 [project.optional-dependencies]
 docs = [
   "ixmp[tests]",
+  "genno >= 1.26",  # For sphinx extensions; see doc/conf.py
   "GitPython",
   "numpydoc",
   "sphinx >= 3.0",

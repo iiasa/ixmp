@@ -19,7 +19,7 @@ author = "ixmp Developers"
 # Add any Sphinx extension module names here, as strings. They can be extensions coming
 # with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "ixmp.util.sphinx_linkcode_github",
+    # First party
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
@@ -29,6 +29,9 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
+    # Others
+    "ixmp.util.sphinx_linkcode_github",
+    "genno.compat.sphinx.rewrite_refs",
     "sphinxcontrib.bibtex",
 ]
 
@@ -76,6 +79,14 @@ html_static_path = ["_static"]
 
 # The theme to use for HTML and HTML Help pages.
 html_theme = "sphinx_rtd_theme"
+
+# -- Options for genno.compat.sphinx.rewrite_refs --------------------------------------
+
+reference_aliases = {
+    r"(genno\.|)Quantity": "genno.core.attrseries.AttrSeries",
+    "AnyQuantity": ":data:`genno.core.quantity.AnyQuantity`",
+}
+
 
 # -- Options for sphinx.ext.extlinks ---------------------------------------------------
 

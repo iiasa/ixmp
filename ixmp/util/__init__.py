@@ -618,13 +618,8 @@ def show_versions(file=sys.stdout):
 
         # Retrieve git log information, if any
         gl = _git_log(mod)
-        try:
-            version = mod.__version__
-        except Exception:
-            # __version__ not available
-            version = "installed"
-        finally:
-            info.append((module_name, version + gl))
+        version = getattr(mod, "__version__", "installed") or ""
+        info.append((module_name, version + gl))
 
         if module_name == "jpype":
             info.append(("… JVM path", mod.getDefaultJVMPath()))

@@ -9,7 +9,7 @@ from ixmp._config import config
 from ixmp.backend import BACKENDS, FIELDS, ItemType
 from ixmp.util import as_str_list
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ixmp.backend.base import Backend
 
 
@@ -235,11 +235,11 @@ class Platform:
                 "model or scenario."
             )
         filters = {
-            "model": as_str_list(model) or [],
-            "scenario": as_str_list(scenario) or [],
-            "variable": as_str_list(variable) or [],
-            "unit": as_str_list(unit) or [],
-            "region": as_str_list(region) or [],
+            "model": as_str_list(model),
+            "scenario": as_str_list(scenario),
+            "variable": as_str_list(variable),
+            "unit": as_str_list(unit),
+            "region": as_str_list(region),
             "default": default,
             "export_all_runs": export_all_runs,
         }

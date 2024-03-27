@@ -1,10 +1,20 @@
 import logging
 from functools import partialmethod
-from itertools import repeat, zip_longest
+from itertools import zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Union,
+)
 from warnings import warn
 
 import pandas as pd
@@ -213,6 +223,11 @@ class Scenario(TimeSeries):
         # Get index names for set *name*, may raise KeyError
         idx_names = self.idx_names(name)
 
+        # List of keys
+        keys: MutableSequence[Union[str, MutableSequence[str]]] = []
+        # List of comments for each key
+        comments: List[Optional[str]] = [comment] if comment else []
+
         # Check arguments and convert to two lists: keys and comments
         if len(idx_names) == 0:
             # Basic set. Keys must be strings.
@@ -223,7 +238,7 @@ class Scenario(TimeSeries):
                 )
 
             # Ensure keys is a list of str
-            keys = as_str_list(key)
+            keys.extend(as_str_list(key))
         else:
             # Set defined over 1+ other sets
 
@@ -235,37 +250,37 @@ class Scenario(TimeSeries):
                 # DataFrame of key values and perhaps comments
                 try:
                     # Pop a 'comment' column off the DataFrame, convert to list
-                    comment = key.pop("comment").to_list()
+                    comments.extend(key.pop("comment"))
                 except KeyError:
                     pass
 
                 # Convert key to list of list of key values
-                keys = []
                 for row in key.to_dict(orient="records"):
                     keys.append(as_str_list(row, idx_names=idx_names))
             elif isinstance(key, dict):
                 # Dict of lists of key values
 
                 # Pop a 'comment' list from the dict
-                comment = key.pop("comment", None)
+                comments.extend(key.pop("comment", []))
 
                 # Convert to list of list of key values
-                keys = list(map(as_str_list, zip(*[key[i] for i in idx_names])))
+                keys.extend(map(as_str_list, zip(*[key[i] for i in idx_names])))
             elif isinstance(key[0], str):
                 # List of key values; wrap
-                keys = [as_str_list(key)]
+                keys.append(as_str_list(key))
             elif isinstance(key[0], list):
                 # List of lists of key values; convert to list of list of str
-                keys = list(map(as_str_list, key))
+                keys.extend(map(as_str_list, key))
             elif isinstance(key, str) and len(idx_names) == 1:
                 # Bare key given for a 1D set; wrap for convenience
-                keys = [[key]]
+                keys.append([key])
             else:
                 # Other, invalid value
                 raise ValueError(key)
 
         # Process comments to a list of str, or let them all be None
-        comments = as_str_list(comment) if comment else repeat(None, len(keys))
+        if not comments:
+            comments = [None] * len(keys)
 
         # Combine iterators to tuples. If the lengths are mismatched, the sentinel
         # value 'False' is filled in
@@ -569,7 +584,7 @@ class Scenario(TimeSeries):
                     keys = [keys]
 
                 # Use the same value for all keys
-                values = [float(value)] * len(keys)
+                values: List[Any] = [float(value)] * len(keys)
             else:
                 # Multiple values
                 values = value

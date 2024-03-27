@@ -1,6 +1,7 @@
 import logging
 import re
 from functools import partial
+from typing import cast
 
 import genno
 import pandas as pd
@@ -123,7 +124,8 @@ def test_update_scenario(caplog, test_mp) -> None:
     c.add("target", scen)
 
     # Create a pd.DataFrame suitable for Scenario.add_par()
-    data = dantzig_data["d"].query("j == 'chicago'").assign(j="toronto")
+    d = cast(pd.DataFrame, dantzig_data["d"])
+    data = d.query("j == 'chicago'").assign(j="toronto")
     data["value"] += 1.0
 
     # Add to the Reporter
@@ -141,7 +143,7 @@ def test_update_scenario(caplog, test_mp) -> None:
     assert len(scen.par("d")) == N_before + len(data)
 
     # Modify the data
-    data = pd.concat([dantzig_data["d"], data]).reset_index(drop=True)
+    data = pd.concat([d, data]).reset_index(drop=True)
     data["value"] *= 2.0
 
     # Convert to a Quantity object and re-add

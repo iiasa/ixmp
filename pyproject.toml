@@ -109,10 +109,11 @@ markers = [
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]
 # FIXME the following exceed this limit
-# .backend.io.s_read_excel: 26
-# .backend.jdbc.JDBCBackend.item_get_elements: 19
-# .core.scenario.Scenario.add_set: 17
-mccabe.max-complexity = 15
+# .backend.io.s_read_excel: 22
+# .backend.jdbc.JDBCBackend.item_get_elements: 18
+# .core.scenario.Scenario.add_par: 15
+# .core.scenario.Scenario.add_set: 18
+mccabe.max-complexity = 13
 
 [tool.setuptools.packages]
 find = {}

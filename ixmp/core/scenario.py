@@ -186,7 +186,7 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_get_elements", "set", name, filters)
 
-    # FIXME reduce complexity from 17 to <=15
+    # FIXME reduce complexity 18 → ≤13
     def add_set(  # noqa: C901
         self,
         name: str,
@@ -535,7 +535,8 @@ class Scenario(TimeSeries):
     #: List all defined variables. See :meth:`list_items`.
     var_list = partialmethod(list_items, ItemType.VAR)
 
-    def add_par(
+    # FIXME reduce complexity 15 → ≤13
+    def add_par(  # noqa: C901
         self,
         name: str,
         key_or_data: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,

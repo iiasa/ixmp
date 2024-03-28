@@ -174,7 +174,7 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
             raise ValueError from None
 
 
-# FIXME reduce complexity from 26 to <=15
+# FIXME reduce complexity 22 → ≤13
 def s_read_excel(  # noqa: C901
     be, s, path, add_units=False, init_items=False, commit_steps=False
 ):

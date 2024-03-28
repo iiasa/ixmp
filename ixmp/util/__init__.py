@@ -9,7 +9,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Dict,
+    Any,
     Iterable,
     Iterator,
     List,
@@ -57,7 +57,7 @@ def logger():
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names: Optional[Iterable[str]] = None):
+def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> List[str]:
     """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
@@ -70,11 +70,11 @@ def as_str_list(arg, idx_names: Optional[Iterable[str]] = None):
 
     """
     if arg is None:
-        return None
+        return []
     elif idx_names is None:
         # arg must be iterable
-        # NB narrower ABC Sequence does not work here; e.g. test_excel_io()
-        #    fails via Scenario.add_set().
+        # NB narrower ABC Sequence does not work here; e.g. test_excel_io() fails via
+        #    Scenario.add_set().
         if isinstance(arg, Iterable) and not isinstance(arg, str):
             return list(map(str, arg))
         else:
@@ -120,7 +120,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     ]
     # State variables for loop
     name = ["", ""]
-    data: List[pd.DataFrame] = [None, None]
+    data: List[pd.DataFrame] = [pd.DataFrame(), pd.DataFrame()]
 
     # Elements for first iteration
     name[0], data[0] = next(items[0])
@@ -146,7 +146,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
 
         # Either merge on remaining columns; or, for scalars, on the indices
         on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg: Dict[str, object] = (
+        on_arg: Mapping[str, Any] = (
             dict(on=on) if on else dict(left_index=True, right_index=True)
         )
 
@@ -173,7 +173,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
             except StopIteration:
                 # No more data for this iterator.
                 # Use "~" because it sorts after all ASCII characters
-                name[i], data[i] = "~ end", None
+                name[i], data[i] = "~ end", pd.DataFrame()
 
         if name[0] == name[1] == "~ end":
             break
@@ -618,13 +618,8 @@ def show_versions(file=sys.stdout):
 
         # Retrieve git log information, if any
         gl = _git_log(mod)
-        try:
-            version = mod.__version__
-        except Exception:
-            # __version__ not available
-            version = "installed"
-        finally:
-            info.append((module_name, version + gl))
+        version = getattr(mod, "__version__", "installed") or ""
+        info.append((module_name, version + gl))
 
         if module_name == "jpype":
             info.append(("… JVM path", mod.getDefaultJVMPath()))

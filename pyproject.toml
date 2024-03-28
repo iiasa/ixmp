@@ -50,6 +50,7 @@ documentation = "https://docs.messageix.org/ixmp"
 [project.optional-dependencies]
 docs = [
   "ixmp[tests]",
+  "genno >= 1.26",  # For sphinx extensions; see doc/conf.py
   "GitPython",
   "numpydoc",
   "sphinx >= 3.0",
@@ -83,12 +84,10 @@ omit = ["ixmp/util/sphinx_linkcode_github.py"]
 [[tool.mypy.overrides]]
 # Packages/modules for which no type hints are available.
 module = [
-  "dask.*",
   "jpype",
   "memory_profiler",
-  "pandas.*",
-  "pyam",
   "pretenders.*",
+  "pyam",
 ]
 ignore_missing_imports = true
 
@@ -107,15 +106,14 @@ markers = [
   "performance: ixmp performance test.",
 ]
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]
-
-[tool.ruff.mccabe]
 # FIXME the following exceed this limit
-# .backend.io.s_read_excel: 26
-# .backend.jdbc.JDBCBackend.item_get_elements: 19
-# .core.scenario.Scenario.add_set: 17
-max-complexity = 15
+# .backend.io.s_read_excel: 22
+# .backend.jdbc.JDBCBackend.item_get_elements: 18
+# .core.scenario.Scenario.add_par: 15
+# .core.scenario.Scenario.add_set: 18
+mccabe.max-complexity = 13
 
 [tool.setuptools.packages]
 find = {}

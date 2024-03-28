@@ -965,7 +965,7 @@ class JDBCBackend(CachingBackend):
         jitem = self._get_item(s, "item", name, load=False)
         return list(getattr(jitem, f"getIdx{sets_or_names.title()}")())
 
-    # FIXME reduce complexity from 19 to <=15
+    # FIXME reduce complexity 18 → ≤13
     def item_get_elements(self, s, type, name, filters=None):  # noqa: C901
         if filters:
             # Convert filter elements to strings

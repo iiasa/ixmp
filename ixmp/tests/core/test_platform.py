@@ -1,7 +1,9 @@
 """Tests of :class:`ixmp.Platform`."""
+
 import logging
 import re
 from sys import getrefcount
+from typing import TYPE_CHECKING
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -12,6 +14,9 @@ from pytest import raises
 import ixmp
 from ixmp.backend import FIELDS
 from ixmp.testing import DATA, assert_logs, models
+
+if TYPE_CHECKING:
+    from ixmp import Platform
 
 
 class TestPlatform:
@@ -67,14 +72,11 @@ def test_scenario_list(mp):
     assert scenario[0] == "Hitchhiker"
 
 
-def test_export_timeseries_data(test_mp, tmp_path):
+def test_export_timeseries_data(mp: "Platform", tmp_path) -> None:
     path = tmp_path / "export.csv"
-    test_mp.export_timeseries_data(
-        path, model="Douglas Adams", unit="???", region="World"
-    )
+    mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
 
     obs = pd.read_csv(path, index_col=False, header=0)
-
     exp = (
         DATA[0]
         .assign(**models["h2g2"], version=1, subannual="Year", meta=0)

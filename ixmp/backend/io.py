@@ -112,7 +112,9 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
             sheet_name = name + (f"({sheet_num})" if sheet_num > 1 else "")
 
             # Subset the data (only on rows, if a DataFrame) and write
-            data.iloc[first_row:last_row].to_excel(writer, sheet_name, index=False)
+            data.iloc[first_row:last_row].to_excel(
+                writer, sheet_name=sheet_name, index=False
+            )
 
     # Discard entries that were not written
     for name in omitted:
@@ -172,7 +174,7 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
             raise ValueError from None
 
 
-# FIXME reduce complexity from 26 to <=15
+# FIXME reduce complexity 22 → ≤13
 def s_read_excel(  # noqa: C901
     be, s, path, add_units=False, init_items=False, commit_steps=False
 ):

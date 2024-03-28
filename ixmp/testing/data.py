@@ -3,14 +3,13 @@ from itertools import product
 from math import ceil
 from typing import Any, List
 
+import genno
 import numpy as np
 import pandas as pd
 import pint
-import xarray as xr
 
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
-from ixmp.report import Quantity
 
 #: Common (model name, scenario name) pairs for testing.
 SCEN = {
@@ -145,9 +144,8 @@ def add_test_data(scen: Scenario):
 
     # Data
     ureg = pint.get_application_registry()
-    x = Quantity(
-        xr.DataArray(np.random.rand(len(t), len(y)), coords=[("t", t), ("y", y)]),
-        units=ureg.kg,
+    x = genno.Quantity(
+        np.random.rand(len(t), len(y)), coords={"t": t, "y": y}, units=ureg.kg
     )
 
     # As a pd.DataFrame with units

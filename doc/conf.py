@@ -132,7 +132,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "sparse": ("https://sparse.pydata.org/en/stable/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
-    "xarray": ("https://xarray.pydata.org/en/stable/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable", None),
 }
 
 # -- Options for sphinx.ext.linkcode / ixmp.util.sphinx_linkcode_github ----------------

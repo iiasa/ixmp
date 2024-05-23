@@ -15,8 +15,33 @@ from ixmp.util import as_str_list
 log = logging.getLogger(__name__)
 
 
-def gams_version() -> Optional[str]:
-    """Return the GAMS version as a string, for instance "24.7.4"."""
+class GAMSInfo:
+    """Information about the GAMS installation."""
+
+    #: Version.
+    version: Optional[str]
+
+    #: System directory.
+    system_dir: Path
+
+    def __init__(self, output: str) -> None:
+        if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
+            self.version = match.group(1)
+        else:  # pragma: no cover
+            self.version = None
+
+        if match := re.search(r"^\s*SysDir (.*)", output, re.MULTILINE):
+            self.system_dir = Path(match.group(1))
+        else:  # pragma: no cover
+            self.system_dir = Path.cwd()
+
+    @property
+    def java_api_dir(self) -> Path:
+        """Java API files subdirectory of :attr:`.system_dir`."""
+        return self.system_dir.joinpath("apifiles", "Java", "api")
+
+
+def gams_info() -> GAMSInfo:
     # NB check_output(['gams'], ...) does not work, because GAMS writes directly to the
     #    console instead of to stdout. check_output(['gams', '-LogOption=3'], ...) does
     #    not work, because GAMS does not accept options without an input file to
@@ -43,11 +68,12 @@ def gams_version() -> Optional[str]:
     gms.with_suffix(".lst").unlink()
     tmp_dir.rmdir()
 
-    # Find and return the version string
-    if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
-        return match.group(1)
-    else:  # pragma: no cover
-        return None
+    return GAMSInfo(output)
+
+
+def gams_version() -> Optional[str]:
+    """Return the GAMS version as a string, for instance "24.7.4"."""
+    return gams_info().version
 
 
 #: Return codes used by GAMS, from

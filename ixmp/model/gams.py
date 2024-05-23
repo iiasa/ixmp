@@ -25,6 +25,7 @@ class GAMSInfo:
     system_dir: Path
 
     def __init__(self, output: str) -> None:
+        print(output)
         if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
             self.version = match.group(1)
         else:  # pragma: no cover

@@ -1269,6 +1269,9 @@ def start_jvm(jvmargs=None):
     log.debug(f"JAVA_HOME: {os.environ.get('JAVA_HOME', '(not set)')}")
     log.debug(f"jpype.getDefaultJVMPath: {jpype.getDefaultJVMPath()}")
     log.debug(f"args to startJVM: {args} {kwargs}")
+    print(f"JAVA_HOME: {os.environ.get('JAVA_HOME', '(not set)')}")
+    print(f"jpype.getDefaultJVMPath: {jpype.getDefaultJVMPath()}")
+    print(f"args to startJVM: {args} {kwargs}")
 
     try:
         jpype.startJVM(*args, **kwargs)

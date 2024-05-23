@@ -36,11 +36,15 @@ jobs:
         # - ""
         # - "==2.0.0rc0"
 
-        exclude: [ ]
-        # # Specific version combinations that are invalid, e.g. pandas 2.0
-        # # requires Python >= 3.8
+        exclude:
+        # Specific version combinations that are invalid
+        # No arm64 distribution for this version of GAMS
+        - os: macos-latest
+          gams-version: 25.1.1
+        # Example: pandas 2.0 requires Python >= 3.8
         # - python-version: "3.7"
         #   pandas-version: "==2.0.0rc0"
+
 
       fail-fast: false
 
@@ -70,17 +74,16 @@ jobs:
       with:
         r-version: '4.2.3'
 
-    - name: Cache GAMS installer and R packages
+    - name: Cache R packages
       uses: actions/cache@v4
       with:
         path: |
-          gams
           ${{ env.R_LIBS_USER }}
         key: ${{ matrix.os }}-R${{ steps.setup-r.outputs.installed-r-version }}
         restore-keys: |
           ${{ matrix.os }}-
 
-    - uses: iiasa/actions/setup-gams@main
+    - uses: iiasa/actions/setup-gams@enh/gams-macos-arm64
       with:
         version: 25.1.1
 

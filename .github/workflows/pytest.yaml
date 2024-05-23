@@ -28,6 +28,9 @@ jobs:
         - "3.10"
         - "3.11"
         - "3.12"  # Latest supported by ixmp
+        gams-version:
+        # First version including a macOS arm64 distribution
+        - 43.4.1
 
         # commented: force a specific version of pandas, for e.g. pre-release
         # testing
@@ -35,11 +38,15 @@ jobs:
         # - ""
         # - "==2.0.0rc0"
 
-        exclude: [ ]
-        # # Specific version combinations that are invalid, e.g. pandas 2.0
-        # # requires Python >= 3.8
-        # - python-version: "3.7"
-        #   pandas-version: "==2.0.0rc0"
+        exclude:
+        # Specific version combinations that are invalid
+        # No arm64 distribution for this version of GAMS
+        - { os: macos-latest, gams-version: 25.1.1}
+        # No arm64 distributions of JPype for these Pythons
+        - { os: macos-latest, python-version: "3.8" }
+        - { os: macos-latest, python-version: "3.9" }
+        # Example: pandas 2.0 requires Python >= 3.8
+        # - { python-version: "3.7", pandas-version: "==2.0.0rc0" }
 
       fail-fast: false
 
@@ -81,7 +88,7 @@ jobs:
 
     - uses: iiasa/actions/setup-gams@main
       with:
-        version: 25.1.1
+        version: ${{ matrix.gams-version }}
 
     - name: Set RETICULATE_PYTHON
       # Use the environment variable set by the setup-python action, above.

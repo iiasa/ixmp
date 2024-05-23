@@ -1234,6 +1234,8 @@ def start_jvm(jvmargs=None):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+    from ixmp.model.gams import gams_info
+
     if jvmargs is None:
         jvmargs = []
     if jpype.isJVMStarted():
@@ -1244,8 +1246,15 @@ def start_jvm(jvmargs=None):
 
     # Arguments
     args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
-    # Append path to directory containing arch-specific libraries
-    args.append(f"-Djava.library.path={base.joinpath(platform.machine())}")
+
+    # Append path to directories containing arch-specific libraries
+    uname = platform.uname()
+    paths = [
+        gams_info().java_api_dir,  # GAMS system directory
+        base.joinpath(uname.machine),  # Subdirectory of ixmp/backend/jdbc
+    ]
+    sep = ";" if uname.system == "Windows" else ":"
+    args.append(f"-Djava.library.path={sep.join(map(str, paths))}")
 
     # Keyword arguments
     kwargs = dict(

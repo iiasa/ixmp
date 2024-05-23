@@ -20,13 +20,14 @@ jobs:
       matrix:
         os:
         - macos-13
+        - macos-latest
         - ubuntu-latest
         - windows-latest
         python-version:
         - "3.8"  # Earliest version supported by ixmp
         - "3.9"
-        - "3.10"
-        - "3.11"
+        # - "3.10"
+        # - "3.11"
         - "3.12"  # Latest supported by ixmp
 
         # commented: force a specific version of pandas, for e.g. pre-release

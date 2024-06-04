@@ -1,5 +1,10 @@
-Next release
-============
+.. Next release
+.. ============
+
+.. _v3.9.0:
+
+v3.9.0 (2024-06-04)
+===================
 
 All changes
 -----------
@@ -14,6 +19,7 @@ v3.8.0 (2024-01-12)
 
 Migration notes
 ---------------
+
 Update code that imports from the following modules:
 
 - :py:`ixmp.reporting` → use :mod:`ixmp.report`.

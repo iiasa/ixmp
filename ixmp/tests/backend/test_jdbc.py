@@ -47,13 +47,7 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_close(test_mp_f, capfd):
+def test_close_default_logging(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
     mp = test_mp_f
@@ -68,9 +62,21 @@ def test_close(test_mp_f, capfd):
     captured = capfd.readouterr()
     assert captured.out == ""
 
-    # With log level INFO, a message is printed
+
+def test_close_increased_logging(test_mp_f, capfd):
+    """Platform.close_db() doesn't throw needless exceptions."""
+    # Use the session-scoped fixture to avoid affecting other tests in this file
+    mp = test_mp_f
+
+    # Close once
+    mp.close_db()
+
+    # Set higher log level INFO
     level = mp.get_log_level()
     mp.set_log_level(logging.INFO)
+
+    # Close again, once already closed
+    # With logging.INFO, a message is printed
     mp.close_db()
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
@@ -237,19 +243,18 @@ def test_invalid_properties_file(test_data_path):
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_connect_message(capfd, caplog):
-    msg = "connected to database 'jdbc:hsqldb:mem://ixmptest' (user: ixmp)..."
+def test_connect_message(capfd, caplog, request):
+    msg = (
+        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}' (user: ixmp)..."
+    )
 
+    # TODO Specifying a name will fail because the test is looking for a platform with
+    # that name which doesn't exist yet.
     ixmp.Platform(
+        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url="jdbc:hsqldb:mem://ixmptest",
+        url=f"jdbc:hsqldb:mem://{request.node.name}",
         log_level="INFO",
     )
 
@@ -262,9 +267,10 @@ def test_connect_message(capfd, caplog):
     #    in the above call. Try again now that the level is INFO:
 
     ixmp.Platform(
+        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url="jdbc:hsqldb:mem://ixmptest",
+        url=f"jdbc:hsqldb:mem://{request.node.name}",
     )
 
     # Instead, log messages are printed to stdout
@@ -273,7 +279,7 @@ def test_connect_message(capfd, caplog):
 
 
 @pytest.mark.parametrize("arg", [True, False])
-def test_cache_arg(arg):
+def test_cache_arg(arg, request):
     """Test 'cache' argument, passed to CachingBackend."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -281,7 +287,7 @@ def test_cache_arg(arg):
         url="jdbc:hsqldb:mem://test_cache_false",
         cache=arg,
     )
-    scen = make_dantzig(mp)
+    scen = make_dantzig(mp, request=request)
 
     # Maybe put something in the cache
     scen.par("a")
@@ -339,8 +345,8 @@ def test_init(tmp_env, args, kwargs, action, kind, match):
         ixmp.Platform(*args, **kwargs)
 
 
-def test_gh_216(test_mp):
-    scen = make_dantzig(test_mp)
+def test_gh_216(test_mp, request):
+    scen = make_dantzig(test_mp, request=request)
 
     filters = dict(i=["seattle", "beijing"])
 
@@ -382,24 +388,26 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     # See also test_base.TestCachingBackend.test_del_ts
     reason="https://github.com/iiasa/ixmp/issues/463",
 )
-def test_del_ts():
+def test_del_ts(request):
     mp = ixmp.Platform(
         backend="jdbc",
         driver="hsqldb",
         url="jdbc:hsqldb:mem:test_del_ts",
     )
 
+    backend: ixmp.backend.jdbc.JDBCBackend = mp._backend  # type: ignore
+
     # Number of Java objects referenced by the JDBCBackend
-    N_obj = len(mp._backend.jindex)
+    N_obj = len(backend.jindex)
 
     # Create a list of some Scenario objects
     N = 8
-    scenarios = [make_dantzig(mp)]
+    scenarios = [make_dantzig(mp, request=request)]
     for i in range(1, N):
-        scenarios.append(scenarios[0].clone(scenario=f"clone {i}"))
+        scenarios.append(scenarios[0].clone(scenario=f"{request.node.name} clone {i}"))
 
     # Number of referenced objects has increased by 8
-    assert len(mp._backend.jindex) == N_obj + N
+    assert len(backend.jindex) == N_obj + N
 
     # Pop and free the objects
     for i in range(N):
@@ -414,22 +422,23 @@ def test_del_ts():
         s_id = id(s)
 
         # Underlying Java object
-        s_jobj = mp._backend.jindex[s]
+        s_jobj = backend.jindex[s]
 
         # Now delete the Scenario object
-        del s
+        # del s # should work, but doesn't always resolve to s.__del__()
+        backend.del_ts(s)
 
         # Number of referenced objects decreases by 1
-        assert len(mp._backend.jindex) == N_obj + N - (i + 1)
+        assert len(backend.jindex) == N_obj + N - (i + 1)
         # ID is no longer in JDBCBackend.jindex
-        assert s_id not in mp._backend.jindex
+        assert s_id not in backend.jindex
 
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1
         del s_jobj
 
     # Backend is again empty
-    assert len(mp._backend.jindex) == N_obj
+    assert len(backend.jindex) == N_obj
 
 
 # NB coverage is omitted because this test is not included in the standard suite
@@ -648,8 +657,8 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
-def test_docs(test_mp):
-    scen = make_dantzig(test_mp)
+def test_docs(test_mp, request):
+    scen = make_dantzig(test_mp, request=request)
     # test model docs
     test_mp.set_doc("model", {scen.model: "Dantzig model"})
     assert test_mp.get_doc("model") == {"canning problem": "Dantzig model"}
@@ -672,9 +681,9 @@ def test_docs(test_mp):
     assert ex.value.args[0] == exp
 
 
-def test_cache_clear(test_mp):
+def test_cache_clear(test_mp, request):
     """Removing set elements causes the cache to be cleared entirely."""
-    scen = make_dantzig(test_mp)
+    scen = make_dantzig(test_mp, request=request)
 
     # Load an item so that it is cached
     d0 = scen.par("d")

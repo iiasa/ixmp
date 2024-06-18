@@ -27,8 +27,8 @@ from ixmp.testing import assert_logs, make_dantzig
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
 
-def test_from_url(test_mp) -> None:
-    ts = make_dantzig(test_mp)
+def test_from_url(test_mp, request) -> None:
+    ts = make_dantzig(test_mp, request=request)
 
     full_url = f"ixmp://{ts.platform.name}/{ts.url}"
 
@@ -45,8 +45,8 @@ def test_from_url(test_mp) -> None:
     assert ts.url == result.url
 
 
-def test_get_remove_ts(caplog, test_mp) -> None:
-    ts = make_dantzig(test_mp)
+def test_get_remove_ts(caplog, test_mp, request) -> None:
+    ts = make_dantzig(test_mp, request=request)
 
     caplog.set_level(logging.INFO, "ixmp")
 
@@ -107,8 +107,8 @@ def test_map_as_qty() -> None:
     assert_qty_equal(exp, result)
 
 
-def test_update_scenario(caplog, test_mp) -> None:
-    scen = make_dantzig(test_mp)
+def test_update_scenario(caplog, test_mp, request) -> None:
+    scen = make_dantzig(test_mp, request=request)
     scen.check_out()
     scen.add_set("j", "toronto")
     scen.commit("Add j=toronto")

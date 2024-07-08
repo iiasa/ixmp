@@ -92,8 +92,9 @@ class GAMSInfo:
                     cwd=temp_dir,
                     universal_newlines=True,
                 )
-            except FileNotFoundError as e:
+            except FileNotFoundError as e:  # pragma: no cover
                 log.warning(f"{e}")
+                output = ""
 
         # Parse GAMS version from the copyright line
         if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):

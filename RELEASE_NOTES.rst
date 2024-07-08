@@ -1,5 +1,11 @@
-.. Next release
-.. ============
+Next release
+============
+
+- :mod:`ixmp` locates GAMS API libraries needed for the Java code underlying :class:`.JDBCBackend` based on the system GAMS installation (:pull:`532`).
+  As a result:
+
+  - :class:`.JDBCBackend` is usable on MacOS with newer, ``arm64``-architecture processors and Python/GAMS compiled for ``arm64`` (:issue:`473`, :issue:`531`).
+  - GAMS API libraries are no longer (re-)packaged with ixmp in the directory :file:`ixmp/backend/jdbc/`.
 
 .. _v3.9.0:
 

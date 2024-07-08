@@ -5,7 +5,8 @@ import shutil
 import tempfile
 from copy import copy
 from pathlib import Path
-from subprocess import CalledProcessError, run
+from subprocess import CalledProcessError, check_output, run
+from tempfile import TemporaryDirectory
 from typing import Any, MutableMapping, Optional
 
 from ixmp.backend import ItemType
@@ -15,65 +16,8 @@ from ixmp.util import as_str_list
 log = logging.getLogger(__name__)
 
 
-class GAMSInfo:
-    """Information about the GAMS installation."""
-
-    #: Version.
-    version: Optional[str]
-
-    #: System directory.
-    system_dir: Path
-
-    def __init__(self, output: str) -> None:
-        if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
-            self.version = match.group(1)
-        else:  # pragma: no cover
-            self.version = None
-
-        if match := re.search(r"^\s*SysDir (.*)", output, re.MULTILINE):
-            self.system_dir = Path(match.group(1))
-        else:  # pragma: no cover
-            self.system_dir = Path.cwd()
-
-    @property
-    def java_api_dir(self) -> Path:
-        """Java API files subdirectory of :attr:`.system_dir`."""
-        return self.system_dir.joinpath("apifiles", "Java", "api")
-
-
-def gams_info() -> GAMSInfo:
-    # NB check_output(['gams'], ...) does not work, because GAMS writes directly to the
-    #    console instead of to stdout. check_output(['gams', '-LogOption=3'], ...) does
-    #    not work, because GAMS does not accept options without an input file to
-    #    execute.
-    import os
-    from subprocess import check_output
-    from tempfile import mkdtemp
-
-    # Create a temporary GAMS program that does nothing
-    tmp_dir = Path(mkdtemp())
-    gms = tmp_dir / "null.gms"
-    gms.write_text("$exit;")
-
-    # Execute, capturing stdout
-    output = check_output(
-        ["gams", "null", "-LogOption=3"],
-        shell=os.name == "nt",
-        cwd=tmp_dir,
-        universal_newlines=True,
-    )
-
-    # Clean up
-    gms.unlink()
-    gms.with_suffix(".lst").unlink()
-    tmp_dir.rmdir()
-
-    return GAMSInfo(output)
-
-
-def gams_version() -> Optional[str]:
-    """Return the GAMS version as a string, for instance "24.7.4"."""
-    return gams_info().version
+# Singleton instance of GAMSInfo.
+_GAMS_INFO: Optional["GAMSInfo"] = None
 
 
 #: Return codes used by GAMS, from
@@ -118,6 +62,55 @@ RETURN_CODE = {
     5000: "Driver error: internal error: cannot load option handling library",
 }
 RETURN_CODE = {key % 256: value for key, value in RETURN_CODE.items()}
+
+
+class GAMSInfo:
+    """Information about the GAMS installation."""
+
+    #: GAMS version as a string, for instance "24.7.4".
+    version: Optional[str]
+
+    #: System directory.
+    system_dir: Path
+
+    def __init__(self) -> None:
+        # Retrieve some `output` containing GAMS installation info
+        with TemporaryDirectory() as temp_dir:
+            # NB the following do not work:
+            # - check_output(['gams'], ...) —because GAMS writes directly to the console
+            #   instead of to stdout.
+            # - check_output(['gams', '-LogOption=3'], ...) —because GAMS does not
+            #   accept options without an input file to execute.
+            # …so instead create a GAMS source file that does nothing:
+            Path(temp_dir, "null.gms").write_text("$exit;")
+
+            try:
+                # Execute this no-op file and capture stdout
+                output = check_output(
+                    ["gams", "null.gms", "-LogOption=3"],
+                    shell=os.name == "nt",
+                    cwd=temp_dir,
+                    universal_newlines=True,
+                )
+            except FileNotFoundError as e:
+                log.warning(f"{e}")
+
+        # Parse GAMS version from the copyright line
+        if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
+            self.version = match.group(1)
+        else:  # pragma: no cover
+            self.version = None
+
+        # Parse GAMS system directory path
+        if match := re.search(r"^\s*SysDir (.*)", output, re.MULTILINE):
+            self.system_dir = Path(match.group(1))
+        else:  # pragma: no cover
+            self.system_dir = Path.cwd()
+
+    @property
+    def java_api_dir(self) -> Path:
+        """Java API files subdirectory of :attr:`.system_dir`."""
+        return self.system_dir.joinpath("apifiles", "Java", "api")
 
 
 class GAMSModel(Model):
@@ -405,3 +398,20 @@ class GAMSModel(Model):
 
         # Finished: remove the temporary directory, if any
         self.remove_temp_dir()
+
+
+def gams_info() -> GAMSInfo:
+    """Return an instance of :class:`.GAMSInfo`."""
+    # Singleton pattern; ensure there is only one instance of GAMSInfo
+    global _GAMS_INFO
+
+    if _GAMS_INFO is None:
+        # Create the singleton
+        _GAMS_INFO = GAMSInfo()
+
+    return _GAMS_INFO
+
+
+def gams_version() -> Optional[str]:
+    """Return :attr:`.GAMSInfo.version`."""
+    return gams_info().version

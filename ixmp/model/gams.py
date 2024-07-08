@@ -170,6 +170,7 @@ class GAMSModel(Model):
         "out_file": str(Path("{cwd}", "{model_name}_out.gdx")),
         "solve_args": ['--in="{in_file}"', '--out="{out_file}"'],
         # Not formatted
+        "LP": None,
         "gams_args": [],
         "check_solution": True,
         "comment": None,
@@ -316,6 +317,8 @@ class GAMSModel(Model):
         # Input and output file names
         self.in_file = Path(self.format_option("in_file"))
         self.out_file = Path(self.format_option("out_file"))
+        # LP solver; only pass if given
+        self.solve_args.extend([f"LP={self.LP}"] if self.LP else [])
 
         # Assemble the full command: executable, model file, model-specific arguments,
         # and general GAMS arguments

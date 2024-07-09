@@ -1,6 +1,7 @@
 import gc
 import logging
 import os
+import platform
 import re
 from collections import ChainMap
 from collections.abc import Iterable, Sequence
@@ -1233,18 +1234,32 @@ def start_jvm(jvmargs=None):
         .. _`JVM documentation`: https://docs.oracle.com/javase/7/docs
            /technotes/tools/windows/java.html)
     """
+    from ixmp.model.gams import gams_info
+
     if jvmargs is None:
         jvmargs = []
     if jpype.isJVMStarted():
         return
 
+    # Base directory for the classpath and library path
+    base = Path(__file__).with_name("jdbc")
+
     # Arguments
     args = jvmargs if isinstance(jvmargs, list) else [jvmargs]
 
+    # Append path to directories containing arch-specific libraries
+    uname = platform.uname()
+    paths = [
+        gams_info().java_api_dir,  # GAMS system directory
+        base.joinpath(uname.machine),  # Subdirectory of ixmp/backend/jdbc
+    ]
+    sep = ";" if uname.system == "Windows" else ":"
+    args.append(f"-Djava.library.path={sep.join(map(str, paths))}")
+
     # Keyword arguments
     kwargs = dict(
-        # Glob pattern for ixmp.jar and related Java binaries
-        classpath=str(Path(__file__).parent.joinpath("jdbc", "*")),
+        # Use ixmp.jar and related Java JAR files
+        classpath=str(base.joinpath("*")),
         # For JPype 0.7 (raises a warning) and 0.8 (default is False). 'True' causes
         # Java string objects to be converted automatically to Python str(), as expected
         # by ixmp Python code.

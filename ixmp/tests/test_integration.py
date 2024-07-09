@@ -1,6 +1,4 @@
 import logging
-import os
-import platform
 
 import numpy as np
 import pytest
@@ -14,7 +12,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-def test_run_clone(caplog, test_mp):
+def test_run_clone(caplog, test_mp, request):
     caplog.set_level(logging.WARNING)
 
     # this test is designed to cover the full functionality of the GAMS API
@@ -24,14 +22,20 @@ def test_run_clone(caplog, test_mp):
     # - reads back the solution from the output
     # - performs the test on the objective value and the timeseries data
     mp = test_mp
-    scen = make_dantzig(mp, solve=True, quiet=True)
+    scen = make_dantzig(mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
-    assert_frame_equal(scen.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
     # cloning with `keep_solution=True` keeps all timeseries and the solution
     scen2 = scen.clone(keep_solution=True)
     assert np.isclose(scen2.var("z")["lvl"], 153.675)
-    assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
     # version attribute of the clone increments the original (GitHub #211)
     assert scen2.version == scen.version + 1
@@ -47,20 +51,25 @@ def test_run_clone(caplog, test_mp):
     # timeseries set as `meta=True`
     scen3 = scen.clone(keep_solution=False)
     assert np.isnan(scen3.var("z")["lvl"])
-    assert_frame_equal(scen3.timeseries(iamc=True), HIST_DF)
+    assert_frame_equal(
+        scen3.timeseries(iamc=True), HIST_DF.assign(scenario=scen.scenario)
+    )
 
     # cloning with `keep_solution=False` and `first_model_year`
     # drops the solution and removes all timeseries not marked `meta=True`
     # in the model horizon (i.e, `year >= first_model_year`)
     scen4 = scen.clone(keep_solution=False, shift_first_model_year=2005)
     assert np.isnan(scen4.var("z")["lvl"])
-    assert_frame_equal(scen4.timeseries(iamc=True), TS_DF_CLEARED)
+    assert_frame_equal(
+        scen4.timeseries(iamc=True),
+        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
 
-def test_run_remove_solution(test_mp):
+def test_run_remove_solution(test_mp, request):
     # create a new instance of the transport problem and solve it
     mp = test_mp
-    scen = make_dantzig(mp, solve=True, quiet=True)
+    scen = make_dantzig(mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists
@@ -72,7 +81,9 @@ def test_run_remove_solution(test_mp):
     scen2.remove_solution()
     assert not scen2.has_solution()
     assert np.isnan(scen2.var("z")["lvl"])
-    assert_frame_equal(scen2.timeseries(iamc=True), HIST_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True), HIST_DF.assign(scenario=scen.scenario)
+    )
 
     # remove the solution with a specific year as first model year, check that
     # variables are empty and timeseries not marked `meta=True` are removed
@@ -80,7 +91,10 @@ def test_run_remove_solution(test_mp):
     scen3.remove_solution(first_model_year=2005)
     assert not scen3.has_solution()
     assert np.isnan(scen3.var("z")["lvl"])
-    assert_frame_equal(scen3.timeseries(iamc=True), TS_DF_CLEARED)
+    assert_frame_equal(
+        scen3.timeseries(iamc=True),
+        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+    )
 
 
 def scenario_list(mp):
@@ -95,16 +109,10 @@ def get_distance(scen):
     return scen.par("d").set_index(["i", "j"]).loc["san-diego", "topeka"]["value"]
 
 
-@pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Darwin",
-    reason="Flaky; see iiasa/ixmp#489",
-)
-def test_multi_db_run(tmpdir):
+def test_multi_db_run(tmpdir, request):
     # create a new instance of the transport problem and solve it
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1, solve=True, quiet=True)
+    scen1 = make_dantzig(mp1, solve=True, quiet=True, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     # add other unit to make sure that the mapping is correct during clone
@@ -124,7 +132,9 @@ def test_multi_db_run(tmpdir):
     # reopen the connection to the second platform and reload scenario
     _mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     assert_multi_db(mp1, _mp2)
-    scen2 = ixmp.Scenario(_mp2, **models["dantzig"])
+    args = models["dantzig"].copy()
+    args.update(scenario=request.node.name)
+    scen2 = ixmp.Scenario(_mp2, **args)
 
     # check that sets, variables and parameter were copied correctly
     assert_array_equal(scen1.set("i"), scen2.set("i"))
@@ -135,13 +145,16 @@ def test_multi_db_run(tmpdir):
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par("f")["value"] == 90.0
     assert scen2.par("f")["unit"] == "USD/km"
-    assert_frame_equal(scen2.timeseries(iamc=True), TS_DF)
+    assert_frame_equal(
+        scen2.timeseries(iamc=True),
+        TS_DF.assign(scenario=[scen2.scenario, scen2.scenario]),
+    )
 
 
-def test_multi_db_edit_source(tmpdir):
+def test_multi_db_edit_source(tmpdir, request):
     # create a new instance of the transport problem
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1)
+    scen1 = make_dantzig(mp1, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     scen2 = scen1.clone(platform=mp2)
@@ -163,10 +176,10 @@ def test_multi_db_edit_source(tmpdir):
     assert_multi_db(mp1, mp2)
 
 
-def test_multi_db_edit_target(tmpdir):
+def test_multi_db_edit_target(tmpdir, request):
     # create a new instance of the transport problem
     mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
-    scen1 = make_dantzig(mp1)
+    scen1 = make_dantzig(mp1, request=request)
 
     mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
     scen2 = scen1.clone(platform=mp2)

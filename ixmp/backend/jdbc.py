@@ -728,6 +728,7 @@ class JDBCBackend(CachingBackend):
 
         # Aggressively free memory
         self.gc()
+        self.jindex.pop(ts, None)
 
     def check_out(self, ts, timeseries_only):
         with _handle_jexception():

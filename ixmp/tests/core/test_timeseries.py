@@ -87,7 +87,7 @@ class TestTimeSeries:
         node = hash(request.node.nodeid.replace("/", " "))
         # Class of object to yield
         cls = request.param
-        yield cls(mp, model=f"test-{node}", scenario="test", version="new")
+        yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
 
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])

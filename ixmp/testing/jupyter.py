@@ -48,16 +48,6 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
     import nbformat
     from nbclient import NotebookClient
 
-    # Workaround for https://github.com/jupyter/nbclient/issues/85
-    if (
-        sys.version_info[0] == 3
-        and sys.version_info[1] >= 8
-        and sys.platform.startswith("win")
-    ):
-        import asyncio
-
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
     # Read the notebook
     nb = nbformat.read(nb_path, as_version=4)
 

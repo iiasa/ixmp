@@ -105,6 +105,7 @@ markers = [
   "rixmp: test of the ixmp R interface.",
   "performance: ixmp performance test.",
 ]
+tmp_path_retention_policy = "none"
 
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]

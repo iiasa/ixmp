@@ -12,6 +12,14 @@ group_base_name = platform.system() + platform.python_version()
 GHA = "GITHUB_ACTIONS" in os.environ
 
 
+FLAKY = pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
+    reason="Flaky; see iiasa/ixmp#543",
+)
+
+
 def default_args():
     """Default arguments for :func:`.run_notebook."""
     if GHA:
@@ -21,6 +29,7 @@ def default_args():
         return dict()
 
 
+@FLAKY
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
 def test_py_transport(tutorial_path, tmp_path, tmp_env):
     fname = tutorial_path / "transport" / "py_transport.ipynb"
@@ -43,6 +52,7 @@ def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env):
     assert np.isclose(get_cell_output(nb, "scen-detroit-z")["lvl"], 161.324)
 
 
+@FLAKY
 @pytest.mark.xdist_group(name=f"{group_base_name}-1")
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark

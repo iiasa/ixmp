@@ -1,7 +1,7 @@
 # Methods are in alphabetical order
 from itertools import product
 from math import ceil
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import genno
 import numpy as np
@@ -12,8 +12,31 @@ import pytest
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
 
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    class ScenarioIdentifiers(TypedDict):
+        """Identifiers of a Scenario.
+
+        Used only for type checking in this file, so version is omitted.
+        """
+
+        model: str
+        scenario: str
+
+    class ScenarioKwargs(TypedDict, total=False):
+        """Keyword arguments to Scenario.__init__()."""
+
+        model: str
+        scenario: str
+        version: str
+        scheme: str
+        annotation: str
+        with_data: Optional[bool]
+
+
 #: Common (model name, scenario name) pairs for testing.
-SCEN = {
+SCEN: Dict[str, "ScenarioIdentifiers"] = {
     "dantzig": dict(model="canning problem", scenario="standard"),
     "h2g2": dict(model="Douglas Adams", scenario="Hitchhiker"),
 }
@@ -186,7 +209,7 @@ def make_dantzig(
     --------
     .DantzigModel
     """
-    # add custom units and region for timeseries data
+    # Add custom units and region for time series data
     try:
         mp.add_unit("USD/km")
     except Exception:
@@ -194,36 +217,31 @@ def make_dantzig(
         pass
     mp.add_region("DantzigLand", "country")
 
-    # Initialize a new Scenario, and use the DantzigModel class' initialize()
-    # method to populate it
-    annot = "Dantzig's transportation problem for illustration and testing"
-    args = dict(
+    # Initialize a new Scenario, and use the DantzigModel class' initialize() method to
+    # populate it
+    args: "ScenarioKwargs" = dict(
         **models["dantzig"],
         version="new",
-        annotation=annot,
+        annotation="Dantzig's transportation problem for illustration and testing",
         scheme="dantzig",
         with_data=True,
     )
-    if request:
-        # Use a distinct scenario name for a particular test
-        args.update(scenario=request.node.name)
-    scen = Scenario(
-        mp,
-        **args,  # type: ignore [arg-type]
-    )
+    # Use a distinct scenario name for a particular test
+    args.update({"scenario": request.node.name} if request else {})
 
-    # commit the scenario
+    scen = Scenario(mp, **args)
+
+    # Commit the scenario
     scen.commit("Import Dantzig's transport problem for testing.")
 
-    # set this new scenario as the default version for the model/scenario name
+    # Set this new scenario as the default version for the model/scenario name
     scen.set_as_default()
 
     if solve:
         # Solve the model using the GAMS code provided in the `tests` folder
         scen.solve(model="dantzig", case="transport_standard", quiet=quiet)
 
-    # add timeseries data for testing `clone(keep_solution=False)`
-    # and `remove_solution()`
+    # Add time series data for testing clone(keep_solution=False) and remove_solution()
     scen.check_out(timeseries_only=True)
     scen.add_timeseries(HIST_DF, meta=True)
     scen.add_timeseries(INP_DF)

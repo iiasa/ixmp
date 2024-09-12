@@ -2,7 +2,6 @@ import gc
 import logging
 import os
 import platform
-import sys
 from sys import getrefcount
 from typing import Tuple
 
@@ -387,12 +386,6 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     rerun_delay=2,
     condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
     reason="Flaky; see iiasa/ixmp#543",
-)
-@pytest.mark.xfail(
-    condition=sys.version_info.minor <= 10,
-    raises=AssertionError,
-    # See also test_base.TestCachingBackend.test_del_ts
-    reason="https://github.com/iiasa/ixmp/issues/463",
 )
 def test_del_ts(request):
     mp = ixmp.Platform(

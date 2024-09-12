@@ -382,6 +382,12 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
+@pytest.mark.flaky(
+    reruns=5,
+    rerun_delay=2,
+    condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Windows",
+    reason="Flaky; see iiasa/ixmp#543",
+)
 @pytest.mark.xfail(
     condition=sys.version_info.minor <= 10,
     raises=AssertionError,

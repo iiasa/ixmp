@@ -244,16 +244,14 @@ def test_invalid_properties_file(test_data_path):
 
 def test_connect_message(capfd, caplog, request):
     msg = (
-        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}' (user: ixmp)..."
+        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}_0' "
+        "(user: ixmp)..."
     )
 
-    # TODO Specifying a name will fail because the test is looking for a platform with
-    # that name which doesn't exist yet.
     ixmp.Platform(
-        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url=f"jdbc:hsqldb:mem://{request.node.name}",
+        url=f"jdbc:hsqldb:mem://{request.node.name}_0",
         log_level="INFO",
     )
 
@@ -264,12 +262,14 @@ def test_connect_message(capfd, caplog, request):
     #    a previous run may have left the Java log level higher than INFO, in which
     #    case the Java Platform object would not write to stderr before set_log_level()
     #    in the above call. Try again now that the level is INFO:
-
+    msg = (
+        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}_1' "
+        "(user: ixmp)..."
+    )
     ixmp.Platform(
-        # name=request.node.name,
         backend="jdbc",
         driver="hsqldb",
-        url=f"jdbc:hsqldb:mem://{request.node.name}",
+        url=f"jdbc:hsqldb:mem://{request.node.name}_1",
     )
 
     # Instead, log messages are printed to stdout

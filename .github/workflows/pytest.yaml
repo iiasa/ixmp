@@ -24,11 +24,11 @@ jobs:
         - ubuntu-latest
         - windows-latest
         python-version:
-        - "3.8"  # Earliest version supported by ixmp
-        - "3.9"
+        - "3.9"  # Earliest version supported by ixmp
         - "3.10"
         - "3.11"
-        - "3.12"  # Latest supported by ixmp
+        - "3.12"
+        - "3.13"  # Latest supported by ixmp
         gams-version:
         # Version used until 2024-07; disabled
         # - 25.1.1
@@ -43,17 +43,13 @@ jobs:
 
         exclude:
         # Specific version combinations that are invalid / not to be used
-        # No arm64 distribution for this version of GAMS
-        # - { os: macos-latest, gams-version: 25.1.1}
         # No arm64 distributions of JPype for these Pythons
-        - { os: macos-latest, python-version: "3.8" }
         - { os: macos-latest, python-version: "3.9" }
         # Redundant with macos-latest
         - { os: macos-13, python-version: "3.10" }
         - { os: macos-13, python-version: "3.11" }
         - { os: macos-13, python-version: "3.12" }
-        # Example: pandas 2.0 requires Python >= 3.8
-        # - { python-version: "3.7", pandas-version: "==2.0.0rc0" }
+        - { os: macos-13, python-version: "3.13" }
 
       fail-fast: false
 
@@ -80,6 +76,8 @@ jobs:
 
     - uses: r-lib/actions/setup-r@v2
       id: setup-r
+      with:
+        r-version: "4.4.1"
 
     - name: Cache GAMS installer and R packages
       uses: actions/cache@v4

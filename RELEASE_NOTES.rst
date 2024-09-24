@@ -1,6 +1,8 @@
 Next release
 ============
 
+- :mod:`ixmp` is tested and compatible with `Python 3.13 <https://www.python.org/downloads/release/python-3130/>`__ (:pull:`544`).
+- Support for Python 3.8 is dropped (:pull:`544`), as it has reached end-of-life.
 - :mod:`ixmp` locates GAMS API libraries needed for the Java code underlying :class:`.JDBCBackend` based on the system GAMS installation (:pull:`532`).
   As a result:
 

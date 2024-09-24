@@ -1,5 +1,5 @@
 from itertools import chain, repeat
-from typing import List, Union, cast
+from typing import Union, cast
 
 import dask
 import pandas as pd
@@ -50,7 +50,7 @@ class Reporter(Computer):
         rep.add("scenario", scenario)
 
         # List of top-level keys
-        all_keys: List[Union[str, Key]] = []
+        all_keys: list[Union[str, Key]] = []
 
         # List of parameters, equations, and variables
         quantities = chain(

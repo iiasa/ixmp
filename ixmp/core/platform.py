@@ -1,6 +1,6 @@
 import logging
 from os import PathLike
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -264,7 +264,7 @@ class Platform:
 
         self._backend.set_unit(unit, comment)
 
-    def units(self) -> List[str]:
+    def units(self) -> list[str]:
         """Return all units defined on the Platform.
 
         Returns
@@ -386,7 +386,7 @@ class Platform:
 
     def check_access(
         self, user: str, models: Union[str, Sequence[str]], access: str = "view"
-    ) -> Union[bool, Dict[str, bool]]:
+    ) -> Union[bool, dict[str, bool]]:
         """Check access to specific models.
 
         Parameters

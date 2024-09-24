@@ -1,7 +1,10 @@
 """Backend API."""
 
 from enum import IntFlag
-from typing import Dict, List, Type, Union
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    import ixmp.backend.base
 
 #: Lists of field names for tuples returned by Backend API methods.
 #:
@@ -46,12 +49,12 @@ FIELDS = {
 #: Partial list of dimensions for the IAMC data structure, or “IAMC format”. This omits
 #: "year" and "subannual" which appear in some variants of the structure, but not in
 #: others.
-IAMC_IDX: List[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
+IAMC_IDX: list[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
 
 
 #: Mapping from names to available backends. To register additional backends, add
 #: entries to this dictionary.
-BACKENDS: Dict[str, Type] = {}
+BACKENDS: dict[str, type["ixmp.backend.base.Backend"]] = {}
 
 
 class ItemType(IntFlag):

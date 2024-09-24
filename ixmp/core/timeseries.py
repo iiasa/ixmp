@@ -2,7 +2,7 @@ import logging
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Optional, Sequence, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -117,7 +117,7 @@ class TimeSeries:
     @classmethod
     def from_url(
         cls, url: str, errors: Literal["warn", "raise"] = "warn"
-    ) -> Tuple[Optional["TimeSeries"], Platform]:
+    ) -> tuple[Optional["TimeSeries"], Platform]:
         """Instantiate a TimeSeries (or Scenario) given an ``ixmp://`` URL.
 
         The following are equivalent::
@@ -303,7 +303,7 @@ class TimeSeries:
         self,
         df: pd.DataFrame,
         meta: bool = False,
-        year_lim: Tuple[Optional[int], Optional[int]] = (None, None),
+        year_lim: tuple[Optional[int], Optional[int]] = (None, None),
     ) -> None:
         """Add time series data.
 
@@ -562,7 +562,7 @@ class TimeSeries:
         )
         return all_meta[name] if name else all_meta
 
-    def set_meta(self, name_or_dict: Union[str, Dict[str, Any]], value=None) -> None:
+    def set_meta(self, name_or_dict: Union[str, dict[str, Any]], value=None) -> None:
         """Set :ref:`data-meta` for this object.
 
         Parameters

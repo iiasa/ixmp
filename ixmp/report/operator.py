@@ -1,6 +1,6 @@
 import logging
 from itertools import zip_longest
-from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Union
 
 import genno
 import pandas as pd
@@ -147,7 +147,7 @@ def data_for_quantity(
 
 
 # Non-weak references to objects to keep them alive
-_FROM_URL_REF: Set[Any] = set()
+_FROM_URL_REF: set[Any] = set()
 
 
 def from_url(url: str, cls=TimeSeries) -> "TimeSeries":

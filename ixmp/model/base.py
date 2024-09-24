@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Mapping
+from typing import TYPE_CHECKING, Mapping
 
 from ixmp.util import maybe_check_out, maybe_commit
 
@@ -85,7 +85,7 @@ class Model(ABC):
         log.debug(f"No initialization for {repr(scenario.scheme)}-scheme Scenario")
 
     @classmethod
-    def initialize_items(cls, scenario: "Scenario", items: Mapping[str, Dict]) -> None:
+    def initialize_items(cls, scenario: "Scenario", items: Mapping[str, dict]) -> None:
         """Helper for :meth:`initialize`.
 
         All of the `items` are added to `scenario`. Existing items are not modified.

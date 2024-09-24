@@ -6,15 +6,12 @@ from os import PathLike
 from pathlib import Path
 from typing import (
     Any,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Literal,
     MutableMapping,
     Optional,
     Sequence,
-    Tuple,
     Union,
 )
 
@@ -33,7 +30,7 @@ class Backend(ABC):
     # Typing:
     # - All methods MUST be fully typed.
     # - Use more permissive types, e.g. Sequence[str], for inputs.
-    # - Use precise types, e.g. List[str], for return values.
+    # - Use precise types, e.g. list[str], for return values.
     # - Backend subclasses do not need to repeat the type annotations; these are implied
     #   by this parent class.
     #
@@ -57,7 +54,7 @@ class Backend(ABC):
     # Platform methods
 
     @classmethod
-    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> Dict[str, Any]:
+    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
         """OPTIONAL: Handle platform/backend config arguments.
 
         Returns a :class:`dict` to be stored in the configuration file. This
@@ -124,7 +121,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_doc(self, domain: str, name: Optional[str] = None) -> Union[str, Dict]:
+    def get_doc(self, domain: str, name: Optional[str] = None) -> Union[str, dict]:
         """Read documentation from database
 
         Parameters
@@ -155,7 +152,7 @@ class Backend(ABC):
         Close any database connection(s), if open.
         """
 
-    def get_auth(self, user: str, models: Sequence[str], kind: str) -> Dict[str, bool]:
+    def get_auth(self, user: str, models: Sequence[str], kind: str) -> dict[str, bool]:
         """OPTIONAL: Return user authorization for `models`.
 
         If the Backend implements access control, this method **must** indicate whether
@@ -215,7 +212,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_nodes(self) -> Iterable[Tuple[str, Optional[str], str, str]]:
+    def get_nodes(self) -> Iterable[tuple[str, Optional[str], str, str]]:
         """Iterate over all nodes stored on the Platform.
 
         Yields
@@ -238,7 +235,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_timeslices(self) -> Iterable[Tuple[str, str, float]]:
+    def get_timeslices(self) -> Iterable[tuple[str, str, float]]:
         """Iterate over subannual timeslices defined on the Platform instance.
 
         Yields
@@ -321,7 +318,7 @@ class Backend(ABC):
     def get_scenarios(
         self, default: bool, model: Optional[str], scenario: Optional[str]
     ) -> Iterable[
-        Tuple[str, str, str, bool, bool, str, str, str, str, str, str, str, int]
+        tuple[str, str, str, bool, bool, str, str, str, str, str, str, str, int]
     ]:
         """Iterate over TimeSeries stored on the Platform.
 
@@ -377,7 +374,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_units(self) -> List[str]:
+    def get_units(self) -> list[str]:
         """Return all registered symbols for units of measurement.
 
         Returns
@@ -592,7 +589,7 @@ class Backend(ABC):
         """OPTIONAL: Load `ts` data into memory."""
 
     @staticmethod
-    def _handle_rw_filters(filters: dict) -> Tuple[Optional[TimeSeries], Dict]:
+    def _handle_rw_filters(filters: dict) -> tuple[Optional[TimeSeries], dict]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
@@ -617,7 +614,7 @@ class Backend(ABC):
         variable: Sequence[str],
         unit: Sequence[str],
         year: Sequence[str],
-    ) -> Iterable[Tuple[str, str, str, int, float]]:
+    ) -> Iterable[tuple[str, str, str, int, float]]:
         """Retrieve time series data.
 
         Parameters
@@ -650,7 +647,7 @@ class Backend(ABC):
     @abstractmethod
     def get_geo(
         self, ts: TimeSeries
-    ) -> Iterable[Tuple[str, str, int, str, str, str, bool]]:
+    ) -> Iterable[tuple[str, str, int, str, str, str, bool]]:
         """Retrieve time-series 'geodata'.
 
         Yields
@@ -677,7 +674,7 @@ class Backend(ABC):
         ts: TimeSeries,
         region: str,
         variable: str,
-        data: Dict[int, float],
+        data: dict[int, float],
         unit: str,
         subannual: str,
         meta: bool,
@@ -831,7 +828,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_items(self, s: Scenario, type: str) -> List[str]:
+    def list_items(self, s: Scenario, type: str) -> list[str]:
         """Return a list of names of items of `type`.
 
         Parameters
@@ -882,7 +879,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def item_index(self, s: Scenario, name: str, sets_or_names: str) -> List[str]:
+    def item_index(self, s: Scenario, name: str, sets_or_names: str) -> list[str]:
         """Return the index sets or names of item `name`.
 
         Parameters
@@ -900,8 +897,8 @@ class Backend(ABC):
         s: Scenario,
         type: Literal["equ", "par", "set", "var"],
         name: str,
-        filters: Optional[Dict[str, List[Any]]] = None,
-    ) -> Union[Dict[str, Any], pd.Series, pd.DataFrame]:
+        filters: Optional[dict[str, list[Any]]] = None,
+    ) -> Union[dict[str, Any], pd.Series, pd.DataFrame]:
         """Return elements of item `name`.
 
         Parameters
@@ -945,7 +942,7 @@ class Backend(ABC):
         s: Scenario,
         type: str,
         name: str,
-        elements: Iterable[Tuple[Any, Optional[float], Optional[str], Optional[str]]],
+        elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
     ) -> None:
         """Add keys or values to item `name`.
 
@@ -1011,7 +1008,7 @@ class Backend(ABC):
         scenario: Optional[str],
         version: Optional[int],
         strict: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Retrieve all metadata attached to a specific target.
 
         Depending on which of `model`, `scenario`, `version` are :obj:`None`, metadata
@@ -1121,7 +1118,7 @@ class Backend(ABC):
     # Methods for message_ix.Scenario
 
     @abstractmethod
-    def cat_list(self, ms: Scenario, name: str) -> List[str]:
+    def cat_list(self, ms: Scenario, name: str) -> list[str]:
         """Return list of categories in mapping `name`.
 
         Parameters
@@ -1136,7 +1133,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> List[str]:
+    def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> list[str]:
         """Get elements of a category mapping.
 
         Parameters
@@ -1188,11 +1185,11 @@ class CachingBackend(Backend):
 
     #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on the
     #: subclass' usage of the cache.
-    _cache: Dict[Tuple, object] = {}
+    _cache: dict[tuple, object] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
     #: using :meth:`cache_get`.
-    _cache_hit: Dict[Tuple, int] = {}
+    _cache_hit: dict[tuple, int] = {}
 
     # Backend API methods
 
@@ -1217,8 +1214,8 @@ class CachingBackend(Backend):
         ts: TimeSeries,
         ix_type: Optional[str],
         name: Optional[str],
-        filters: Optional[Dict[str, Hashable]] = None,
-    ) -> Tuple[Hashable, ...]:
+        filters: Optional[dict[str, Hashable]] = None,
+    ) -> tuple[Hashable, ...]:
         """Return a hashable cache key.
 
         ixmp `filters` (a :class:`dict` of :class:`list`) are converted to a unique id
@@ -1237,7 +1234,7 @@ class CachingBackend(Backend):
             return (ts_id, ix_type, name, hash(json.dumps(sorted(filters.items()))))
 
     def cache_get(
-        self, ts: TimeSeries, ix_type: str, name: str, filters: Dict
+        self, ts: TimeSeries, ix_type: str, name: str, filters: dict
     ) -> Optional[Any]:
         """Retrieve value from cache.
 
@@ -1258,7 +1255,7 @@ class CachingBackend(Backend):
             raise KeyError(ts, ix_type, name, filters)
 
     def cache(
-        self, ts: TimeSeries, ix_type: str, name: str, filters: Dict, value: Any
+        self, ts: TimeSeries, ix_type: str, name: str, filters: dict, value: Any
     ) -> bool:
         """Store `value` in cache.
 
@@ -1284,7 +1281,7 @@ class CachingBackend(Backend):
         ts: TimeSeries,
         ix_type: Optional[str] = None,
         name: Optional[str] = None,
-        filters: Optional[Dict] = None,
+        filters: Optional[dict] = None,
     ) -> None:
         """Invalidate cached values.
 
@@ -1300,7 +1297,7 @@ class CachingBackend(Backend):
 
         if filters is None:
             i = slice(1) if (ix_type is name is None) else slice(3)
-            to_remove: Iterable[Tuple] = filter(
+            to_remove: Iterable[tuple] = filter(
                 lambda k: k[i] == key[i], self._cache.keys()
             )
         else:

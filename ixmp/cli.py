@@ -1,11 +1,10 @@
 from pathlib import Path
-from typing import Type
 
 import click
 
 import ixmp
 
-ScenarioClass: Type[ixmp.Scenario] = ixmp.Scenario
+ScenarioClass: type[ixmp.Scenario] = ixmp.Scenario
 
 
 class VersionType(click.ParamType):

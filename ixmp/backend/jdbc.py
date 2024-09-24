@@ -152,7 +152,7 @@ def _handle_jexception():
 
 
 @lru_cache
-def _fixed_index_sets(scheme: str) -> Mapping[str, List[str]]:
+def _fixed_index_sets(scheme: str) -> Mapping[str, list[str]]:
     """Return index sets for items that are fixed in the Java code.
 
     See :meth:`JDBCBackend.init_item`. The return value is cached so the method is only

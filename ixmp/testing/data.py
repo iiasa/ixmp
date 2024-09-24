@@ -1,7 +1,7 @@
 # Methods are in alphabetical order
 from itertools import product
 from math import ceil
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import genno
 import numpy as np
@@ -36,13 +36,13 @@ if TYPE_CHECKING:
 
 
 #: Common (model name, scenario name) pairs for testing.
-SCEN: Dict[str, "ScenarioIdentifiers"] = {
+SCEN: dict[str, "ScenarioIdentifiers"] = {
     "dantzig": dict(model="canning problem", scenario="standard"),
     "h2g2": dict(model="Douglas Adams", scenario="Hitchhiker"),
 }
 models = SCEN
 
-_MS: List[Any] = [models["dantzig"]["model"], models["dantzig"]["scenario"]]
+_MS: list[Any] = [models["dantzig"]["model"], models["dantzig"]["scenario"]]
 
 #: Time series data for testing.
 HIST_DF = pd.DataFrame(

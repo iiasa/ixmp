@@ -4,7 +4,7 @@ import os
 from copy import copy
 from dataclasses import asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Optional
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class BaseValues:
         data.pop(name)
         return new_cls, new_cls(**data)
 
-    def keys(self) -> Tuple[str, ...]:
+    def keys(self) -> tuple[str, ...]:
         return tuple(map(lambda f: f.name.replace("_", " "), fields(self)))
 
     def set(self, name: str, value: Any, strict: bool = True):
@@ -214,7 +214,7 @@ class Config:
     #: ``ixmp.config.values["platform"]["platform name"]…``.
     values: BaseValues
 
-    _ValuesClass: Type
+    _ValuesClass: type[BaseValues]
 
     def __init__(self, read: bool = True):
         self._ValuesClass = BaseValues
@@ -261,7 +261,7 @@ class Config:
         """Return the value of a configuration key `name`."""
         return self.values[name]
 
-    def keys(self) -> Tuple[str, ...]:
+    def keys(self) -> tuple[str, ...]:
         """Return the names of all registered configuration keys."""
         return self.values.keys()
 
@@ -383,7 +383,7 @@ class Config:
 
         self.values["platform"][name] = info
 
-    def get_platform_info(self, name: str) -> Tuple[str, Dict[str, Any]]:
+    def get_platform_info(self, name: str) -> tuple[str, dict[str, Any]]:
         """Return information on configured Platform `name`.
 
         Parameters

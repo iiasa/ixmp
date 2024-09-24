@@ -6,7 +6,7 @@ import sys
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
 from types import FunctionType
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 from sphinx.util import logging
 
@@ -153,7 +153,7 @@ class GitHubLinker:
 
         try:
             # Use the info for the first of `candidates` available
-            line_info: Tuple[str, int, int] = next(
+            line_info: tuple[str, int, int] = next(
                 filter(None, map(self.line_numbers.get, candidates))
             )
         except StopIteration:

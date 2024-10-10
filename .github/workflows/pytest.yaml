@@ -116,21 +116,43 @@ jobs:
         # TEMPORARY Work around pretenders/pretenders#153
         pip install "bottle < 0.13"
 
+    - name: Debug jupyter kernelspec --version
+      run: jupyter kernelspec --version
+      shell: bash
+
+    - name: Debug which Rscript is used below
+      run: which Rscript
+      shell: bash
+
+    - name: Debug PATH
+      run: echo $PATH
+      shell: bash
+
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))
         remotes::install_cran(
           c("IRkernel", "reticulate"),
           dependencies = TRUE,
-          # force = TRUE,
+          force = TRUE,
         )
+
+        system2('which', 'python', TRUE, TRUE)
+        system2('which', 'jupyter', TRUE, TRUE)
+        system2('which', 'jupyter-kernelspec', TRUE, TRUE)
+
+        paste(c(shQuote('jupyter'), c('kernelspec', '--version')), collapse = " ")
+
+        system('jupyter-kernelspec --version')
+
+        system2('jupyter-kernelspec', '--version', TRUE, TRUE)
 
         IRkernel::installspec()
 
         # commented: for debugging
         # print(reticulate::py_config())
         # reticulate::py_run_string("import os; print(os.environ)")
-      shell: Rscript {0}
+      shell: Rscript --verbose {0}
 
     - name: Run test suite using pytest
       run: |

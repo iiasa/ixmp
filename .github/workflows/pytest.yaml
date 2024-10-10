@@ -126,7 +126,7 @@ jobs:
         remotes::install_cran(
           c("IRkernel", "reticulate"),
           dependencies = TRUE,
-          # force = TRUE,
+          force = TRUE,
         )
 
         IRkernel::installspec()

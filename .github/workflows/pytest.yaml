@@ -136,6 +136,8 @@ jobs:
         system2('which', 'python', TRUE, TRUE)
         system2('which', 'jupyter', TRUE, TRUE)
 
+        paste(c(shQuote('jupyter'), c('kernelspec', '--version')), collapse = " ")
+
         system('jupyter kernelspec --version')
 
         system2('jupyter', c('kernelspec', '--version'), TRUE, TRUE)

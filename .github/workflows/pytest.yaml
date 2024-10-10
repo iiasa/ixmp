@@ -116,6 +116,10 @@ jobs:
         # TEMPORARY Work around pretenders/pretenders#153
         pip install "bottle < 0.13"
 
+    - name: Debug jupyter kernelspec --version
+      run: jupyter kernelspec --version
+      shell: bash
+
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))

@@ -136,7 +136,7 @@ jobs:
         system2('which', 'python', TRUE, TRUE)
         system2('which', 'jupyter', TRUE, TRUE)
 
-        system('jupyter', c('kernelspec', '--version'), TRUE, TRUE)
+        system('jupyter kernelspec --version')
 
         system2('jupyter', c('kernelspec', '--version'), TRUE, TRUE)
 
@@ -145,7 +145,7 @@ jobs:
         # commented: for debugging
         # print(reticulate::py_config())
         # reticulate::py_run_string("import os; print(os.environ)")
-      shell: Rscript {0}
+      shell: Rscript --verbose {0}
 
     - name: Run test suite using pytest
       run: |

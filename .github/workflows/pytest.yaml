@@ -120,6 +120,10 @@ jobs:
       run: jupyter kernelspec --version
       shell: bash
 
+    - name: Debug which Rscript is used below
+      run: which Rscript
+      shell: bash
+
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))

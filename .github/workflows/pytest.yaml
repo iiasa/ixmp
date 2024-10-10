@@ -129,6 +129,8 @@ jobs:
           force = TRUE,
         )
 
+        system2('jupyter', c('kernelspec', '--version'), FALSE, FALSE)
+
         IRkernel::installspec()
 
         # commented: for debugging

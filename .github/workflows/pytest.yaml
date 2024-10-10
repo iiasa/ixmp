@@ -129,7 +129,7 @@ jobs:
           force = TRUE,
         )
 
-        system2('jupyter', c('kernelspec', '--version'), FALSE, FALSE)
+        system2('jupyter', c('kernelspec', '--version'), TRUE, TRUE)
 
         IRkernel::installspec()
 

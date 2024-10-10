@@ -124,6 +124,10 @@ jobs:
       run: which Rscript
       shell: bash
 
+    - name: Debug PATH
+      run: echo $PATH
+      shell: bash
+
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))
@@ -135,6 +139,7 @@ jobs:
 
         system2('which', 'python', TRUE, TRUE)
         system2('which', 'jupyter', TRUE, TRUE)
+        system2('which', 'jupyter-kernelspec', TRUE, TRUE)
 
         paste(c(shQuote('jupyter'), c('kernelspec', '--version')), collapse = " ")
 

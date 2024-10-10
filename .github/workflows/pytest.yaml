@@ -143,9 +143,9 @@ jobs:
 
         paste(c(shQuote('jupyter'), c('kernelspec', '--version')), collapse = " ")
 
-        system('jupyter kernelspec --version')
+        system('jupyter-kernelspec --version')
 
-        system2('jupyter', c('kernelspec', '--version'), TRUE, TRUE)
+        system2('jupyter-kernelspec', '--version', TRUE, TRUE)
 
         IRkernel::installspec()
 

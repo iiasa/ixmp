@@ -138,6 +138,10 @@ jobs:
         )
 
         system2('which', 'python', TRUE, TRUE)
+
+        system2('which', 'pip', TRUE, TRUE)
+        system2('pip', 'list', TRUE, TRUE)
+
         system2('which', 'jupyter', TRUE, TRUE)
         system2('which', 'jupyter-kernelspec', TRUE, TRUE)
 

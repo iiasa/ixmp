@@ -128,8 +128,8 @@ jobs:
       run: echo $PATH
       shell: bash
 
-    - name: Debug PYTHONPATH
-      run: echo $PYTHONPATH
+    - name: Debug python path
+      run: python -c "import sys; print(sys.executable, sys.path)"
       shell: bash
 
     - name: Install R dependencies and tutorial requirements
@@ -142,7 +142,7 @@ jobs:
         )
 
         system2('which', 'python', TRUE, TRUE)
-        system2('echo', '$PYTHONPATH', TRUE, TRUE)
+        system2('python', '-c "import sys; print(sys.executable, sys.path)"', TRUE, TRUE)
 
         system2('which', 'pip', TRUE, TRUE)
         system2('pip', 'list', TRUE, TRUE)

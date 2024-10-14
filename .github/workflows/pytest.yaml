@@ -138,6 +138,7 @@ jobs:
         )
 
         system2('which', 'python', TRUE, TRUE)
+        system2('echo', '$PYTHONPATH', TRUE, TRUE)
 
         system2('which', 'pip', TRUE, TRUE)
         system2('pip', 'list', TRUE, TRUE)

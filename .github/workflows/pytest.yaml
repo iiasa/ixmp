@@ -67,6 +67,10 @@ jobs:
       with:
         fetch-depth: ${{ env.depth }}
         fetch-tags: true
+  
+    - name: Debug python path
+      run: python -c "import sys; print(sys.executable, sys.path)"
+      shell: bash
 
     - uses: actions/setup-python@v5
       with:

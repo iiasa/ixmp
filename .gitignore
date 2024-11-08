@@ -60,6 +60,7 @@ prof/
 
 # Editors and IDEs
 .editorconfig
+.vscode
 *.iml
 /**/.idea
 

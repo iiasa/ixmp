@@ -142,7 +142,7 @@ jobs:
       shell: bash
 
     - name: Upload test coverage to Codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       # FIXME Limit runtime until
       # https://github.com/codecov/codecov-action/issues/1316 is resolved
       timeout-minutes: 1

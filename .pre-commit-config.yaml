@@ -17,6 +17,7 @@ repos:
     - pandas-stubs
     - pytest
     - sphinx
+    - werkzeug
     - xarray
     args: ["."]
 - repo: https://github.com/astral-sh/ruff-pre-commit

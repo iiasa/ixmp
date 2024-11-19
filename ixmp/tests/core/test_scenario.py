@@ -1,5 +1,4 @@
 import re
-import sys
 from pathlib import Path
 from shutil import copyfile
 
@@ -98,13 +97,8 @@ class TestScenario:
 
         # Giving an invalid scenario with errors='warn' causes a message to be logged
         msg = (
-            "ValueError: "
-            + (
-                "scenario='Hitchhikerfoo'"
-                if sys.version_info.minor != 12
-                else "model, scenario, or version not found"
-            )
-            + f"\nwhen loading Scenario from url: {repr(url + 'foo')}"
+            "ValueError: scenario='Hitchhikerfoo'\n"
+            f"when loading Scenario from url: {repr(url + 'foo')}"
         )
         with assert_logs(caplog, msg):
             scen, mp = ixmp.Scenario.from_url(url + "foo")

@@ -497,14 +497,15 @@ def format_scenario_list(
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
         .groupby(["model", "scenario"], group_keys=True)
-        .apply(describe)
+        .apply(describe, include_groups=False)
     )
 
-    if len(info):
-        info = info.reset_index()
-    else:
-        # No results; re-create a minimal empty data frame
-        info = pd.DataFrame([], columns=["model", "scenario", "default", "N"])
+    # If we have no results; re-create a minimal empty data frame
+    info = (
+        info.reset_index()
+        if len(info)
+        else pd.DataFrame([], columns=["model", "scenario", "default", "N"])
+    )
 
     info["scenario"] = info["scenario"].str.cat(info["default"].astype(str), sep="#")
 

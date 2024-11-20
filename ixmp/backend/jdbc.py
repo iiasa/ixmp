@@ -4,13 +4,13 @@ import os
 import platform
 import re
 from collections import ChainMap
-from collections.abc import Iterable, Sequence
+from collections.abc import Generator, Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, List, Mapping, Optional
+from typing import Optional
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -152,7 +152,7 @@ def _handle_jexception():
 
 
 @lru_cache
-def _fixed_index_sets(scheme: str) -> Mapping[str, List[str]]:
+def _fixed_index_sets(scheme: str) -> Mapping[str, list[str]]:
     """Return index sets for items that are fixed in the Java code.
 
     See :meth:`JDBCBackend.init_item`. The return value is cached so the method is only
@@ -1290,7 +1290,7 @@ def start_jvm(jvmargs=None):
 # Conversion methods
 
 
-def to_pylist(jlist) -> List:
+def to_pylist(jlist) -> list:
     """Convert Java list types to :class:`list`."""
     try:
         return list(jlist[:])

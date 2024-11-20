@@ -34,7 +34,7 @@ Install system dependencies
 Python
 ------
 
-Python version 3.8 or later is required.
+Python version 3.9 or later is required.
 
 GAMS (required)
 ---------------
@@ -89,7 +89,7 @@ After installing GAMS, we recommend that new users install Anaconda, and then us
 Advanced users may choose to install :mod:`ixmp` from source code (next section).
 
 4. Install Python via either `Miniconda`_ or `Anaconda`_. [1]_
-   We recommend the latest version; currently Python 3.10. [2]_
+   We recommend the latest version; currently Python 3.13. [2]_
 
 5. Open a command prompt.
    We recommend Windows users use the “Anaconda Prompt” to avoid issues with permissions and environment variables when installing and using :mod:`ixmp`.

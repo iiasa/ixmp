@@ -1,116 +1,64 @@
-import logging
-import sys
-from subprocess import Popen
-from time import sleep
+import json
 
 import pytest
-from pretenders.client.http import HTTPMock
-from pretenders.common.constants import FOREVER
 
 import ixmp
 from ixmp.testing import create_test_platform
 
-log = logging.getLogger(__name__)
 
+@pytest.fixture
+def mock(httpserver):
+    """Mock server with responses for both tests."""
+    from werkzeug import Request, Response
 
-@pytest.fixture(scope="session")
-def server():
-    proc = Popen(
-        [
-            sys.executable,
-            "-m",
-            "pretenders.server.server",
-            "--host",
-            "localhost",
-            "--port",
-            "8000",
+    httpserver.expect_request("/login", method="POST").respond_with_json(
+        "security-token"
+    )
+
+    # Mock the behaviour of the ixmp_source (Java) access API
+    # - Request data is valid JSON containing a list of dict.
+    # - Response is a JSON list of bool of equal length.
+    def handler(r: Request) -> Response:
+        data = r.get_json()
+        result = [
+            (i["username"], i["entityType"], i["entityId"])
+            == ("test_user", "MODEL", "test_model")
+            for i in data
         ]
-    )
-    log.info(f"Mock server started with pid {proc.pid}")
+        return Response(json.dumps(result), content_type="application/json")
 
-    # Wait for server to start up
-    sleep(5)
+    # Use the same handler for all test requests against the /access/list URL
+    httpserver.expect_request(
+        "/access/list",
+        method="POST",
+        headers={"Authorization": "Bearer security-token"},  # JSON Web Token header
+    ).respond_with_handler(handler)
 
-    yield
-
-    proc.terminate()
-    log.info("Mock server terminated")
+    return httpserver
 
 
-@pytest.fixture(scope="function")
-def mock(server):
-    # Create the mock server
-    httpmock = HTTPMock("localhost", 8000)
-
-    # Common responses for both tests
-    httpmock.when("POST /login").reply(
-        '"security-token"', headers={"Content-Type": "application/json"}, times=FOREVER
+@pytest.fixture
+def test_props(mock, request, tmp_path, test_data_path):
+    return create_test_platform(
+        tmp_path, test_data_path, "test_access", auth_url=mock.url_for("")
     )
 
-    yield httpmock
+
+M = ["test_model", "non_existing_model"]
 
 
-def test_check_single_model_access(mock, tmp_path, test_data_path, request):
-    mock.when(
-        "POST /access/list",
-        body='.+"test_user".+',
-        headers={"Authorization": "Bearer security-token"},
-    ).reply("[true]", headers={"Content-Type": "application/json"}, times=FOREVER)
-    mock.when(
-        "POST /access/list",
-        body='.+"non_granted_user".+',
-        headers={"Authorization": "Bearer security-token"},
-    ).reply("[false]", headers={"Content-Type": "application/json"}, times=FOREVER)
-
-    test_props = create_test_platform(
-        tmp_path,
-        test_data_path,
-        f"{request.node.name}",
-        auth_url=mock.pretend_url,
-    )
-
+@pytest.mark.parametrize(
+    "user, models, exp",
+    (
+        ("test_user", "test_model", True),
+        ("non_granted_user", "test_model", False),
+        ("non_existing_user", "test_model", False),
+        ("test_user", M, {"test_model": True, "non_existing_model": False}),
+        ("non_granted_user", M, {"test_model": False, "non_existing_model": False}),
+        ("non_existing_user", M, {"test_model": False, "non_existing_model": False}),
+    ),
+)
+def test_check_access(test_props, user, models, exp):
+    """:meth:`.check_access` correctly handles certain arguments and responses."""
     mp = ixmp.Platform(backend="jdbc", dbprops=test_props)
-
-    granted = mp.check_access("test_user", "test_model")
-    assert granted
-
-    granted = mp.check_access("non_granted_user", "test_model")
-    assert not granted
-
-    granted = mp.check_access("non_existing_user", "test_model")
-    assert not granted
-
-
-def test_check_multi_model_access(mock, tmp_path, test_data_path, request):
-    mock.when(
-        "POST /access/list",
-        body='.+"test_user".+',
-        headers={"Authorization": "Bearer security-token"},
-    ).reply(
-        "[true, false]", headers={"Content-Type": "application/json"}, times=FOREVER
-    )
-    mock.when(
-        "POST /access/list",
-        body='.+"non_granted_user".+',
-        headers={"Authorization": "Bearer security-token"},
-    ).reply(
-        "[false, false]", headers={"Content-Type": "application/json"}, times=FOREVER
-    )
-
-    test_props = create_test_platform(
-        tmp_path, test_data_path, f"{request.node.name}", auth_url=mock.pretend_url
-    )
-
-    mp = ixmp.Platform(backend="jdbc", dbprops=test_props)
-
-    access = mp.check_access("test_user", ["test_model", "non_existing_model"])
-    assert access["test_model"]
-    assert not access["non_existing_model"]
-
-    access = mp.check_access("non_granted_user", ["test_model", "non_existing_model"])
-    assert not access["test_model"]
-    assert not access["non_existing_model"]
-
-    access = mp.check_access("non_existing_user", ["test_model", "non_existing_model"])
-    assert not access["test_model"]
-    assert not access["non_existing_model"]
+    assert exp == mp.check_access(user, models)

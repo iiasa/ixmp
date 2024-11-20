@@ -1,22 +1,14 @@
 import logging
 import re
 import sys
+from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -57,7 +49,7 @@ def logger():
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> List[str]:
+def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> list[str]:
     """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
@@ -100,7 +92,7 @@ def check_year(y, s):
         return True
 
 
-def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
+def diff(a, b, filters=None) -> Iterator[tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
     :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
@@ -111,7 +103,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     Yields
     ------
     tuple of str, pandas.DataFrame
-        Tuples of item name and data.
+        tuples of item name and data.
     """
     # Iterators; index 0 corresponds to `a`, 1 to `b`
     items = [
@@ -120,7 +112,7 @@ def diff(a, b, filters=None) -> Iterator[Tuple[str, pd.DataFrame]]:
     ]
     # State variables for loop
     name = ["", ""]
-    data: List[pd.DataFrame] = [pd.DataFrame(), pd.DataFrame()]
+    data: list[pd.DataFrame] = [pd.DataFrame(), pd.DataFrame()]
 
     # Elements for first iteration
     name[0], data[0] = next(items[0])
@@ -505,14 +497,15 @@ def format_scenario_list(
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
         .groupby(["model", "scenario"], group_keys=True)
-        .apply(describe)
+        .apply(describe, include_groups=False)
     )
 
-    if len(info):
-        info = info.reset_index()
-    else:
-        # No results; re-create a minimal empty data frame
-        info = pd.DataFrame([], columns=["model", "scenario", "default", "N"])
+    # If we have no results; re-create a minimal empty data frame
+    info = (
+        info.reset_index()
+        if len(info)
+        else pd.DataFrame([], columns=["model", "scenario", "default", "N"])
+    )
 
     info["scenario"] = info["scenario"].str.cat(info["default"].astype(str), sep="#")
 

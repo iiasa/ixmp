@@ -3,7 +3,6 @@ import logging
 import os
 import platform
 from sys import getrefcount
-from typing import Tuple
 
 import jpype
 import numpy as np
@@ -296,7 +295,7 @@ def test_cache_arg(arg, request):
 
 # This variable formerly had 'warns' as the third element in some tuples, to
 # test for deprecation warnings.
-INIT_PARAMS: Tuple[Tuple, ...] = (
+INIT_PARAMS: tuple[tuple, ...] = (
     # Handled in JDBCBackend:
     (
         ["nonexistent.properties"],

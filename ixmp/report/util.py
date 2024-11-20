@@ -14,11 +14,8 @@ def dims_for_qty(data):
 
     :data:`.RENAME_DIMS` is used to rename dimensions.
     """
-    if isinstance(data, pd.DataFrame):
-        # List of the dimensions
-        dims = data.columns.tolist()
-    else:
-        dims = list(data)
+    # List of the dimensions
+    dims = data.columns.tolist() if isinstance(data, pd.DataFrame) else list(data)
 
     # Remove columns containing values or units; dimensions are the remainder
     for col in "value", "lvl", "mrg", "unit":

@@ -1,20 +1,11 @@
 import logging
+from collections.abc import Callable, Iterable, MutableSequence, Sequence
 from functools import partialmethod
 from itertools import zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    MutableSequence,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Optional, Union
 from warnings import warn
 
 import pandas as pd
@@ -135,7 +126,7 @@ class Scenario(TimeSeries):
             for name in getattr(self, "{}_list".format(ix_type))():
                 get_func(name)
 
-    def idx_sets(self, name: str) -> List[str]:
+    def idx_sets(self, name: str) -> list[str]:
         """Return the list of index sets for an item (set, par, var, equ).
 
         Parameters
@@ -145,7 +136,7 @@ class Scenario(TimeSeries):
         """
         return self._backend("item_index", name, "sets")
 
-    def idx_names(self, name: str) -> List[str]:
+    def idx_names(self, name: str) -> list[str]:
         """Return the list of index names for an item (set, par, var, equ).
 
         Parameters
@@ -167,8 +158,8 @@ class Scenario(TimeSeries):
             return [str(key_or_keys)]
 
     def set(
-        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
-    ) -> Union[List[str], pd.DataFrame]:
+        self, name: str, filters: Optional[dict[str, Sequence[str]]] = None, **kwargs
+    ) -> Union[list[str], pd.DataFrame]:
         """Return the (filtered) elements of a set.
 
         Parameters
@@ -190,7 +181,7 @@ class Scenario(TimeSeries):
     def add_set(  # noqa: C901
         self,
         name: str,
-        key: Union[str, Sequence[str], Dict, pd.DataFrame],
+        key: Union[str, Sequence[str], dict, pd.DataFrame],
         comment: Union[str, Sequence[str], None] = None,
     ) -> None:
         """Add elements to an existing set.
@@ -229,7 +220,7 @@ class Scenario(TimeSeries):
         # List of keys
         keys: MutableSequence[Union[str, MutableSequence[str]]] = []
         # List of comments for each key
-        comments: List[Optional[str]] = []
+        comments: list[Optional[str]] = []
 
         # Check arguments and convert to two lists: keys and comments
         if len(idx_names) == 0:
@@ -311,7 +302,7 @@ class Scenario(TimeSeries):
     def remove_set(
         self,
         name: str,
-        key: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
+        key: Optional[Union[str, Sequence[str], dict, pd.DataFrame]] = None,
     ) -> None:
         """Delete set elements or an entire set.
 
@@ -329,7 +320,7 @@ class Scenario(TimeSeries):
             self._backend("item_delete_elements", "set", name, self._keys(name, key))
 
     def par(
-        self, name: str, filters: Optional[Dict[str, Sequence[str]]] = None, **kwargs
+        self, name: str, filters: Optional[dict[str, Sequence[str]]] = None, **kwargs
     ) -> pd.DataFrame:
         """Return parameter data.
 
@@ -354,7 +345,7 @@ class Scenario(TimeSeries):
     def items(
         self,
         type: ItemType = ItemType.PAR,
-        filters: Optional[Dict[str, Sequence[str]]] = None,
+        filters: Optional[dict[str, Sequence[str]]] = None,
         *,
         indexed_by: Optional[str] = None,
         par_data: Optional[bool] = None,
@@ -517,7 +508,7 @@ class Scenario(TimeSeries):
 
     def list_items(
         self, item_type: ItemType, indexed_by: Optional[str] = None
-    ) -> List[str]:
+    ) -> list[str]:
         """List all defined items of type `item_type`.
 
         See also
@@ -539,7 +530,7 @@ class Scenario(TimeSeries):
     def add_par(  # noqa: C901
         self,
         name: str,
-        key_or_data: Optional[Union[str, Sequence[str], Dict, pd.DataFrame]] = None,
+        key_or_data: Optional[Union[str, Sequence[str], dict, pd.DataFrame]] = None,
         value=None,
         unit: Optional[str] = None,
         comment: Optional[str] = None,
@@ -590,7 +581,7 @@ class Scenario(TimeSeries):
                     keys = [keys]
 
                 # Use the same value for all keys
-                values: List[Any] = [float(value)] * len(keys)
+                values: list[Any] = [float(value)] * len(keys)
             else:
                 # Multiple values
                 values = value
@@ -661,7 +652,7 @@ class Scenario(TimeSeries):
         self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
-    def scalar(self, name: str) -> Dict[str, Union[Real, str]]:
+    def scalar(self, name: str) -> dict[str, Union[Real, str]]:
         """Return the value and unit of a scalar.
 
         Parameters
@@ -824,7 +815,7 @@ class Scenario(TimeSeries):
         self,
         model: Optional[str] = None,
         callback: Optional[Callable] = None,
-        cb_kwargs: Dict[str, Any] = {},
+        cb_kwargs: dict[str, Any] = {},
         **model_options,
     ) -> None:
         """Solve the model and store output.
@@ -924,7 +915,7 @@ class Scenario(TimeSeries):
         self,
         path: PathLike,
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Optional[Dict[str, Union[Sequence[str], "Scenario"]]] = None,
+        filters: Optional[dict[str, Union[Sequence[str], "Scenario"]]] = None,
         max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.

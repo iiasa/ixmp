@@ -3,11 +3,12 @@ import os
 import re
 import shutil
 import tempfile
+from collections.abc import MutableMapping
 from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import Any, MutableMapping, Optional
+from typing import Any, Optional
 
 from ixmp.backend import ItemType
 from ixmp.model.base import Model, ModelError

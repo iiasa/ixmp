@@ -1,19 +1,11 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Hashable, Iterable, MutableMapping, Sequence
 from copy import copy
 from os import PathLike
 from pathlib import Path
-from typing import (
-    Any,
-    Hashable,
-    Iterable,
-    Literal,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Literal, Optional, Union
 
 import pandas as pd
 

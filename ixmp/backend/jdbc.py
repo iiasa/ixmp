@@ -4,13 +4,13 @@ import os
 import platform
 import re
 from collections import ChainMap
-from collections.abc import Iterable, Sequence
+from collections.abc import Generator, Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Generator, Mapping, Optional
+from typing import Optional
 from weakref import WeakKeyDictionary
 
 import jpype

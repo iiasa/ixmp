@@ -1,13 +1,14 @@
 import logging
 import re
 import sys
+from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 from warnings import warn
 

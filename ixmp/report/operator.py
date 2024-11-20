@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Mapping
 from itertools import zip_longest
-from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import genno
 import pandas as pd

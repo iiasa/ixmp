@@ -2,7 +2,8 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 from ixmp.util import maybe_check_out, maybe_commit
 

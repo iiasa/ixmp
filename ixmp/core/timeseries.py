@@ -1,8 +1,9 @@
 import logging
+from collections.abc import Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import Any, Literal, Optional, Union
 from warnings import warn
 from weakref import ProxyType, proxy
 

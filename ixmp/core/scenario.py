@@ -1,10 +1,11 @@
 import logging
+from collections.abc import Callable, Iterable, MutableSequence, Sequence
 from functools import partialmethod
 from itertools import zip_longest
 from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, Iterable, MutableSequence, Optional, Sequence, Union
+from typing import Any, Optional, Union
 from warnings import warn
 
 import pandas as pd

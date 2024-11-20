@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Sequence
 from os import PathLike
-from typing import TYPE_CHECKING, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas as pd

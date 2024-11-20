@@ -107,10 +107,6 @@ jobs:
         # commented: use with "pandas-version" in the matrix, above
         # pip install --upgrade pandas${{ matrix.pandas-version }}
 
-        # TEMPORARY Work around hgrecco/pint#2007;
-        # see https://github.com/iiasa/ixmp/issues/534
-        pip install "pint != 0.24.0" "numpy < 2"
-
     - name: Install R dependencies and tutorial requirements
       run: |
         install.packages(c("remotes", "Rcpp"))

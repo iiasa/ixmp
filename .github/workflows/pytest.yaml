@@ -107,6 +107,9 @@ jobs:
         # commented: use with "pandas-version" in the matrix, above
         # pip install --upgrade pandas${{ matrix.pandas-version }}
 
+        # TEMPORARY attempt to pin fastjsonschema
+        pip install fastjsonschema==2.20.0
+
         # TEMPORARY With Python 3.13 pyam-iamc resolves to 1.3.1, which in turn
         # limits pint < 0.17. Override. cf. iiasa/ixmp#544
         pip install --upgrade pint

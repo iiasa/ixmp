@@ -99,6 +99,15 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
+    # Workaround Python Path in R issue https://github.com/actions/runner-images/issues/11137
+    - name: Install system dependencies for R packages
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+        sudo apt-get install -y python3-pip python3-dev
+        # pip3 install jupyter
+
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |
@@ -111,21 +120,35 @@ jobs:
         # limits pint < 0.17. Override. cf. iiasa/ixmp#544
         pip install --upgrade pint
 
-    - name: Install R dependencies and tutorial requirements
+    # - name: Install R dependencies and tutorial requirements
+    #   run: |
+    #     install.packages(c("remotes", "Rcpp"))
+    #     remotes::install_cran(
+    #       c("IRkernel", "reticulate"),
+    #       dependencies = TRUE,
+    #       # force = TRUE,
+    #     )
+
+    #     pip install jupyter
+    #     Rscript -e "IRkernel::installspec()"
+
+    #     # IRkernel::installspec()
+
+    #     # commented: for debugging
+    #     # print(reticulate::py_config())
+    #     # reticulate::py_run_string("import os; print(os.environ)")
+    #   shell: Rscript {0}
+
+    - name: Install R dependencies
       run: |
-        install.packages(c("remotes", "Rcpp"))
-        remotes::install_cran(
-          c("IRkernel", "reticulate"),
-          dependencies = TRUE,
-          # force = TRUE,
-        )
-
-        IRkernel::installspec()
-
-        # commented: for debugging
-        # print(reticulate::py_config())
-        # reticulate::py_run_string("import os; print(os.environ)")
-      shell: Rscript {0}
+        R -e "install.packages(c('remotes', 'Rcpp'))"
+        R -e "remotes::install_cran(c('IRkernel', 'reticulate'), dependencies = TRUE)"
+    - name: Install Jupyter via pip
+      run: |
+        pip install jupyter
+    - name: Configure IRkernel
+      run: |
+        Rscript -e "IRkernel::installspec()"
 
     - name: Run test suite using pytest
       run: |

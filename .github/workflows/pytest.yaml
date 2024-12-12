@@ -99,6 +99,15 @@ jobs:
       run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
       shell: bash
 
+    # Workaround Python Path in R issue https://github.com/actions/runner-images/issues/11137
+    - name: Install system dependencies for R packages
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+        sudo apt-get install -y python3-pip python3-dev
+        pip3 install jupyter
+
     - name: Install Python package and dependencies
       # [docs] contains [tests], which contains [report,tutorial]
       run: |

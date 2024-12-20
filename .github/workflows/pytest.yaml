@@ -123,12 +123,6 @@ jobs:
         )
 
         reticulate::py_config()
-
-        # commented: for debugging
-        # print(reticulate::py_config())
-        # reticulate::py_run_string("import os; print(os.environ)")
-
-        # IRkernel::installspec()
       shell: Rscript {0}
 
     - name: Install R dependencies and tutorial requirements

@@ -112,6 +112,8 @@ jobs:
         pip install --upgrade pint
 
     - name: Install R dependencies and tutorial requirements
+      # Workaround for https://github.com/actions/runner-images/issues/11137
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' }}
       run: |
         install.packages(c("remotes", "Rcpp"))
         remotes::install_cran(
@@ -120,11 +122,24 @@ jobs:
           # force = TRUE,
         )
 
-        IRkernel::installspec()
+        reticulate::py_config()
+      shell: Rscript {0}
+
+    - name: Install R dependencies and tutorial requirements
+      if: ${{ ! (matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12') }}
+      run: |
+        install.packages(c("remotes", "Rcpp"))
+        remotes::install_cran(
+          c("IRkernel", "reticulate"),
+          dependencies = TRUE,
+          # force = TRUE,
+        )
 
         # commented: for debugging
         # print(reticulate::py_config())
         # reticulate::py_run_string("import os; print(os.environ)")
+
+        IRkernel::installspec()
       shell: Rscript {0}
 
     - name: Run test suite using pytest

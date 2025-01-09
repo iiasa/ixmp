@@ -3,7 +3,7 @@
 import logging
 import re
 from sys import getrefcount
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -20,9 +20,21 @@ if TYPE_CHECKING:
 
 
 class TestPlatform:
-    def test_init(self):
+    @pytest.fixture(params=list(ixmp.BACKENDS))
+    def mp(self, request, test_mp) -> Generator[ixmp.Platform, None, None]:
+        """Fixture that yields 2 different platforms: one JDBC-backed, one ixmp4."""
+        backend = request.param
+
+        if backend == "jdbc":
+            yield test_mp
+        elif backend == "ixmp4":
+            # TODO Use a fixture similar to test_mp (with same contents) backed by ixmp4
+            yield ixmp.Platform(backend="ixmp4")
+
+    def test_init0(self):
         with pytest.raises(
-            ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
+            ValueError,
+            match=re.escape("backend class 'foo' not among ['ixmp4', 'jdbc']"),
         ):
             ixmp.Platform(backend="foo")
 
@@ -30,10 +42,25 @@ class TestPlatform:
         mp = ixmp.Platform()
         assert "local" == mp.name
 
+    @pytest.mark.parametrize(
+        "backend, backend_args",
+        (
+            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
+            ("ixmp4", dict()),
+        ),
+    )
+    def test_init1(self, backend, backend_args):
+        # Platform can be instantiated
+        ixmp.Platform(backend=backend, **backend_args)
+
     def test_getattr(self, test_mp):
         """Test __getattr__."""
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
+
+    def test_scenario_list(self, mp):
+        scenario = mp.scenario_list()
+        assert isinstance(scenario, pd.DataFrame)
 
 
 @pytest.fixture

@@ -373,8 +373,7 @@ def test_verbose_exception(test_mp, exception_verbose_true):
 
     exc_msg = exc_info.value.args[0]
     assert (
-        "There exists no Scenario 'foo|bar' "
-        "(version: -1)  in the database!" in exc_msg
+        "There exists no Scenario 'foo|bar' (version: -1)  in the database!" in exc_msg
     )
     assert "at.ac.iiasa.ixmp.database.DbDAO.getRunId" in exc_msg
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
@@ -595,7 +594,7 @@ def test_reload_cycle(
         mp = ixmp.Platform(**platform_args)
 
         # Load existing Scenario
-        s0 = ixmp.Scenario(mp, model="foo", scenario=f"bar {i-1}", version=1)
+        s0 = ixmp.Scenario(mp, model="foo", scenario=f"bar {i - 1}", version=1)
 
         memory_usage(f"pass {i} -- platform instantiated")
 

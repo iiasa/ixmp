@@ -91,7 +91,7 @@ def report(context, config, key):
 
     if not context:
         raise click.UsageError(
-            "give either --url, --platform or --dbprops " "before command report"
+            "give either --url, --platform or --dbprops before command report"
         )
 
     # Instantiate the Reporter with the Scenario loaded by main()
@@ -227,8 +227,7 @@ def import_group(context):
     """
     if not context or "scen" not in context:
         raise click.UsageError(
-            "give --url, or --platform, --model, and "
-            "--scenario, before command import"
+            "give --url, or --platform, --model, and --scenario, before command import"
         )
 
 
@@ -407,7 +406,7 @@ def list_scenarios(context, **kwargs):
 
     if not context:
         raise click.UsageError(
-            "give either --url, --platform or --dbprops " "before command list"
+            "give either --url, --platform or --dbprops before command list"
         )
 
     print(

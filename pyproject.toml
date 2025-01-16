@@ -82,8 +82,9 @@ exclude_also = [
 omit = ["ixmp/util/sphinx_linkcode_github.py"]
 
 [tool.mypy]
-exclude = [
-  "build/",
+files = [
+  "doc",
+  "ixmp",
 ]
 
 [[tool.mypy.overrides]]
@@ -110,6 +111,10 @@ markers = [
   "performance: ixmp performance test.",
 ]
 tmp_path_retention_policy = "none"
+
+[tool.ruff]
+# TEMPORARY Exclude tutorial files
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]

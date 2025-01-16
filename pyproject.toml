@@ -112,10 +112,6 @@ markers = [
 ]
 tmp_path_retention_policy = "none"
 
-[tool.ruff]
-# TEMPORARY Exclude tutorial files
-extend-exclude = ["*.ipynb"]
-
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]
 # FIXME the following exceed this limit

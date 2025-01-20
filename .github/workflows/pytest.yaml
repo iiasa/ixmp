@@ -94,29 +94,13 @@ jobs:
       # [docs] requires [tests] which requires [report,tutorial]
       run: uv pip install .[docs]
 
-    - name: Install R dependencies and tutorial requirements
-      # Workaround for https://github.com/actions/runner-images/issues/11137
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' }}
-      run: |
-        install.packages(c("remotes", "Rcpp"))
-        remotes::install_cran(
-          c("IRkernel", "reticulate"),
-          dependencies = TRUE,
-          # force = TRUE,
-        )
-
-        reticulate::py_config()
-      shell: Rscript {0}
+    - name: "Install libpng-dev"  # for R 'png', required by reticulate
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: sudo apt install libpng-dev
 
     - name: Install R dependencies and tutorial requirements
-      if: ${{ ! (matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12') }}
       run: |
-        install.packages(c("remotes", "Rcpp"))
-        remotes::install_cran(
-          c("IRkernel", "reticulate"),
-          dependencies = TRUE,
-          # force = TRUE,
-        )
+        install.packages(c("IRkernel", "reticulate"))
 
         # commented: for debugging
         # print(reticulate::py_config())

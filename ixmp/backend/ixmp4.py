@@ -11,34 +11,34 @@ class IXMP4Backend(CachingBackend):
 
     _platform: "ixmp4.Platform"
 
-    def __init__(self):
-        import ixmp4
+    def __init__(self, **kwargs) -> None:
+        from ixmp4 import Platform
+        from ixmp4.core.exceptions import PlatformNotFound
 
-        # TODO Obtain `name` from the ixmp.Platform creating this Backend
-        name = "test"
+        # TODO Handle errors or make sure name is always present for this backend
+        name = kwargs.pop("name")
 
         # Add an ixmp4.Platform using ixmp4's own configuration code
         # TODO Move this to a test fixture
         # NB ixmp.tests.conftest.test_sqlite_mp exists, but is not importable (missing
         #    __init__.py)
+        # NB test_platform is parametrized for both backends, but
+        # TestPlatform::test_init1 calls this function without defining an
+        # ixmp4.Platform first
         import ixmp4.conf
 
-        dsn = "sqlite:///:memory:"
         try:
+            ixmp4.conf.settings.toml.get_platform(name)
+        except PlatformNotFound:
+            # TODO Handle errors or make sure dsn is always present when the platform is
+            # not known
+            dsn = kwargs.pop("dsn")
             ixmp4.conf.settings.toml.add_platform(name, dsn)
-        except ixmp4.core.exceptions.PlatformNotUnique:
-            pass
 
         # Instantiate and store
-        self._platform = ixmp4.Platform(name)
+        self._platform = Platform(name)
 
     def get_scenarios(self, default, model, scenario):
-        # Current fails with:
-        # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: run
-        # [SQL: SELECT DISTINCT run.model__id, run.scenario__id, run.version,
-        # run.is_default, run.id
-        # FROM run
-        # WHERE run.is_default = 1 ORDER BY run.id ASC]
         return self._platform.runs.list()
 
     # The below methods of base.Backend are not yet implemented

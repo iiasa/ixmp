@@ -30,16 +30,7 @@ jobs:
         - "3.12"
         - "3.13"  # Latest supported by ixmp
         gams-version:
-        # Version used until 2024-07; disabled
-        # - 25.1.1
-        # First version including a macOS arm64 distribution
-        - 43.4.1
-
-        # commented: force a specific version of pandas, for e.g. pre-release
-        # testing
-        # pandas-version:
-        # - ""
-        # - "==2.0.0rc0"
+        - "43.4.1"  # First version including a macOS arm64 distribution
 
         exclude:
         # Specific version combinations that are invalid / not to be used
@@ -55,8 +46,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-py${{ matrix.python-version }}
-    # commented: use with "pandas-version" in the matrix, above
-    # name: ${{ matrix.os }}-py${{ matrix.python-version }}-pandas${{ matrix.pandas-version }}
 
     steps:
     - uses: actions/checkout@v4
@@ -64,20 +53,22 @@ jobs:
         fetch-depth: ${{ env.depth }}
         fetch-tags: true
 
-    - uses: actions/setup-python@v5
+    - name: TEMPORARY Work around actions/checkout#2041
+      run: git fetch --tags
+
+    - name: Set up uv, Python
+      uses: astral-sh/setup-uv@v5
       with:
+        cache-dependency-glob: "**/pyproject.toml"
         python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: "**/pyproject.toml"
 
     - uses: ts-graphviz/setup-graphviz@v2
-      # TEMPORARY Work around ts-graphviz/setup-graphviz#630
-      if: ${{ ! startswith(matrix.os, 'macos-') }}
+      # Work around ts-graphviz/setup-graphviz#630
+      if: matrix.os != 'macos-13'
 
     - uses: r-lib/actions/setup-r@v2
       id: setup-r
-      with:
-        r-version: "4.4.1"
+      with: { r-version: "4.4.1" }
 
     - name: Cache GAMS installer and R packages
       uses: actions/cache@v4
@@ -95,45 +86,21 @@ jobs:
         license: ${{ secrets.GAMS_LICENSE }}
 
     - name: Set RETICULATE_PYTHON
-      # Use the environment variable set by the setup-python action, above.
-      run: echo "RETICULATE_PYTHON=$pythonLocation" >> $GITHUB_ENV
+      # Retrieve the Python executable set up above
+      run: echo "RETICULATE_PYTHON=$(uv python find)" >> $GITHUB_ENV
       shell: bash
 
-    - name: Install Python package and dependencies
-      # [docs] contains [tests], which contains [report,tutorial]
-      run: |
-        pip install .[docs]
+    - name: Install the package and dependencies
+      # [docs] requires [tests] which requires [report,tutorial]
+      run: uv pip install .[docs]
 
-        # commented: use with "pandas-version" in the matrix, above
-        # pip install --upgrade pandas${{ matrix.pandas-version }}
-
-        # TEMPORARY With Python 3.13 pyam-iamc resolves to 1.3.1, which in turn
-        # limits pint < 0.17. Override. cf. iiasa/ixmp#544
-        pip install --upgrade pint
+    - name: "Install libpng-dev"  # for R 'png', required by reticulate
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: sudo apt install libpng-dev
 
     - name: Install R dependencies and tutorial requirements
-      # Workaround for https://github.com/actions/runner-images/issues/11137
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' }}
       run: |
-        install.packages(c("remotes", "Rcpp"))
-        remotes::install_cran(
-          c("IRkernel", "reticulate"),
-          dependencies = TRUE,
-          # force = TRUE,
-        )
-
-        reticulate::py_config()
-      shell: Rscript {0}
-
-    - name: Install R dependencies and tutorial requirements
-      if: ${{ ! (matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12') }}
-      run: |
-        install.packages(c("remotes", "Rcpp"))
-        remotes::install_cran(
-          c("IRkernel", "reticulate"),
-          dependencies = TRUE,
-          # force = TRUE,
-        )
+        install.packages(c("IRkernel", "reticulate"))
 
         # commented: for debugging
         # print(reticulate::py_config())
@@ -142,23 +109,20 @@ jobs:
         IRkernel::installspec()
       shell: Rscript {0}
 
-    - name: Run test suite using pytest
+    - name: Run tests
       run: |
-        pytest ixmp \
+        uv run --no-sync \
+          pytest ixmp \
           -m "not performance" \
-          --color=yes -rA --verbose \
+          --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
           --numprocesses=auto --dist=loadgroup
       shell: bash
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v5
-      # FIXME Limit runtime until
-      # https://github.com/codecov/codecov-action/issues/1316 is resolved
-      timeout-minutes: 1
-      continue-on-error: true
       with:
-        token: ${{ secrets.CODECOV_TOKEN }} # required
+        token: ${{ secrets.CODECOV_TOKEN}}
 
   pre-commit:
     name: Code quality
@@ -167,12 +131,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with: { python-version: "3.12" }
-
-    - name: Force recreation of pre-commit virtual environment for mypy
-      if: github.event_name == 'schedule'
-      run: gh cache list -L 999 | cut -f2 | grep pre-commit | xargs -I{} gh cache delete "{}" || true
-      env: { GH_TOKEN: "${{ github.token }}" }
-
-    - uses: pre-commit/action@v3.0.1
+    - uses: astral-sh/setup-uv@v5
+      with: { cache-dependency-glob: "**/pyproject.toml" }
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.UV_PYTHON }}|${{ hashFiles('.pre-commit-config.yaml') }}
+        lookup-only: ${{ github.event_name == 'schedule' }}  # Set 'true' to recreate cache
+    - run: uvx pre-commit run --all-files --color=always --show-diff-on-failure

@@ -137,7 +137,7 @@ class TestScenario:
         # Add set on a locked scenario
         with pytest.raises(
             RuntimeError,
-            match="This Scenario cannot be edited" ", do a checkout first!",
+            match="This Scenario cannot be edited, do a checkout first!",
         ):
             scen.init_set("foo")
 
@@ -399,7 +399,7 @@ class TestScenario:
 
         # With init_items=False, can't be read into an empty Scenario.
         # Exception raised is the first index set, alphabetically
-        with pytest.raises(ValueError, match="no set 'i'; " "try init_items=True"):
+        with pytest.raises(ValueError, match="no set 'i'; try init_items=True"):
             scen_empty.read_excel(tmp_path)
 
         # File can be read with init_items=True
@@ -441,7 +441,7 @@ class TestScenario:
 
         # Fails with add_units=False
         with pytest.raises(
-            ValueError, match="The unit 'pounds' does not exist" " in the database!"
+            ValueError, match="The unit 'pounds' does not exist in the database!"
         ):
             s.read_excel(tmp_path, init_items=True)
 
@@ -623,7 +623,7 @@ def test_set(scen_empty) -> None:
         scen.add_set("i", ["i9", "extra"], ["i9 comment"])
     # Missing element in the index set
     with pytest.raises(
-        ValueError, match="The index set 'i' does not have an " "element 'bar'!"
+        ValueError, match="The index set 'i' does not have an element 'bar'!"
     ):
         scen.add_set("foo", "bar")
 

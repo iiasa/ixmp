@@ -170,7 +170,7 @@ def _domain_enum(domain):
         return domain_enum.valueOf(domain.upper())
     except java.IllegalArgumentException:
         domains = ", ".join([d.name().lower() for d in domain_enum.values()])
-        raise ValueError(f"No such domain: {domain}, " f"existing domains: {domains}")
+        raise ValueError(f"No such domain: {domain}, existing domains: {domains}")
 
 
 def _unwrap(v):
@@ -886,8 +886,7 @@ class JDBCBackend(CachingBackend):
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
             raise NotImplementedError(  # pragma: no cover
-                f"Clone between {self.__class__} and"
-                f"{platform_dest._backend.__class__}"
+                f"Clone between {self.__class__} and{platform_dest._backend.__class__}"
             )
         elif platform_dest._backend is not self:
             package = s.__class__.__module__.split(".")[0]

@@ -35,16 +35,20 @@ These include:
 import logging
 import os
 import shutil
+from collections.abc import Generator
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
+from typing import Any
 
 import pint
 import pytest
 from click.testing import CliRunner
+from ixmp4.conf.base import PlatformInfo
+from ixmp4.data.backend import SqliteTestBackend
 
-from ixmp import Platform, cli
+from ixmp import BACKENDS, Platform, cli
 from ixmp import config as ixmp_config
 
 from .data import (
@@ -89,7 +93,7 @@ __all__ = [
 # Pytest hooks
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     """Add the ``--user-config`` command-line option to pytest."""
     parser.addoption(
         "--ixmp-jvm-mem",
@@ -103,7 +107,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_sessionstart(session):
+def pytest_sessionstart(session: pytest.Session) -> None:
     """Unset any configuration read from the user's directory."""
     from ixmp.backend import jdbc
 
@@ -117,7 +121,7 @@ def pytest_sessionstart(session):
     jdbc._GC_AGGRESSIVE = False
 
 
-def pytest_report_header(config, start_path):
+def pytest_report_header(config, start_path) -> str:
     """Add the ixmp configuration to the pytest report header."""
     return f"ixmp config: {repr(ixmp_config.values)}"
 
@@ -137,7 +141,7 @@ def ixmp_cli(tmp_env):
 
 
 @pytest.fixture(scope="module")
-def mp(test_mp):
+def mp(test_mp: Platform) -> Generator[Platform, Any, None]:
     """A :class:`.Platform` containing test data.
 
     This fixture is **module** -scoped, and is used in :mod:`.test_platform`,
@@ -149,23 +153,29 @@ def mp(test_mp):
 
 
 @pytest.fixture(scope="session")
-def test_data_path():
+def test_data_path() -> Path:
     """Path to the directory containing test data."""
     return Path(__file__).parents[1].joinpath("tests", "data")
 
 
-@pytest.fixture(scope="module")
-def test_mp(request, tmp_env, test_data_path):
+@pytest.fixture(scope="module", params=list(BACKENDS.keys()))
+def test_mp(
+    request: pytest.FixtureRequest, tmp_env, test_data_path
+) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=request.param
+    )
 
 
 @pytest.fixture(scope="session")
-def tmp_env(pytestconfig, tmp_path_factory):
+def tmp_env(
+    pytestconfig: pytest.Config, tmp_path_factory: pytest.TempPathFactory
+) -> Generator[os._Environ[str], Any, None]:
     """Return the os.environ dict with the IXMP_DATA variable set.
 
     IXMP_DATA will point to a temporary directory that is unique to the test session.
@@ -187,13 +197,13 @@ def tmp_env(pytestconfig, tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def tutorial_path():
+def tutorial_path() -> Path:
     """Path to the directory containing the tutorials."""
     return Path(__file__).parents[2].joinpath("tutorial")
 
 
 @pytest.fixture(scope="session")
-def ureg():
+def ureg() -> Generator[pint.UnitRegistry, Any, None]:
     """Application-wide units registry."""
     registry = pint.get_application_registry()
 
@@ -242,8 +252,8 @@ def protect_rename_dims():
     RENAME_DIMS.update(saved)
 
 
-@pytest.fixture(scope="function")
-def test_mp_f(request, tmp_env, test_data_path):
+@pytest.fixture(scope="function", params=list(BACKENDS.keys()))
+def test_mp_f(request: pytest.FixtureRequest, tmp_env, test_data_path):
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
     This fixture has **function** scope: the same Platform is reused for one test
@@ -253,7 +263,9 @@ def test_mp_f(request, tmp_env, test_data_path):
     --------
     test_mp
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=request.param
+    )
 
 
 # Assertions
@@ -384,19 +396,38 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 # Private utilities
 
 
-def _platform_fixture(request, tmp_env, test_data_path):
+def _platform_fixture(
+    request: pytest.FixtureRequest, tmp_env, test_data_path, backend: str
+) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace("/", " ")
 
     # Add a platform
-    ixmp_config.add_platform(
-        platform_name, "jdbc", "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
-    )
+    if backend == "jdbc":
+        ixmp_config.add_platform(
+            platform_name, backend, "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
+        )
+    elif backend == "ixmp4":
+        import ixmp4.conf
+
+        # Setup ixmp4 backend and run DB migrations
+        sqlite = SqliteTestBackend(
+            PlatformInfo(name=platform_name, dsn="sqlite:///:memory:")
+        )
+        sqlite.setup()
+
+        # Add DB to ixmp4 config
+        ixmp4.conf.settings.toml.add_platform(
+            name=platform_name, dsn="sqlite:///:memory:"
+        )
+
+        # Add ixmp4 backend to ixmp platforms
+        ixmp_config.add_platform(platform_name, backend)
 
     # Launch Platform
-    mp = Platform(name=platform_name)
+    mp = Platform(name=platform_name, backend=backend)
     yield mp
 
     # Teardown: don't show log messages when destroying the platform, even if
@@ -406,3 +437,11 @@ def _platform_fixture(request, tmp_env, test_data_path):
 
     # Remove from config
     ixmp_config.remove_platform(platform_name)
+
+    if backend == "ixmp4":
+        assert sqlite  # to satisfy type checkers
+
+        # Close DB connection and remove platform
+        sqlite.close()
+        sqlite.teardown()
+        ixmp4.conf.settings.toml.remove_platform(platform_name)

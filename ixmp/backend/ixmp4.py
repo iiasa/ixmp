@@ -2,15 +2,11 @@ import logging
 from collections.abc import Generator, MutableMapping, Sequence
 from typing import TYPE_CHECKING, Any, Optional
 
-from ixmp4 import Platform
-from ixmp4.conf.base import PlatformInfo
-from ixmp4.data.backend import SqliteTestBackend
-from ixmp4.data.backend.base import Backend as ixmp4_backend
-
 from ixmp.backend.base import CachingBackend
 
 if TYPE_CHECKING:
     import ixmp4
+    from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 log = logging.getLogger(__name__)
 
@@ -19,9 +15,13 @@ class IXMP4Backend(CachingBackend):
     """Backend using :mod:`ixmp4`."""
 
     _platform: "ixmp4.Platform"
-    _backend: ixmp4_backend
+    _backend: "ixmp4_backend"
 
-    def __init__(self, _backend: Optional[ixmp4_backend] = None) -> None:
+    def __init__(self, _backend: Optional["ixmp4_backend"] = None) -> None:
+        from ixmp4 import Platform
+        from ixmp4.conf.base import PlatformInfo
+        from ixmp4.data.backend import SqliteTestBackend
+
         # Create a default backend if None is provided
         if not _backend:
             log.warning("Falling back to default SqliteBackend 'ixmp4-local'")

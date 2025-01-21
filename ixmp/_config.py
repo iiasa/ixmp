@@ -68,6 +68,10 @@ def _platform_default():
             "driver": "hsqldb",
             "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
         },
+        "ixmp4-local": {
+            "class": "ixmp4",
+            "dsn": "sqlite:///:memory:",
+        },
     }
 
 

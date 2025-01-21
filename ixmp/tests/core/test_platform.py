@@ -2,6 +2,7 @@
 
 import logging
 import re
+import sys
 from sys import getrefcount
 from typing import TYPE_CHECKING
 from weakref import getweakrefcount
@@ -18,11 +19,16 @@ from ixmp.testing import DATA, assert_logs, models
 if TYPE_CHECKING:
     from ixmp import Platform
 
+min_ixmp4_version = pytest.mark.skipif(
+    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
+)
+
 
 class TestPlatform:
-    def test_init(self):
+    def test_init0(self):
         with pytest.raises(
-            ValueError, match=re.escape("backend class 'foo' not among ['jdbc']")
+            ValueError,
+            match=re.escape("backend class 'foo' not among"),
         ):
             ixmp.Platform(backend="foo")
 
@@ -30,10 +36,25 @@ class TestPlatform:
         mp = ixmp.Platform()
         assert "local" == mp.name
 
+    @pytest.mark.parametrize(
+        "backend, backend_args",
+        (
+            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
+            pytest.param("ixmp4", dict(), marks=min_ixmp4_version),
+        ),
+    )
+    def test_init1(self, backend, backend_args):
+        # Platform can be instantiated
+        ixmp.Platform(backend=backend, **backend_args)
+
     def test_getattr(self, test_mp):
         """Test __getattr__."""
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
+
+    def test_scenario_list(self, mp: ixmp.Platform) -> None:
+        scenario = mp.scenario_list()
+        assert isinstance(scenario, pd.DataFrame)
 
 
 @pytest.fixture

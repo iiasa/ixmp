@@ -250,7 +250,7 @@ def make_dantzig(
     return scen
 
 
-def populate_test_platform(platform):
+def populate_test_platform(platform: Platform) -> None:
     """Populate `platform` with data for testing.
 
     Many of the tests in :mod:`ixmp.tests.core` depend on this set of data.

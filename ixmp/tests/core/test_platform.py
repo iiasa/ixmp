@@ -35,8 +35,7 @@ class TestPlatform:
         "backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            # TODO use this/default name for ixmp4 platforms without passing it manually
-            ("ixmp4", dict(name="ixmp4-local")),
+            ("ixmp4", dict()),
         ),
     )
     def test_init1(self, backend, backend_args):

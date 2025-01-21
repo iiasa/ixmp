@@ -81,9 +81,6 @@ class Platform:
         # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)
 
-        if backend == "ixmp4":
-            kwargs["name"] = self.name
-
         # Retrieve the Backend class
         try:
             backend_class_name = kwargs.pop("class")

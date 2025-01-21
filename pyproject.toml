@@ -61,7 +61,8 @@ ixmp4 = ["ixmp4"]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
-  "ixmp[ixmp4,report,tutorial]",
+  "ixmp[report,tutorial]",
+  "ixmp[ixmp4]; python_version > '3.9'",
   "memory_profiler",
   "nbclient >= 0.5",
   "pytest >= 5",

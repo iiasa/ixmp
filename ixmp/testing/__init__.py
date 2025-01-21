@@ -35,6 +35,7 @@ These include:
 import logging
 import os
 import shutil
+import sys
 from collections.abc import Generator
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
@@ -45,8 +46,6 @@ from typing import Any
 import pint
 import pytest
 from click.testing import CliRunner
-from ixmp4.conf.base import PlatformInfo
-from ixmp4.data.backend import SqliteTestBackend
 
 from ixmp import BACKENDS, Platform, cli
 from ixmp import config as ixmp_config
@@ -88,6 +87,12 @@ __all__ = [
     "test_mp",
     "tmp_env",
 ]
+
+# Parametrize platforms for jdbc and ixmp4
+backends = list(BACKENDS.keys())
+# ixmp4 is not published for Python 3.9
+if sys.version_info < (3, 10):
+    backends.remove("ixmp4")
 
 
 # Pytest hooks
@@ -158,7 +163,7 @@ def test_data_path() -> Path:
     return Path(__file__).parents[1].joinpath("tests", "data")
 
 
-@pytest.fixture(scope="module", params=list(BACKENDS.keys()))
+@pytest.fixture(scope="module", params=backends)
 def test_mp(
     request: pytest.FixtureRequest, tmp_env, test_data_path
 ) -> Generator[Platform, Any, None]:
@@ -252,7 +257,7 @@ def protect_rename_dims():
     RENAME_DIMS.update(saved)
 
 
-@pytest.fixture(scope="function", params=list(BACKENDS.keys()))
+@pytest.fixture(scope="function", params=backends)
 def test_mp_f(request: pytest.FixtureRequest, tmp_env, test_data_path):
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
@@ -410,7 +415,8 @@ def _platform_fixture(
             platform_name, backend, "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
         )
     elif backend == "ixmp4":
-        # import ixmp4.conf
+        from ixmp4.conf.base import PlatformInfo
+        from ixmp4.data.backend import SqliteTestBackend
 
         # Setup ixmp4 backend and run DB migrations
         sqlite = SqliteTestBackend(

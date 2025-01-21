@@ -2,6 +2,7 @@
 
 import logging
 import re
+import sys
 from sys import getrefcount
 from typing import TYPE_CHECKING
 from weakref import getweakrefcount
@@ -18,12 +19,16 @@ from ixmp.testing import DATA, assert_logs, models
 if TYPE_CHECKING:
     from ixmp import Platform
 
+min_ixmp4_version = pytest.mark.skipif(
+    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
+)
+
 
 class TestPlatform:
     def test_init0(self):
         with pytest.raises(
             ValueError,
-            match=re.escape("backend class 'foo' not among ['ixmp4', 'jdbc']"),
+            match=re.escape("backend class 'foo' not among"),
         ):
             ixmp.Platform(backend="foo")
 
@@ -35,7 +40,7 @@ class TestPlatform:
         "backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            ("ixmp4", dict()),
+            pytest.param("ixmp4", dict(), marks=min_ixmp4_version),
         ),
     )
     def test_init1(self, backend, backend_args):

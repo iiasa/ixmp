@@ -204,12 +204,13 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_nodes(self) -> Iterable[tuple[str, Optional[str], str, str]]:
+    def get_nodes(self) -> Iterable[tuple[str, Optional[str], Optional[str], str]]:
         """Iterate over all nodes stored on the Platform.
 
         Yields
         -------
         tuple
+
             The members of each tuple are:
 
             ========= =========== ===
@@ -820,7 +821,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_items(self, s: Scenario, type: str) -> list[str]:
+    def list_items(self, s: Scenario, type: Literal["set", "par", "equ"]) -> list[str]:
         """Return a list of names of items of `type`.
 
         Parameters
@@ -832,7 +833,7 @@ class Backend(ABC):
     def init_item(
         self,
         s: Scenario,
-        type: str,
+        type: Literal["set", "par", "equ", "var"],
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -871,7 +872,9 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def item_index(self, s: Scenario, name: str, sets_or_names: str) -> list[str]:
+    def item_index(
+        self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
+    ) -> list[str]:
         """Return the index sets or names of item `name`.
 
         Parameters
@@ -932,7 +935,7 @@ class Backend(ABC):
     def item_set_elements(
         self,
         s: Scenario,
-        type: str,
+        type: Literal["par", "set"],
         name: str,
         elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
     ) -> None:

@@ -406,6 +406,7 @@ def _setup_ixmp4_platform(mp: Platform) -> None:
     """Set up an ixmp4-backed Platform with things hardcoded in Java."""
     mp.add_unit("cases", comment="As pre-defined in Java.")
     mp.add_unit("km", comment="As pre-defined in Java.")
+    mp.add_region(region="World", hierarchy="common")
 
 
 def _platform_fixture(

@@ -57,8 +57,8 @@ docs = [
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]
-# Change ixmp4 to new release after https://github.com/iiasa/ixmp4/pull/153 is merged
-ixmp4 = ["ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/expose-run-is-default"]
+# Change ixmp4 to new release after https://github.com/iiasa/ixmp4/pull/154 is merged
+ixmp4 = ["ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/introduce-has-solution"]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
 import pandas as pd
 
 from ixmp.backend.base import CachingBackend
+from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 
@@ -46,7 +47,16 @@ class IXMP4Backend(CachingBackend):
     # def __del__(self) -> None:
     #     self.close_db()
 
+    def set_log_level(self, level: int) -> None:
+        # Set the level of the 'ixmp.backend.ixmp4' logger. Messages are handled by the
+        # 'ixmp' logger; see ixmp/__init__.py.
+        log.setLevel(level)
+
+    # def get_log_level(self):
+    #     return super().get_log_level()
+
     # Platform methods
+
     @classmethod
     def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
         msg = "Unhandled {} args to Backend.handle_config(): {!r}"
@@ -103,12 +113,16 @@ class IXMP4Backend(CachingBackend):
         if synonym:
             log.warning(f"Discarding synonym parameter {synonym}; unused in ixmp4.")
         if hierarchy is None:
-            raise ValueError("IXMP4Backend.set_node() requires to specify 'hierarchy'!")
+            log.warning(
+                "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
+                "Using 'None' as the meaningsless default."
+            )
+            hierarchy = "None"
         self._platform.regions.create(name=name, hierarchy=hierarchy)
 
-    def get_nodes(self) -> list[tuple[str, str, None, str]]:
+    def get_nodes(self) -> list[tuple[str, None, str, str]]:
         return [
-            (region.name, region.name, None, region.hierarchy)
+            (region.name, None, region.name, region.hierarchy)
             for region in self._platform.regions.list()
         ]
 
@@ -136,6 +150,36 @@ class IXMP4Backend(CachingBackend):
         # TODO either do log.warning that annotation is unused or
         # run.docs = annotation
         self._index_and_set_attrs(run, ts)
+
+    def clone(
+        self,
+        s: Scenario,
+        platform_dest: Platform,
+        model: str,
+        scenario: str,
+        annotation: str,
+        keep_solution: bool,
+        first_model_year: Optional[int] = None,
+    ) -> Scenario:
+        # TODO either do log.warning that annotation is unused or
+        # run.docs = annotation
+        # TODO Should this be supported?
+        if first_model_year:
+            log.warning(
+                "ixmp4-backed Scenarios don't support cloning from "
+                "`first_model_year` only!"
+            )
+        # TODO Is this enough? ixmp4 doesn't support cloning to a different platform at
+        # the moment, but maybe we can imitate this here? (Access
+        # platform_dest.backend._platform to create a new Run?)
+        cloned_s = Scenario(
+            mp=platform_dest, model=model, scenario=scenario, annotation=annotation
+        )
+        cloned_run = self.index[s].clone(
+            model=model, scenario=scenario, keep_solution=keep_solution
+        )
+        self._index_and_set_attrs(cloned_run, cloned_s)
+        return cloned_s
 
     def get(self, ts: TimeSeries) -> None:
         v = int(ts.version) if ts.version else None
@@ -405,6 +449,9 @@ class IXMP4Backend(CachingBackend):
 
     # Handle timeslices
 
+    # def set_timeslice(self, name: str, category: str, duration: float) -> None:
+    #     return super().set_timeslice(name, category, duration)
+
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):
         raise NotImplementedError
@@ -412,7 +459,6 @@ class IXMP4Backend(CachingBackend):
     cat_get_elements = _ni
     cat_list = _ni
     cat_set_elements = _ni
-    clone = _ni
     delete = _ni
     delete_geo = _ni
     delete_item = _ni

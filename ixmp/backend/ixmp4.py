@@ -180,7 +180,10 @@ class IXMP4Backend(CachingBackend):
     def is_default(self, ts: TimeSeries) -> bool:
         return self.index[ts].is_default()
 
-    # Handle various items
+    def has_solution(self, s: Scenario) -> bool:
+        return self.index[s].optimization.has_solution()
+
+    # Handle optimization items
 
     # TODO: type hints
     def _get_repo(
@@ -308,10 +311,6 @@ class IXMP4Backend(CachingBackend):
         if comment:
             scalar.docs = comment
 
-    ### TODO
-    ###
-    ### Currently, tests fail because they expect 'cases' to be predefined on the test_mp
-
     def _add_data_to_parameter(
         self,
         s: Scenario,
@@ -396,7 +395,6 @@ class IXMP4Backend(CachingBackend):
             # as such?
             _, item = self._get_item(s=s, name=name, type=type)
             data = pd.DataFrame(item.data)
-            print(data)
             if type == "par":
                 data.rename(columns={"values": "value", "units": "unit"}, inplace=True)
             else:
@@ -404,6 +402,8 @@ class IXMP4Backend(CachingBackend):
                     columns={"levels": "level", "marginals": "marginal"}, inplace=True
                 )
             return data
+
+    # Handle timeslices
 
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):
@@ -422,7 +422,6 @@ class IXMP4Backend(CachingBackend):
     get_geo = _ni
     get_meta = _ni
     get_timeslices = _ni
-    has_solution = _ni
     item_delete_elements = _ni
     last_update = _ni
     remove_meta = _ni

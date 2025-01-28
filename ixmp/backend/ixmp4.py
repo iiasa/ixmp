@@ -5,11 +5,18 @@ from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
 import pandas as pd
 
 from ixmp.backend.base import CachingBackend
+from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 
 if TYPE_CHECKING:
     import ixmp4
+    from ixmp4.core.optimization.equation import Equation
+    from ixmp4.core.optimization.indexset import IndexSet
+    from ixmp4.core.optimization.parameter import Parameter
+    from ixmp4.core.optimization.scalar import Scalar
+    from ixmp4.core.optimization.table import Table
+    from ixmp4.core.optimization.variable import Variable
     from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 log = logging.getLogger(__name__)
@@ -46,7 +53,16 @@ class IXMP4Backend(CachingBackend):
     # def __del__(self) -> None:
     #     self.close_db()
 
+    def set_log_level(self, level: int) -> None:
+        # Set the level of the 'ixmp.backend.ixmp4' logger. Messages are handled by the
+        # 'ixmp' logger; see ixmp/__init__.py.
+        log.setLevel(level)
+
+    # def get_log_level(self):
+    #     return super().get_log_level()
+
     # Platform methods
+
     @classmethod
     def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
         msg = "Unhandled {} args to Backend.handle_config(): {!r}"
@@ -103,12 +119,16 @@ class IXMP4Backend(CachingBackend):
         if synonym:
             log.warning(f"Discarding synonym parameter {synonym}; unused in ixmp4.")
         if hierarchy is None:
-            raise ValueError("IXMP4Backend.set_node() requires to specify 'hierarchy'!")
+            log.warning(
+                "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
+                "Using 'None' as the meaningsless default."
+            )
+            hierarchy = "None"
         self._platform.regions.create(name=name, hierarchy=hierarchy)
 
-    def get_nodes(self) -> list[tuple[str, str, None, str]]:
+    def get_nodes(self) -> list[tuple[str, None, str, str]]:
         return [
-            (region.name, region.name, None, region.hierarchy)
+            (region.name, None, region.name, region.hierarchy)
             for region in self._platform.regions.list()
         ]
 
@@ -137,6 +157,36 @@ class IXMP4Backend(CachingBackend):
         # run.docs = annotation
         self._index_and_set_attrs(run, ts)
 
+    def clone(
+        self,
+        s: Scenario,
+        platform_dest: Platform,
+        model: str,
+        scenario: str,
+        annotation: str,
+        keep_solution: bool,
+        first_model_year: Optional[int] = None,
+    ) -> Scenario:
+        # TODO either do log.warning that annotation is unused or
+        # run.docs = annotation
+        # TODO Should this be supported?
+        if first_model_year:
+            log.warning(
+                "ixmp4-backed Scenarios don't support cloning from "
+                "`first_model_year` only!"
+            )
+        # TODO Is this enough? ixmp4 doesn't support cloning to a different platform at
+        # the moment, but maybe we can imitate this here? (Access
+        # platform_dest.backend._platform to create a new Run?)
+        cloned_s = Scenario(
+            mp=platform_dest, model=model, scenario=scenario, annotation=annotation
+        )
+        cloned_run = self.index[s].clone(
+            model=model, scenario=scenario, keep_solution=keep_solution
+        )
+        self._index_and_set_attrs(cloned_run, cloned_s)
+        return cloned_s
+
     def get(self, ts: TimeSeries) -> None:
         v = int(ts.version) if ts.version else None
         run = self._platform.runs.get(model=ts.model, scenario=ts.scenario, version=v)
@@ -154,21 +204,17 @@ class IXMP4Backend(CachingBackend):
 
     def commit(self, ts: TimeSeries, comment: str) -> None:
         log.warning(
-            "ixmp4 backed Scenarios/Runs are changed immediately, no need for "
-            "a commit!"
+            "ixmp4 backed Scenarios/Runs are changed immediately, no need for a commit!"
         )
 
     def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
         if from_year:
             log.warning(
-                "ixmp4 does not support removing the solution only after a "
-                "certain year"
+                "ixmp4 does not support removing the solution only after a certain year"
             )
         self.index[s].optimization.remove_solution()
 
     def set_as_default(self, ts: TimeSeries) -> None:
-        # TODO are we okay with always loading a Run for this or should we adapt
-        # TimeSeries to have a `_run` attribute that has the Run loaded?
         self.index[ts].set_as_default()
 
     # Information about the Run
@@ -253,35 +299,55 @@ class IXMP4Backend(CachingBackend):
         s: Scenario,
         name: str,
         type: Literal["scalar", "indexset", "set", "par", "equ", "var"],
-    ):
-        # TODO add try except here to always return using IndexError from repo.list()[0]
-        repo = self._get_repo(s=s, type=type)
-        item_list = repo.list(name=name)
-        if (
-            len(item_list) == 1
-        ):  # ixmp4 enforces names to be unique among individual item classes
-            return (type, item_list[0])
+    ) -> Union[
+        "Scalar",
+        "IndexSet",
+        "Table",
+        "Equation",
+        "Variable",
+        "Parameter",
+    ]:
+        return self._get_repo(s=s, type=type).get(name=name)
 
-    # TODO mypy says this function is missing a return statement. But why?
-    # AFAICT, items.items() will always contain something, so we will always return
-    # something (unless we raise). Am I missing something?
-    def item_index(  # type: ignore[return]
+    def _get_indexset_or_table(
+        self, s: Scenario, name: str
+    ) -> Union["IndexSet", "Table"]:
+        from ixmp4.core import IndexSet, Table
+        from ixmp4.core.exceptions import NotFound
+
+        try:
+            repo = self._get_repo(s=s, type="indexset")
+            return cast(IndexSet, repo.get(name=name))
+        except NotFound:
+            repo = self._get_repo(s=s, type="set")
+            return cast(Table, repo.get(name=name))
+
+    def item_index(
         self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
     ) -> list[str]:
-        type, item = self._find_item(s=s, name=name)
-        if item is None:
-            raise LookupError(f"No item called {name} found on this Scenario!")
-        if type == "indexset":
+        _, item = self._find_item(s=s, name=name)
+        # NOTE Using isinstance allows adequate attribute access
+        if (
+            isinstance(item, IndexSet)
+            or isinstance(item, Scalar)
+            or (
+                isinstance(item, Variable)
+                and sets_or_names == "names"
+                and item.column_names is None
+            )
+        ):
             return cast(list[str], [])
         else:
-            return (
-                [column.name for column in item.columns]
-                if sets_or_names == "names"
-                else item.constrained_to_indexsets
+            index_names = (
+                item.column_names if sets_or_names == "names" else item.indexsets
             )
+            assert index_names, (
+                f"Requested {sets_or_names}, but these are None for item {item.name}"
+            )
+            return index_names
 
     def _add_data_to_set(
-        self, s: Scenario, name: str, key: str | list[str], comment: Optional[str]
+        self, s: Scenario, name: str, key: Union[str, list[str]], comment: Optional[str]
     ) -> None:
         if comment:
             log.warning(
@@ -292,9 +358,10 @@ class IXMP4Backend(CachingBackend):
             self.index[s].optimization.indexsets.get(name=name).add(key)
         else:
             table = self.index[s].optimization.tables.get(name=name)
-            data_to_add = {
-                table.constrained_to_indexsets[i]: key[i] for i in range(len(key))
-            }
+            # TODO should we enforce in ixmp4 that when constrained_to_indexsets
+            # contains duplicate values, column_names must be provided?
+            keys = table.column_names if table.column_names else table.indexsets
+            data_to_add = {keys[i]: [key[i]] for i in range(len(key))}
             table.add(data=data_to_add)
 
     def _create_scalar(
@@ -315,25 +382,26 @@ class IXMP4Backend(CachingBackend):
         self,
         s: Scenario,
         name: str,
-        key: str | list[str],
+        key: Union[str, list[str]],
         value: float,
         unit: str,
         comment: Optional[str],
     ) -> None:
         if comment:
             log.warning(
-                "`comment` currently unused with ixmp4 when adding data to "
-                "Parameters."
+                "`comment` currently unused with ixmp4 when adding data to Parameters."
             )
         parameter = self.index[s].optimization.parameters.get(name=name)
         # TODO there's got to be a better way for handling possible lists
         if isinstance(key, str):
             key = [key]
+        keys = parameter.column_names if parameter.column_names else parameter.indexsets
         data_to_add: dict[str, Union[list[float], list[str]]] = {
-            parameter.constrained_to_indexsets[i]: [key[i]] for i in range(len(key))
+            keys[i]: [key[i]] for i in range(len(key))
         }
         data_to_add["values"] = [value]
         data_to_add["units"] = [unit]
+
         parameter.add(data=data_to_add)
 
     def item_set_elements(
@@ -363,20 +431,14 @@ class IXMP4Backend(CachingBackend):
         self, s: Scenario, name: str, filters: Optional[dict[str, list[Any]]] = None
     ) -> Union[pd.Series, pd.DataFrame]:
         # TODO handle filters
-        from ixmp4.core import IndexSet, Table
-        from ixmp4.core.exceptions import NotFound
 
-        item: Union[IndexSet, Table]
-        try:
-            repo = self._get_repo(s=s, type="indexset")
-            item = cast(IndexSet, repo.get(name=name))
-        except NotFound:
-            repo = self._get_repo(s=s, type="set")
-            item = cast(Table, repo.get(name=name))
+        item = self._get_indexset_or_table(s=s, name=name)
 
-        return (
-            pd.DataFrame(item.data) if isinstance(item, Table) else pd.Series(item.data)
-        )
+        if isinstance(item, Table):
+            columns = item.column_names if item.column_names else item.indexsets
+            return pd.DataFrame(item.data, columns=columns)
+        else:
+            return pd.Series(item.data)
 
     def item_get_elements(
         self,
@@ -393,8 +455,9 @@ class IXMP4Backend(CachingBackend):
         else:
             # TODO this can really only be Equation, Parameter, or Variable, so cast
             # as such?
-            _, item = self._get_item(s=s, name=name, type=type)
-            data = pd.DataFrame(item.data)
+            item = self._get_item(s=s, name=name, type=type)
+            # TODO if item.data can be empty, set columns explicitly as for table above
+            data = pd.DataFrame(item.data)  # type: ignore[union-attr]
             if type == "par":
                 data.rename(columns={"values": "value", "units": "unit"}, inplace=True)
             else:
@@ -403,16 +466,133 @@ class IXMP4Backend(CachingBackend):
                 )
             return data
 
+    def item_delete_elements(
+        self,
+        s: Scenario,
+        type: Literal["par", "set"],
+        name: str,
+        keys: Iterable[Sequence[str]],
+    ) -> None:
+        if type == "set":
+            item = self._get_indexset_or_table(s=s, name=name)
+
+            if isinstance(item, IndexSet):
+                # NOTE We might have to expose IndexSet._data_type to cast correctly
+                data = pd.DataFrame(keys, columns=[item.name])
+                item.remove(data=cast(list[str], data[item.name].to_list()))
+            else:
+                # TODO can we assume that keys follow same order as indexsets/columns?
+                columns = item.column_names if item.column_names else item.indexsets
+                data = pd.DataFrame(keys, columns=columns)
+                item.remove(data=data)
+        else:
+            parameter = cast(Parameter, self._get_item(s=s, name=name, type="par"))
+            columns = (
+                parameter.column_names
+                if parameter.column_names
+                else parameter.indexsets
+            )
+            data = pd.DataFrame(keys, columns=columns)
+            parameter.remove(data=data)
+
+    def cat_set_elements(
+        self,
+        ms: Scenario,
+        name: str,
+        cat: str,
+        keys: Union[str, Sequence[str]],
+        is_unique: bool,
+    ) -> None:
+        """Add data to a category mapping.
+
+        For the ixmp4.Table or IndexSet `name`, define a category as a new IndexSet
+        called 'type_`name`' (if it doesn't exist already) and add `cat` to it. Then,
+        define a new Table 'category_`name`' storing one column for `keys` and one for
+        'categories'.
+
+        Parameters
+        ----------
+        name : str
+            Name of the category mapping Table.
+        cat : str
+            Name of the category within `name`.
+        keys : iterable of str or list of str
+            Keys to add to `cat`.
+        is_unique : bool
+            If :obj:`True`:
+
+            - `keys` **must** contain only one key.
+            - The Backend **must** remove any existing member of `cat`, so that it has
+              only one element.
+        """
+        from ixmp4.core.exceptions import NotFound
+
+        # Assume for now that only IndexSets are requested to be mapped to cats
+        indexset = self.index[ms].optimization.indexsets.get(name=name)
+
+        # Get or create the 'type_name' indexset and 'category_name' table
+        try:
+            category_indexset = self.index[ms].optimization.indexsets.get(
+                name=f"type_{name}"
+            )
+        except NotFound:
+            category_indexset = self.index[ms].optimization.indexsets.create(
+                name=f"type_{name}"
+            )
+
+        try:
+            category_table = self.index[ms].optimization.tables.get(
+                name=f"category_{name}"
+            )
+        except NotFound:
+            category_table = self.index[ms].optimization.tables.create(
+                name=f"category_{name}",
+                constrained_to_indexsets=[indexset.name, category_indexset.name],
+            )
+
+        # Convert for convenience
+        if isinstance(keys, str):
+            keys = [keys]
+
+        # Ensure proper treatment when is_unique is True
+        if is_unique:
+            if len(keys) > 1:
+                raise ValueError("One can only add one element to a unique category!")
+            # Ensure data contains no data except that which we're going to add
+            # NOTE if category_table contains data linked to elements existing now, this
+            # will lead to DataValidationErrors when adding data to the table. Also,
+            # ixmp4 might safeguard against this when implementing remove() functions
+            if category_indexset.data:
+                # TODO remove data once ixmp4 implements that
+                log.warning("Can't remove data from ixmp4 objects (categories) yet!")
+
+        # Add data to both objects
+        category_indexset.add(data=cat)
+        data = {indexset.name: keys, category_indexset.name: [cat] * len(keys)}
+        category_table.add(data=data)
+
+    def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> list[str]:
+        data = pd.DataFrame(
+            self.index[ms].optimization.tables.get(name=f"category_{name}").data
+        )
+        # This assumes there are only two columns
+        columns = data.columns.to_list()
+        columns.remove(f"type_{name}")
+        return data[data[f"type_{name}"] == cat, columns[0]].astype(str).to_list()
+
+    def cat_list(self, ms: Scenario, name: str) -> list[str]:
+        category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
+        return cast(list[str], category_indexset.data)
+
     # Handle timeslices
+
+    # def set_timeslice(self, name: str, category: str, duration: float) -> None:
+    #     return super().set_timeslice(name, category, duration)
 
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):
         raise NotImplementedError
 
-    cat_get_elements = _ni
-    cat_list = _ni
-    cat_set_elements = _ni
-    clone = _ni
     delete = _ni
     delete_geo = _ni
     delete_item = _ni
@@ -422,7 +602,6 @@ class IXMP4Backend(CachingBackend):
     get_geo = _ni
     get_meta = _ni
     get_timeslices = _ni
-    item_delete_elements = _ni
     last_update = _ni
     remove_meta = _ni
     set_data = _ni

@@ -401,6 +401,13 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 # Private utilities
 
 
+# TODO Check if this setup is necessary when running all tests (not just test_platform)
+def _setup_ixmp4_platform(mp: Platform) -> None:
+    """Set up an ixmp4-backed Platform with things hardcoded in Java."""
+    mp.add_unit("cases", comment="As pre-defined in Java.")
+    mp.add_unit("km", comment="As pre-defined in Java.")
+
+
 def _platform_fixture(
     request: pytest.FixtureRequest, tmp_env, test_data_path, backend: str
 ) -> Generator[Platform, Any, None]:
@@ -429,6 +436,8 @@ def _platform_fixture(
 
     # Launch Platform
     mp = Platform(name=platform_name, backend=backend)
+    if backend == "ixmp4":
+        _setup_ixmp4_platform(mp=mp)
     yield mp
 
     # Teardown: don't show log messages when destroying the platform, even if

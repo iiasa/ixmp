@@ -10,7 +10,8 @@ from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 
 if TYPE_CHECKING:
-    import ixmp4
+    from ixmp4 import Platform as ixmp4_platform
+    from ixmp4.core import Run
     from ixmp4.core.optimization.equation import Equation
     from ixmp4.core.optimization.indexset import IndexSet
     from ixmp4.core.optimization.parameter import Parameter
@@ -25,12 +26,12 @@ log = logging.getLogger(__name__)
 class IXMP4Backend(CachingBackend):
     """Backend using :mod:`ixmp4`."""
 
-    _platform: "ixmp4.Platform"
+    _platform: "ixmp4_platform"
     _backend: "ixmp4_backend"
 
     # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
     # subclasses of either)
-    index: dict[TimeSeries, "ixmp4.Run"] = {}
+    index: dict[TimeSeries, "Run"] = {}
 
     def __init__(self, _backend: Optional["ixmp4_backend"] = None) -> None:
         from ixmp4 import Platform
@@ -134,7 +135,7 @@ class IXMP4Backend(CachingBackend):
 
     # Modifying the Run object
 
-    def _index_and_set_attrs(self, run: "ixmp4.Run", ts: TimeSeries) -> None:
+    def _index_and_set_attrs(self, run: "Run", ts: TimeSeries) -> None:
         """Add *run* to index and update attributes of *ts*.
 
         Helper for init and get.
@@ -281,18 +282,47 @@ class IXMP4Backend(CachingBackend):
             repo = self._get_repo(s=s, type=type)
             return [item.name for item in repo.list()]
 
-    # TODO type hints
-    def _find_item(self, s: Scenario, name: str):
+    def _find_item(
+        self, s: Scenario, name: str
+    ) -> tuple[
+        str,
+        Union[
+            "Scalar",
+            "IndexSet",
+            "Table",
+            "Equation",
+            "Variable",
+            "Parameter",
+        ],
+    ]:
         # NOTE this currently assumes that `name` will only be present once among
         # Tables, Parameters, Equations, Variables. This is in line with the assumption
         # made in the Java backend, but ixmp4 enforces no such constraint.
+        _type: Optional[str] = None
+        _item: Optional[
+            Union[
+                "Scalar",
+                "IndexSet",
+                "Table",
+                "Equation",
+                "Variable",
+                "Parameter",
+            ]
+        ] = None
         for type in ("scalar", "indexset", "set", "par", "equ", "var"):
             repo = self._get_repo(s=s, type=type)
             item_list = repo.list(name=name)
             if (
                 len(item_list) == 1
             ):  # ixmp4 enforces names to be unique among individual item classes
-                return (type, item_list[0])
+                _type = type
+                _item = item_list[0]
+                break
+
+        if _item is None or _type is None:
+            raise KeyError(f"No item called {name} found on this Scenario!")
+        else:
+            return (_type, _item)
 
     def _get_item(
         self,

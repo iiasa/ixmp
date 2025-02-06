@@ -1,24 +1,22 @@
 import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
+from typing import Any, Literal, Optional, Union, cast
 
 import pandas as pd
+from ixmp4 import Platform as ixmp4_platform
+from ixmp4.core import Run
+from ixmp4.core.optimization.equation import Equation
+from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.parameter import Parameter
+from ixmp4.core.optimization.scalar import Scalar
+from ixmp4.core.optimization.table import Table
+from ixmp4.core.optimization.variable import Variable
+from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 from ixmp.backend.base import CachingBackend
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
-
-if TYPE_CHECKING:
-    from ixmp4 import Platform as ixmp4_platform
-    from ixmp4.core import Run
-    from ixmp4.core.optimization.equation import Equation
-    from ixmp4.core.optimization.indexset import IndexSet
-    from ixmp4.core.optimization.parameter import Parameter
-    from ixmp4.core.optimization.scalar import Scalar
-    from ixmp4.core.optimization.table import Table
-    from ixmp4.core.optimization.variable import Variable
-    from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 log = logging.getLogger(__name__)
 
@@ -360,21 +358,21 @@ class IXMP4Backend(CachingBackend):
         if (
             isinstance(item, IndexSet)
             or isinstance(item, Scalar)
-            or (
-                isinstance(item, Variable)
-                and sets_or_names == "names"
-                and item.column_names is None
-            )
+            or (isinstance(item, Variable) and item.indexsets is None)
         ):
             return cast(list[str], [])
         else:
-            index_names = (
-                item.column_names if sets_or_names == "names" else item.indexsets
+            if sets_or_names == "names" and item.column_names is None:
+                log.warning(
+                    f"Requested {sets_or_names}, but these are None for item "
+                    f"{item.name}, falling back on (Index)Set names!"
+                )
+            assert item.indexsets  # Could only be None for Variables
+            return (
+                item.column_names
+                if item.column_names and sets_or_names == "names"
+                else item.indexsets
             )
-            assert index_names, (
-                f"Requested {sets_or_names}, but these are None for item {item.name}"
-            )
-            return index_names
 
     def _add_data_to_set(
         self, s: Scenario, name: str, key: Union[str, list[str]], comment: Optional[str]

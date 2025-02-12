@@ -11,6 +11,8 @@ from tempfile import TemporaryDirectory
 from typing import Any, Optional
 
 from ixmp.backend import ItemType
+from ixmp.backend.jdbc import JDBCBackend
+from ixmp.core.scenario import Scenario
 from ixmp.model.base import Model, ModelError
 from ixmp.util import as_str_list
 
@@ -180,6 +182,21 @@ class GAMSModel(Model):
         See :meth:`record_versions`.
     """  # noqa: E501
 
+    # Make attributes known to self
+    model_file: str
+    case: str
+    in_file: os.PathLike
+    out_file: os.PathLike
+    solve_args: list[str]
+    gams_args: list[str]
+    check_solution: bool
+    comment: Optional[str]
+    equ_list: Optional[list[str]]
+    var_list: Optional[list[str]]
+    quiet: bool
+    use_temp_dir: bool
+    record_version_packages: list[str]
+
     #: Model name.
     name = "default"
 
@@ -308,7 +325,7 @@ class GAMSModel(Model):
         # This appears to still fail on Windows.
         self.remove_temp_dir("at GAMSModel teardown")
 
-    def run(self, scenario):
+    def run(self, scenario: Scenario) -> None:
         """Execute the model.
 
         Among other steps:
@@ -324,8 +341,18 @@ class GAMSModel(Model):
         # Store the scenario so its attributes can be referenced by format()
         self.scenario = scenario
 
-        # Record versions of packages listed in `record_version_packages`
-        self.record_versions()
+        # NOTE workaround delattr(self, "scenario"); differentiate backend types without
+        # moving that call
+        # If we get more backend types, we'll need to adjust this
+        backend_type = (
+            "jdbc"
+            if isinstance(self.scenario.platform._backend, JDBCBackend)
+            else "ixmp4"
+        )
+
+        if backend_type == "jdbc":
+            # Record versions of packages listed in `record_version_packages`
+            self.record_versions()
 
         # Format or retrieve the model file option
         model_file = Path(self.format_option("model_file"))
@@ -348,13 +375,17 @@ class GAMSModel(Model):
 
         if os.name == "nt":
             # Windows: join the commands to a single string
-            command = " ".join(command)
+            command = " ".join(command)  # type: ignore[assignment]
 
         # Remove stored reference to the Scenario to allow it to be GC'd later
         delattr(self, "scenario")
 
         # Common argument for write_file and read_file
-        s_arg = dict(filters=dict(scenario=scenario))
+        s_arg: dict[str, object] = dict(filters=dict(scenario=scenario))
+
+        # Instruct ixmp4 to record package versions
+        if backend_type == "ixmp4":
+            s_arg["record_version_packages"] = self.record_version_packages
 
         try:
             # Write model data to file
@@ -373,10 +404,13 @@ class GAMSModel(Model):
                 "JDBCBackend"
             )
         else:
-            # Remove ixmp_version set entirely
-            with scenario.transact():
-                scenario.remove_set("ixmp_version")
-
+            if backend_type == "jdbc":
+                # Remove ixmp_version set entirely
+                with scenario.transact():
+                    scenario.remove_set("ixmp_version")
+            else:  # backend_type == "ixmp4"
+                # Clean up s_arg for use in read_file()
+                s_arg.pop("record_version_packages")
         try:
             # Invoke GAMS
             run(command, shell=os.name == "nt", cwd=self.cwd, check=True)

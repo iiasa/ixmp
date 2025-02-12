@@ -2,24 +2,37 @@ import logging
 from collections import deque
 from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional, Union
 
 import gams.transfer as gt
 import pandas as pd
 
 # from gams import GamsWorkspace
 from ixmp4.core import Run
-from ixmp4.core.optimization.equation import Equation
 from ixmp4.core.optimization.indexset import IndexSet
-from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar
-from ixmp4.core.optimization.table import Table
-from ixmp4.core.optimization.variable import Variable
 from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
 from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
 
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from . import ItemType
+
+if TYPE_CHECKING:
+    from typing import TypeVar
+
+    from ixmp4.core.optimization.equation import Equation
+
+    # from ixmp4.core.optimization.indexset import IndexSet
+    from ixmp4.core.optimization.parameter import Parameter
+
+    # from ixmp4.core.optimization.scalar import Scalar
+    from ixmp4.core.optimization.table import Table
+    from ixmp4.core.optimization.variable import Variable
+
+    # Type variable that can be any one of these 6 types, but not a union of 2+ of them
+    Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
+
 
 log = logging.getLogger(__name__)
 
@@ -329,100 +342,68 @@ def s_read_excel(  # noqa: C901
     maybe_commit(s, not commit_steps, f"Import from {path}")
 
 
-def _add_scalars_to_container(container: gt.Container, scalars: list[Scalar]) -> None:
-    for scalar in scalars:
-        gt.Parameter(
-            container=container,
-            name=scalar.name,
-            records=scalar.value,
-            description=scalar.docs if scalar.docs else "",
-        )
+def _add_to_container(container: gt.Container, items: list[Item4]) -> None:
+    """Add ixmp4 data `items` to `container`."""
+    if not items:
+        return  # Nothing to be done
 
+    # Identify the ixmp4 class name and corresponding gams.transfer class
+    kind = type(items[0]).__name__
+    klass = {
+        "IndexSet": gt.Set,
+        "Parameter": gt.Parameter,
+        "Scalar": gt.Parameter,
+        "Table": gt.Set,
+        "Variable": gt.Variable,
+        "Equation": gt.Equation,
+    }[kind]
 
-# TODO instead of checking len(indexset.data), make ixmp4 return None if it's empty?
-def _add_indexsets_to_container(
-    container: gt.Container, indexsets: list[IndexSet]
-) -> list[gt.Set]:
-    """Add Indexsets to Container and return them for dependent functions."""
-    return [
-        gt.Set(
-            container=container,
-            name=indexset.name,
-            records=indexset.data if len(indexset.data) else None,
-            description=indexset.docs
-            if indexset.docs
-            else "",  # description is "optional", but must be str
-        )
-        for indexset in indexsets
-    ]
+    def domain(item: Item4) -> Optional[list[str]]:
+        if isinstance(item, (IndexSet, Scalar)):
+            return None
+        else:
+            return item.indexsets
 
+    def records(
+        item: Item4,
+    ) -> Union[
+        float,
+        Union[list[float], list[int], list[str]],
+        dict[str, Union[list[float], list[int], list[str]]],
+        None,
+    ]:
+        if isinstance(item, Scalar):
+            return item.value
+        elif not len(item.data):
+            return None
 
-def _add_tables_to_container(
-    container: gt.Container, tables: list[Table], indexsets: list[gt.Set]
-) -> None:
-    for table in tables:
-        gt.Set(
-            container=container,
-            name=table.name,
-            domain=table.indexsets,
-            records=table.data if len(table.data.items()) else None,
-            description=table.docs if table.docs else "",
-        )
+        if isinstance(item, IndexSet):
+            return item.data
 
+        result = item.data
 
-def _add_parameters_to_container(
-    container: gt.Container, parameters: list[Parameter], indexsets: list[gt.Set]
-) -> None:
-    for parameter in parameters:
-        records = parameter.data if len(parameter.data.items()) else None
-        if records:
-            records.pop("units")
+        # Pop items not to be stored
+        for name in {
+            "Equation": ["levels", "marginals"],
+            "Parameter": ["units"],
+            "Variable": ["levels", "marginals"],
+        }[kind]:
+            result.pop(name)
 
-        gt.Parameter(
-            container=container,
-            name=parameter.name,
-            domain=parameter.indexsets,
-            records=records,
-            description=parameter.docs if parameter.docs else "",
-        )
+        return result
 
-
-def _add_variables_to_container(
-    container: gt.Container, variables: list[Variable], indexsets: list[gt.Set]
-) -> None:
-    for variable in variables:
-        records = variable.data if len(variable.data.items()) else None
-        if records:
-            records.pop("levels")
-            records.pop("marginals")
-
-        gt.Variable(
-            container=container,
-            name=variable.name,
-            domain=variable.indexsets,
-            records=records,
-            description=variable.docs if variable.docs else "",
-        )
-
-
-def _add_equations_to_container(
-    container: gt.Container, equations: list[Equation], indexsets: list[gt.Set]
-) -> None:
-    for equation in equations:
-        records = equation.data if len(equation.data.items()) else None
-        if records:
-            records.pop("levels")
-            records.pop("marginals")
+    for item in items:
         # The gams documentation confuses me: The docstring says `type` is required, the
         # example says no. It seems to work fine like this, but if we do need a value,
         # maybe we could guess based on
         # https://github.com/iiasa/ixmp_source/blob/master/src/main/java/at/ac/iiasa/ixmp/objects/Scenario.java#L1926,
-        gt.Equation(
+        klass(
             container=container,
-            name=equation.name,
-            domain=equation.indexsets,
-            records=records,
-            description=equation.docs if equation.docs else "",
+            name=item.name,
+            domain=domain(item),
+            records=records(item),
+            # Optional, but must be str
+            description=item.docs if item.docs else "",
         )
 
 
@@ -461,39 +442,25 @@ def write_run_to_gdx(
     record_version_packages: list[str],
     include_variables_and_equations: bool = False,
 ) -> None:
-    """Writes scenario data from the Run to a GAMS container."""
+    """Write scenario data from the `run` to a GDX file via GAMS container."""
 
     # TODO How to deal with [*] Set?
 
     container = gt.Container()
-    _add_scalars_to_container(
-        container=container, scalars=run.optimization.scalars.list()
-    )
-    indexsets = _add_indexsets_to_container(
-        container=container, indexsets=run.optimization.indexsets.list()
-    )
-    _add_tables_to_container(
-        container=container,
-        tables=run.optimization.tables.list(),
-        indexsets=indexsets,
-    )
-    _add_parameters_to_container(
-        container=container,
-        parameters=run.optimization.parameters.list(),
-        indexsets=indexsets,
-    )
 
-    if include_variables_and_equations:
-        _add_variables_to_container(
-            container=container,
-            variables=run.optimization.variables.list(),
-            indexsets=indexsets,
-        )
-        _add_equations_to_container(
-            container=container,
-            equations=run.optimization.equations.list(),
-            indexsets=indexsets,
-        )
+    repository = [
+        run.optimization.indexsets,
+        run.optimization.scalars,
+        run.optimization.tables,
+        run.optimization.parameters,
+        run.optimization.variables,
+        run.optimization.equations,
+    ]
+    idx = slice(None) if include_variables_and_equations else slice(-2)
+    for r in repository[idx]:
+        # FIXME Type of 'r' is inferred as BaseFacade, the narrowest common supertype of
+        #       IndexSetRepository etc.; BaseFacade.list() is not defined.
+        _add_to_container(container, r.list())  # type: ignore [attr-defined]
 
     _record_versions(container=container, packages=record_version_packages)
 

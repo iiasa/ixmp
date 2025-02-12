@@ -9,11 +9,43 @@ from typing import Any, Literal, Optional, Union
 
 import pandas as pd
 
+# TODO Import this from typing when dropping Python 3.11
+from typing_extensions import TypedDict, Unpack
+
 from ixmp.backend import ItemType
 from ixmp.backend.io import s_read_excel, s_write_excel, ts_read_file
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+
+
+# These are based on existing calls within ixmp
+class WriteFiltersKwargs(TypedDict, total=False):
+    scenario: Scenario | list[str]
+    model: list[str]
+    variable: list[str]
+    unit: list[str]
+    region: list[str]
+    default: bool
+    export_all_runs: bool
+
+
+class WriteKwargs(TypedDict, total=False):
+    filters: WriteFiltersKwargs
+    record_version_packages: list[str]
+
+
+class ReadKwargs(TypedDict, total=False):
+    filters: WriteFiltersKwargs
+    firstyear: Optional[Any]
+    lastyear: Optional[Any]
+    add_units: bool
+    init_items: bool
+    commit_steps: bool
+    check_solution: bool
+    comment: str
+    equ_list: list[str]
+    var_list: list[str]
 
 
 class Backend(ABC):
@@ -379,7 +411,9 @@ class Backend(ABC):
         set_unit
         """
 
-    def read_file(self, path: PathLike, item_type: ItemType, **kwargs) -> None:
+    def read_file(
+        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+    ) -> None:
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
         A backend **may** implement read_file for one or more combinations of the `path`
@@ -419,16 +453,20 @@ class Backend(ABC):
         --------
         write_file
         """
-        s, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
+        s, _ = self._handle_rw_filters(kwargs["filters"])
+        _kwargs = {k: v for (k, v) in kwargs.items() if k != "filters"}
+
         path = Path(path)
         if path.suffix in (".csv", ".xlsx") and item_type is ItemType.TS and s:
-            ts_read_file(s, path, **kwargs)
+            ts_read_file(s, path, **_kwargs)
         elif path.suffix == ".xlsx" and item_type is ItemType.MODEL and s:
-            s_read_excel(self, s, path, **kwargs)
+            s_read_excel(self, s, path, **_kwargs)
         else:
             raise NotImplementedError
 
-    def write_file(self, path: PathLike, item_type: ItemType, **kwargs) -> None:
+    def write_file(
+        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+    ) -> None:
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
         A backend **may** implement write_file for one or more combinations of the
@@ -461,12 +499,18 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
         # any other filters
-        s, kwargs["filters"] = self._handle_rw_filters(kwargs.pop("filters", {}))
+        s, kwargs["filters"] = self._handle_rw_filters(kwargs["filters"])
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
         path = Path(path)
         if path.suffix == ".xlsx" and item_type in xlsx_types and s:
-            s_write_excel(self, s, path, item_type, **kwargs)
+            s_write_excel(
+                be=self,
+                s=s,
+                path=path,
+                item_type=item_type,
+                filters=kwargs["filters"],
+            )
         else:
             # All other combinations of arguments
             raise NotImplementedError
@@ -582,18 +626,20 @@ class Backend(ABC):
         """OPTIONAL: Load `ts` data into memory."""
 
     @staticmethod
-    def _handle_rw_filters(filters: dict) -> tuple[Optional[TimeSeries], dict]:
+    def _handle_rw_filters(
+        filters: WriteFiltersKwargs,
+    ) -> tuple[Optional[TimeSeries], WriteFiltersKwargs]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
         :class:`.TimeSeries` object. A 2-tuple is returned of the object (or
         :obj:`None`) and the remaining filters.
         """
-        ts = None
+        ts: Optional[TimeSeries] = None
         filters = copy(filters)
         try:
             if isinstance(filters["scenario"], TimeSeries):
-                ts = filters.pop("scenario")
+                ts = filters["scenario"]
         except KeyError:
             pass  # Don't modify filters at all
 
@@ -861,7 +907,9 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def delete_item(self, s: Scenario, type: str, name: str) -> None:
+    def delete_item(
+        self, s: Scenario, type: Literal["set", "par", "equ"], name: str
+    ) -> None:
         """Remove an item `name` of `type`.
 
         Parameters

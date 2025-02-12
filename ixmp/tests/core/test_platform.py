@@ -3,8 +3,10 @@
 import logging
 import re
 import sys
+from collections.abc import Generator
+from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -17,7 +19,7 @@ from ixmp.backend import FIELDS
 from ixmp.testing import DATA, assert_logs, models
 
 if TYPE_CHECKING:
-    from ixmp import Platform
+    pass
 
 min_ixmp4_version = pytest.mark.skipif(
     sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
@@ -25,7 +27,7 @@ min_ixmp4_version = pytest.mark.skipif(
 
 
 class TestPlatform:
-    def test_init0(self):
+    def test_init0(self) -> None:
         with pytest.raises(
             ValueError,
             match=re.escape("backend class 'foo' not among"),
@@ -43,11 +45,11 @@ class TestPlatform:
             pytest.param("ixmp4", dict(), marks=min_ixmp4_version),
         ),
     )
-    def test_init1(self, backend, backend_args):
+    def test_init1(self, backend: str, backend_args: dict[str, str]) -> None:
         # Platform can be instantiated
         ixmp.Platform(backend=backend, **backend_args)
 
-    def test_getattr(self, test_mp):
+    def test_getattr(self, test_mp: ixmp.Platform) -> None:
         """Test __getattr__."""
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
@@ -58,7 +60,7 @@ class TestPlatform:
 
 
 @pytest.fixture
-def log_level_mp(test_mp):
+def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
     """A fixture that preserves the log level of *test_mp*."""
     tmp = test_mp.get_log_level()
     yield test_mp
@@ -78,7 +80,7 @@ def log_level_mp(test_mp):
         ("FOO", ValueError),
     ],
 )
-def test_log_level(log_level_mp, level, exc):
+def test_log_level(log_level_mp: ixmp.Platform, level: str, exc) -> None:
     """Log level can be set and retrieved."""
     if exc is None:
         log_level_mp.set_log_level(level)
@@ -88,12 +90,12 @@ def test_log_level(log_level_mp, level, exc):
             log_level_mp.set_log_level(level)
 
 
-def test_scenario_list(mp):
+def test_scenario_list(mp: ixmp.Platform) -> None:
     scenario = mp.scenario_list(model="Douglas Adams")["scenario"]
     assert scenario[0] == "Hitchhiker"
 
 
-def test_export_timeseries_data(mp: "Platform", tmp_path) -> None:
+def test_export_timeseries_data(mp: ixmp.Platform, tmp_path: Path) -> None:
     path = tmp_path / "export.csv"
     mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
 
@@ -108,7 +110,7 @@ def test_export_timeseries_data(mp: "Platform", tmp_path) -> None:
     assert_frame_equal(exp, obs)
 
 
-def test_export_ts_wrong_params(test_mp, tmp_path):
+def test_export_ts_wrong_params(test_mp: ixmp.Platform, tmp_path: Path) -> None:
     """Platform.export_timeseries_data to raise error with wrong parameters."""
     path = tmp_path / "export.csv"
     with raises(ValueError, match="Invalid arguments"):
@@ -121,7 +123,7 @@ def test_export_ts_wrong_params(test_mp, tmp_path):
         )
 
 
-def test_export_ts_of_all_runs(mp, tmp_path):
+def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Export timeseries of all runs."""
     path = tmp_path / "export.csv"
 
@@ -154,7 +156,7 @@ def test_export_ts_of_all_runs(mp, tmp_path):
     assert 4 == len(obs)
 
 
-def test_export_timeseries_data_empty(mp, tmp_path):
+def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Dont export data if given models/scenarios do not have any runs."""
     path = tmp_path / "export.csv"
     model = "model-no-run"
@@ -166,16 +168,16 @@ def test_export_timeseries_data_empty(mp, tmp_path):
     assert 0 == len(pd.read_csv(path, index_col=False, header=0))
 
 
-def test_unit_list(test_mp):
+def test_unit_list(test_mp: ixmp.Platform) -> None:
     units = test_mp.units()
     assert ("cases" in units) is True
 
 
-def test_add_unit(test_mp):
+def test_add_unit(test_mp: ixmp.Platform) -> None:
     test_mp.add_unit("test", "just testing")
 
 
-def test_regions(test_mp):
+def test_regions(test_mp: ixmp.Platform) -> None:
     regions = test_mp.regions()
 
     # Result has the expected columns
@@ -187,7 +189,7 @@ def test_regions(test_mp):
     assert all([list(obs.loc[0]) == ["World", None, "World", "common"]])
 
 
-def test_add_region(test_mp):
+def test_add_region(test_mp: ixmp.Platform) -> None:
     # Region can be added
     test_mp.add_region("foo", "bar", "World")
 
@@ -197,7 +199,7 @@ def test_add_region(test_mp):
     assert all([list(obs.loc[0]) == ["foo", None, "World", "bar"]])
 
 
-def test_add_region_synonym(test_mp):
+def test_add_region_synonym(test_mp: ixmp.Platform) -> None:
     test_mp.add_region("foo", "bar", "World")
     test_mp.add_region_synonym("foo2", "foo")
     regions = test_mp.regions()
@@ -213,7 +215,7 @@ def test_add_region_synonym(test_mp):
     assert_frame_equal(obs, exp)
 
 
-def test_timeslices(test_mp):
+def test_timeslices(test_mp: ixmp.Platform) -> None:
     timeslices = test_mp.timeslices()
     obs = timeslices[timeslices.category == "Common"]
     # result has all attributes of time slice
@@ -222,7 +224,7 @@ def test_timeslices(test_mp):
     assert all([list(obs.iloc[0]) == ["Year", "Common", 1.0]])
 
 
-def test_add_timeslice(test_mp):
+def test_add_timeslice(test_mp: ixmp.Platform) -> None:
     test_mp.add_timeslice("January, 1st", "Days", 1.0 / 366)
     timeslices = test_mp.timeslices()
     obs = timeslices[timeslices.category == "Days"]
@@ -232,7 +234,7 @@ def test_add_timeslice(test_mp):
     assert all([list(obs.iloc[0]) == ["January, 1st", "Days", 1.0 / 366]])
 
 
-def test_add_timeslice_duplicate(caplog, test_mp):
+def test_add_timeslice_duplicate(caplog, test_mp: ixmp.Platform) -> None:
     test_mp.add_timeslice("foo_slice", "foo_category", 0.2)
 
     # Adding same name with different duration raises an error
@@ -245,7 +247,7 @@ def test_add_timeslice_duplicate(caplog, test_mp):
         test_mp.add_timeslice("foo_slice", "bar_category", 0.2)
 
 
-def test_weakref():
+def test_weakref() -> None:
     """Weak references allow Platforms to be del'd while Scenarios live."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -288,11 +290,11 @@ def test_weakref():
     # *s* is garbage-collected at this point
 
 
-def test_add_model_name(test_mp):
+def test_add_model_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_model_name("new_model_name")
     assert "new_model_name" in test_mp.get_model_names()
 
 
-def test_add_scenario_name(test_mp):
+def test_add_scenario_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_scenario_name("new_scenario_name")
     assert "new_scenario_name" in test_mp.get_scenario_names()

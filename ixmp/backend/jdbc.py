@@ -10,7 +10,7 @@ from copy import copy
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, cast
 from weakref import WeakKeyDictionary
 
 import jpype
@@ -605,7 +605,7 @@ class JDBCBackend(CachingBackend):
 
         ts, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
         if path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
-            if len(filters):  # pragma: no cover
+            if len(filters) > 1:  # pragma: no cover
                 raise NotImplementedError("write to GDX with filters")
             elif not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("write to GDX requires a Scenario object")
@@ -614,7 +614,9 @@ class JDBCBackend(CachingBackend):
             self.jindex[ts].toGDX(str(path.parent), path.name, False)
         elif path.suffix == ".csv" and item_type is ItemType.TS:
             models = set(filters.pop("model"))
-            scenarios = set(filters.pop("scenario"))
+            # NOTE this is what we get for not differentiating e.g. scenario vs
+            # scenarios in filters...
+            scenarios = set(cast(list[str], filters.pop("scenario")))
             variables = filters.pop("variable")
             units = filters.pop("unit")
             regions = filters.pop("region")

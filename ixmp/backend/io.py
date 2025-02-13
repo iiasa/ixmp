@@ -1,11 +1,38 @@
 import logging
 from collections import deque
+from collections.abc import Iterable
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional, Union
 
+import gams.transfer as gt
 import pandas as pd
+
+# from gams import GamsWorkspace
+from ixmp4.core import Run
+from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.scalar import Scalar
+from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
+from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
 
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from . import ItemType
+
+if TYPE_CHECKING:
+    from typing import TypeVar
+
+    from ixmp4.core.optimization.equation import Equation
+
+    # from ixmp4.core.optimization.indexset import IndexSet
+    from ixmp4.core.optimization.parameter import Parameter
+
+    # from ixmp4.core.optimization.scalar import Scalar
+    from ixmp4.core.optimization.table import Table
+    from ixmp4.core.optimization.variable import Variable
+
+    # Type variable that can be any one of these 6 types, but not a union of 2+ of them
+    Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
+
 
 log = logging.getLogger(__name__)
 
@@ -313,3 +340,202 @@ def s_read_excel(  # noqa: C901
         maybe_commit(s, commit_steps, f"Loaded {ix_type} {repr(name)} from {path}")
 
     maybe_commit(s, not commit_steps, f"Import from {path}")
+
+
+def _add_to_container(container: gt.Container, items: list[Item4]) -> None:
+    """Add ixmp4 data `items` to `container`."""
+    if not items:
+        return  # Nothing to be done
+
+    # Identify the ixmp4 class name and corresponding gams.transfer class
+    kind = type(items[0]).__name__
+    klass = {
+        "IndexSet": gt.Set,
+        "Parameter": gt.Parameter,
+        "Scalar": gt.Parameter,
+        "Table": gt.Set,
+        "Variable": gt.Variable,
+        "Equation": gt.Equation,
+    }[kind]
+
+    def domain(item: Item4) -> Optional[list[str]]:
+        if isinstance(item, (IndexSet, Scalar)):
+            return None
+        else:
+            return item.indexsets
+
+    def records(
+        item: Item4,
+    ) -> Union[
+        float,
+        Union[list[float], list[int], list[str]],
+        dict[str, Union[list[float], list[int], list[str]]],
+        None,
+    ]:
+        if isinstance(item, Scalar):
+            return item.value
+        elif not len(item.data):
+            return None
+
+        if isinstance(item, IndexSet):
+            return item.data
+
+        result = item.data
+
+        # Pop items not to be stored
+        for name in {
+            "Equation": ["levels", "marginals"],
+            "Parameter": ["units"],
+            "Variable": ["levels", "marginals"],
+        }[kind]:
+            result.pop(name)
+
+        return result
+
+    for item in items:
+        # The gams documentation confuses me: The docstring says `type` is required, the
+        # example says no. It seems to work fine like this, but if we do need a value,
+        # maybe we could guess based on
+        # https://github.com/iiasa/ixmp_source/blob/master/src/main/java/at/ac/iiasa/ixmp/objects/Scenario.java#L1926,
+        klass(
+            container=container,
+            name=item.name,
+            domain=domain(item),
+            records=records(item),
+            # Optional, but must be str
+            description=item.docs if item.docs else "",
+        )
+
+
+def _record_versions(container: gt.Container, packages: list[str]) -> None:
+    """Store Python package versions as set elements to be written to GDX.
+
+    The values are stored in a 2-dimensional set named ``ixmp_version``, where the
+    first element is the package name, and the second is its version according to
+    :func:`importlib.metadata.version`). If the package is not installed, the
+    string "(not installed)" is stored.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    name = "ixmp_version"
+
+    # Each tuple consists of (package_name, package_version)
+    versions: list[tuple[str, str]] = []
+
+    # Handle each identified package
+    for package in packages:
+        try:
+            # Retrieve the version; replace characters not supported by GAMS
+            package_version = version(package).replace(".", "-")
+        except PackageNotFoundError:
+            package_version = "(not installed)"  # Not installed
+
+        versions.append((package, package_version))
+
+    # Add Set to the container
+    container.addSet(name=name, domain=["*", "*"], records=versions)
+
+
+def write_run_to_gdx(
+    run: Run,
+    file_name: Path,
+    record_version_packages: list[str],
+    include_variables_and_equations: bool = False,
+) -> None:
+    """Write scenario data from the `run` to a GDX file via GAMS container."""
+
+    # TODO How to deal with [*] Set?
+
+    container = gt.Container()
+
+    repository = [
+        run.optimization.indexsets,
+        run.optimization.scalars,
+        run.optimization.tables,
+        run.optimization.parameters,
+        run.optimization.variables,
+        run.optimization.equations,
+    ]
+    idx = slice(None) if include_variables_and_equations else slice(-2)
+    for r in repository[idx]:
+        # FIXME Type of 'r' is inferred as BaseFacade, the narrowest common supertype of
+        #       IndexSetRepository etc.; BaseFacade.list() is not defined.
+        _add_to_container(container, r.list())  # type: ignore [attr-defined]
+
+    _record_versions(container=container, packages=record_version_packages)
+
+    container.write(write_to=file_name)
+
+
+def _read_variables_to_run(
+    container: gt.Container, run: Run, variables: Iterable[AbstractVariable]
+) -> None:
+    for variable in variables:
+        # Prepare columns to select from container.data
+        # DF also includes lower, upper, scale
+        columns = ["level", "marginal"]
+        variable_columns = variable.column_names or variable.indexsets
+        if variable_columns:
+            columns += variable_columns
+
+        run.backend.optimization.variables.add_data(
+            variable_id=variable.id,
+            data=(
+                container.data[variable.name]
+                .records[columns]
+                .rename(columns={"level": "levels", "marginal": "marginals"})
+            ),
+        )
+
+
+def _read_equations_to_run(
+    container: gt.Container, run: Run, equations: Iterable[AbstractEquation]
+) -> None:
+    for equation in equations:
+        # Prepare columns to select from container.data
+        # DF also includes lower, upper, scale
+        columns = ["level", "marginal"]
+        equation_columns = equation.column_names or equation.indexsets
+        if equation_columns:
+            columns += equation_columns
+
+        run.backend.optimization.equations.add_data(
+            equation_id=equation.id,
+            data=(
+                container.data[equation.name]
+                .records[columns]
+                .rename(columns={"level": "levels", "marginal": "marginals"})
+            ),
+        )
+
+
+def read_gdx_to_run(
+    run: Run,
+    result_file: Path,
+    equ_list: list[str],
+    var_list: list[str],
+    comment: str,
+    check_solution: bool,
+) -> None:
+    if comment:
+        log.warning(f"Ignoring comment {comment} for now; unused by ixmp4!")
+    if check_solution:
+        log.warning(
+            f"Ignoring check_solution={check_solution} for now; unused by ixmp4!"
+        )
+
+    variables = (
+        run.backend.optimization.variables.list(name__in=var_list)
+        if len(var_list)
+        else run.backend.optimization.variables.list()
+    )
+    equations = (
+        run.backend.optimization.equations.list(name__in=equ_list)
+        if len(equ_list)
+        else run.backend.optimization.equations.list()
+    )
+
+    container = gt.Container(load_from=result_file)
+
+    _read_variables_to_run(container=container, run=run, variables=variables)
+    _read_equations_to_run(container=container, run=run, equations=equations)

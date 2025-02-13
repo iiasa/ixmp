@@ -1,5 +1,7 @@
 import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from os import PathLike
+from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast
 
 import pandas as pd
@@ -13,7 +15,12 @@ from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
-from ixmp.backend.base import CachingBackend
+# TODO Import this from typing when dropping Python 3.11
+from typing_extensions import Unpack
+
+from ixmp.backend import ItemType
+from ixmp.backend.base import CachingBackend, ReadKwargs, WriteKwargs
+from ixmp.backend.io import read_gdx_to_run, write_run_to_gdx
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
@@ -263,6 +270,10 @@ class IXMP4Backend(CachingBackend):
         if type == "set" and len(idx_sets) == 0:
             repo = self._get_repo(s=s, type="indexset")
             repo.create(name=name)
+        elif type == "par" and len(idx_sets) == 0:
+            # NOTE ixmp4 requires scalars to get value and unit upon creation, so the
+            # shim does that when `item_set_elements()` targets a scalar
+            return None
         else:
             repo = self._get_repo(s=s, type=type)
             repo.create(
@@ -281,9 +292,19 @@ class IXMP4Backend(CachingBackend):
             return [item.name for item in repo.list()]
 
     def _find_item(
-        self, s: Scenario, name: str
+        self,
+        s: Scenario,
+        name: str,
+        types: tuple[Literal["scalar", "indexset", "set", "par", "equ", "var"], ...] = (
+            "scalar",
+            "indexset",
+            "set",
+            "par",
+            "equ",
+            "var",
+        ),
     ) -> tuple[
-        str,
+        Literal["scalar", "indexset", "set", "par", "equ", "var"],
         Union[
             "Scalar",
             "IndexSet",
@@ -296,7 +317,9 @@ class IXMP4Backend(CachingBackend):
         # NOTE this currently assumes that `name` will only be present once among
         # Tables, Parameters, Equations, Variables. This is in line with the assumption
         # made in the Java backend, but ixmp4 enforces no such constraint.
-        _type: Optional[str] = None
+        _type: Optional[Literal["scalar", "indexset", "set", "par", "equ", "var"]] = (
+            None
+        )
         _item: Optional[
             Union[
                 "Scalar",
@@ -307,7 +330,7 @@ class IXMP4Backend(CachingBackend):
                 "Parameter",
             ]
         ] = None
-        for type in ("scalar", "indexset", "set", "par", "equ", "var"):
+        for type in types:
             repo = self._get_repo(s=s, type=type)
             item_list = repo.list(name=name)
             if (
@@ -340,7 +363,6 @@ class IXMP4Backend(CachingBackend):
     def _get_indexset_or_table(
         self, s: Scenario, name: str
     ) -> Union["IndexSet", "Table"]:
-        from ixmp4.core import IndexSet, Table
         from ixmp4.core.exceptions import NotFound
 
         try:
@@ -388,7 +410,7 @@ class IXMP4Backend(CachingBackend):
             table = self.index[s].optimization.tables.get(name=name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
-            keys = table.column_names if table.column_names else table.indexsets
+            keys = table.column_names or table.indexsets
             data_to_add = {keys[i]: [key[i]] for i in range(len(key))}
             table.add(data=data_to_add)
 
@@ -423,7 +445,8 @@ class IXMP4Backend(CachingBackend):
         # TODO there's got to be a better way for handling possible lists
         if isinstance(key, str):
             key = [key]
-        keys = parameter.column_names if parameter.column_names else parameter.indexsets
+
+        keys = parameter.column_names or parameter.indexsets
         data_to_add: dict[str, Union[list[float], list[str]]] = {
             keys[i]: [key[i]] for i in range(len(key))
         }
@@ -463,7 +486,7 @@ class IXMP4Backend(CachingBackend):
         item = self._get_indexset_or_table(s=s, name=name)
 
         if isinstance(item, Table):
-            columns = item.column_names if item.column_names else item.indexsets
+            columns = item.column_names or item.indexsets
             return pd.DataFrame(item.data, columns=columns)
         else:
             return pd.Series(item.data)
@@ -510,18 +533,27 @@ class IXMP4Backend(CachingBackend):
                 item.remove(data=cast(list[str], data[item.name].to_list()))
             else:
                 # TODO can we assume that keys follow same order as indexsets/columns?
-                columns = item.column_names if item.column_names else item.indexsets
+                columns = item.column_names or item.indexsets
                 data = pd.DataFrame(keys, columns=columns)
                 item.remove(data=data)
         else:
             parameter = cast(Parameter, self._get_item(s=s, name=name, type="par"))
-            columns = (
-                parameter.column_names
-                if parameter.column_names
-                else parameter.indexsets
-            )
+            columns = parameter.column_names or parameter.indexsets
             data = pd.DataFrame(keys, columns=columns)
             parameter.remove(data=data)
+
+    def delete_item(
+        self,
+        s: Scenario,
+        type: Literal["set", "par", "equ", "indexset"],
+        name: str,
+    ) -> None:
+        if type == "set":
+            # type will always be either "indexset" or "set"
+            type, _ = self._find_item(s=s, name=name, types=("indexset", "set"))  # type: ignore[assignment]
+
+        repo = self._get_repo(s=s, type=type)
+        repo.delete(item=name)
 
     def cat_set_elements(
         self,
@@ -591,8 +623,9 @@ class IXMP4Backend(CachingBackend):
             # will lead to DataValidationErrors when adding data to the table. Also,
             # ixmp4 might safeguard against this when implementing remove() functions
             if category_indexset.data:
-                # TODO remove data once ixmp4 implements that
-                log.warning("Can't remove data from ixmp4 objects (categories) yet!")
+                # Remove all existing data so that only the single provided element will
+                # be stored in the indexset
+                category_indexset.remove(category_indexset.data)
 
         # Add data to both objects
         category_indexset.add(data=cat)
@@ -617,13 +650,149 @@ class IXMP4Backend(CachingBackend):
     # def set_timeslice(self, name: str, category: str, duration: float) -> None:
     #     return super().set_timeslice(name, category, duration)
 
+    # Handle I/O
+
+    def write_file(
+        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+    ) -> None:
+        """Write Platform, TimeSeries, or Scenario data to file.
+
+        IXMP4Backend supports writing to:
+
+        - ``path='*.gdx', item_type=ItemType.SET | ItemType.PAR``.
+
+        IXMP4Backend does not yet support:
+        - ``path='*.csv', item_type=TS``. The `default` keyword argument is
+          **required**.
+
+        Other parameters
+        ----------------
+        filters : dict of dict of str
+            Restrict items written. The following filters may be used:
+
+            - model : list of str
+            - scenario : list of str | Scenario
+            - variable : list of str
+            - region: list of str
+            - unit: list of str
+            - default : bool
+                If :obj:`True`, only data from TimeSeries versions with
+                :meth:`.TimeSeries.set_as_default` are written.
+            - export_all_runs: bool
+                Whether to export all existing model+scenario run combinations.
+
+        See also
+        --------
+        .Backend.write_file
+        """
+        try:
+            # Call the default implementation, e.g. for .xlsx
+            super().write_file(path, item_type, **kwargs)
+        except NotImplementedError:
+            pass
+        else:
+            return
+
+        # NOTE Would like to use proper paths in signature already, but comply with base
+        #  class for now
+        _path = Path(path)
+
+        ts, filters = self._handle_rw_filters(kwargs["filters"])
+        if _path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
+            # NOTE if we keep the TypedDicts and can't pop items, we might have to
+            # adjust more checks like this. Alternatively, use explicit keyword
+            # parameters for functions or convert kwargs to dicts in here to enable pop.
+            if len(filters) > 1:  # pragma: no cover
+                raise NotImplementedError("write to GDX with filters")
+            elif not isinstance(ts, Scenario):  # pragma: no cover
+                raise ValueError("write to GDX requires a Scenario object")
+
+            write_run_to_gdx(
+                run=self.index[ts],
+                file_name=_path,
+                record_version_packages=kwargs["record_version_packages"],
+            )
+        else:
+            raise NotImplementedError
+
+    def read_file(
+        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+    ) -> None:
+        """Read Platform, TimeSeries, or Scenario data from file.
+
+        IXMP4Backend supports reading from:
+
+        - ``path='*.gdx', item_type=ItemType.MODEL``. The keyword arguments
+          `check_solution`, `comment`, `equ_list`, and `var_list` are **required**.
+
+        Other parameters
+        ----------------
+        check_solution : bool
+            If True, raise an exception if the GAMS solver did not reach optimality.
+            (Only for MESSAGE-scheme Scenarios.)
+        comment : str
+            Comment added to Scenario when importing the solution.
+        equ_list : list of str
+            Equations to be imported.
+        var_list : list of str
+            Variables to be imported.
+        filters : dict of dict of str
+            Restrict items read.
+
+        See also
+        --------
+        .Backend.read_file
+        """
+        try:
+            # Call the default implementation, e.g. for .xlsx
+            super().read_file(path, item_type, **kwargs)
+        except NotImplementedError:
+            pass
+        else:
+            return
+
+        _path = Path(path)
+
+        # TODO handle case when filters is not present
+        ts, _ = self._handle_rw_filters(kwargs["filters"])
+        _kwargs = {k: v for (k, v) in kwargs.items() if k != "filters"}
+
+        if _path.suffix == ".gdx" and item_type is ItemType.MODEL:
+            kw = {"check_solution", "comment", "equ_list", "var_list"}
+
+            if not isinstance(ts, Scenario):  # pragma: no cover
+                raise ValueError("read from GDX requires a Scenario object")
+            elif set(_kwargs.keys()) != kw:
+                raise ValueError(
+                    f"keyword arguments {_kwargs.keys()} do not match required {kw}"
+                )
+
+            check_solution = bool(_kwargs.pop("check_solution"))
+            comment = str(_kwargs.pop("comment"))
+            equ_list = cast(list[str], _kwargs.pop("equ_list"))
+            var_list = cast(list[str], _kwargs.pop("var_list"))
+
+            if len(_kwargs):
+                raise ValueError(f"extra keyword arguments {_kwargs}")
+
+            read_gdx_to_run(
+                run=self.index[ts],
+                result_file=_path,
+                equ_list=equ_list,
+                var_list=var_list,
+                comment=comment,
+                check_solution=check_solution,
+            )
+
+        else:
+            raise NotImplementedError(path, item_type)
+
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args, **kwargs):
         raise NotImplementedError
 
     delete = _ni
     delete_geo = _ni
-    delete_item = _ni
     delete_meta = _ni
     get_data = _ni
     get_doc = _ni

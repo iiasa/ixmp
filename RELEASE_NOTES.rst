@@ -1,5 +1,16 @@
-Next release
-============
+.. Next release
+.. ============
+
+.. All changes
+.. -----------
+
+.. _v3.10.0:
+
+v3.10.0 (2025-02-19)
+====================
+
+All changes
+-----------
 
 - :mod:`ixmp` is tested and compatible with `Python 3.13 <https://www.python.org/downloads/release/python-3130/>`__ (:pull:`544`).
 - Support for Python 3.8 is dropped (:pull:`544`), as it has reached end-of-life.

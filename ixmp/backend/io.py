@@ -2,15 +2,19 @@ import logging
 from collections import deque
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, TypeVar, Union
 
 import gams.transfer as gt
 import pandas as pd
 
 # from gams import GamsWorkspace
 from ixmp4.core import Run
+from ixmp4.core.optimization.equation import Equation
 from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar
+from ixmp4.core.optimization.table import Table
+from ixmp4.core.optimization.variable import Variable
 from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
 from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
 
@@ -18,20 +22,8 @@ from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from . import ItemType
 
-if TYPE_CHECKING:
-    from typing import TypeVar
-
-    from ixmp4.core.optimization.equation import Equation
-
-    # from ixmp4.core.optimization.indexset import IndexSet
-    from ixmp4.core.optimization.parameter import Parameter
-
-    # from ixmp4.core.optimization.scalar import Scalar
-    from ixmp4.core.optimization.table import Table
-    from ixmp4.core.optimization.variable import Variable
-
-    # Type variable that can be any one of these 6 types, but not a union of 2+ of them
-    Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
+# Type variable that can be any one of these 6 types, but not a union of 2+ of them
+Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
 
 
 log = logging.getLogger(__name__)
@@ -393,9 +385,9 @@ def _add_to_container(container: gt.Container, items: list[Item4]) -> None:
         return result
 
     for item in items:
-        # The gams documentation confuses me: The docstring says `type` is required, the
-        # example says no. It seems to work fine like this, but if we do need a value,
-        # maybe we could guess based on
+        # The gams documentation confuses me: The docstring says `type` is required for
+        # Equations, the example says no. It seems to work fine like this, but if we do
+        # need a value, maybe we could guess based on
         # https://github.com/iiasa/ixmp_source/blob/master/src/main/java/at/ac/iiasa/ixmp/objects/Scenario.java#L1926,
         klass(
             container=container,

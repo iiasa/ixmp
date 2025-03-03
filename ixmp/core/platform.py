@@ -9,6 +9,7 @@ import pandas as pd
 from ixmp._config import config
 from ixmp.backend import BACKENDS, FIELDS, ItemType
 from ixmp.util import as_str_list
+from ixmp.util.ixmp4 import WriteFiltersKwargs
 
 if TYPE_CHECKING:
     from ixmp.backend.base import Backend
@@ -236,15 +237,15 @@ class Platform:
                 "Invalid arguments: export_all_runs cannot be used when providing a "
                 "model or scenario."
             )
-        filters = {
-            "model": as_str_list(model),
-            "scenario": as_str_list(scenario),
-            "variable": as_str_list(variable),
-            "unit": as_str_list(unit),
-            "region": as_str_list(region),
-            "default": default,
-            "export_all_runs": export_all_runs,
-        }
+        filters = WriteFiltersKwargs(
+            scenario=as_str_list(scenario),
+            model=as_str_list(model),
+            variable=as_str_list(variable),
+            unit=as_str_list(unit),
+            region=as_str_list(region),
+            default=default,
+            export_all_runs=export_all_runs,
+        )
 
         self._backend.write_file(path, ItemType.TS, filters=filters)
 

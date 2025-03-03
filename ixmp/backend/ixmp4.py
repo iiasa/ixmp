@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast
 
 import pandas as pd
+from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
 from ixmp4.core.optimization.equation import Equation
@@ -104,8 +105,36 @@ class IXMP4Backend(CachingBackend):
         for model in self._platform.models.list():
             yield model.name
 
-    def get_scenarios(self, default, model, scenario):
-        return self._platform.runs.list()
+    def get_scenarios(
+        self, default: bool, model: Optional[str], scenario: Optional[str]
+    ):
+        runs = self._platform.runs.list(
+            default_only=default,
+            model={"name": model} if model else None,
+            scenario={"name": scenario} if scenario else None,
+        )
+
+        for run in runs:
+            yield [
+                run.model.name,
+                run.scenario.name,
+                # TODO What are we going to use for scheme in ixmp4?
+                "IXMP4Run",
+                run.is_default(),
+                # TODO Change this from being hardcoded
+                False,
+                # TODO Expose the creation, update and lock info in ixmp4
+                # (if we get lock info)
+                "Some user",
+                "Some date",
+                "Some user",
+                "Some date",
+                "Some user",
+                "Some date",
+                # TODO Should Runs get .docs?
+                "Some docs",
+                run.version,
+            ]
 
     def set_unit(self, name: str, comment: str) -> None:
         self._platform.units.create(name=name).docs = comment
@@ -184,11 +213,15 @@ class IXMP4Backend(CachingBackend):
         # TODO Is this enough? ixmp4 doesn't support cloning to a different platform at
         # the moment, but maybe we can imitate this here? (Access
         # platform_dest.backend._platform to create a new Run?)
-        cloned_s = Scenario(
-            mp=platform_dest, model=model, scenario=scenario, annotation=annotation
-        )
         cloned_run = self.index[s].clone(
             model=model, scenario=scenario, keep_solution=keep_solution
+        )
+        # Instantiate same class as the original object
+        cloned_s = s.__class__(
+            platform_dest,
+            model,
+            scenario,
+            version=cloned_run.version,
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
         return cloned_s
@@ -645,6 +678,68 @@ class IXMP4Backend(CachingBackend):
         category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
         return cast(list[str], category_indexset.data)
 
+    def set_data(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        data: dict[int, float],
+        unit: str,
+        subannual: str,
+        meta: bool,
+    ) -> None:
+        log.warning("Parameter `meta` for set_data() currently unused by ixmp4!")
+        log.warning("Parameter `subannual` for set_data() currently unused by ixmp4!")
+
+        # Construct dataframe as ixmp4 expects it
+        years = data.keys()
+        values = data.values()
+        number_of_years = len(years)
+        regions = [region] * number_of_years
+        variables = [variable] * number_of_years
+        units = [unit] * number_of_years
+        _data = list(zip(years, values, regions, variables, units))
+
+        # Add timeseries dataframe
+        # TODO Is this really the only type we're interested in?
+        self.index[ts].iamc.add(
+            pd.DataFrame(
+                _data, columns=["step_year", "value", "region", "variable", "unit"]
+            ),
+            type=DataPoint.Type.ANNUAL,
+        )
+
+    def get_data(
+        self,
+        ts: TimeSeries,
+        region: Sequence[str],
+        variable: Sequence[str],
+        unit: Sequence[str],
+        year: Sequence[str],
+    ) -> Generator[tuple, Any, None]:
+        data = self.index[ts].iamc.tabulate(
+            region={"name__in": region},
+            variable={"name__in": variable},
+            unit={"name__in": unit},
+        )
+
+        # TODO depending on data["type"], a different column name will contain the
+        # "year" values:
+        # step_year if type is ANNUAL or CATEGORICAL
+        # step_category if type is CATEGORICAL
+        # step_datetime if type is DATETIME
+        # We're only adding ANNUAL above for now, so let's assume that
+        data = data.loc[data["step_year"].isin(year)]
+
+        # Select only the columns we're interested in
+        # TODO the ixmp4 docstrings sounds like region, variable, and unit are not part
+        # of the df?
+        data = data[["region", "variable", "unit", "step_year", "value"]]
+
+        # TODO Why would we iterate and yield tuples instead of returning the whole df?
+        for row in data.itertuples(index=False, name=None):
+            yield row
+
     # Handle timeslices
 
     # def set_timeslice(self, name: str, category: str, duration: float) -> None:
@@ -660,8 +755,6 @@ class IXMP4Backend(CachingBackend):
         IXMP4Backend supports writing to:
 
         - ``path='*.gdx', item_type=ItemType.SET | ItemType.PAR``.
-
-        IXMP4Backend does not yet support:
         - ``path='*.csv', item_type=TS``. The `default` keyword argument is
           **required**.
 
@@ -712,6 +805,30 @@ class IXMP4Backend(CachingBackend):
                 file_name=_path,
                 record_version_packages=kwargs["record_version_packages"],
             )
+        elif _path.suffix == ".csv" and item_type is ItemType.TS:
+            models = filters.pop("model")
+            # NOTE this is what we get for not differentiating e.g. scenario vs
+            # scenarios in filters...
+            scenarios = set(cast(list[str], filters.pop("scenario")))
+            variables = filters.pop("variable")
+            units = filters.pop("unit")
+            regions = filters.pop("region")
+            default = filters.pop("default")
+            # TODO (How) Should we include this?
+            # export_all_runs = filters.pop("export_all_runs")
+
+            data = self._backend.runs.tabulate(
+                model={"name__in": models},
+                scenario={"name__in": scenarios},
+                iamc={
+                    "region": {"name__in": regions},
+                    "variable": {"name__in": variables},
+                    "unit": {"name__in": units},
+                },
+                default_only=default,
+            )
+            data.to_csv(path_or_buf=_path)
+
         else:
             raise NotImplementedError
 
@@ -794,14 +911,12 @@ class IXMP4Backend(CachingBackend):
     delete = _ni
     delete_geo = _ni
     delete_meta = _ni
-    get_data = _ni
     get_doc = _ni
     get_geo = _ni
     get_meta = _ni
     get_timeslices = _ni
     last_update = _ni
     remove_meta = _ni
-    set_data = _ni
     set_doc = _ni
     set_geo = _ni
     set_meta = _ni

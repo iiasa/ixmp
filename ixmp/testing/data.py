@@ -11,6 +11,7 @@ import pytest
 
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
+from ixmp.backend.ixmp4 import IXMP4Backend
 
 if TYPE_CHECKING:
     from typing import TypedDict
@@ -182,6 +183,11 @@ def add_test_data(scen: Scenario):
     return t, t_foo, t_bar, x
 
 
+def _add_required_units(mp: Platform) -> None:
+    mp.add_unit("USD")
+    mp.add_unit("???")
+
+
 def make_dantzig(
     mp: Platform,
     solve: bool = False,
@@ -209,6 +215,9 @@ def make_dantzig(
     --------
     .DantzigModel
     """
+    if isinstance(mp._backend, IXMP4Backend):
+        _add_required_units(mp=mp)
+
     # Add custom units and region for time series data
     try:
         mp.add_unit("USD/km")

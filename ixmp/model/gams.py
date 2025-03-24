@@ -15,6 +15,7 @@ from ixmp.backend.jdbc import JDBCBackend
 from ixmp.core.scenario import Scenario
 from ixmp.model.base import Model, ModelError
 from ixmp.util import as_str_list
+from ixmp.util.ixmp4 import ContainerData
 
 log = logging.getLogger(__name__)
 
@@ -180,6 +181,9 @@ class GAMSModel(Model):
     record_version_packages : list of str, optional
         Names of Python packages to record versions. Default: :py:`["ixmp"]`.
         See :meth:`record_versions`.
+    container_data : list of :class:`ixmp.util.ixmp4.ContainerData`, optional
+        List of data to add to the GAMS Container used by the IXMP4Backend for GAMS I/O.
+        Default: empty list.
     """  # noqa: E501
 
     # Make attributes known to self
@@ -196,6 +200,7 @@ class GAMSModel(Model):
     quiet: bool
     use_temp_dir: bool
     record_version_packages: list[str]
+    container_data: list[ContainerData]
 
     #: Model name.
     name = "default"
@@ -216,6 +221,7 @@ class GAMSModel(Model):
         "quiet": False,
         "use_temp_dir": True,
         "record_version_packages": ["ixmp"],
+        "container_data": [],
     }
 
     def __init__(self, name_=None, **model_options):
@@ -386,6 +392,7 @@ class GAMSModel(Model):
         # Instruct ixmp4 to record package versions
         if backend_type == "ixmp4":
             s_arg["record_version_packages"] = self.record_version_packages
+            s_arg["container_data"] = self.container_data
 
         try:
             # Write model data to file
@@ -411,6 +418,7 @@ class GAMSModel(Model):
             else:  # backend_type == "ixmp4"
                 # Clean up s_arg for use in read_file()
                 s_arg.pop("record_version_packages")
+                s_arg.pop("container_data")
         try:
             # Invoke GAMS
             run(command, shell=os.name == "nt", cwd=self.cwd, check=True)

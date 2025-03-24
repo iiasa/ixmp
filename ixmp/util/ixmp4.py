@@ -1,6 +1,8 @@
 # TODO Import this from typing when dropping Python 3.11
-from typing import TYPE_CHECKING, Any, Optional
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
+import pandas as pd
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
@@ -18,9 +20,28 @@ class WriteFiltersKwargs(TypedDict, total=False):
     export_all_runs: bool
 
 
+@dataclass
+class ContainerData:
+    name: str
+    kind: Literal["IndexSet", "Table", "Scalar", "Parameter", "Equation", "Variable"]
+    records: Optional[
+        Union[
+            float,
+            list[int],
+            list[float],
+            list[str],
+            dict[str, Union[list[float], list[int], list[str]]],
+            pd.DataFrame,
+        ]
+    ]
+    domain: Optional[list[str]] = None
+    docs: Optional[str] = None
+
+
 class WriteKwargs(TypedDict, total=False):
     filters: WriteFiltersKwargs
     record_version_packages: list[str]
+    container_data: list[ContainerData]
 
 
 class ReadKwargs(TypedDict, total=False):

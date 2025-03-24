@@ -1,12 +1,18 @@
 from functools import lru_cache, partial
+from typing import TYPE_CHECKING, Literal, Union
 
 import pandas as pd
 from genno import Key
 
 from ixmp.report import common
 
+if TYPE_CHECKING:
+    from genno.types import AnyQuantity
 
-def dims_for_qty(data):
+    from ixmp.core.scenario import Scenario
+
+
+def dims_for_qty(data: Union[list[str], pd.DataFrame]) -> list[str]:
     """Return the list of dimensions for *data*.
 
     If *data* is a :class:`pandas.DataFrame`, its columns are processed;
@@ -28,7 +34,9 @@ def dims_for_qty(data):
     return [common.RENAME_DIMS.get(d, d) for d in dims]
 
 
-def keys_for_quantity(ix_type, name, scenario):
+def keys_for_quantity(
+    ix_type: Literal["par", "equ", "var"], name: str, scenario: "Scenario"
+) -> list[tuple[Key, partial["AnyQuantity"], str, str]]:
     """Return keys for *name* in *scenario*."""
     from .operator import data_for_quantity
 
@@ -36,7 +44,7 @@ def keys_for_quantity(ix_type, name, scenario):
     dims = dims_for_qty(scenario.idx_names(name))
 
     # Column for retrieving data
-    column = "value" if ix_type == "par" else "lvl"
+    column: Literal["mrg", "lvl", "value"] = "value" if ix_type == "par" else "lvl"
 
     # A computation to retrieve the data
     result = [
@@ -63,11 +71,11 @@ def keys_for_quantity(ix_type, name, scenario):
 
 
 @lru_cache(1)
-def get_reversed_rename_dims():
+def get_reversed_rename_dims() -> dict[str, str]:
     return {v: k for k, v in common.RENAME_DIMS.items()}
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> dict[str, str]:
     if name == "RENAME_DIMS":
         return common.RENAME_DIMS
     else:

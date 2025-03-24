@@ -570,7 +570,10 @@ class IXMP4Backend(CachingBackend):
                 data.rename(columns={"values": "value", "units": "unit"}, inplace=True)
             else:
                 data.rename(
-                    columns={"levels": "level", "marginals": "marginal"}, inplace=True
+                    # NOTE the ixmp.report(er) expects these names, unfortunately; see
+                    # ixmp.report.util::keys_for_quantity()
+                    columns={"levels": "lvl", "marginals": "mrg"},
+                    inplace=True,
                 )
             return data
 

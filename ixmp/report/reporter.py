@@ -1,5 +1,5 @@
 from itertools import chain, repeat
-from typing import Union, cast
+from typing import Literal, Union, cast
 
 import dask
 import pandas as pd
@@ -53,7 +53,7 @@ class Reporter(Computer):
         all_keys: list[Union[str, Key]] = []
 
         # List of parameters, equations, and variables
-        quantities = chain(
+        quantities: chain[tuple[Literal["par", "equ", "var"], str]] = chain(
             zip(repeat("par"), sorted(scenario.par_list())),
             zip(repeat("equ"), sorted(scenario.equ_list())),
             zip(repeat("var"), sorted(scenario.var_list())),

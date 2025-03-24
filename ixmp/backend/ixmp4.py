@@ -413,7 +413,7 @@ class IXMP4Backend(CachingBackend):
         if (
             isinstance(item, IndexSet)
             or isinstance(item, Scalar)
-            or (isinstance(item, Variable) and item.indexsets is None)
+            or (isinstance(item, (Variable, Equation)) and item.indexsets is None)
         ):
             return cast(list[str], [])
         else:
@@ -524,6 +524,22 @@ class IXMP4Backend(CachingBackend):
         else:
             return pd.Series(item.data)
 
+    def _align_dtypes_for_filters(
+        self, filters: dict[str, list[Any]], data: pd.DataFrame
+    ) -> dict[str, list[Any]]:
+        """Convert `filters` values to types enabling `data.isin()`."""
+        # TODO Is this really the proper way to handle these types?
+        TYPE_MAP = {"object": str, "int64": int}
+        for column_name in filters.keys():
+            if not isinstance(
+                filters[column_name][0], TYPE_MAP[str(data.dtypes[column_name])]
+            ):
+                filters[column_name] = [
+                    TYPE_MAP[str(data.dtypes[column_name])](value)
+                    for value in filters[column_name]
+                ]
+        return filters
+
     def item_get_elements(
         self,
         s: Scenario,
@@ -542,6 +558,14 @@ class IXMP4Backend(CachingBackend):
             item = self._get_item(s=s, name=name, type=type)
             # TODO if item.data can be empty, set columns explicitly as for table above
             data = pd.DataFrame(item.data)  # type: ignore[union-attr]
+
+            # Apply filters if requested
+            if filters:
+                # isin() won't consider int(700) to be in ['700'], etc
+                filters = self._align_dtypes_for_filters(filters=filters, data=data)
+
+                data = data[data.isin(values=filters)[filters.keys()].all(axis=1)]
+
             if type == "par":
                 data.rename(columns={"values": "value", "units": "unit"}, inplace=True)
             else:
@@ -588,6 +612,9 @@ class IXMP4Backend(CachingBackend):
         repo = self._get_repo(s=s, type=type)
         repo.delete(item=name)
 
+    # NOTE The name 'cat_`name`' is used for backward compatibility with the JDBC, where
+    # such names are hardcoded. 'cat' means 'category' and should be expanded for
+    # clarity in the future.
     def cat_set_elements(
         self,
         ms: Scenario,
@@ -600,7 +627,7 @@ class IXMP4Backend(CachingBackend):
 
         For the ixmp4.Table or IndexSet `name`, define a category as a new IndexSet
         called 'type_`name`' (if it doesn't exist already) and add `cat` to it. Then,
-        define a new Table 'category_`name`' storing one column for `keys` and one for
+        define a new Table 'cat_`name`' storing one column for `keys` and one for
         'categories'.
 
         Parameters
@@ -623,7 +650,11 @@ class IXMP4Backend(CachingBackend):
         # Assume for now that only IndexSets are requested to be mapped to cats
         indexset = self.index[ms].optimization.indexsets.get(name=name)
 
-        # Get or create the 'type_name' indexset and 'category_name' table
+        # Special treatment for 'technology' for historical reasons:
+        if name == "technology":
+            name = "tec"
+
+        # Get or create the 'type_name' indexset and 'cat_name' table
         try:
             category_indexset = self.index[ms].optimization.indexsets.get(
                 name=f"type_{name}"
@@ -634,12 +665,10 @@ class IXMP4Backend(CachingBackend):
             )
 
         try:
-            category_table = self.index[ms].optimization.tables.get(
-                name=f"category_{name}"
-            )
+            category_table = self.index[ms].optimization.tables.get(name=f"cat_{name}")
         except NotFound:
             category_table = self.index[ms].optimization.tables.create(
-                name=f"category_{name}",
+                name=f"cat_{name}",
                 constrained_to_indexsets=[indexset.name, category_indexset.name],
             )
 
@@ -661,19 +690,27 @@ class IXMP4Backend(CachingBackend):
                 category_indexset.remove(category_indexset.data)
 
         # Add data to both objects
-        category_indexset.add(data=cat)
+        if cat not in category_indexset.data:
+            category_indexset.add(data=cat)
         data = {indexset.name: keys, category_indexset.name: [cat] * len(keys)}
         category_table.add(data=data)
 
+    # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
+    # same here or do we expect user code to call this with name == "tec" if they're
+    # interested in "technology"?
     def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> list[str]:
         data = pd.DataFrame(
-            self.index[ms].optimization.tables.get(name=f"category_{name}").data
+            self.index[ms].optimization.tables.get(name=f"cat_{name}").data
         )
-        # This assumes there are only two columns
+        # This assumes there are only two columns: 'type_{name}' and the category name
         columns = data.columns.to_list()
         columns.remove(f"type_{name}")
-        return data[data[f"type_{name}"] == cat, columns[0]].astype(str).to_list()
 
+        return data[data[f"type_{name}"] == cat][columns[0]].astype(str).to_list()
+
+    # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
+    # same here or do we expect user code to call this with name == "tec" if they're
+    # interested in "technology"?
     def cat_list(self, ms: Scenario, name: str) -> list[str]:
         category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
         return cast(list[str], category_indexset.data)
@@ -804,6 +841,7 @@ class IXMP4Backend(CachingBackend):
                 run=self.index[ts],
                 file_name=_path,
                 record_version_packages=kwargs["record_version_packages"],
+                container_data=kwargs["container_data"],
             )
         elif _path.suffix == ".csv" and item_type is ItemType.TS:
             models = filters.pop("model")
@@ -872,6 +910,7 @@ class IXMP4Backend(CachingBackend):
 
         # TODO handle case when filters is not present
         ts, _ = self._handle_rw_filters(kwargs["filters"])
+        # Convert to normal dict to allow removal of keys
         _kwargs = {k: v for (k, v) in kwargs.items() if k != "filters"}
 
         if _path.suffix == ".gdx" and item_type is ItemType.MODEL:
@@ -886,6 +925,9 @@ class IXMP4Backend(CachingBackend):
 
             check_solution = bool(_kwargs.pop("check_solution"))
             comment = str(_kwargs.pop("comment"))
+
+            # message_ix/ixmp4 uses these lists to set the default items to read, so
+            # these will always be true
             equ_list = cast(list[str], _kwargs.pop("equ_list"))
             var_list = cast(list[str], _kwargs.pop("var_list"))
 

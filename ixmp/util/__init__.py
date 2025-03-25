@@ -551,11 +551,11 @@ def format_scenario_list(
 def show_versions(file=sys.stdout):
     """Print information about ixmp and its dependencies to *file*."""
     import importlib
-    from subprocess import DEVNULL, CalledProcessError, check_output
+    from subprocess import DEVNULL, check_output
 
     from xarray.util.print_versions import get_sys_info
 
-    from ixmp.model.gams import gams_version
+    from ixmp.model.gams import gams_info
 
     def _git_log(mod):
         cmd = ["git", "log", "--oneline", "--no-color", "--decorate", "-n 1"]
@@ -617,13 +617,8 @@ def show_versions(file=sys.stdout):
         if module_name == "jpype":
             info.append(("… JVM path", mod.getDefaultJVMPath()))
 
-    # Also display GAMS version, if any
-    try:
-        version = gams_version()
-    except (CalledProcessError, FileNotFoundError):  # pragma: no cover
-        version = "'gams' executable not in PATH"
-    finally:
-        info.extend([("GAMS", version), (None, None)])
+    # Also display GAMS version or diagnostic message
+    info.extend([("GAMS", gams_info().version), (None, None)])
 
     # Use xarray to get system & Python information
     info.extend(get_sys_info()[1:])  # Exclude the commit number

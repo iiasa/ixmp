@@ -70,7 +70,11 @@ def _platform_default():
         },
         "ixmp4-local": {
             "class": "ixmp4",
-            "dsn": "sqlite:///:memory:",
+            "dsn": (
+                "sqlite:///"
+                f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"
+                "/ixmp4-local.sqlite3"
+            ),
         },
     }
 

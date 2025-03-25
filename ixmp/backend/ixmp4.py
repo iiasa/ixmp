@@ -40,7 +40,6 @@ class IXMP4Backend(CachingBackend):
     index: dict[TimeSeries, "Run"] = {}
 
     def __init__(self, _backend: Optional["ixmp4_backend"] = None) -> None:
-        from ixmp4 import Platform
         from ixmp4.conf.base import PlatformInfo
         from ixmp4.data.backend import SqliteTestBackend
 
@@ -48,14 +47,21 @@ class IXMP4Backend(CachingBackend):
         if not _backend:
             log.warning("Falling back to default SqliteBackend 'ixmp4-local'")
             sqlite = SqliteTestBackend(
-                PlatformInfo(name="ixmp4-local", dsn="sqlite:///:memory:")
+                PlatformInfo(
+                    name="ixmp4-local",
+                    dsn=(
+                        "sqlite:///"
+                        f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"  # noqa: E501
+                        "/ixmp4-local.sqlite3"
+                    ),
+                )
             )
             sqlite.setup()
 
         self._backend = _backend if _backend else sqlite
 
         # Instantiate and store
-        self._platform = Platform(_backend=self._backend)
+        self._platform = ixmp4_platform(_backend=self._backend)
 
     # def __del__(self) -> None:
     #     self.close_db()
@@ -185,6 +191,11 @@ class IXMP4Backend(CachingBackend):
         elif v != ts.version:  # pragma: no cover
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
+
+        # NOTE ixmp4 doesn't store 'scheme', which could in principle be anything.
+        # Since this is a shim between message_ix/ixmp4, I'm hardcoding this for now.
+        if isinstance(ts, Scenario):
+            ts.scheme = "MESSAGE"
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)

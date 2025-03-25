@@ -60,6 +60,8 @@ class Platform:
         "set_meta",
     ]
 
+    _units_to_warn_about: Optional[list[str]] = None
+
     def __init__(
         self, name: Optional[str] = None, backend: Optional[str] = None, **backend_args
     ):

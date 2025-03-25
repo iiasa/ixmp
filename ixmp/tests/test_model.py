@@ -6,7 +6,7 @@ import pytest
 from ixmp import Scenario
 from ixmp.model.base import Model, ModelError
 from ixmp.model.dantzig import DantzigModel
-from ixmp.model.gams import gams_version
+from ixmp.model.gams import GAMSInfo, gams_version
 from ixmp.testing import assert_logs, make_dantzig
 
 
@@ -107,6 +107,25 @@ def test_gams_version():
     # trailing text)
     assert 3 == len(parts)
     assert [int(p) for p in parts]
+
+
+class TestGAMSInfo:
+    def test_version(self, monkeypatch, tmp_path) -> None:
+        """:attr:`GAMSInfo.version` contains useful info if no installation found."""
+        # Set the expected name of the GAMS executable to a non-existent program
+        monkeypatch.setattr(GAMSInfo, "_name", "__F_O_O")
+
+        # GAMSInfo.executable() runs as called from GAMSInfo.__init__()
+        gi1 = GAMSInfo()
+
+        # GAMSInfo.version contains an instructive message
+        msg = "no '__F_O_O' executable in IXMP_GAMS_PATH={} or the system PATH"
+        assert msg.format("(not set)") == gi1.version
+
+        # GAMSInfo.version picks up the IXMP_GAMS_PATH environment variable
+        monkeypatch.setenv("IXMP_GAMS_PATH", str(tmp_path))
+        gi2 = GAMSInfo()
+        assert msg.format(str(tmp_path)) == gi2.version
 
 
 class TestGAMSModel:

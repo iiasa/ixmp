@@ -41,7 +41,7 @@ class Scenario(TimeSeries):
     """
 
     #: Scheme of the Scenario.
-    scheme = None
+    scheme: Optional[str] = None
 
     def __init__(
         self,

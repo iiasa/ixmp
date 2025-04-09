@@ -2,18 +2,18 @@ import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, cast
+from typing import Any, Literal, Optional, TypeAlias, Union, cast, overload
 
 import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
-from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet
-from ixmp4.core.optimization.parameter import Parameter
-from ixmp4.core.optimization.scalar import Scalar
-from ixmp4.core.optimization.table import Table
-from ixmp4.core.optimization.variable import Variable
+from ixmp4.core.optimization.equation import Equation, EquationRepository
+from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
+from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
+from ixmp4.core.optimization.table import Table, TableRepository
+from ixmp4.core.optimization.variable import Variable, VariableRepository
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 # TODO Import this from typing when dropping Python 3.11
@@ -176,9 +176,9 @@ class IXMP4Backend(CachingBackend):
     # Modifying the Run object
 
     def _index_and_set_attrs(self, run: "Run", ts: TimeSeries) -> None:
-        """Add *run* to index and update attributes of *ts*.
+        """Add `run` to index and update attributes of `ts`.
 
-        Helper for init and get.
+        Helper for `init()` and `get()`.
         """
         # Add to index
         self.index[ts] = run
@@ -281,12 +281,40 @@ class IXMP4Backend(CachingBackend):
 
     # Handle optimization items
 
-    # TODO: type hints
+    Ixmp4ItemType: TypeAlias = Literal["scalar", "indexset", "set", "par", "equ", "var"]
+
+    @overload
+    def _get_repo(self, s: Scenario, type: Literal["scalar"]) -> ScalarRepository: ...
+
+    @overload
     def _get_repo(
-        self,
-        s: Scenario,
-        type: Literal["scalar", "indexset", "set", "par", "equ", "var"],
-    ):
+        self, s: Scenario, type: Literal["indexset"]
+    ) -> IndexSetRepository: ...
+
+    @overload
+    def _get_repo(self, s: Scenario, type: Literal["set"]) -> TableRepository: ...
+
+    @overload
+    def _get_repo(self, s: Scenario, type: Literal["par"]) -> ParameterRepository: ...
+
+    @overload
+    def _get_repo(self, s: Scenario, type: Literal["equ"]) -> EquationRepository: ...
+
+    @overload
+    def _get_repo(self, s: Scenario, type: Literal["var"]) -> VariableRepository: ...
+
+    # NOTE Type hints here ensure the function body is checked
+    def _get_repo(
+        self, s: Scenario, type: Ixmp4ItemType
+    ) -> Union[
+        IndexSetRepository,
+        TableRepository,
+        ScalarRepository,
+        ParameterRepository,
+        EquationRepository,
+        VariableRepository,
+    ]:
+        """Return the repository of items of `type` belonging to `s`."""
         if type == "scalar":
             return self.index[s].optimization.scalars
         if type == "indexset":
@@ -312,8 +340,8 @@ class IXMP4Backend(CachingBackend):
         # In base::item_get_elements, it sounds like "equ" and "var" can also target
         # scalars, whereas below, inspired from jdbc, I'm only linking "par" to scalars
         if type == "set" and len(idx_sets) == 0:
-            repo = self._get_repo(s=s, type="indexset")
-            repo.create(name=name)
+            indexset_repo = self._get_repo(s=s, type="indexset")
+            indexset_repo.create(name=name)
         elif type == "par" and len(idx_sets) == 0:
             # NOTE ixmp4 requires scalars to get value and unit upon creation, so the
             # shim does that when `item_set_elements()` targets a scalar
@@ -321,7 +349,9 @@ class IXMP4Backend(CachingBackend):
         else:
             repo = self._get_repo(s=s, type=type)
             repo.create(
-                name=name, constrained_to_indexsets=idx_sets, column_names=idx_names
+                name=name,
+                constrained_to_indexsets=list(idx_sets),
+                column_names=list(idx_names) if idx_names else None,
             )
 
     def list_items(self, s: Scenario, type: Literal["set", "par", "equ"]) -> list[str]:
@@ -339,7 +369,7 @@ class IXMP4Backend(CachingBackend):
         self,
         s: Scenario,
         name: str,
-        types: tuple[Literal["scalar", "indexset", "set", "par", "equ", "var"], ...] = (
+        types: tuple[Ixmp4ItemType, ...] = (
             "scalar",
             "indexset",
             "set",
@@ -348,7 +378,7 @@ class IXMP4Backend(CachingBackend):
             "var",
         ),
     ) -> tuple[
-        Literal["scalar", "indexset", "set", "par", "equ", "var"],
+        Ixmp4ItemType,
         Union[
             "Scalar",
             "IndexSet",
@@ -358,6 +388,28 @@ class IXMP4Backend(CachingBackend):
             "Parameter",
         ],
     ]:
+        """Find item `name` in Scenario `s`.
+
+        Parameters
+        ----------
+        s : Scenario
+            The Scenario in which to search for `name`.
+        name : str
+            The name to search for.
+        types : tuple[`Ixmp4ItemType`, ...], optional
+            If provided, search only specific types for `name`. For example,
+            types=("indexset", "set"). Default: tuple of all types.
+
+        Returns
+        -------
+        tuple[`Ixmp4ItemType`, Scalar | IndexSet | Table | Parameter | Equation | Variable]
+            A tuple containing the string item type and the item itself.
+
+        Raises
+        ------
+        KeyError
+            If no item with `name` and type in `types` can be found in `s`.
+        """  # noqa: E501
         # NOTE this currently assumes that `name` will only be present once among
         # Tables, Parameters, Equations, Variables. This is in line with the assumption
         # made in the Java backend, but ixmp4 enforces no such constraint.
@@ -389,11 +441,28 @@ class IXMP4Backend(CachingBackend):
         else:
             return (_type, _item)
 
+    @overload
+    def _get_item(self, s: Scenario, name: str, type: Literal["scalar"]) -> Scalar: ...
+
+    @overload
     def _get_item(
-        self,
-        s: Scenario,
-        name: str,
-        type: Literal["scalar", "indexset", "set", "par", "equ", "var"],
+        self, s: Scenario, name: str, type: Literal["indexset"]
+    ) -> IndexSet: ...
+
+    @overload
+    def _get_item(self, s: Scenario, name: str, type: Literal["set"]) -> Table: ...
+
+    @overload
+    def _get_item(self, s: Scenario, name: str, type: Literal["par"]) -> Parameter: ...
+
+    @overload
+    def _get_item(self, s: Scenario, name: str, type: Literal["equ"]) -> Equation: ...
+
+    @overload
+    def _get_item(self, s: Scenario, name: str, type: Literal["var"]) -> Variable: ...
+
+    def _get_item(
+        self, s: Scenario, name: str, type: Ixmp4ItemType
     ) -> Union[
         "Scalar",
         "IndexSet",
@@ -402,19 +471,28 @@ class IXMP4Backend(CachingBackend):
         "Variable",
         "Parameter",
     ]:
+        """Retrieve item `name` with `type` from `s`.
+
+        Returns
+        -------
+        Scalar | IndexSet | Table | Parameter | Equation | Variable
+            Based on `type`.
+        """
         return self._get_repo(s=s, type=type).get(name=name)
 
     def _get_indexset_or_table(
         self, s: Scenario, name: str
     ) -> Union["IndexSet", "Table"]:
-        from ixmp4.core.exceptions import NotFound
+        """Get `name` from Scenario `s`.
 
+        Try first if `name` is an IndexSet. Get it as a Table if it isn't.
+        """
         try:
-            repo = self._get_repo(s=s, type="indexset")
-            return cast(IndexSet, repo.get(name=name))
-        except NotFound:
-            repo = self._get_repo(s=s, type="set")
-            return cast(Table, repo.get(name=name))
+            indexset_repo = self._get_repo(s=s, type="indexset")
+            return indexset_repo.get(name=name)
+        except IndexSet.NotFound:
+            table_repo = self._get_repo(s=s, type="set")
+            return table_repo.get(name=name)
 
     def item_index(
         self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
@@ -433,7 +511,7 @@ class IXMP4Backend(CachingBackend):
                     f"Requested {sets_or_names}, but these are None for item "
                     f"{item.name}, falling back on (Index)Set names!"
                 )
-            assert item.indexsets  # Could only be None for Variables
+            assert item.indexsets  # Could only be None for Variables & Equations
             return (
                 item.column_names
                 if item.column_names and sets_or_names == "names"
@@ -443,6 +521,22 @@ class IXMP4Backend(CachingBackend):
     def _add_data_to_set(
         self, s: Scenario, name: str, key: Union[str, list[str]], comment: Optional[str]
     ) -> None:
+        """Add data `key` to `name` in Scenario `s`.
+
+        Parameters
+        ----------
+        s : Scenario
+            The Scenario hosting the item.
+        name : str
+            The name of the item to add data to.
+        key : str | list[str]
+            The data to add.
+
+            ATTENTION: if `key` is a str, we're assuming `name` means an IndexSet;
+            if `key` is a list, we're assuming `name` means a Table.
+        comment: str, optional
+            A message to store with the data addition. Unused by ixmp4.
+        """
         if comment:
             log.warning(
                 "`comment` currently unused with ixmp4 when adding data to Tables."
@@ -480,6 +574,21 @@ class IXMP4Backend(CachingBackend):
         unit: Optional[str],
         comment: Optional[str],
     ) -> None:
+        """Create the Scalar `name` in Scenario `s`.
+
+        Parameters
+        ----------
+        s : Scenario
+            The Scenario hosting the Scalar.
+        name : str
+            The name of the Scalar.
+        value : float
+            The value of the Scalar.
+        unit : str, optional
+            The unit of the Scalar.
+        comment: str, optional
+            A message to explain what this Scalar means.
+        """
         scalar = self.index[s].optimization.scalars.create(
             name=name, value=value, unit=unit
         )
@@ -495,6 +604,23 @@ class IXMP4Backend(CachingBackend):
         unit: str,
         comment: Optional[str],
     ) -> None:
+        """Add data `key` to the Parameter `name` in Scenario `s`.
+
+        Parameters
+        ----------
+        s : Scenario
+            The Scenario hosting the Parameter.
+        name : str
+            The name of the Parameter.
+        key : str | list[str]
+            The data to add to the Parameter.
+        value : float
+            The value of the Parameter.
+        unit : str
+            The unit of the Parameter.
+        comment: str, optional
+            A message to store with the data addition. Unused by ixmp4.
+        """
         if comment:
             log.warning(
                 "`comment` currently unused with ixmp4 when adding data to Parameters."
@@ -545,6 +671,18 @@ class IXMP4Backend(CachingBackend):
     def _get_set_data(
         self, s: Scenario, name: str, filters: Optional[dict[str, list[Any]]] = None
     ) -> Union[pd.Series, pd.DataFrame]:
+        """Get the data stored in `name` in `s`.
+
+        Parameters
+        ----------
+        s : Scenario
+            The Scenario hosting the item.
+        name : str
+            The name of the item.
+        filters : dict[str, list[Any]], optional
+            Filters to apply to the data. If present, return only matching data.
+            Default: None.
+        """
         item = self._get_indexset_or_table(s=s, name=name)
 
         if isinstance(item, Table):
@@ -593,8 +731,6 @@ class IXMP4Backend(CachingBackend):
             item = self._get_item(s=s, name=name, type=type)
 
             # TODO What about Scalars? How does message_ix load them?
-            # This should always be the case
-            assert isinstance(item, (Parameter, Equation, Variable))
 
             data = pd.DataFrame(item.data)
 
@@ -651,7 +787,7 @@ class IXMP4Backend(CachingBackend):
                 data = pd.DataFrame(keys, columns=columns)
                 item.remove(data=data)
         else:
-            parameter = cast(Parameter, self._get_item(s=s, name=name, type="par"))
+            parameter = self._get_item(s=s, name=name, type="par")
             columns = parameter.column_names or parameter.indexsets
             data = pd.DataFrame(keys, columns=columns)
             parameter.remove(data=data)

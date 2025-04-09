@@ -449,7 +449,7 @@ def _update_item_in_container(container: gt.Container, item: ContainerData) -> N
 def _add_items_to_container(
     container: gt.Container, items: list[ContainerData]
 ) -> None:
-    """Add `items` to `container`."""
+    """Add or update `items` to/in `container`."""
     if not items:
         return  # Nothing to be done
 

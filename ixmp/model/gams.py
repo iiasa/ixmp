@@ -8,7 +8,7 @@ from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ixmp.backend import ItemType
 from ixmp.backend.jdbc import JDBCBackend
@@ -373,7 +373,7 @@ class GAMSModel(Model):
 
         # Assemble the full command: executable, model file, model-specific arguments,
         # and general GAMS arguments
-        command = (
+        command: Union[str, list[str]] = (
             ["gams", f'"{model_file}"']
             + [self.format(arg) for arg in self.solve_args]
             + self.gams_args
@@ -381,7 +381,7 @@ class GAMSModel(Model):
 
         if os.name == "nt":
             # Windows: join the commands to a single string
-            command = " ".join(command)  # type: ignore[assignment]
+            command = " ".join(command)
 
         # Remove stored reference to the Scenario to allow it to be GC'd later
         delattr(self, "scenario")

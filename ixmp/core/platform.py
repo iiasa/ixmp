@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Sequence
 from os import PathLike
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -63,7 +63,10 @@ class Platform:
     _units_to_warn_about: Optional[list[str]] = None
 
     def __init__(
-        self, name: Optional[str] = None, backend: Optional[str] = None, **backend_args
+        self,
+        name: Optional[str] = None,
+        backend: Optional[Literal["ixmp4", "jdbc"]] = None,
+        **backend_args,
     ):
         if name is None:
             if backend is None and not len(backend_args):

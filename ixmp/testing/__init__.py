@@ -41,7 +41,7 @@ from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pint
 import pytest
@@ -410,7 +410,10 @@ def _setup_ixmp4_platform(mp: Platform) -> None:
 
 
 def _platform_fixture(
-    request: pytest.FixtureRequest, tmp_env, test_data_path, backend: str
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["jdbc", "ixmp4"],
 ) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.

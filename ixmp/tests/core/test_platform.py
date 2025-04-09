@@ -6,7 +6,7 @@ import sys
 from collections.abc import Generator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -32,7 +32,8 @@ class TestPlatform:
             ValueError,
             match=re.escape("backend class 'foo' not among"),
         ):
-            ixmp.Platform(backend="foo")
+            # Testing the wrong type on purpose
+            ixmp.Platform(backend="foo")  # type: ignore[arg-type]
 
         # name="default" is used, referring to "local"
         mp = ixmp.Platform()
@@ -45,7 +46,9 @@ class TestPlatform:
             pytest.param("ixmp4", dict(), marks=min_ixmp4_version),
         ),
     )
-    def test_init1(self, backend: str, backend_args: dict[str, str]) -> None:
+    def test_init1(
+        self, backend: Literal["jdbc", "ixmp4"], backend_args: dict[str, str]
+    ) -> None:
         # Platform can be instantiated
         ixmp.Platform(backend=backend, **backend_args)
 

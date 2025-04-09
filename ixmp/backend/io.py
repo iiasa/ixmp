@@ -430,6 +430,22 @@ def _align_records_and_domain(
         return {key: records[key] for key in domain_order}
 
 
+def _update_item_in_container(container: gt.Container, item: ContainerData) -> None:
+    """Update `item` in `container`."""
+    # NOTE This is not updating the comment
+
+    kwargs = dict(name=item.name, domain=item.domain, records=item.records)
+
+    if item.kind in ("IndexSet", "Table"):
+        container.addSet(**kwargs)
+    elif item.kind in ("Scalar", "Parameter"):
+        container.addParameter(**kwargs)
+    elif item.kind == "Equation":
+        container.addEquation(**kwargs)
+    else:  # Variable
+        container.addVariable(**kwargs)
+
+
 def _add_items_to_container(
     container: gt.Container, items: list[ContainerData]
 ) -> None:
@@ -465,6 +481,8 @@ def _add_items_to_container(
                 # Optional, but must be str
                 description=item.docs or "",
             )
+        else:
+            _update_item_in_container(container=container, item=item)
 
 
 def _convert_ixmp4_items_to_containerdata(items: list[Item4]) -> list[ContainerData]:
@@ -628,7 +646,7 @@ def _read_variables_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.variables.add_data(
-                variable_id=variable.id, data=(records[columns_of_interest])
+                variable_id=variable.id, data=records[columns_of_interest]
             )
 
 
@@ -651,7 +669,7 @@ def _read_equations_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.equations.add_data(
-                equation_id=equation.id, data=(records[columns_of_interest])
+                equation_id=equation.id, data=records[columns_of_interest]
             )
 
 
@@ -698,9 +716,9 @@ def read_gdx_to_run(
     # NOTE This handles empty `var_list`, too,
     # which is not necessary as long as any Variables are required in message_ix
     variables = (
-        run.backend.optimization.variables.list(name__in=var_list)
+        run.backend.optimization.variables.list(run_id=run.id, name__in=var_list)
         if len(var_list)
-        else run.backend.optimization.variables.list()
+        else run.backend.optimization.variables.list(run_id=run.id)
     )
     _read_variables_to_run(container=container, run=run, variables=variables)
 
@@ -708,8 +726,8 @@ def read_gdx_to_run(
     # NOTE This handles empty `equ_list`, too,
     # which is not necessary as long as any Equations are required in message_ix
     equations = (
-        run.backend.optimization.equations.list(name__in=equ_list)
+        run.backend.optimization.equations.list(run_id=run.id, name__in=equ_list)
         if len(equ_list)
-        else run.backend.optimization.equations.list()
+        else run.backend.optimization.equations.list(run_id=run.id)
     )
     _read_equations_to_run(container=container, run=run, equations=equations)

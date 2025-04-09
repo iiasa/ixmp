@@ -7,7 +7,7 @@ repos:
     additional_dependencies:
     - genno
     - GitPython
-    - ixmp4
+    - "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items"
     - nbclient
     - pandas-stubs
     - pytest

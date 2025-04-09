@@ -429,7 +429,7 @@ class IXMP4Backend(CachingBackend):
             return cast(list[str], [])
         else:
             if sets_or_names == "names" and item.column_names is None:
-                log.warning(
+                log.debug(
                     f"Requested {sets_or_names}, but these are None for item "
                     f"{item.name}, falling back on (Index)Set names!"
                 )
@@ -448,14 +448,28 @@ class IXMP4Backend(CachingBackend):
                 "`comment` currently unused with ixmp4 when adding data to Tables."
             )
         # Assumption: if key is just one value, we're dealing with an IndexSet
+        # NOTE E.g. westeros_addon_technologies in message_ix calls
+        # `scenario.add_set("addon", "po_turbine")` for a 1-D Table called "addon". This
+        # only works now because ixmp.Scenario.add_set() converts str keys for Tables to
+        # [key] before adding them. We would need to replicate that or adapt the
+        # decision logic here should we drop ixmp.Scenario.
         if isinstance(key, str):
-            self.index[s].optimization.indexsets.get(name=name).add(key)
+            # NOTE ixmp_source silently ignores duplicate data; replicate here
+            # This could be improved by adding data without loading the indexset first,
+            # but this requires users to ensure their data are valid
+            indexset = self.index[s].optimization.indexsets.get(name=name)
+            if key not in indexset.data:
+                indexset.add(key)
         else:
             table = self.index[s].optimization.tables.get(name=name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
             keys = table.column_names or table.indexsets
-            data_to_add = {keys[i]: [key[i]] for i in range(len(key))}
+            data_to_add = pd.DataFrame({keys[i]: [key[i]] for i in range(len(key))})
+
+            # Silently ignore duplicate data, see NOTE above
+            data_to_add = data_to_add[~data_to_add.isin(values=table.data).all(axis=1)]
+
             table.add(data=data_to_add)
 
     def _create_scalar(
@@ -511,13 +525,19 @@ class IXMP4Backend(CachingBackend):
                 self._add_data_to_set(s=s, name=name, key=key, comment=comment)
             else:
                 if key is None:
-                    assert value, "Creating a Scalar requires a value!"
+                    assert isinstance(value, float), (
+                        "Creating a Scalar requires a value!"
+                    )
                     self._create_scalar(
                         s=s, name=name, value=value, unit=unit, comment=comment
                     )
                 else:
-                    assert value, "Adding data to a Parameter requires a value!"
-                    assert unit, "Adding data to a Parameter requires a unit!"
+                    assert isinstance(value, float), (
+                        "Adding data to a Parameter requires a value!"
+                    )
+                    assert isinstance(unit, str), (
+                        "Adding data to a Parameter requires a unit!"
+                    )
                     self._add_data_to_parameter(
                         s=s, name=name, key=key, value=value, unit=unit, comment=comment
                     )
@@ -525,19 +545,27 @@ class IXMP4Backend(CachingBackend):
     def _get_set_data(
         self, s: Scenario, name: str, filters: Optional[dict[str, list[Any]]] = None
     ) -> Union[pd.Series, pd.DataFrame]:
-        # TODO handle filters
-
         item = self._get_indexset_or_table(s=s, name=name)
 
         if isinstance(item, Table):
             columns = item.column_names or item.indexsets
-            return pd.DataFrame(item.data, columns=columns)
+            df = pd.DataFrame(item.data, columns=columns)
+            return df[df.isin(values=filters).all(axis=1)] if filters else df
         else:
-            return pd.Series(item.data)
+            series = pd.Series(item.data)
+            return series[series.isin(values=filters[name])] if filters else series
+
+    def _ensure_filters_values_are_lists(
+        self, filters: dict[str, Union[Any, list[Any]]]
+    ) -> None:
+        """Convert singular values in `filters` to lists."""
+        for k, v in filters.items():
+            if not isinstance(v, list):
+                filters[k] = [v]
 
     def _align_dtypes_for_filters(
         self, filters: dict[str, list[Any]], data: pd.DataFrame
-    ) -> dict[str, list[Any]]:
+    ) -> None:
         """Convert `filters` values to types enabling `data.isin()`."""
         # TODO Is this really the proper way to handle these types?
         TYPE_MAP = {"object": str, "int64": int}
@@ -549,43 +577,58 @@ class IXMP4Backend(CachingBackend):
                     TYPE_MAP[str(data.dtypes[column_name])](value)
                     for value in filters[column_name]
                 ]
-        return filters
 
     def item_get_elements(
         self,
         s: Scenario,
         type: Literal["equ", "par", "set", "var"],
         name: str,
-        filters: Optional[dict[str, list[Any]]] = None,
+        filters: Optional[dict[str, Any]] = None,
     ) -> Union[dict[str, Any], pd.Series, pd.DataFrame]:
-        # TODO handle filters
         if type == "set":
             return self._get_set_data(s=s, name=name, filters=filters)
         # TODO this is not handling scalars at the moment, but maybe try with type,
         # except NotFound, try scalar?
         else:
-            # TODO this can really only be Equation, Parameter, or Variable, so cast
-            # as such?
             item = self._get_item(s=s, name=name, type=type)
-            # TODO if item.data can be empty, set columns explicitly as for table above
-            data = pd.DataFrame(item.data)  # type: ignore[union-attr]
+
+            # TODO What about Scalars? How does message_ix load them?
+            # This should always be the case
+            assert isinstance(item, (Parameter, Equation, Variable))
+
+            data = pd.DataFrame(item.data)
+
+            if data.empty:
+                # Set correct columns
+                columns = item.column_names or item.indexsets
+                unindexed_columns = (
+                    ["value", "unit"] if type == "par" else ["lvl", "mrg"]
+                )
+                if columns:
+                    columns.extend(unindexed_columns)
+
+                return pd.DataFrame(
+                    columns=columns if bool(columns) else unindexed_columns
+                )
 
             # Apply filters if requested
             if filters:
                 # isin() won't consider int(700) to be in ['700'], etc
-                filters = self._align_dtypes_for_filters(filters=filters, data=data)
+                self._ensure_filters_values_are_lists(filters=filters)
+                self._align_dtypes_for_filters(filters=filters, data=data)
 
                 data = data[data.isin(values=filters)[filters.keys()].all(axis=1)]
 
-            if type == "par":
-                data.rename(columns={"values": "value", "units": "unit"}, inplace=True)
-            else:
-                data.rename(
-                    # NOTE the ixmp.report(er) expects these names, unfortunately; see
-                    # ixmp.report.util::keys_for_quantity()
-                    columns={"levels": "lvl", "marginals": "mrg"},
-                    inplace=True,
-                )
+            # Rename columns
+            # NOTE the ixmp.report(er) expects these names, unfortunately; see
+            # ixmp.report.util::keys_for_quantity()
+            renames = (
+                {"values": "value", "units": "unit"}
+                if type == "par"
+                else {"levels": "lvl", "marginals": "mrg"}
+            )
+            data.rename(columns=renames, inplace=True)
+
             return data
 
     def item_delete_elements(
@@ -659,31 +702,52 @@ class IXMP4Backend(CachingBackend):
             - The Backend **must** remove any existing member of `cat`, so that it has
               only one element.
         """
-        from ixmp4.core.exceptions import NotFound
+        column_name: Optional[str] = None
 
-        # Assume for now that only IndexSets are requested to be mapped to cats
-        indexset = self.index[ms].optimization.indexsets.get(name=name)
+        # Categories can be based on IndexSets directly or on 1-d Tables
+        try:
+            # Most should be based on IndexSets, try that first
+            indexset = self.index[ms].optimization.indexsets.get(name=name)
+            indexset_name = indexset.name
+        except IndexSet.NotFound:
+            # We're dealing with a Table
+            table = self.index[ms].optimization.tables.get(name=name)
+
+            # Ensure the Table's dimensions are correct before setting variables
+            assert len(table.indexsets) == 1
+            indexset_name = table.indexsets[0]
+            column_name = table.name
 
         # Special treatment for 'technology' for historical reasons:
         if name == "technology":
             name = "tec"
+        # NOTE Of the default items, all categories except 'cat_addon' are based on
+        # IndexSets. 'cat_addon' is based on the 1-d Table 'addon', which is why it also
+        # doesn't follow the naming convention. Usually, the column names are
+        # 'type_<name>' and '<name>', but for 'cat_addon', it's 'type_addon' and
+        # 'technology_addon'.
+        elif name == "addon":
+            column_name = "technology_addon"
 
         # Get or create the 'type_name' indexset and 'cat_name' table
         try:
             category_indexset = self.index[ms].optimization.indexsets.get(
                 name=f"type_{name}"
             )
-        except NotFound:
+        except IndexSet.NotFound:
             category_indexset = self.index[ms].optimization.indexsets.create(
                 name=f"type_{name}"
             )
 
         try:
             category_table = self.index[ms].optimization.tables.get(name=f"cat_{name}")
-        except NotFound:
+        except Table.NotFound:
             category_table = self.index[ms].optimization.tables.create(
                 name=f"cat_{name}",
-                constrained_to_indexsets=[indexset.name, category_indexset.name],
+                constrained_to_indexsets=[indexset_name, category_indexset.name],
+                column_names=[column_name, category_indexset.name]
+                if column_name
+                else None,
             )
 
         # Convert for convenience
@@ -706,7 +770,9 @@ class IXMP4Backend(CachingBackend):
         # Add data to both objects
         if cat not in category_indexset.data:
             category_indexset.add(data=cat)
-        data = {indexset.name: keys, category_indexset.name: [cat] * len(keys)}
+        data = {column_name: keys} if column_name else {indexset_name: keys}
+        data[category_indexset.name] = [cat] * len(keys)
+
         category_table.add(data=data)
 
     # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the

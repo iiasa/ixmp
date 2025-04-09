@@ -705,6 +705,7 @@ class Scenario(TimeSeries):
         else:
             self._backend("item_delete_elements", "par", name, self._keys(name, key))
 
+    # FIXME What ensures that filters has the correct type?
     def var(self, name: str, filters=None, **kwargs):
         """Return a dataframe of (filtered) elements for a specific variable.
 

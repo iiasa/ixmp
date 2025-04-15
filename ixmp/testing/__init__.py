@@ -131,6 +131,20 @@ def pytest_report_header(config, start_path) -> str:
     return f"ixmp config: {repr(ixmp_config.values)}"
 
 
+# NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
+# sound like what we need, but I couldn't quite get it to work. Instead, this is more
+# following https://pytest-with-eric.com/introduction/pytest-generate-tests/
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    if "backend" in metafunc.fixturenames:
+        markers = [m.name for m in metafunc.definition.iter_markers()]
+
+        requested_backends = [marker for marker in markers if marker in backends]
+
+        _backends = requested_backends if bool(requested_backends) else backends
+
+        metafunc.parametrize("backend", _backends, indirect=True)
+
+
 # Session-scoped fixtures
 
 
@@ -163,18 +177,26 @@ def test_data_path() -> Path:
     return Path(__file__).parents[1].joinpath("tests", "data")
 
 
-@pytest.fixture(scope="module", params=backends)
+# NOTE We need to declare this as module-scope explicitly; otherwise, pytest creates
+# backend for pytest_generate_tests as function-scoped fixture automatically
+@pytest.fixture(scope="module")
+def backend(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
 def test_mp(
-    request: pytest.FixtureRequest, tmp_env, test_data_path
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["ixmp4", "jdbc"],
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend=request.param
-    )
+    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
 @pytest.fixture(scope="session")
@@ -257,8 +279,13 @@ def protect_rename_dims():
     RENAME_DIMS.update(saved)
 
 
-@pytest.fixture(scope="function", params=backends)
-def test_mp_f(request: pytest.FixtureRequest, tmp_env, test_data_path):
+@pytest.fixture(scope="function")
+def test_mp_f(
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["ixmp4", "jdbc"],
+) -> Generator[Platform, Any, None]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
     This fixture has **function** scope: the same Platform is reused for one test
@@ -268,9 +295,7 @@ def test_mp_f(request: pytest.FixtureRequest, tmp_env, test_data_path):
     --------
     test_mp
     """
-    yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend=request.param
-    )
+    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
 # Assertions
@@ -401,11 +426,16 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 # Private utilities
 
 
-# TODO Check if this setup is necessary when running all tests (not just test_platform)
+# NOTE The test suite doesn't need all units/regions defined by default
+# Only those marked with 'tutorials' are needed for the MESSAGE tutorials
 def _setup_ixmp4_platform(mp: Platform) -> None:
     """Set up an ixmp4-backed Platform with things hardcoded in Java."""
-    mp.add_unit("cases", comment="As pre-defined in Java.")
-    mp.add_unit("km", comment="As pre-defined in Java.")
+    mp.add_unit("???", comment="As pre-defined in Java.")
+    mp.add_unit("GWa", comment="As pre-defined in Java.")
+    mp.add_unit("USD/kWa", comment="As pre-defined in Java.")
+    mp.add_unit("cases", comment="As pre-defined in Java.")  # tutorials
+    mp.add_unit("kg", comment="As pre-defined in Java.")
+    mp.add_unit("km", comment="As pre-defined in Java.")  # tutorials
     mp.add_region(region="World", hierarchy="common")
 
 

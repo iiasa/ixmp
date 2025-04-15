@@ -2,7 +2,7 @@ import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, TypeAlias, Union, cast, overload
+from typing import Any, Literal, Optional, Union, cast, overload
 
 import pandas as pd
 from ixmp4 import DataPoint
@@ -17,7 +17,7 @@ from ixmp4.core.optimization.variable import Variable, VariableRepository
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 # TODO Import this from typing when dropping Python 3.11
-from typing_extensions import Unpack
+from typing_extensions import TypeAlias, Unpack
 
 from ixmp.backend import ItemType
 from ixmp.backend.base import CachingBackend, ReadKwargs, WriteKwargs
@@ -27,6 +27,30 @@ from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 
 log = logging.getLogger(__name__)
+
+
+def _ensure_filters_values_are_lists(filters: dict[str, Union[Any, list[Any]]]) -> None:
+    """Convert singular values in `filters` to lists."""
+    for k, v in filters.items():
+        if not isinstance(v, list):
+            filters[k] = [v]
+
+
+def _align_dtypes_for_filters(
+    filters: dict[str, list[Any]], data: pd.DataFrame
+) -> None:
+    """Convert `filters` values to types enabling `data.isin()`."""
+    # TODO Is this really the proper way to handle these types?
+    TYPE_MAP = {"object": str, "int64": int}
+
+    for column_name in filters.keys():
+        if not isinstance(
+            filters[column_name][0], TYPE_MAP[str(data.dtypes[column_name])]
+        ):
+            filters[column_name] = [
+                TYPE_MAP[str(data.dtypes[column_name])](value)
+                for value in filters[column_name]
+            ]
 
 
 class IXMP4Backend(CachingBackend):
@@ -193,9 +217,10 @@ class IXMP4Backend(CachingBackend):
             raise RuntimeError(f"got version {v} instead of {ts.version}")
 
         # NOTE ixmp4 doesn't store 'scheme', which could in principle be anything.
-        # Since this is a shim between message_ix/ixmp4, I'm hardcoding this for now.
+        # Since this is a shim between message_ix/ixmp4, I'm hardcoding this as default.
         if isinstance(ts, Scenario):
-            ts.scheme = "MESSAGE"
+            if not ts.scheme:
+                ts.scheme = "IXMP4-MESSAGE"
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)
@@ -437,7 +462,7 @@ class IXMP4Backend(CachingBackend):
                 break
 
         if _item is None or _type is None:
-            raise KeyError(f"No item called {name} found on this Scenario!")
+            raise KeyError(f"No item called '{name}' found on this Scenario!")
         else:
             return (_type, _item)
 
@@ -519,7 +544,11 @@ class IXMP4Backend(CachingBackend):
             )
 
     def _add_data_to_set(
-        self, s: Scenario, name: str, key: Union[str, list[str]], comment: Optional[str]
+        self,
+        s: Scenario,
+        name: str,
+        key: Union[str, list[str]],
+        comment: Optional[str] = None,
     ) -> None:
         """Add data `key` to `name` in Scenario `s`.
 
@@ -572,7 +601,7 @@ class IXMP4Backend(CachingBackend):
         name: str,
         value: float,
         unit: Optional[str],
-        comment: Optional[str],
+        comment: Optional[str] = None,
     ) -> None:
         """Create the Scalar `name` in Scenario `s`.
 
@@ -602,7 +631,7 @@ class IXMP4Backend(CachingBackend):
         key: Union[str, list[str]],
         value: float,
         unit: str,
-        comment: Optional[str],
+        comment: Optional[str] = None,
     ) -> None:
         """Add data `key` to the Parameter `name` in Scenario `s`.
 
@@ -693,29 +722,6 @@ class IXMP4Backend(CachingBackend):
             series = pd.Series(item.data)
             return series[series.isin(values=filters[name])] if filters else series
 
-    def _ensure_filters_values_are_lists(
-        self, filters: dict[str, Union[Any, list[Any]]]
-    ) -> None:
-        """Convert singular values in `filters` to lists."""
-        for k, v in filters.items():
-            if not isinstance(v, list):
-                filters[k] = [v]
-
-    def _align_dtypes_for_filters(
-        self, filters: dict[str, list[Any]], data: pd.DataFrame
-    ) -> None:
-        """Convert `filters` values to types enabling `data.isin()`."""
-        # TODO Is this really the proper way to handle these types?
-        TYPE_MAP = {"object": str, "int64": int}
-        for column_name in filters.keys():
-            if not isinstance(
-                filters[column_name][0], TYPE_MAP[str(data.dtypes[column_name])]
-            ):
-                filters[column_name] = [
-                    TYPE_MAP[str(data.dtypes[column_name])](value)
-                    for value in filters[column_name]
-                ]
-
     def item_get_elements(
         self,
         s: Scenario,
@@ -750,8 +756,8 @@ class IXMP4Backend(CachingBackend):
             # Apply filters if requested
             if filters:
                 # isin() won't consider int(700) to be in ['700'], etc
-                self._ensure_filters_values_are_lists(filters=filters)
-                self._align_dtypes_for_filters(filters=filters, data=data)
+                _ensure_filters_values_are_lists(filters=filters)
+                _align_dtypes_for_filters(filters=filters, data=data)
 
                 data = data[data.isin(values=filters)[filters.keys()].all(axis=1)]
 
@@ -976,18 +982,20 @@ class IXMP4Backend(CachingBackend):
             unit={"name__in": unit},
         )
 
-        # TODO depending on data["type"], a different column name will contain the
-        # "year" values:
-        # step_year if type is ANNUAL or CATEGORICAL
-        # step_category if type is CATEGORICAL
-        # step_datetime if type is DATETIME
-        # We're only adding ANNUAL above for now, so let's assume that
-        data = data.loc[data["step_year"].isin(year)]
+        # Protect against empty data
+        if not data.empty:
+            # TODO depending on data["type"], a different column name will contain the
+            # "year" values:
+            # step_year if type is ANNUAL or CATEGORICAL
+            # step_category if type is CATEGORICAL
+            # step_datetime if type is DATETIME
+            # We're only adding ANNUAL above for now, so let's assume that
+            data = data.loc[data["step_year"].isin(year)]
 
-        # Select only the columns we're interested in
-        # TODO the ixmp4 docstrings sounds like region, variable, and unit are not part
-        # of the df?
-        data = data[["region", "variable", "unit", "step_year", "value"]]
+            # Select only the columns we're interested in
+            # TODO the ixmp4 docstrings sounds like region, variable, and unit are not
+            # part of the df?
+            data = data[["region", "variable", "unit", "step_year", "value"]]
 
         # TODO Why would we iterate and yield tuples instead of returning the whole df?
         for row in data.itertuples(index=False, name=None):

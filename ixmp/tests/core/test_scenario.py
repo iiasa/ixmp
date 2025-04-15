@@ -45,6 +45,8 @@ class TestScenario:
     """Tests of :class:`ixmp.Scenario`."""
 
     # Initialize Scenario
+    # NOTE IXMP4-backed Scenarios start with version = 1
+    @pytest.mark.jdbc
     def test_init(self, test_mp, scen_empty):
         # Empty scenario has version == 0
         assert scen_empty.version == 0
@@ -76,16 +78,26 @@ class TestScenario:
         ):
             Scenario(test_mp, model="foo", scenario="bar", cache=False)
 
-    def test_default_version(self, mp):
+    def test_default_version(self, mp: ixmp.Platform) -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"])
-        assert scen.version == 2
+        scenario_df = mp.scenario_list(
+            model=models["dantzig"]["model"], scen=models["dantzig"]["scenario"]
+        )
+        assert len(scenario_df["version"]) == 1
+        assert scen.version == scenario_df["version"].item()
 
+    # NOTE IXMP4(Backend) doesn't raise the same error/message as expected here
+    @pytest.mark.jdbc
     def test_from_url(self, mp, caplog):
         url = f"ixmp://{mp.name}/Douglas Adams/Hitchhiker"
 
         # Default version is loaded
         scen, mp = ixmp.Scenario.from_url(url)
-        assert scen.version == 1
+        scenario_df = mp.scenario_list(
+            model=models["h2g2"]["model"], scen=models["h2g2"]["scenario"]
+        )
+        assert len(scenario_df["version"]) == 1
+        assert scen.version == scenario_df["version"].item()
 
         # Giving an invalid version with errors='raise' raises an exception
         expected = (
@@ -118,6 +130,8 @@ class TestScenario:
         obs = scen2.set("h")
         npt.assert_array_equal(obs, ["test"])
 
+    # FIXME IXMP4Backend needs to handle change_scalar correctly
+    @pytest.mark.jdbc
     def test_clone_edit(self, scen):
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
@@ -131,6 +145,8 @@ class TestScenario:
         assert scen2.scalar("f") == {"unit": "USD/km", "value": 95}
 
     # Initialize items
+    # NOTE IXMP4Backend doesn't handle commits yet
+    @pytest.mark.jdbc
     def test_init_set(self, scen):
         """Test ixmp.Scenario.init_set()."""
 
@@ -149,6 +165,9 @@ class TestScenario:
         with pytest.raises(ValueError, match="'foo' already exists"):
             scen.init_set("foo")
 
+    # FIXME IXMP4Backend recognized 'foo' as having no idx_sets, likely due to the
+    # assumption of all names of all items being unique. We should drop that, it seems.
+    @pytest.mark.jdbc
     def test_init_par(self, scen) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -170,6 +189,8 @@ class TestScenario:
         scen2.commit("adding a scalar 'g'")
 
     # Existence checks
+    # TODO IXMP4Backend doesn't handle scalars correctly yet
+    @pytest.mark.jdbc
     def test_has_par(self, scen):
         assert scen.has_par("f")
         assert not scen.has_par("m")
@@ -182,6 +203,8 @@ class TestScenario:
         assert scen.has_var("x")
         assert not scen.has_var("y")
 
+    # TODO IXMP4Backend doesn't handle scalars correctly yet
+    @pytest.mark.jdbc
     def test_scalar(self, scen):
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
 
@@ -226,6 +249,8 @@ class TestScenario:
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
+    # TODO IXMP4Backend should support this, I think
+    @pytest.mark.jdbc
     def test_add_par2(self, scen):
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -255,6 +280,8 @@ class TestScenario:
         assert scen.idx_sets("d") == ["i", "j"]
         assert scen.idx_names("d") == ["i", "j"]
 
+    # FIXME IXMP4-backed par doesn't have 0 as a key; avoid this hardcoding
+    @pytest.mark.jdbc
     def test_par(self, scen):
         # Parameter data can be retrieved with filters
         df = scen.par("d", filters={"i": ["seattle"]})
@@ -264,6 +291,8 @@ class TestScenario:
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])
 
+    # FIXME IXMP4Backend is missing an item, likely the scalar f again
+    @pytest.mark.jdbc
     def test_items0(self, scen):
         # Without filters
         iterator = scen.items()
@@ -294,6 +323,9 @@ class TestScenario:
 
         assert i == 1
 
+    # FIXME For test case 3, IXMP4Backend somehow also lists 'foo' (likely defined in
+    # the fixture); in test case 2 it's missing f (the scalar)
+    @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "item_type, indexed_by, exp",
         (
@@ -333,6 +365,8 @@ class TestScenario:
         # Marginals
         npt.assert_array_almost_equal(df["mrg"], [0, 0, 0.036])
 
+    # TODO IXMP4Backend is not handling _cache correctly
+    @pytest.mark.jdbc
     def test_load_scenario_data(self, mp):
         """load_scenario_data() caches all data."""
         scen = ixmp.Scenario(mp, **models["dantzig"])
@@ -366,6 +400,9 @@ class TestScenario:
             scen.load_scenario_data()
 
     # I/O
+    # TODO For IXMP4Backend, this somehow triggers a GAMS-related error, while this test
+    # should never touch GAMS
+    @pytest.mark.jdbc
     def test_excel_io(self, scen, scen_empty, tmp_path, caplog):
         tmp_path /= "output.xlsx"
 
@@ -448,6 +485,9 @@ class TestScenario:
         # Succeeds with add_units=True
         s.read_excel(tmp_path, add_units=True, init_items=True)
 
+    # NOTE IXMP4-backed Scenarios should not call remove_solution() if they don't have
+    # one
+    @pytest.mark.jdbc
     def test_solve(self, tmp_path, scen):
         from subprocess import run
 
@@ -483,6 +523,8 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
+    # NOTE Not yet implemented on IXMP4Backend
+    @pytest.mark.jdbc
     def test_meta(self, mp, test_dict):
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         for k, v in test_dict.items():
@@ -513,6 +555,8 @@ class TestScenario:
         with pytest.raises(ValueError, match="Cannot use value"):
             scen.set_meta("test_string", complex(1, 1))
 
+    # NOTE Not yet implemented on IXMP4Backend
+    @pytest.mark.jdbc
     def test_meta_bulk(self, mp, test_dict):
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         scen.set_meta(test_dict)
@@ -560,6 +604,9 @@ def test_gh_210(scen_empty):
     assert all(foo_data.columns == columns)
 
 
+# NOTE IXMP4(Backend) raises an OptimizationDataValidationError if 'bar' is missing from
+# index set 'i' instead of a ValueError
+@pytest.mark.jdbc
 def test_set(scen_empty) -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
@@ -690,6 +737,9 @@ def test_filter_str(scen_empty):
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
+# FIXME Calling scen.solve(change_distance, ...) triggers a bug in the GAMS code
+# IXMP4Backend might need to avoid similar calls (which properties exactly?)
+@pytest.mark.jdbc
 def test_solve_callback(test_mp, request):
     """Test the callback argument to Scenario.solve().
 

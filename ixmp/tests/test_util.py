@@ -72,6 +72,8 @@ def test_diff_identical(test_mp, request):
         assert exp_name == name and len(df) == N
 
 
+# FIXME I don't see why IXMP4Backend shouldn't support this, but it's failing.
+@pytest.mark.jdbc
 def test_diff_data(test_mp, request):
     """diff() when Scenarios contain the same items, but different data."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -156,6 +158,9 @@ def test_diff_items(test_mp, request):
         pass  # No check of the contents
 
 
+# TODO IXMP4Backend doesn't handle retrieval of scalars correctly yet;
+# but look here for a test case!
+@pytest.mark.jdbc
 def test_discard_on_error(caplog, test_mp, request):
     caplog.set_level(logging.INFO, "ixmp.util")
 
@@ -293,6 +298,8 @@ def test_format_scenario_list(test_mp_f):
     ) == util.format_scenario_list(mp, as_url=True)
 
 
+# IXMP4Backend doesn't have proper commits yet, so these never raise RuntimeErrors
+@pytest.mark.jdbc
 def test_maybe_commit(caplog, test_mp):
     s = Scenario(test_mp, "maybe_commit", "maybe_commit", version="new")
 

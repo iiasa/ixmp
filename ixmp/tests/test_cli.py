@@ -27,6 +27,8 @@ def test_versiontype():
         vt.convert("xx", None, None)
 
 
+# FIXME This should work for IXMP4Backend, I think
+@pytest.mark.jdbc
 def test_main(ixmp_cli, test_mp, tmp_path):
     # Name of a temporary file that doesn't exist
     tmp_path /= "temp.properties"
@@ -96,7 +98,8 @@ def test_config(ixmp_cli):
 
 
 def test_list(ixmp_cli, test_mp):
-    cmd = ["list", "--match", "foo"]
+    # NOTE Some other test may leak scenarios onto test_mp
+    cmd = ["list", "--match", "no-scenario-named-foo"]
 
     # 'list' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(cmd)
@@ -113,7 +116,7 @@ def test_list(ixmp_cli, test_mp):
 0 (model, scenario) combination(s)
 0 total scenarios
 """
-    )
+    ), result.output
 
 
 def test_platform(ixmp_cli, tmp_path):
@@ -121,7 +124,7 @@ def test_platform(ixmp_cli, tmp_path):
 
     def call(*args, exit_0=True):
         result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
-        assert not exit_0 or result.exit_code == 0
+        assert not exit_0 or result.exit_code == 0, result.output
         return result
 
     # The default platform is 'local'
@@ -217,6 +220,8 @@ def test_platform_copy(ixmp_cli, tmp_path, request):
         call("copy", f"p1-{test_specific_name}", f"p3-{test_specific_name}")
 
 
+# TODO Version 1 for IXMP4Backend returns an empty DF for scen.timeseries()
+@pytest.mark.jdbc
 def test_import_ts(ixmp_cli, test_mp, test_data_path):
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
@@ -326,6 +331,10 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == 0, result.output
 
 
+# FIXME IXMP4Backend requires a version to be specified when loading a Scenario
+# or a default to be set for the corresponding Run before
+# since Run doesn't store `version`
+@pytest.mark.jdbc
 def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
     populate_test_platform(test_mp)
     tmp_path /= "dantzig.xlsx"
@@ -381,6 +390,8 @@ def test_show_versions(ixmp_cli):
     assert result.exit_code == 0, result.output
 
 
+# FIXME This is again the parameter error for IXMP4Backend and the DantzigModel
+@pytest.mark.jdbc
 def test_solve(ixmp_cli, test_mp):
     populate_test_platform(test_mp)
     cmd = [

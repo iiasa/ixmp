@@ -349,7 +349,6 @@ def _domain(item: Item4) -> Optional[list[str]]:
 
 def _records(
     item: Item4,
-    kind: str,
 ) -> Union[
     float,
     Union[list[float], list[int], list[str]],
@@ -381,10 +380,10 @@ def _records(
 
     # Pop items not to be stored
     for name in {
-        "Equation": ["levels", "marginals"],
-        "Parameter": ["units"],
-        "Variable": ["levels", "marginals"],
-    }[kind]:
+        Equation: ["levels", "marginals"],
+        Parameter: ["units"],
+        Variable: ["levels", "marginals"],
+    }[type(item)]:
         result.pop(name)
 
     return result
@@ -431,7 +430,10 @@ def _align_records_and_domain(
 
 
 def _update_item_in_container(container: gt.Container, item: ContainerData) -> None:
-    """Update `item` in `container`."""
+    """Update `item` in `container`.
+
+    Note that this overwrites existing records of `item`.
+    """
     # NOTE This is not updating the comment
 
     kwargs = dict(name=item.name, domain=item.domain, records=item.records)
@@ -441,6 +443,9 @@ def _update_item_in_container(container: gt.Container, item: ContainerData) -> N
     elif item.kind in ("Scalar", "Parameter"):
         container.addParameter(**kwargs)
     elif item.kind == "Equation":
+        # NOTE This was hardcoded in ixmp_source the same way; not sure how the
+        # 'type' in the container affects anything
+        kwargs["type"] = "E"
         container.addEquation(**kwargs)
     else:  # Variable
         container.addVariable(**kwargs)
@@ -467,10 +472,9 @@ def _add_items_to_container(
         # NOTE A container may already contain some data from the MESSAGE-specific setup
         # This seems to imply a UniqueConstraint over all item names, though.
         if not container.hasSymbols(item.name):
-            # The gams documentation confuses me: The docstring says `type` is required
-            # for Equations, the example says no. It seems to work fine like this, but
-            # if we do need a value, maybe we could guess based on
-            # https://github.com/iiasa/ixmp_source/blob/master/src/main/java/at/ac/iiasa/ixmp/objects/Scenario.java#L1926,
+            # NOTE This was hardcoded in ixmp_source the same way; not sure how the
+            # 'type' in the container affects anything
+            kwargs = {"type": "E"} if item.kind == "Equation" else {}
 
             # Create an item instance linked to the container
             klass(
@@ -480,6 +484,7 @@ def _add_items_to_container(
                 records=item.records,
                 # Optional, but must be str
                 description=item.docs or "",
+                **kwargs,
             )
         else:
             _update_item_in_container(container=container, item=item)
@@ -499,7 +504,7 @@ def _convert_ixmp4_items_to_containerdata(items: list[Item4]) -> list[ContainerD
     container_items: list[ContainerData] = []
 
     for item in items:
-        records = _records(item=item, kind=kind)
+        records = _records(item=item)
         # The order of keys in 'domain' is used by gamsapi to overwrite the order of
         # keys in 'records', so make sure they are aligned:
         # NOTE ixmp4 ensures that all _records.keys() are in _domain and vice-versa

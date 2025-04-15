@@ -425,7 +425,8 @@ class Backend(ABC):
         --------
         write_file
         """
-        s, _ = self._handle_rw_filters(kwargs["filters"])
+        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        s, _ = self._handle_rw_filters(filters=filters)
         _kwargs = {k: v for (k, v) in kwargs.items() if k != "filters"}
 
         path = Path(path)
@@ -471,7 +472,8 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
         # any other filters
-        s, kwargs["filters"] = self._handle_rw_filters(kwargs["filters"])
+        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        s, kwargs["filters"] = self._handle_rw_filters(filters=filters)
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
         path = Path(path)

@@ -30,7 +30,8 @@ jobs:
         - "3.12"
         - "3.13"  # Latest supported by ixmp
         gams-version:
-        - "43.4.1"  # First version including a macOS arm64 distribution
+        # - "43.4.1"  # First version including a macOS arm64 distribution
+        - "48.1.0" # Version matching the current gamsapi installation
 
         exclude:
         # Specific version combinations that are invalid / not to be used

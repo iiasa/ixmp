@@ -457,10 +457,14 @@ def _platform_fixture(
         )
     elif backend == "ixmp4":
         import ixmp4.conf
+        from ixmp4.core.exceptions import PlatformNotUnique
 
-        # Make in-memory DB/Platform for ixmp4
+        # Add to or get from ixmp4 an in-memory DB/Platform
         dsn = "sqlite:///:memory:"
-        ixmp4.conf.settings.toml.add_platform(name=platform_name, dsn=dsn)
+        try:
+            ixmp4.conf.settings.toml.add_platform(name=platform_name, dsn=dsn)
+        except PlatformNotUnique:
+            pass
 
         # Add ixmp4 backend to ixmp platforms
         ixmp_config.add_platform(platform_name, backend, _name=platform_name)

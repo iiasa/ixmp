@@ -4,6 +4,8 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast, overload
 
+import ixmp4.conf
+import ixmp4.conf.manager
 import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
@@ -63,28 +65,50 @@ class IXMP4Backend(CachingBackend):
     # subclasses of either)
     index: dict[TimeSeries, "Run"] = {}
 
-    def __init__(self, _backend: Optional["ixmp4_backend"] = None) -> None:
+    # Mapping from platform name to ixmp4 Backend; this enables repeated __init__()
+    # calls for in-memory DBs
+    backend_index: dict[str, "ixmp4_backend"] = {}
+
+    def __init__(self, _name: Optional[str] = None) -> None:
         from ixmp4.conf.base import PlatformInfo
         from ixmp4.data.backend import SqliteTestBackend
 
-        # Create a default backend if None is provided
-        if not _backend:
-            log.warning("Falling back to default SqliteBackend 'ixmp4-local'")
-            sqlite = SqliteTestBackend(
-                PlatformInfo(
-                    name="ixmp4-local",
-                    dsn=(
-                        "sqlite:///"
-                        f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"  # noqa: E501
-                        "/ixmp4-local.sqlite3"
-                    ),
-                )
+        DEFAULT_NAME = "ixmp4-local"
+
+        if not _name:
+            # Warn about using the default backend
+            log.warning(f"Falling back to default SqliteBackend '{DEFAULT_NAME}'")
+
+        name = _name if _name else DEFAULT_NAME
+
+        # Create default platform information if None is registered
+        platform_info = (
+            ixmp4.conf.settings.toml.get_platform(key=_name)
+            if _name
+            else PlatformInfo(
+                name=name,
+                dsn=(
+                    "sqlite:///"
+                    f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"
+                    f"/{name}.sqlite3"
+                ),
             )
+        )
+
+        # Get the ixmp4 Backend object if one already exists or create and register it
+        try:
+            sqlite = self.backend_index[name]
+        except KeyError:
+            sqlite = SqliteTestBackend(platform_info)
+
+            # Ensure default DB is setup correctly
+            # NOTE sqlalchemy catches existing tables to avoid superfluous CREATEs
             sqlite.setup()
 
-        self._backend = _backend if _backend else sqlite
+            self.backend_index[name] = sqlite
 
         # Instantiate and store
+        self._backend = sqlite
         self._platform = ixmp4_platform(_backend=self._backend)
 
     # def __del__(self) -> None:
@@ -108,9 +132,9 @@ class IXMP4Backend(CachingBackend):
 
         info: dict[str, Any] = {}
         try:
-            info["_backend"] = kwargs["_backend"]
+            info["_name"] = kwargs["_name"]
         except KeyError:
-            raise ValueError(f"Missing key '_backend' for backend=ixmp4; got {kwargs}")
+            raise ValueError(f"Missing key '_name' for backend=ixmp4; got {kwargs}")
 
         return info
 

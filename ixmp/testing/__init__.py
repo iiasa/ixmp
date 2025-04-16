@@ -456,17 +456,14 @@ def _platform_fixture(
             platform_name, backend, "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
         )
     elif backend == "ixmp4":
-        from ixmp4.conf.base import PlatformInfo
-        from ixmp4.data.backend import SqliteTestBackend
+        import ixmp4.conf
 
-        # Setup ixmp4 backend and run DB migrations
-        sqlite = SqliteTestBackend(
-            PlatformInfo(name=platform_name, dsn="sqlite:///:memory:")
-        )
-        sqlite.setup()
+        # Make in-memory DB/Platform for ixmp4
+        dsn = "sqlite:///:memory:"
+        ixmp4.conf.settings.toml.add_platform(name=platform_name, dsn=dsn)
 
         # Add ixmp4 backend to ixmp platforms
-        ixmp_config.add_platform(platform_name, backend, _backend=sqlite)
+        ixmp_config.add_platform(platform_name, backend, _name=platform_name)
 
     # Launch Platform
     mp = Platform(name=platform_name, backend=backend)
@@ -483,8 +480,4 @@ def _platform_fixture(
     ixmp_config.remove_platform(platform_name)
 
     if backend == "ixmp4":
-        assert sqlite  # to satisfy type checkers
-
-        # Close DB connection and remove platform
-        sqlite.close()
-        sqlite.teardown()
+        ixmp4.conf.settings.toml.remove_platform(key=platform_name)

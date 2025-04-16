@@ -4,7 +4,6 @@ from importlib.metadata import PackageNotFoundError, version
 
 from ixmp._config import config
 from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
-from ixmp.backend.ixmp4 import IXMP4Backend
 from ixmp.backend.jdbc import JDBCBackend
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario, TimeSeries
@@ -48,7 +47,11 @@ sys.meta_path.append(
 
 # Register Backends provided by ixmp
 BACKENDS["jdbc"] = JDBCBackend
-BACKENDS["ixmp4"] = IXMP4Backend
+
+if sys.version_info >= (3, 10):
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    BACKENDS["ixmp4"] = IXMP4Backend
 
 # Register Models provided by ixmp
 MODELS.update(

@@ -1,29 +1,32 @@
 import logging
+import sys
 from collections import deque
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal, Optional, TypeVar, Union, cast
 
-import gams.transfer as gt
 import pandas as pd
-from ixmp4.core import Run
-from ixmp4.core.optimization.base import Lister
-from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
-from ixmp4.core.optimization.parameter import Parameter
-from ixmp4.core.optimization.scalar import Scalar
-from ixmp4.core.optimization.table import Table
-from ixmp4.core.optimization.variable import Variable
-from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
-from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
 
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 from ixmp.util.ixmp4 import ContainerData
 
 from . import ItemType
 
-# Type variable that can be any one of these 6 types, but not a union of 2+ of them
-Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
+if sys.version_info >= (3, 10):
+    import gams.transfer as gt
+    from ixmp4.core import Run
+    from ixmp4.core.optimization.base import Lister
+    from ixmp4.core.optimization.equation import Equation
+    from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+    from ixmp4.core.optimization.parameter import Parameter
+    from ixmp4.core.optimization.scalar import Scalar
+    from ixmp4.core.optimization.table import Table
+    from ixmp4.core.optimization.variable import Variable
+    from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
+    from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
+
+    # Type variable that can be any one of these 6 types, but not a union of 2+ of them
+    Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
 
 
 log = logging.getLogger(__name__)

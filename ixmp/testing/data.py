@@ -1,4 +1,5 @@
 # Methods are in alphabetical order
+import sys
 from itertools import product
 from math import ceil
 from typing import TYPE_CHECKING, Any, Optional
@@ -11,7 +12,6 @@ import pytest
 
 from ixmp import Platform, Scenario, TimeSeries
 from ixmp.backend import IAMC_IDX
-from ixmp.backend.ixmp4 import IXMP4Backend
 
 if TYPE_CHECKING:
     from typing import TypedDict
@@ -215,8 +215,11 @@ def make_dantzig(
     --------
     .DantzigModel
     """
-    if isinstance(mp._backend, IXMP4Backend):
-        _add_required_units(mp=mp)
+    if sys.version_info >= (3, 10):
+        from ixmp.backend.ixmp4 import IXMP4Backend
+
+        if isinstance(mp._backend, IXMP4Backend):
+            _add_required_units(mp=mp)
 
     # Add custom units and region for time series data
     try:

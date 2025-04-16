@@ -1,8 +1,9 @@
-# TODO Import this from typing when dropping Python 3.11
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import pandas as pd
+
+# TODO Import this from typing when dropping Python 3.11
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:

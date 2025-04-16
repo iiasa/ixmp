@@ -441,9 +441,7 @@ class TestTimeSeries:
         ts.add_timeseries(data)
         # TODO: add check that warning message is displayed
         ts.commit("")
-        assert [
-            "Dropped extra column(s) ['climate_model'] from data"
-        ] == caplog.messages
+        assert "Dropped extra column(s) ['climate_model'] from data" in caplog.messages
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc

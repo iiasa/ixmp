@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast, overload
 
 import ixmp4.conf
-import ixmp4.conf.manager
 import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
@@ -23,7 +22,7 @@ from typing_extensions import TypeAlias, Unpack
 
 from ixmp.backend import ItemType
 from ixmp.backend.base import CachingBackend, ReadKwargs, WriteKwargs
-from ixmp.backend.io import read_gdx_to_run, write_run_to_gdx
+from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries

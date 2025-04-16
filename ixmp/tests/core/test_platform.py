@@ -168,8 +168,11 @@ def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     )
     obs = pd.read_csv(path, index_col=False, header=0)
 
-    # NOTE It seems there are more lines here, maybe due to an increased number of runs?
-    assert 6 == len(obs)
+    # We only have 1 model, scenario, region, variable, unit, so we expect lines equal
+    # to number of versions (equals default version number) times number of years:
+    expected = exp_default_version * len(DATA[0]["year"])  # Usually 4
+
+    assert expected == len(obs)
 
 
 def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None:

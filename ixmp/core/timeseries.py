@@ -158,6 +158,7 @@ class TimeSeries:
             ts = cls(platform, **scenario_info)
         except Exception as e:
             if errors == "warn":
+                # FIXME ixmp4 errors might have empty e.args
                 log.warning(
                     f"{e.__class__.__name__}: {e.args[0]}\n"
                     f"when loading {cls.__name__} from url: {repr(url)}"

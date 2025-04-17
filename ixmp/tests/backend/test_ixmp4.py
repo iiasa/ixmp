@@ -22,6 +22,8 @@ from ixmp.backend.ixmp4 import (
 # @pytest.mark.ixmp4
 # def test__index_and_set_attrs(test_mp: Platform) -> None:
 
+pytestmark = pytest.mark.min_ixmp4_version
+
 
 @pytest.mark.ixmp4
 def test__get_repo(test_mp: Platform) -> None:

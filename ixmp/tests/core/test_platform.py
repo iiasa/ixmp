@@ -2,7 +2,6 @@
 
 import logging
 import re
-import sys
 from collections.abc import Generator
 from pathlib import Path
 from sys import getrefcount
@@ -16,14 +15,10 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend import FIELDS
-from ixmp.testing import DATA, assert_logs, models
+from ixmp.testing import DATA, assert_logs, min_ixmp4_version, models
 
 if TYPE_CHECKING:
     pass
-
-min_ixmp4_version = pytest.mark.skipif(
-    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
-)
 
 
 class TestPlatform:

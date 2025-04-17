@@ -26,6 +26,8 @@ from ixmp.util.ixmp4 import ContainerData
 # TODO Should all tests handling scenarios get `request` and use unique scenario names?
 # TODO Should we make the run-retrieval its own fixture?
 
+pytestmark = pytest.mark.min_ixmp4_version
+
 
 @pytest.mark.ixmp4
 def test__domain(test_mp: ixmp.Platform) -> None:

@@ -47,7 +47,7 @@ import pint
 import pytest
 from click.testing import CliRunner
 
-from ixmp import BACKENDS, Platform, cli
+from ixmp import BACKENDS, Platform, Scenario, cli
 from ixmp import config as ixmp_config
 
 from .data import (
@@ -298,6 +298,31 @@ def test_mp_f(
     test_mp
     """
     yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+
+
+# NOTE No type hint for Python 3.9 compliance
+@pytest.fixture
+def ixmp4_backend(test_mp: Platform):
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    assert isinstance(test_mp._backend, IXMP4Backend)
+    return test_mp._backend
+
+
+@pytest.fixture
+def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
+    return Scenario(
+        mp=test_mp,
+        model=request.node.nodeid + "model",
+        scenario="scenario",
+        version="new",
+    )
+
+
+# NOTE No type hint for Python 3.9 compliance
+@pytest.fixture
+def run(ixmp4_backend, scenario: Scenario):
+    return ixmp4_backend.index[scenario]
 
 
 # Assertions

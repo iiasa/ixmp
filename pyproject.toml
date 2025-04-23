@@ -85,7 +85,10 @@ exclude_also = [
   # Imports only used by type checkers
   "if TYPE_CHECKING:",
 ]
-omit = ["ixmp/util/sphinx_linkcode_github.py"]
+omit = [
+  "ixmp/util/sphinx_linkcode_github.py",
+  ".venv/*",
+]
 
 [tool.mypy]
 files = [

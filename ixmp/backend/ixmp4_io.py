@@ -16,6 +16,7 @@ from ixmp4.core.optimization.variable import Variable
 from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
 from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
 
+from ixmp.model.gams import gams_info
 from ixmp.util.ixmp4 import ContainerData
 
 log = logging.getLogger(__name__)
@@ -272,7 +273,7 @@ def write_run_to_gdx(
     # TODO How to deal with [*] Set? That seems to be handled by GAMS automatically.
 
     # Define the container
-    container = gt.Container()
+    container = gt.Container(system_directory=str(gams_info().system_dir))
 
     repository: list[Lister] = [
         run.optimization.indexsets,
@@ -405,7 +406,9 @@ def read_gdx_to_run(
         )
 
     # Create a GAMS Container from the `result_file`
-    container = gt.Container(load_from=result_file)
+    container = gt.Container(
+        load_from=result_file, system_directory=str(gams_info().system_dir)
+    )
 
     # Load requested Variables and read them to `run`
     # NOTE This handles empty `var_list`, too,

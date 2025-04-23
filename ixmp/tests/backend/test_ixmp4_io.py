@@ -3,6 +3,7 @@ from typing import Literal, Union
 
 import pytest
 
+from ixmp.model.gams import gams_info
 from ixmp.testing import min_ixmp4_version
 from ixmp.util.ixmp4 import ContainerData
 
@@ -14,7 +15,7 @@ pytestmark = min_ixmp4_version
 def container():
     from gams.transfer import Container
 
-    return Container()
+    return Container(system_directory=str(gams_info().system_dir))
 
 
 def test__record_versions(container) -> None:
@@ -213,7 +214,10 @@ class TestIxmp4IOFunctions:
             record_version_packages=["ixmp"],
             include_variables_and_equations=True,
         )
-        container = Container(load_from=tmp_path / "test_write.gdx")
+        container = Container(
+            load_from=tmp_path / "test_write.gdx",
+            system_directory=str(gams_info().system_dir),
+        )
         assert len(container.data) == 1
         assert "ixmp_version" in container.data.keys()
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Literal, Union
 
+import pandas as pd
 import pytest
 
 from ixmp.model.gams import gams_info
@@ -28,6 +29,20 @@ def test__record_versions(container) -> None:
     indexset = indexsets[0]
     assert indexset.name == "ixmp_version"
     assert indexset.domain == ["*", "*"]
+
+    # Test recording the package version of something that's never present
+    _record_versions(container=container, packages=["not installed"])
+    indexset = container.getSets()[0]
+    print(indexset.records)
+    pd.testing.assert_frame_equal(
+        indexset.records[["uni_0", "uni_1"]],
+        pd.DataFrame(
+            {
+                "uni_0": pd.Categorical(["not installed"], ordered=True),
+                "uni_1": pd.Categorical(["(not installed)"], ordered=True),
+            }
+        ),
+    )
 
 
 def test__update_item_in_container(container) -> None:

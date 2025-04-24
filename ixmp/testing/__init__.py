@@ -137,6 +137,7 @@ def pytest_report_header(config, start_path) -> str:
 # sound like what we need, but I couldn't quite get it to work. Instead, this is more
 # following https://pytest-with-eric.com/introduction/pytest-generate-tests/
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Parametrize tests for the two backend options."""
     if "backend" in metafunc.fixturenames:
         markers = [m.name for m in metafunc.definition.iter_markers()]
 

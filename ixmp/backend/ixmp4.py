@@ -827,6 +827,7 @@ class IXMP4Backend(CachingBackend):
         type: Literal["set", "par", "equ", "indexset"],
         name: str,
     ) -> None:
+        # NOTE We need to allow 'set' and 'indexset' for type for backward compatibility
         if type == "set":
             # type will always be either "indexset" or "set"
             type, _ = self._find_item(s=s, name=name, types=("indexset", "set"))  # type: ignore[assignment]
@@ -1163,7 +1164,7 @@ class IXMP4Backend(CachingBackend):
         if _path.suffix == ".gdx" and item_type is ItemType.MODEL:
             kw = {"check_solution", "comment", "equ_list", "var_list"}
 
-            if not isinstance(ts, Scenario):  # pragma: no cover
+            if not isinstance(ts, Scenario):
                 raise ValueError("read from GDX requires a Scenario object")
             elif set(_kwargs.keys()) != kw:
                 raise ValueError(
@@ -1177,9 +1178,6 @@ class IXMP4Backend(CachingBackend):
             # these will always be true
             equ_list = cast(list[str], _kwargs.pop("equ_list"))
             var_list = cast(list[str], _kwargs.pop("var_list"))
-
-            if len(_kwargs):
-                raise ValueError(f"extra keyword arguments {_kwargs}")
 
             read_gdx_to_run(
                 run=self.index[ts],

@@ -561,6 +561,7 @@ class JDBCBackend(CachingBackend):
                 kwargs.pop("check_solution"),
             )
 
+            # NOTE This test seems unnecessary with the 'elif' clause above
             if len(kwargs):
                 raise ValueError(f"extra keyword arguments {kwargs}")
 

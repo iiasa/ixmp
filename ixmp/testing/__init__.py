@@ -105,12 +105,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--ixmp-jvm-mem",
         action="store",
-        help="Heap space to allocated for the JDBCBackend/JVM.",
+        default=-1,
+        help="Memory limit, in MiB, for the Java Virtual Machine (JVM) started by the "
+        "ixmp JDBCBackend",
+    )
+    parser.addoption(
+        "--ixmp-resource-limit",
+        action="store",
+        default="DATA:-1",
+        help=(
+            "Limit a Python resource via the ixmp.testing.resource_limit fixture. Use "
+            "e.g. 'DATA:500' to set RLIMIT_DATA to 500 MiB."
+        ),
     )
     parser.addoption(
         "--ixmp-user-config",
         action="store_true",
-        help="Use the user's existing config/'local' platform.",
+        help="Use the user's existing ixmp config, including platforms.",
     )
 
 

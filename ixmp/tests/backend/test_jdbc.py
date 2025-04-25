@@ -495,9 +495,9 @@ def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: n
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
     kwarg = dict()
-    jvm_mem_limit = int(request.config.getoption("--jvm-mem-limit"))
-    if jvm_mem_limit > 0:
-        kwarg["jvmargs"] = f"-Xmx{jvm_mem_limit}M"
+    max_memory = int(request.config.getoption("--ixmp-jvm-mem"))
+    if max_memory > 0:
+        kwarg["jvmargs"] = f"-Xmx{max_memory}M"
 
     # Path for this database
     path = tmp_path_factory.mktemp("reload_cycle") / "base"

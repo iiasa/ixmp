@@ -23,6 +23,9 @@ def test_base_model():
         M1()
 
 
+# FIXME IXMP4Backend doesn't handle scenario.change_scalar() correctly:
+# We can't just create() it, it might already exist, so then we need update()
+@pytest.mark.jdbc
 def test_model_initialize(test_mp, caplog, request):
     # Model.initialize runs on an empty Scenario
     s = make_dantzig(test_mp, request=request)
@@ -111,6 +114,9 @@ class TestGAMSModel:
     def dantzig(self, test_mp, request):
         yield make_dantzig(test_mp, request=request)
 
+    # FIXME The name_ seems to be handled correctly, but IXMP4Backend struggles with
+    # make_dantzig().clone().solve() somehow.
+    @pytest.mark.jdbc
     @pytest.mark.parametrize("char", r'<>"/\|?*')
     def test_filename_invalid_char(self, dantzig, char):
         """Model can be solved with invalid character names."""
@@ -122,6 +128,8 @@ class TestGAMSModel:
         # the GAMSModel.model_name attribute, and in turn the GDX file names used.
         s.solve(name_=name, quiet=True)
 
+    # FIXME IXMP4Backend should support this
+    @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "kwargs",
         [

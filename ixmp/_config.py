@@ -68,6 +68,14 @@ def _platform_default():
             "driver": "hsqldb",
             "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
         },
+        "ixmp4-local": {
+            "class": "ixmp4",
+            "dsn": (
+                "sqlite:///"
+                f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"
+                "/ixmp4-local.sqlite3"
+            ),
+        },
     }
 
 

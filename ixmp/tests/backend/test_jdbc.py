@@ -61,6 +61,8 @@ def test_close_default_logging(test_mp_f, capfd):
     assert captured.out == ""
 
 
+# NOTE IXMP4Backend's close_db() is a noop
+@pytest.mark.jdbc
 def test_close_increased_logging(test_mp_f, capfd):
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
@@ -217,6 +219,8 @@ class TestJDBCBackend:
         be.gc()
 
 
+# TODO IXMP4Backend needs to handle change_scalar() correctly
+@pytest.mark.jdbc
 def test_exceptions(test_mp):
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
@@ -366,6 +370,8 @@ def exception_verbose_true():
     ixmp.backend.jdbc._EXCEPTION_VERBOSE = tmp  # Restore value
 
 
+# FIMXE This raises a RunNotFound on IXMP4Backend
+@pytest.mark.jdbc
 def test_verbose_exception(test_mp, exception_verbose_true):
     # Exception stack trace is logged for debugging
     with pytest.raises(RuntimeError) as exc_info:
@@ -654,6 +660,8 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
+# TODO Not yet implemented by IXMP4Backend
+@pytest.mark.jdbc
 def test_docs(test_mp, request):
     scen = make_dantzig(test_mp, request=request)
     # test model docs

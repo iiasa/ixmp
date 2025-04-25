@@ -57,10 +57,16 @@ docs = [
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]
+# Change ixmp4 to new release after https://github.com/iiasa/ixmp4/pull/164 is merged
+ixmp4 = [
+  "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items", 
+  "gamsapi[core,transfer] >= 45.7.0",
+]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
   "ixmp[report,tutorial]",
+  "ixmp[ixmp4]; python_version > '3.9'",
   "memory_profiler",
   "nbclient >= 0.5",
   "pytest >= 5",
@@ -79,7 +85,10 @@ exclude_also = [
   # Imports only used by type checkers
   "if TYPE_CHECKING:",
 ]
-omit = ["ixmp/util/sphinx_linkcode_github.py"]
+omit = [
+  "ixmp/util/sphinx_linkcode_github.py",
+  ".venv/*",
+]
 
 [tool.mypy]
 files = [
@@ -109,6 +118,8 @@ addopts = """
 markers = [
   "rixmp: test of the ixmp R interface.",
   "performance: ixmp performance test.",
+  "jdbc: tests exclusive to JDBCBackend.",
+  "ixmp4: tests exclusive to IXMP4Backend.",
 ]
 tmp_path_retention_policy = "none"
 

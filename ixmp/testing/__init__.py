@@ -35,16 +35,19 @@ These include:
 import logging
 import os
 import shutil
+import sys
+from collections.abc import Generator
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
+from typing import Any, Literal
 
 import pint
 import pytest
 from click.testing import CliRunner
 
-from ixmp import Platform, cli
+from ixmp import BACKENDS, Platform, Scenario, cli
 from ixmp import config as ixmp_config
 
 from .data import (
@@ -85,11 +88,19 @@ __all__ = [
     "tmp_env",
 ]
 
+# Parametrize platforms for jdbc and ixmp4
+backends = list(BACKENDS.keys())
+
+# Provide a skip marker since ixmp4 is not published for Python 3.9
+min_ixmp4_version = pytest.mark.skipif(
+    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
+)
+
 
 # Pytest hooks
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     """Add the ``--user-config`` command-line option to pytest."""
     parser.addoption(
         "--ixmp-jvm-mem",
@@ -103,7 +114,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_sessionstart(session):
+def pytest_sessionstart(session: pytest.Session) -> None:
     """Unset any configuration read from the user's directory."""
     from ixmp.backend import jdbc
 
@@ -117,9 +128,24 @@ def pytest_sessionstart(session):
     jdbc._GC_AGGRESSIVE = False
 
 
-def pytest_report_header(config, start_path):
+def pytest_report_header(config, start_path) -> str:
     """Add the ixmp configuration to the pytest report header."""
     return f"ixmp config: {repr(ixmp_config.values)}"
+
+
+# NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
+# sound like what we need, but I couldn't quite get it to work. Instead, this is more
+# following https://pytest-with-eric.com/introduction/pytest-generate-tests/
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Parametrize tests for the two backend options."""
+    if "backend" in metafunc.fixturenames:
+        markers = [m.name for m in metafunc.definition.iter_markers()]
+
+        requested_backends = [marker for marker in markers if marker in backends]
+
+        _backends = requested_backends if bool(requested_backends) else backends
+
+        metafunc.parametrize("backend", _backends, indirect=True)
 
 
 # Session-scoped fixtures
@@ -137,7 +163,7 @@ def ixmp_cli(tmp_env):
 
 
 @pytest.fixture(scope="module")
-def mp(test_mp):
+def mp(test_mp: Platform) -> Generator[Platform, Any, None]:
     """A :class:`.Platform` containing test data.
 
     This fixture is **module** -scoped, and is used in :mod:`.test_platform`,
@@ -149,23 +175,37 @@ def mp(test_mp):
 
 
 @pytest.fixture(scope="session")
-def test_data_path():
+def test_data_path() -> Path:
     """Path to the directory containing test data."""
     return Path(__file__).parents[1].joinpath("tests", "data")
 
 
+# NOTE We need to declare this as module-scope explicitly; otherwise, pytest creates
+# backend for pytest_generate_tests as function-scoped fixture automatically
 @pytest.fixture(scope="module")
-def test_mp(request, tmp_env, test_data_path):
+def backend(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
+def test_mp(
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["ixmp4", "jdbc"],
+) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path)
+    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
 @pytest.fixture(scope="session")
-def tmp_env(pytestconfig, tmp_path_factory):
+def tmp_env(
+    pytestconfig: pytest.Config, tmp_path_factory: pytest.TempPathFactory
+) -> Generator[os._Environ[str], Any, None]:
     """Return the os.environ dict with the IXMP_DATA variable set.
 
     IXMP_DATA will point to a temporary directory that is unique to the test session.
@@ -187,13 +227,13 @@ def tmp_env(pytestconfig, tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def tutorial_path():
+def tutorial_path() -> Path:
     """Path to the directory containing the tutorials."""
     return Path(__file__).parents[2].joinpath("tutorial")
 
 
 @pytest.fixture(scope="session")
-def ureg():
+def ureg() -> Generator[pint.UnitRegistry, Any, None]:
     """Application-wide units registry."""
     registry = pint.get_application_registry()
 
@@ -243,7 +283,12 @@ def protect_rename_dims():
 
 
 @pytest.fixture(scope="function")
-def test_mp_f(request, tmp_env, test_data_path):
+def test_mp_f(
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["ixmp4", "jdbc"],
+) -> Generator[Platform, Any, None]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
     This fixture has **function** scope: the same Platform is reused for one test
@@ -253,7 +298,32 @@ def test_mp_f(request, tmp_env, test_data_path):
     --------
     test_mp
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path)
+    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+
+
+# NOTE No type hint for Python 3.9 compliance
+@pytest.fixture
+def ixmp4_backend(test_mp: Platform):
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    assert isinstance(test_mp._backend, IXMP4Backend)
+    return test_mp._backend
+
+
+@pytest.fixture
+def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
+    return Scenario(
+        mp=test_mp,
+        model=request.node.nodeid + "model",
+        scenario="scenario",
+        version="new",
+    )
+
+
+# NOTE No type hint for Python 3.9 compliance
+@pytest.fixture
+def run(ixmp4_backend, scenario: Scenario):
+    return ixmp4_backend.index[scenario]
 
 
 # Assertions
@@ -384,19 +454,53 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 # Private utilities
 
 
-def _platform_fixture(request, tmp_env, test_data_path):
+# NOTE The test suite doesn't need all units/regions defined by default
+# Only those marked with 'tutorials' are needed for the MESSAGE tutorials
+def _setup_ixmp4_platform(mp: Platform) -> None:
+    """Set up an ixmp4-backed Platform with things hardcoded in Java."""
+    mp.add_unit("???", comment="As pre-defined in Java.")
+    mp.add_unit("GWa", comment="As pre-defined in Java.")
+    mp.add_unit("USD/kWa", comment="As pre-defined in Java.")
+    mp.add_unit("cases", comment="As pre-defined in Java.")  # tutorials
+    mp.add_unit("kg", comment="As pre-defined in Java.")
+    mp.add_unit("km", comment="As pre-defined in Java.")  # tutorials
+    mp.add_region(region="World", hierarchy="common")
+
+
+def _platform_fixture(
+    request: pytest.FixtureRequest,
+    tmp_env,
+    test_data_path,
+    backend: Literal["jdbc", "ixmp4"],
+) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace("/", " ")
 
     # Add a platform
-    ixmp_config.add_platform(
-        platform_name, "jdbc", "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
-    )
+    if backend == "jdbc":
+        ixmp_config.add_platform(
+            platform_name, backend, "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
+        )
+    elif backend == "ixmp4":
+        import ixmp4.conf
+        from ixmp4.core.exceptions import PlatformNotUnique
+
+        # Add to or get from ixmp4 an in-memory DB/Platform
+        dsn = "sqlite:///:memory:"
+        try:
+            ixmp4.conf.settings.toml.add_platform(name=platform_name, dsn=dsn)
+        except PlatformNotUnique:
+            pass
+
+        # Add ixmp4 backend to ixmp platforms
+        ixmp_config.add_platform(platform_name, backend, _name=platform_name)
 
     # Launch Platform
-    mp = Platform(name=platform_name)
+    mp = Platform(name=platform_name, backend=backend)
+    if backend == "ixmp4":
+        _setup_ixmp4_platform(mp=mp)
     yield mp
 
     # Teardown: don't show log messages when destroying the platform, even if
@@ -406,3 +510,6 @@ def _platform_fixture(request, tmp_env, test_data_path):
 
     # Remove from config
     ixmp_config.remove_platform(platform_name)
+
+    if backend == "ixmp4":
+        ixmp4.conf.settings.toml.remove_platform(key=platform_name)

@@ -1,4 +1,5 @@
 # Methods are in alphabetical order
+import sys
 from itertools import product
 from math import ceil
 from typing import TYPE_CHECKING, Any, Optional
@@ -182,6 +183,11 @@ def add_test_data(scen: Scenario):
     return t, t_foo, t_bar, x
 
 
+def _add_required_units(mp: Platform) -> None:
+    mp.add_unit("USD")
+    mp.add_unit("???")
+
+
 def make_dantzig(
     mp: Platform,
     solve: bool = False,
@@ -209,6 +215,12 @@ def make_dantzig(
     --------
     .DantzigModel
     """
+    if sys.version_info >= (3, 10):
+        from ixmp.backend.ixmp4 import IXMP4Backend
+
+        if isinstance(mp._backend, IXMP4Backend):
+            _add_required_units(mp=mp)
+
     # Add custom units and region for time series data
     try:
         mp.add_unit("USD/km")
@@ -250,7 +262,7 @@ def make_dantzig(
     return scen
 
 
-def populate_test_platform(platform):
+def populate_test_platform(platform: Platform) -> None:
     """Populate `platform` with data for testing.
 
     Many of the tests in :mod:`ixmp.tests.core` depend on this set of data.

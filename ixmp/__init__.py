@@ -48,6 +48,11 @@ sys.meta_path.append(
 # Register Backends provided by ixmp
 BACKENDS["jdbc"] = JDBCBackend
 
+if sys.version_info >= (3, 10):
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    BACKENDS["ixmp4"] = IXMP4Backend
+
 # Register Models provided by ixmp
 MODELS.update(
     {

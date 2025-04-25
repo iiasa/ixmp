@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import ixmp
 from ixmp.testing import add_random_model_data, models
 
 
-def test_read_excel_big(test_mp, tmp_path):
+def test_read_excel_big(test_mp: ixmp.Platform, tmp_path: Path) -> None:
     """Excel files with model items split across sheets can be read.
 
     https://github.com/iiasa/ixmp/pull/345.

@@ -61,6 +61,15 @@ Provided backends
 
 .. autofunction:: ixmp.backend.jdbc.start_jvm
 
+.. currentmodule:: ixmp.backend.ixmp4
+
+.. warning::
+   `ixmp4 <https://github.com/iiasa/ixmp4/>`_ only supports Python 3.10 and above. 
+   Please ensure you are using a sufficiently recent Python version if you want to use IXMP4Backend.
+   If you are restricted to Python 3.9 and below, please use JDBCBackend instead.
+
+.. autoclass:: ixmp.backend.ixmp4.IXMP4Backend
+
 
 .. currentmodule:: ixmp.backend
 

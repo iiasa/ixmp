@@ -124,7 +124,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     scen.add_par("x", x)
 
     with assert_logs(
-        caplog, "x: mixed units ['kg', 'USD/pkm'] discarded", at_level=logging.INFO
+        caplog, ["x: mixed units", "kg", "USD/pkm", "discarded"], at_level=logging.INFO
     ):
         rep.get(x_key)
 

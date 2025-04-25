@@ -30,7 +30,7 @@ jobs:
         - "3.12"
         - "3.13"  # Latest supported by ixmp
         gams-version:
-        - "43.4.1"  # First version including a macOS arm64 distribution
+        - "45.7.0" # Oldest version of gamsapi allowed by pyproject.toml
 
         exclude:
         # Specific version combinations that are invalid / not to be used

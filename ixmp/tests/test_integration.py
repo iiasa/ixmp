@@ -12,6 +12,8 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
+# FIXME IXMP4Backend seems to return columns with no/wrong names for scen.timeseries()
+@pytest.mark.jdbc
 def test_run_clone(caplog, test_mp, request):
     caplog.set_level(logging.WARNING)
 
@@ -66,6 +68,8 @@ def test_run_clone(caplog, test_mp, request):
     )
 
 
+# FIXME Fix IXMP4Backend return value for s.var()["lvl"] so that np.isnan() accepts it
+@pytest.mark.jdbc
 def test_run_remove_solution(test_mp, request):
     # create a new instance of the transport problem and solve it
     mp = test_mp

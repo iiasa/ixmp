@@ -5,7 +5,7 @@ import pandas as pd
 
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
-from . import ItemType
+from .common import ItemType
 
 log = logging.getLogger(__name__)
 

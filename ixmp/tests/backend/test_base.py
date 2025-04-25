@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from ixmp import TimeSeries
-from ixmp.backend import ItemType
 from ixmp.backend.base import Backend, CachingBackend
+from ixmp.backend.common import ItemType
 from ixmp.testing import make_dantzig
 
 

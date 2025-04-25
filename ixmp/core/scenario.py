@@ -10,10 +10,9 @@ from warnings import warn
 
 import pandas as pd
 
-from ixmp.backend import ItemType
+from ixmp.backend.common import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
-from ixmp.model import get_model
 from ixmp.util import as_str_list, check_year
 
 log = logging.getLogger(__name__)
@@ -53,6 +52,8 @@ class Scenario(TimeSeries):
         annotation: Optional[str] = None,
         **model_init_args,
     ) -> None:
+        from ixmp.model import get_model
+
         # Check arguments
         if version == "new" and scheme is None:
             log.info(f"No scheme for new Scenario {model}/{scenario}")
@@ -864,6 +865,8 @@ class Scenario(TimeSeries):
         ValueError
             If the Scenario has already been solved.
         """
+        from ixmp.model import get_model
+
         if self.has_solution():
             raise ValueError(
                 "Scenario contains a model solution; call .remove_solution() before "

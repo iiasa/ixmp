@@ -15,7 +15,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from ixmp.backend import ItemType
+from ixmp.backend.common import ItemType
 
 if TYPE_CHECKING:
     from ixmp import TimeSeries

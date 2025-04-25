@@ -10,12 +10,12 @@ from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
 from typing import Any, Optional, Union
 
-from ixmp.backend import ItemType
-from ixmp.backend.jdbc import JDBCBackend
+from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
-from ixmp.model.base import Model, ModelError
 from ixmp.util import as_str_list
 from ixmp.util.ixmp4 import ContainerData
+
+from .base import Model, ModelError
 
 log = logging.getLogger(__name__)
 
@@ -344,6 +344,8 @@ class GAMSModel(Model):
 
           - GAMS output/model solution data is read from a GDX file.
         """
+        from ixmp.backend.jdbc import JDBCBackend
+
         # Store the scenario so its attributes can be referenced by format()
         self.scenario = scenario
 

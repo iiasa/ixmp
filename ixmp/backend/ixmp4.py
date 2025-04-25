@@ -20,12 +20,13 @@ from ixmp4.data.backend.base import Backend as ixmp4_backend
 # TODO Import this from typing when dropping Python 3.11
 from typing_extensions import TypeAlias, Unpack
 
-from ixmp.backend import ItemType
-from ixmp.backend.base import CachingBackend, ReadKwargs, WriteKwargs
-from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+
+from .base import CachingBackend, ReadKwargs, WriteKwargs
+from .common import ItemType
+from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
 log = logging.getLogger(__name__)
 

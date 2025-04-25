@@ -367,18 +367,16 @@ class Config:
             if info not in self.values["platform"]:
                 raise ValueError(f"Cannot set unknown {repr(info)} as default platform")
         else:
-            from ixmp.backend import BACKENDS
+            from ixmp.backend import get_class
 
             _args = list(args)
 
             try:
                 # Get the backend class
                 cls = _args.pop(0)
-                backend_class = BACKENDS[cls]
+                backend_class = get_class(cls)
             except IndexError:
                 raise ValueError("Must give at least 1 arg: backend class")
-            except KeyError:
-                raise ValueError(f"No backend named {repr(cls)}")
 
             # Use the backend class' method to handle the arguments
             info = backend_class.handle_config(_args, kwargs)
@@ -421,9 +419,8 @@ class Config:
             return name, copy(self.values["platform"][name])
         except KeyError:
             raise ValueError(
-                f"platform name {repr(name)} not among "
-                + repr(sorted(self.values["platform"].keys()))
-                + f"\nfrom {self.path}"
+                f"platform name {name!r} not among {sorted(self.values['platform'])!r}"
+                f"\nfrom {self.path}"
             ) from None
 
     def remove_platform(self, name: str):

@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from ixmp import Scenario
-from ixmp.backend import ItemType
+from ixmp.backend.common import ItemType
 from ixmp.testing import min_ixmp4_version
 
 pytestmark = min_ixmp4_version

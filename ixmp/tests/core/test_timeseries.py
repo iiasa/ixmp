@@ -7,8 +7,7 @@ import pytest
 from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
-from ixmp import Scenario, TimeSeries
-from ixmp.backend import IAMC_IDX
+from ixmp import IAMC_IDX, Scenario, TimeSeries
 from ixmp.testing import DATA, models
 
 # string columns for timeseries checks

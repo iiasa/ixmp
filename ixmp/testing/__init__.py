@@ -47,7 +47,7 @@ import pint
 import pytest
 from click.testing import CliRunner
 
-from ixmp import BACKENDS, Platform, Scenario, cli
+from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 
 from .data import (
@@ -89,7 +89,7 @@ __all__ = [
 ]
 
 # Parametrize platforms for jdbc and ixmp4
-backends = list(BACKENDS.keys())
+BACKENDS = ["ixmp4", "jdbc"]
 
 # Provide a skip marker since ixmp4 is not published for Python 3.9
 min_ixmp4_version = pytest.mark.skipif(
@@ -167,9 +167,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "backend" in metafunc.fixturenames:
         markers = [m.name for m in metafunc.definition.iter_markers()]
 
-        requested_backends = [marker for marker in markers if marker in backends]
+        requested_backends = [marker for marker in markers if marker in BACKENDS]
 
-        _backends = requested_backends if bool(requested_backends) else backends
+        _backends = requested_backends if bool(requested_backends) else BACKENDS
 
         metafunc.parametrize("backend", _backends, indirect=True)
 

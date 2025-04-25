@@ -121,6 +121,7 @@ markers = [
   "ixmp4: tests exclusive to IXMP4Backend.",
 ]
 tmp_path_retention_policy = "none"
+usefixtures = "tmp_env"
 
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]

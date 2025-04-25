@@ -126,7 +126,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
-    """Unset any configuration read from the user's directory."""
+    """Unset configuration read from the user's home directory or ``IXMP_DATA.
+
+    If :mod:`ixmp.testing` is required as a pytest plugin, this hook will *always* run,
+    even if the :func:`tmp_env` fixture is not used.
+
+    - *Unless* :program:`pytest … --ixmp-user-config` is given:
+
+      - The user's existing configuration is discarded and replaced with defaults.
+      - The path to the "local" (also "default") platform, which by default is in the
+        user's home directory, is cleared. This setting **must** be repopulated with a
+        valid path if :py:`ixmp.Platform()`, :py:`ixmp.Platform("default")`, or
+        :py:`ixmp.Platform("local")` is to be used. One way to do this is by using
+        the :func:`tmp_env` fixture.
+
+    - :data:`.jdbc._GC_AGGRESSIVE` is set to :any:`False` to disable aggressive garbage
+      collection, which can be slow.
+    """
     from ixmp.backend import jdbc
 
     if not session.config.option.ixmp_user_config:
@@ -135,7 +151,6 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         # tmp_env below.
         ixmp_config.values["platform"]["local"].pop("path")
 
-    # Disable slow, aggressive garbage collection
     jdbc._GC_AGGRESSIVE = False
 
 
@@ -217,17 +232,32 @@ def test_mp(
 def tmp_env(
     pytestconfig: pytest.Config, tmp_path_factory: pytest.TempPathFactory
 ) -> Generator[os._Environ[str], Any, None]:
-    """Return the os.environ dict with the IXMP_DATA variable set.
+    """Temporary environment for testing.
 
-    IXMP_DATA will point to a temporary directory that is unique to the test session.
-    ixmp configuration (i.e. the 'config.json' file) can be written and read in this
-    directory without modifying the current user's configuration.
+    In this environment:
+
+    - The environment variable ``IXMP_DATA`` points to a temporary directory that is
+      unique to the test session.
+    - *Unless* :program:`pytest … --ixmp-user-config` is given, the "local" (also
+      "default") platform path is set to a file within the ``IXMP_DATA`` directory.
+    - The :file:`config.json` file is saved in ``IXMP_DATA``.
+
+    For :mod:`ixmp.tests`, this fixture is automatically invoked for every test session.
+    In downstream packages that use :mod:`ixmp.testing`, this *may not* be the case.
+
+    Returns
+    -------
+    dict
+        A reference to :data:`os.environ` with the ``IXMP_DATA`` key set.
     """
     base_temp = tmp_path_factory.getbasetemp()
     os.environ["IXMP_DATA"] = str(base_temp)
 
     if not pytestconfig.option.ixmp_user_config:
-        # Set the path for the default/local platform in the test directory
+        # Clear user's config. This (harmlessly) duplicates pytest_sessionstart, above.
+        ixmp_config.clear()
+        # Replace an automatic reference to the user's home directory with path to a
+        # default/local platform within the test directory
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
 

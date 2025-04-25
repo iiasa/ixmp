@@ -36,3 +36,14 @@ def get_class(name: str) -> type["ixmp.backend.base.Backend"]:
     except KeyError:
         names = set(BACKENDS.keys()) | {"ixmp4", "jdbc"}
         raise ValueError(f"backend class {name!r} not among {sorted(names)}")
+
+
+def available() -> list[str]:
+    """Return a list of available backend names."""
+    for name in "ixmp4", "jdbc":
+        try:
+            get_class(name)
+        except Exception:
+            pass
+
+    return sorted(BACKENDS)

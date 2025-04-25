@@ -88,9 +88,6 @@ __all__ = [
     "tmp_env",
 ]
 
-# Parametrize platforms for jdbc and ixmp4
-BACKENDS = ["ixmp4", "jdbc"]
-
 # Provide a skip marker since ixmp4 is not published for Python 3.9
 min_ixmp4_version = pytest.mark.skipif(
     sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
@@ -165,13 +162,12 @@ def pytest_report_header(config, start_path) -> str:
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Parametrize tests for the two backend options."""
     if "backend" in metafunc.fixturenames:
-        markers = [m.name for m in metafunc.definition.iter_markers()]
+        import ixmp.backend
 
-        requested_backends = [marker for marker in markers if marker in BACKENDS]
+        ba = ixmp.backend.available()
+        markers = set(m.name for m in metafunc.definition.iter_markers())
 
-        _backends = requested_backends if bool(requested_backends) else BACKENDS
-
-        metafunc.parametrize("backend", _backends, indirect=True)
+        metafunc.parametrize("backend", sorted(set(ba) & markers) or ba, indirect=True)
 
 
 # Session-scoped fixtures

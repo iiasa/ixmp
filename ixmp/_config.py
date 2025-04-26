@@ -61,6 +61,17 @@ def _locate(filename=None):
 
 def _platform_default():
     """Default values for the `platform` setting on BaseValues."""
+    try:
+        import ixmp4.conf
+
+        # Use configured ixmp4 storage directory
+        ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath("databases")
+    except ImportError:
+        # ixmp4 not installed or importable; construct a likely value
+        from platformdirs import user_data_path
+
+        ixmp4_databases = user_data_path("ixmp4").joinpath("databases")
+
     return {
         "default": "local",
         "local": {
@@ -70,11 +81,7 @@ def _platform_default():
         },
         "ixmp4-local": {
             "class": "ixmp4",
-            "dsn": (
-                "sqlite:///"
-                f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"
-                "/ixmp4-local.sqlite3"
-            ),
+            "dsn": f"sqlite:///{ixmp4_databases.joinpath('ixmp4-local.sqlite3')}",
         },
     }
 

@@ -189,7 +189,7 @@ class TestIxmp4Functions:
             ixmp4_backend.handle_config(["test arg"], {"foo": "bar"})
 
         # Test raising for missing required key
-        with pytest.raises(ValueError, match="Missing key '_name'"):
+        with pytest.raises(ValueError, match="'ixmp4_name' keyword argument"):
             ixmp4_backend.handle_config([], {"foo": "bar"})
 
     def test_set_node(self, ixmp4_backend, caplog: pytest.LogCaptureFixture) -> None:

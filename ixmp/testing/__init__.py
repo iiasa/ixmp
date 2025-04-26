@@ -515,38 +515,40 @@ def _platform_fixture(
     # Remove '/' so that the name can be used in URL tests.
     platform_name = request.node.nodeid.replace("/", " ")
 
-    # Add a platform
+    # Construct positional and keyword arguments to Config.add_platform()
     if backend == "jdbc":
-        ixmp_config.add_platform(
-            platform_name, backend, "hsqldb", url=f"jdbc:hsqldb:mem:{platform_name}"
-        )
+        args = ["hsqldb"]
+        kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
-        import ixmp4.conf
-        from ixmp4.core.exceptions import PlatformNotUnique
+        args = []
+        kwargs = dict(
+            ixmp4_name=platform_name, dsn="sqlite:///:memory:", jdbc_compat=True
+        )
 
-        # Add to or get from ixmp4 an in-memory DB/Platform
-        dsn = "sqlite:///:memory:"
-        try:
-            ixmp4.conf.settings.toml.add_platform(name=platform_name, dsn=dsn)
-        except PlatformNotUnique:
-            pass
-
-        # Add ixmp4 backend to ixmp platforms
-        ixmp_config.add_platform(platform_name, backend, _name=platform_name)
+    # Add platform to ixmp configuration
+    ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
 
     # Launch Platform
-    mp = Platform(name=platform_name, backend=backend)
-    if backend == "ixmp4":
-        _setup_ixmp4_platform(mp=mp)
+    mp = Platform(name=platform_name)
+
     yield mp
 
-    # Teardown: don't show log messages when destroying the platform, even if
-    # the test using the fixture modified the log level
+    # Teardown: don't show log messages when destroying the platform, even if the test
+    # using the fixture modified the log level
     mp._backend.set_log_level(logging.CRITICAL)
+
     del mp
 
-    # Remove from config
+    # Remove from configuration
     ixmp_config.remove_platform(platform_name)
 
     if backend == "ixmp4":
-        ixmp4.conf.settings.toml.remove_platform(key=platform_name)
+        import ixmp4.conf
+        from ixmp4.core.exceptions import PlatformNotFound
+
+        try:
+            ixmp4.conf.settings.toml.remove_platform(key=platform_name)
+        except PlatformNotFound:
+            # This occurs e.g. if `mp` was not used in a way that triggered addition of
+            # the name & DSN to the ixmp4 configuration.
+            pass

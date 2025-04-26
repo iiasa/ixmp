@@ -10,7 +10,7 @@ import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
-from ixmp4.core.exceptions import PlatformNotFound
+from ixmp4.core.exceptions import NotUnique, PlatformNotFound
 from ixmp4.core.optimization.equation import Equation, EquationRepository
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
@@ -168,6 +168,20 @@ class IXMP4Backend(CachingBackend):
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
         self._platform = ixmp4_platform(_backend=self._backend)
+
+        if opts.jdbc_compat:
+            for u in "???", "GWa", "USD/kWa", "cases", "kg", "km":
+                try:
+                    self.set_unit(u, "For compatibility with ixmp.JDBCBackend")
+                except NotUnique:
+                    # Already exists
+                    # NB The exception class is actually UnitNotUnique, but this is
+                    #    created dynamically and is not importable
+                    pass
+            try:
+                self.set_node(name="World", hierarchy="common")
+            except NotUnique:
+                pass
 
     # def __del__(self) -> None:
     #     self.close_db()

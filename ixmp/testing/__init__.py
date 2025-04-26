@@ -491,19 +491,6 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 # Private utilities
 
 
-# NOTE The test suite doesn't need all units/regions defined by default
-# Only those marked with 'tutorials' are needed for the MESSAGE tutorials
-def _setup_ixmp4_platform(mp: Platform) -> None:
-    """Set up an ixmp4-backed Platform with things hardcoded in Java."""
-    mp.add_unit("???", comment="As pre-defined in Java.")
-    mp.add_unit("GWa", comment="As pre-defined in Java.")
-    mp.add_unit("USD/kWa", comment="As pre-defined in Java.")
-    mp.add_unit("cases", comment="As pre-defined in Java.")  # tutorials
-    mp.add_unit("kg", comment="As pre-defined in Java.")
-    mp.add_unit("km", comment="As pre-defined in Java.")  # tutorials
-    mp.add_region(region="World", hierarchy="common")
-
-
 def _platform_fixture(
     request: pytest.FixtureRequest,
     tmp_env,

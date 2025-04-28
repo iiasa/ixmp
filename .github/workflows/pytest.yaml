@@ -112,8 +112,7 @@ jobs:
 
     - name: Run tests
       run: |
-        uv run --no-sync \
-          pytest ixmp \
+        pytest ixmp \
           -m "not performance" \
           --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
@@ -133,10 +132,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: astral-sh/setup-uv@v6
-      with: { enable-cache: true }
-    - uses: actions/cache@v4
-      with:
-        path: ~/.cache/pre-commit
-        key: pre-commit|${{ env.UV_PYTHON }}|${{ hashFiles('.pre-commit-config.yaml') }}
-        lookup-only: ${{ github.event_name == 'schedule' }}  # Set 'true' to recreate cache
-    - run: uvx pre-commit run --all-files --color=always --show-diff-on-failure
+      with: { enable-cache: true, python-version: "3.13" }
+    - name: Clear and re-create the pre-commit environments
+      run: uvx pre-commit clean
+      if: github.event_name == 'schedule'  # Comment this line to force clear
+    - run: |
+        uvx --with=pre-commit-uv \
+          pre-commit run \
+            --all-files --color=always --show-diff-on-failure --verbose

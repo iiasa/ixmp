@@ -59,7 +59,8 @@ jobs:
     - name: Set up uv, Python
       uses: astral-sh/setup-uv@v6
       with:
-        cache-dependency-glob: "**/pyproject.toml"
+        activate-environment: true
+        enable-cache: true
         python-version: ${{ matrix.python-version }}
 
     - uses: ts-graphviz/setup-graphviz@v2
@@ -132,7 +133,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: astral-sh/setup-uv@v6
-      with: { cache-dependency-glob: "**/pyproject.toml" }
+      with: { enable-cache: true }
     - uses: actions/cache@v4
       with:
         path: ~/.cache/pre-commit

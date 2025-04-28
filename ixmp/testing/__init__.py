@@ -253,12 +253,25 @@ def tmp_env(
         # Clear user's config. This (harmlessly) duplicates pytest_sessionstart, above.
         ixmp_config.clear()
         # Replace an automatic reference to the user's home directory with path to a
-        # default/local platform within the test directory
+        # default/local platform within the pytest temporary directory
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
 
     # Save for other processes
     ixmp_config.save()
+
+    try:
+        import ixmp4.conf
+
+        # Replace an automatic reference to the user's home directory with a
+        # subdirectory of the pytest temporary directory
+        ixmp4.conf.settings.storage_directory = base_temp.joinpath("ixmp4")
+        # Ensure this directory and a further subdirectory "databases" exist
+        ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
+            parents=True, exist_ok=True
+        )
+    except ImportError:
+        pass
 
     yield os.environ
 

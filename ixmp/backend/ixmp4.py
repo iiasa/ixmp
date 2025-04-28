@@ -147,11 +147,17 @@ class IXMP4Backend(CachingBackend):
     # calls for in-memory DBs
     backend_index: dict[str, "ixmp4_backend"] = {}
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        ixmp4_name: str,
+        dsn: str = Options.dsn,
+        jdbc_compat: bool = Options.jdbc_compat,
+    ) -> None:
         from ixmp4.data.backend import SqliteTestBackend
 
         # Handle arguments
-        opts = Options(**kwargs)
+        opts = Options(ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat)
 
         try:
             # Get an existing ixmp4.Backend object

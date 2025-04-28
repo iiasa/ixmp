@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     pass
 
 
+@pytest.mark.usefixtures("tmp_env")
 class TestPlatform:
     def test_init0(self) -> None:
         with pytest.raises(

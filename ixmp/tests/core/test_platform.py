@@ -14,18 +14,18 @@ from pandas.testing import assert_frame_equal
 from pytest import raises
 
 import ixmp
-from ixmp.backend import FIELDS
+from ixmp.backend.common import FIELDS
 from ixmp.testing import DATA, assert_logs, min_ixmp4_version, models
 
 if TYPE_CHECKING:
     pass
 
 
+@pytest.mark.usefixtures("tmp_env")
 class TestPlatform:
     def test_init0(self) -> None:
         with pytest.raises(
-            ValueError,
-            match=re.escape("backend class 'foo' not among"),
+            ValueError, match=re.escape("backend class 'foo' not among")
         ):
             # Testing the wrong type on purpose
             ixmp.Platform(backend="foo")  # type: ignore[arg-type]
@@ -39,7 +39,9 @@ class TestPlatform:
         "_backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            pytest.param("ixmp4", dict(), marks=min_ixmp4_version),
+            pytest.param(
+                "ixmp4", dict(ixmp4_name="ixmp4-local"), marks=min_ixmp4_version
+            ),
         ),
     )
     def test_init1(

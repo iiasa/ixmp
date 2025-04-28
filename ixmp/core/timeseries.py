@@ -9,7 +9,8 @@ from weakref import ProxyType, proxy
 
 import pandas as pd
 
-from ixmp.backend import FIELDS, IAMC_IDX, ItemType
+from ixmp import IAMC_IDX
+from ixmp.backend.common import FIELDS, ItemType
 from ixmp.core.platform import Platform
 from ixmp.util import (
     as_str_list,

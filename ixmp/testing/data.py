@@ -10,8 +10,7 @@ import pandas as pd
 import pint
 import pytest
 
-from ixmp import Platform, Scenario, TimeSeries
-from ixmp.backend import IAMC_IDX
+from ixmp import IAMC_IDX, Platform, Scenario, TimeSeries
 
 if TYPE_CHECKING:
     from typing import TypedDict

@@ -147,7 +147,7 @@ def resource_limit(request):
     if not has_resource_module:
         pytest.skip("Python module 'resource' not available (non-Unix OS)")
 
-    name, value = request.config.getoption("--resource-limit").split(":")
+    name, value = request.config.getoption("--ixmp-resource-limit").split(":")
     res = getattr(resource, f"RLIMIT_{name.upper()}")
     value = int(value)
 

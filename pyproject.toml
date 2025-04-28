@@ -59,14 +59,13 @@ docs = [
 ]
 # Change ixmp4 to new release after https://github.com/iiasa/ixmp4/pull/164 is merged
 ixmp4 = [
-  "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items", 
+  "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items ; python_version > '3.9'",
   "gamsapi[core,transfer] >= 45.7.0",
 ]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
-  "ixmp[report,tutorial]",
-  "ixmp[ixmp4]; python_version > '3.9'",
+  "ixmp[ixmp4,report,tutorial]",
   "memory_profiler",
   "nbclient >= 0.5",
   "pytest >= 5",
@@ -122,6 +121,7 @@ markers = [
   "ixmp4: tests exclusive to IXMP4Backend.",
 ]
 tmp_path_retention_policy = "none"
+usefixtures = "tmp_env"
 
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]

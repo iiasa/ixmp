@@ -3,14 +3,10 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 
 from ixmp._config import config
-from ixmp.backend import BACKENDS, IAMC_IDX, ItemType
-from ixmp.backend.jdbc import JDBCBackend
+from ixmp.backend.common import IAMC_IDX, ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario, TimeSeries
-from ixmp.model import MODELS
 from ixmp.model.base import ModelError
-from ixmp.model.dantzig import DantzigModel
-from ixmp.model.gams import GAMSModel
 from ixmp.report import Reporter
 from ixmp.util import DeprecatedPathFinder, show_versions
 
@@ -44,24 +40,6 @@ sys.meta_path.append(
         },
     )
 )
-
-# Register Backends provided by ixmp
-BACKENDS["jdbc"] = JDBCBackend
-
-if sys.version_info >= (3, 10):
-    from ixmp.backend.ixmp4 import IXMP4Backend
-
-    BACKENDS["ixmp4"] = IXMP4Backend
-
-# Register Models provided by ixmp
-MODELS.update(
-    {
-        "default": GAMSModel,
-        "gams": GAMSModel,
-        "dantzig": DantzigModel,
-    }
-)
-
 
 # Configure the 'ixmp' logger: write messages to stdout, defaulting to level WARNING
 # and above

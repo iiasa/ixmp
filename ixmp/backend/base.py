@@ -1,3 +1,5 @@
+"""Abstract base class for backends."""
+
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -12,12 +14,13 @@ import pandas as pd
 # TODO Import this from typing when dropping Python 3.11
 from typing_extensions import Unpack
 
-from ixmp.backend import ItemType
-from ixmp.backend.io import s_read_excel, s_write_excel, ts_read_file
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util.ixmp4 import ReadKwargs, WriteFiltersKwargs, WriteKwargs
+
+from .common import ItemType
+from .io import s_read_excel, s_write_excel, ts_read_file
 
 
 class Backend(ABC):

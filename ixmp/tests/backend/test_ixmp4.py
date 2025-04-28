@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from ixmp import Scenario
-from ixmp.backend import ItemType
+from ixmp.backend.common import ItemType
 from ixmp.testing import min_ixmp4_version
 
 pytestmark = min_ixmp4_version
@@ -189,7 +189,7 @@ class TestIxmp4Functions:
             ixmp4_backend.handle_config(["test arg"], {"foo": "bar"})
 
         # Test raising for missing required key
-        with pytest.raises(ValueError, match="Missing key '_name'"):
+        with pytest.raises(ValueError, match="'ixmp4_name' keyword argument"):
             ixmp4_backend.handle_config([], {"foo": "bar"})
 
     def test_set_node(self, ixmp4_backend, caplog: pytest.LogCaptureFixture) -> None:

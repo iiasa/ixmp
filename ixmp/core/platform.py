@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ixmp._config import config
-from ixmp.backend import BACKENDS, FIELDS, ItemType
+from ixmp.backend.common import FIELDS, ItemType
 from ixmp.util import as_str_list
 from ixmp.util.ixmp4 import WriteFiltersKwargs
 
@@ -37,7 +37,7 @@ class Platform:
         Name of a specific :ref:`configured <configuration>` backend.
     backend : 'jdbc'
         Storage backend type. 'jdbc' corresponds to the built-in :class:`.JDBCBackend`;
-        see :obj:`.BACKENDS`.
+        see :func:`.get_backend`.
     backend_args
         Keyword arguments to specific to the `backend`. See :class:`.JDBCBackend`.
     """
@@ -68,6 +68,8 @@ class Platform:
         backend: Optional[Literal["ixmp4", "jdbc"]] = None,
         **backend_args,
     ):
+        from ixmp.backend import get_class
+
         if name is None:
             if backend is None and not len(backend_args):
                 # No arguments given: use the default platform config
@@ -87,15 +89,8 @@ class Platform:
         # Overwrite any platform config with explicit keyword arguments
         kwargs.update(backend_args)
 
-        # Retrieve the Backend class
-        try:
-            backend_class_name = kwargs.pop("class")
-            backend_class = BACKENDS[backend_class_name]
-        except KeyError:
-            raise ValueError(
-                f"backend class {repr(backend_class_name)} not among "
-                + str(sorted(BACKENDS.keys()))
-            )
+        # Retrieve a Backend subclass
+        backend_class = get_class(kwargs.pop("class"))
 
         # Instantiate the backend
         self._backend = backend_class(**kwargs)

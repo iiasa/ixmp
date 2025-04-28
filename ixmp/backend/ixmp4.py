@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from dataclasses import asdict, dataclass
 from os import PathLike
 from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast, overload
@@ -9,6 +10,7 @@ import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
+from ixmp4.core.exceptions import NotUnique, PlatformNotFound
 from ixmp4.core.optimization.equation import Equation, EquationRepository
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
@@ -20,12 +22,13 @@ from ixmp4.data.backend.base import Backend as ixmp4_backend
 # TODO Import this from typing when dropping Python 3.11
 from typing_extensions import TypeAlias, Unpack
 
-from ixmp.backend import ItemType
-from ixmp.backend.base import CachingBackend, ReadKwargs, WriteKwargs
-from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+
+from .base import CachingBackend, ReadKwargs, WriteKwargs
+from .common import ItemType
+from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
 log = logging.getLogger(__name__)
 
@@ -54,8 +57,84 @@ def _align_dtypes_for_filters(
             ]
 
 
+@dataclass
+class Options:
+    """Valid configuration options for :class:`IXMP4Backend`.
+
+    If :attr:`dsn` is not given, it is automatically populated as a file named
+    :file:`{ixmp4_name}.sqlite3` under the :mod:`ixmp4` local data path, for instance
+    :file:`$HOME/.local/share/ixmp4/databases/`.
+    """
+
+    #: Name (also 'key') of the backend/platform in :mod:`ixmp4` configuration.
+    ixmp4_name: str
+
+    #: :mod:`ixmp4` data source name.
+    dsn: str = ""
+
+    #: If :any:`True`, populate the :class:`.IXMP4Backend` / :class:`.Platform` with
+    #: certain units and regions that are automatically added to any
+    #: :class:`.JDBCBackend`. These include:
+    #:
+    #: - Units: "???", "GWa", "USD/kWa", "cases", "kg", "km". Of these, only "cases" and
+    #:   "km" are used by the :mod:`message_ix` tutorials.
+    #: - Regions: "World", in hierarchy "common".
+    jdbc_compat: bool = False
+
+    def __post_init__(self):
+        if not self.dsn:
+            # Construct a DSN based on the platform name
+            path = ixmp4.conf.settings.storage_directory.joinpath(
+                "databases", f"{self.ixmp4_name}.sqlite3"
+            )
+            self.dsn = f"sqlite:///{path}"
+
+    @classmethod
+    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
+        """Helper for :meth:`IXMP4Backend.handle_config`."""
+        if len(args):
+            raise ValueError(f"Unhandled positional args to IXMP4Backend: {args!r}")
+
+        try:
+            return asdict(cls(**kwargs))
+        except TypeError:
+            raise ValueError(
+                "Expected at least 'ixmp4_name' keyword argument to IXMP4Backend; got"
+                f" {kwargs}"
+            )
+
+    @property
+    def platform_info(self) -> "ixmp4.conf.base.PlatformInfo":
+        """Return an ixmp4.PlatformInfo instance.
+
+        This ensures that there is an entry in the :mod:`ixmp4` configuration with name
+        :attr:`ixmp4_name`.
+
+        - If the entry does not exist, it is created.
+        - If the entry does exist, its DSN must be the same as :attr:`dsn`.
+        """
+        try:
+            # Retrieve the info for an existing platform
+            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+            assert result.name == self.ixmp4_name and result.dsn == self.dsn
+        except PlatformNotFound:
+            # Add platform info to ixmp4 configuration
+            ixmp4.conf.settings.toml.add_platform(self.ixmp4_name, self.dsn)
+            # add_platform() returns None, so use get_platform() to retrieve the object
+            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+        except AssertionError:  # pragma: no cover
+            log.error(f"From ixmp4: {result}")
+            log.error(f"From ixmp: name = {self.ixmp4_name!r}, dsn = {self.dsn!r}")
+            raise
+
+        return result
+
+
 class IXMP4Backend(CachingBackend):
-    """Backend using :mod:`ixmp4`."""
+    """Backend using :mod:`ixmp4`.
+
+    Keyword arguments are passed to :class:`Options`.
+    """
 
     _platform: "ixmp4_platform"
     _backend: "ixmp4_backend"
@@ -68,47 +147,47 @@ class IXMP4Backend(CachingBackend):
     # calls for in-memory DBs
     backend_index: dict[str, "ixmp4_backend"] = {}
 
-    def __init__(self, _name: Optional[str] = None) -> None:
-        from ixmp4.conf.base import PlatformInfo
+    def __init__(
+        self,
+        *,
+        ixmp4_name: str,
+        dsn: str = Options.dsn,
+        jdbc_compat: bool = Options.jdbc_compat,
+    ) -> None:
         from ixmp4.data.backend import SqliteTestBackend
 
-        DEFAULT_NAME = "ixmp4-local"
+        # Handle arguments
+        opts = Options(ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat)
 
-        if not _name:
-            # Warn about using the default backend
-            log.warning(f"Falling back to default SqliteBackend '{DEFAULT_NAME}'")
-
-        name = _name if _name else DEFAULT_NAME
-
-        # Create default platform information if None is registered
-        platform_info = (
-            ixmp4.conf.settings.toml.get_platform(key=_name)
-            if _name
-            else PlatformInfo(
-                name=name,
-                dsn=(
-                    "sqlite:///"
-                    f"{Path.home().joinpath('.local', 'share', 'ixmp4', 'databases')}"
-                    f"/{name}.sqlite3"
-                ),
-            )
-        )
-
-        # Get the ixmp4 Backend object if one already exists or create and register it
         try:
-            sqlite = self.backend_index[name]
+            # Get an existing ixmp4.Backend object
+            self._backend = self.backend_index[opts.ixmp4_name]
         except KeyError:
-            sqlite = SqliteTestBackend(platform_info)
+            # Object does not exist → instantiate using PlatformInfo from `opts`
+            self._backend = self.backend_index[opts.ixmp4_name] = SqliteTestBackend(
+                opts.platform_info
+            )
 
-            # Ensure default DB is setup correctly
+            # Ensure database is set up.
             # NOTE sqlalchemy catches existing tables to avoid superfluous CREATEs
-            sqlite.setup()
+            self._backend.setup()
 
-            self.backend_index[name] = sqlite
-
-        # Instantiate and store
-        self._backend = sqlite
+        # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
         self._platform = ixmp4_platform(_backend=self._backend)
+
+        if opts.jdbc_compat:
+            for u in "???", "GWa", "USD/kWa", "cases", "kg", "km":
+                try:
+                    self.set_unit(u, "For compatibility with ixmp.JDBCBackend")
+                except NotUnique:
+                    # Already exists
+                    # NB The exception class is actually UnitNotUnique, but this is
+                    #    created dynamically and is not importable
+                    pass
+            try:
+                self.set_node(name="World", hierarchy="common")
+            except NotUnique:
+                pass
 
     # def __del__(self) -> None:
     #     self.close_db()
@@ -122,20 +201,9 @@ class IXMP4Backend(CachingBackend):
     #     return super().get_log_level()
 
     # Platform methods
-
     @classmethod
-    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
-        msg = "Unhandled {} args to Backend.handle_config(): {!r}"
-        if len(args):
-            raise ValueError(msg.format("positional", args))
-
-        info: dict[str, Any] = {}
-        try:
-            info["_name"] = kwargs["_name"]
-        except KeyError:
-            raise ValueError(f"Missing key '_name' for backend=ixmp4; got {kwargs}")
-
-        return info
+    def handle_config(cls, args, kwargs):
+        return Options.handle_config(args, kwargs)
 
     # def close_db(self) -> None:
     #     self._backend.close()

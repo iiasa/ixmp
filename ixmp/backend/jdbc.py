@@ -17,18 +17,18 @@ import jpype
 import numpy as np
 import pandas as pd
 
-from ixmp.backend import FIELDS, ItemType
-from ixmp.backend.base import CachingBackend
 from ixmp.core.scenario import Scenario
 from ixmp.util import as_str_list, filtered
 
-log = logging.getLogger(__name__)
+from .base import CachingBackend
+from .common import FIELDS, ItemType
 
+log = logging.getLogger(__name__)
 
 _EXCEPTION_VERBOSE = os.environ.get("IXMP_JDBC_EXCEPTION_VERBOSE", "0") == "1"
 
-# Whether to collect garbage aggressively when instances of TimeSeries die.
-# See JDBCBackend.gc().
+#: Whether to collect garbage aggressively when instances of TimeSeries die.
+#: See :meth:`JDBCBackend.gc`.
 _GC_AGGRESSIVE = True
 
 # Map of Python to Java log levels
@@ -328,6 +328,7 @@ class JDBCBackend(CachingBackend):
 
     @classmethod
     def gc(cls):
+        """Collect garbage."""
         if _GC_AGGRESSIVE:
             # log.debug('Collect garbage')
             try:

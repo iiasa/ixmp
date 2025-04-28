@@ -10,6 +10,7 @@ All changes
   - This requires ixmp4, which is only compatible with Python 3.10 and above.
   - :class:`.IXMP4Backend` is still missing several features and documentation, which will be added in subsequent PRs.
 
+- Refine the method of locating the GAMS :attr:`~.GAMSInfo.executable` (:pull:`564`, :issue:`456`, :issue:`523`, :issue:`563`).
 
 .. _v3.10.0:
 

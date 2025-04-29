@@ -35,7 +35,7 @@ class Platform:
     ----------
     name : str
         Name of a specific :ref:`configured <configuration>` backend.
-    backend : 'jdbc'
+    backend
         Storage backend type. 'jdbc' corresponds to the built-in :class:`.JDBCBackend`;
         see :func:`.get_backend`.
     backend_args
@@ -65,7 +65,7 @@ class Platform:
     def __init__(
         self,
         name: Optional[str] = None,
-        backend: Optional[Literal["ixmp4", "jdbc"]] = None,
+        backend: Union[Literal["ixmp4", "jdbc"], str, None] = None,
         **backend_args,
     ):
         from ixmp.backend import get_class

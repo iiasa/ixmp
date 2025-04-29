@@ -4,7 +4,7 @@ Next release
 All changes
 -----------
 
-- Add :class:`.IXMP4Backend` as an alternative to :class:`.JDBCBackend` (:pull:`552`, :pull:`568`).
+- Add :class:`.IXMP4Backend` as an alternative to :class:`.JDBCBackend` (:pull:`552`, :pull:`568`. :pull:`570`).
   Please note:
 
   - This requires ixmp4, which is only compatible with Python 3.10 and above.

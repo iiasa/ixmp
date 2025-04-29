@@ -28,7 +28,7 @@ class TestPlatform:
             ValueError, match=re.escape("backend class 'foo' not among")
         ):
             # Testing the wrong type on purpose
-            ixmp.Platform(backend="foo")  # type: ignore[arg-type]
+            ixmp.Platform(backend="foo")
 
         # name="default" is used, referring to "local"
         mp = ixmp.Platform()

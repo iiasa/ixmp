@@ -19,7 +19,6 @@ from .base import Model, ModelError
 
 log = logging.getLogger(__name__)
 
-
 # Singleton instance of GAMSInfo.
 _GAMS_INFO: Optional["GAMSInfo"] = None
 
@@ -71,10 +70,17 @@ RETURN_CODE = {key % 256: value for key, value in RETURN_CODE.items()}
 class GAMSInfo:
     """Information about the GAMS installation."""
 
-    #: GAMS version as a string, for instance "24.7.4".
-    version: Optional[str]
+    # Optional environment variable with the path to a directory containing the GAMS
+    # executable
+    _env: str = "IXMP_GAMS_PATH"
+    # Name of the GAMS executable
+    _name: str = "gams"
 
-    #: System directory.
+    #: GAMS version as a string, for instance "24.7.4". If the GAMS system installation
+    #: cannot be located, the string contains an informative error message.
+    version: str
+
+    #: GAMS system directory.
     system_dir: Path
 
     def __init__(self) -> None:
@@ -90,27 +96,43 @@ class GAMSInfo:
 
             try:
                 # Execute this no-op file and capture stdout
+                args = [self.executable, "null.gms", "-LogOption=3"]
                 output = check_output(
-                    ["gams", "null.gms", "-LogOption=3"],
-                    shell=os.name == "nt",
-                    cwd=temp_dir,
-                    universal_newlines=True,
+                    args, cwd=temp_dir, shell=os.name == "nt", universal_newlines=True
                 )
-            except FileNotFoundError as e:  # pragma: no cover
-                log.warning(f"{e}")
+            except Exception:
                 output = ""
 
         # Parse GAMS version from the copyright line
         if match := re.search(r"^GAMS ([\d\.]+)\s*Copyright", output, re.MULTILINE):
             self.version = match.group(1)
-        else:  # pragma: no cover
-            self.version = None
+        else:
+            self.version = (
+                f"no {self._name!r} executable in {self._env}="
+                f"{os.getenv(self._env, '(not set)')} or the system PATH"
+            )
 
         # Parse GAMS system directory path
         if match := re.search(r"^\s*SysDir (.*)", output, re.MULTILINE):
             self.system_dir = Path(match.group(1))
-        else:  # pragma: no cover
+        else:
             self.system_dir = Path.cwd()
+
+    @property
+    def executable(self) -> str:
+        """Return the path to a GAMS executable.
+
+        This seeks a program :program:`gams` using :func:`shutil.which`. The program is
+        sought in the the directory given by the ``IXMP_GAMS_PATH`` environment variable
+        (if set), or else the system PATH.
+        """
+        which_path = os.getenv(self._env)  # None if not set
+        if path := shutil.which(self._name, path=which_path):
+            return path
+        elif which_path is None:
+            return self._name
+        else:
+            return str(Path(which_path, self._name))
 
     @property
     def java_api_dir(self) -> Path:

@@ -349,6 +349,7 @@ class IXMP4Backend(CachingBackend):
             model,
             scenario,
             version=cloned_run.version,
+            scheme=s.scheme,
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
         return cloned_s

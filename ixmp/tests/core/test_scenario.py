@@ -144,6 +144,30 @@ class TestScenario:
         # Value is changed only in the clone
         assert scen2.scalar("f") == {"unit": "USD/km", "value": 95}
 
+    def test_clone_scheme(self, request, test_mp) -> None:
+        """:attr:`.Scenario.scheme` is preserved on clone."""
+        # Create a string to be used as scheme name
+        # NB this fails with JDBCBackend when using .nodeid directly, e.g.
+        #    "ixmp tests core test_scenario.py::TestScenario::test_clone_scheme[jdbc]".
+        #    This may indicate some (undocumented) restriction in values that this
+        #    back end can handle.
+        scheme = str(hash(request.node.nodeid))
+
+        s0 = ixmp.Scenario(
+            test_mp,
+            model="test_clone_scheme",
+            scenario="s",
+            version="new",
+            scheme=scheme,
+        )
+
+        s0.commit("")
+
+        s1 = s0.clone()
+
+        # Clone has same scheme as original scenario
+        assert s1.scheme == s0.scheme == scheme
+
     # Initialize items
     # NOTE IXMP4Backend doesn't handle commits yet
     @pytest.mark.jdbc

@@ -330,7 +330,11 @@ def _read_variables_to_run(
     for variable in variables:
         columns_of_interest = _set_columns_to_read_from_records(item=variable)
 
-        records = pd.DataFrame(container.data[variable.name].records)
+        try:
+            records = pd.DataFrame(container.data[variable.name].records)
+        except KeyError:
+            # container doesn't contain this variable
+            continue
 
         # Avoid touching the DB for empty data
         if not records.empty:
@@ -353,7 +357,11 @@ def _read_equations_to_run(
     for equation in equations:
         columns_of_interest = _set_columns_to_read_from_records(item=equation)
 
-        records = pd.DataFrame(container.data[equation.name].records)
+        try:
+            records = pd.DataFrame(container.data[equation.name].records)
+        except KeyError:
+            # container doesn't contain this equation
+            continue
 
         # Avoid touching the DB for empty data
         if not records.empty:

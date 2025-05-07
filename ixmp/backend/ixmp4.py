@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast, overload
 
 import ixmp4.conf
+import numpy as np
 import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
@@ -33,10 +34,13 @@ from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 log = logging.getLogger(__name__)
 
 
+# TODO Reconcile this with `as_str_list()`
 def _ensure_filters_values_are_lists(filters: dict[str, Union[Any, list[Any]]]) -> None:
     """Convert singular values in `filters` to lists."""
     for k, v in filters.items():
-        if not isinstance(v, list):
+        if isinstance(v, dict):
+            filters[k] = list(map(str, v))
+        elif not isinstance(v, list):
             filters[k] = [v]
 
 
@@ -48,13 +52,29 @@ def _align_dtypes_for_filters(
     TYPE_MAP = {"object": str, "int64": int}
 
     for column_name in filters.keys():
-        if not isinstance(
-            filters[column_name][0], TYPE_MAP[str(data.dtypes[column_name])]
-        ):
-            filters[column_name] = [
-                TYPE_MAP[str(data.dtypes[column_name])](value)
-                for value in filters[column_name]
-            ]
+        # Guard against empty filters like {'time': []}
+        if bool(filters[column_name]):
+            # Guard against modifying already correct types
+            if not isinstance(
+                filters[column_name][0], TYPE_MAP[str(data.dtypes[column_name])]
+            ):
+                filters[column_name] = [
+                    TYPE_MAP[str(data.dtypes[column_name])](value)
+                    for value in filters[column_name]
+                ]
+
+
+def _remove_empty_lists(filters: dict[str, list[Any]]) -> dict[str, list[Any]]:
+    """Remove keys from `filters` whose values are empty lists."""
+    result: dict[str, list[Any]] = {}
+
+    for k, v in filters.items():
+        if filters[k] == []:
+            continue
+        else:
+            result[k] = v
+
+    return result
 
 
 @dataclass
@@ -379,6 +399,12 @@ class IXMP4Backend(CachingBackend):
             log.warning(
                 "ixmp4 does not support removing the solution only after a certain year"
             )
+            # This is required for compatibility with JDBC
+            if type(s) is not Scenario:
+                raise TypeError(
+                    "s_clear_solution(from_year=...) only valid for ixmp.Scenario; not "
+                    "subclasses"
+                )
         self.index[s].optimization.remove_solution()
 
     def set_as_default(self, ts: TimeSeries) -> None:
@@ -608,8 +634,11 @@ class IXMP4Backend(CachingBackend):
             indexset_repo = self._get_repo(s=s, type="indexset")
             return indexset_repo.get(name=name)
         except IndexSet.NotFound:
-            table_repo = self._get_repo(s=s, type="set")
-            return table_repo.get(name=name)
+            try:
+                table_repo = self._get_repo(s=s, type="set")
+                return table_repo.get(name=name)
+            except Table.NotFound as e:
+                raise KeyError from e
 
     def item_index(
         self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
@@ -809,7 +838,11 @@ class IXMP4Backend(CachingBackend):
         if isinstance(item, Table):
             columns = item.column_names or item.indexsets
             df = pd.DataFrame(item.data, columns=columns)
-            return df[df.isin(values=filters).all(axis=1)] if filters else df
+            return (
+                df[df.isin(values=filters)[filters.keys()].all(axis=1)]
+                if filters
+                else df
+            )
         else:
             series = pd.Series(item.data)
             return series[series.isin(values=filters[name])] if filters else series
@@ -822,6 +855,8 @@ class IXMP4Backend(CachingBackend):
         filters: Optional[dict[str, Any]] = None,
     ) -> Union[dict[str, Any], pd.Series, pd.DataFrame]:
         if type == "set":
+            if filters:
+                _ensure_filters_values_are_lists(filters=filters)
             return self._get_set_data(s=s, name=name, filters=filters)
         # TODO this is not handling scalars at the moment, but maybe try with type,
         # except NotFound, try scalar?
@@ -832,6 +867,14 @@ class IXMP4Backend(CachingBackend):
 
             data = pd.DataFrame(item.data)
 
+            # NOTE the ixmp.report(er) expects these names, unfortunately; see
+            # ixmp.report.util::keys_for_quantity()
+            renames = (
+                {"values": "value", "units": "unit"}
+                if type == "par"
+                else {"levels": "lvl", "marginals": "mrg"}
+            )
+
             if data.empty:
                 # Set correct columns
                 columns = item.column_names or item.indexsets
@@ -841,8 +884,14 @@ class IXMP4Backend(CachingBackend):
                 if columns:
                     columns.extend(unindexed_columns)
 
-                return pd.DataFrame(
-                    columns=columns if bool(columns) else unindexed_columns
+                # NOTE bool(item.indexsets) == True for all Parameters (otherwise, we're
+                # talking Scalars). Empty scalar Equations/Variables expect float-NaNs.
+                return (
+                    pd.DataFrame(
+                        columns=columns if bool(columns) else unindexed_columns
+                    )
+                    if bool(item.indexsets)
+                    else {key: np.nan for key in renames.values()}
                 )
 
             # Apply filters if requested
@@ -850,18 +899,19 @@ class IXMP4Backend(CachingBackend):
                 # isin() won't consider int(700) to be in ['700'], etc
                 _ensure_filters_values_are_lists(filters=filters)
                 _align_dtypes_for_filters(filters=filters, data=data)
+                filters = _remove_empty_lists(filters=filters)
 
-                data = data[data.isin(values=filters)[filters.keys()].all(axis=1)]
+                if bool(filters):
+                    data = data[
+                        data.isin(values=filters)[filters.keys()].all(axis=1)
+                    ].reset_index()
 
             # Rename columns
-            # NOTE the ixmp.report(er) expects these names, unfortunately; see
-            # ixmp.report.util::keys_for_quantity()
-            renames = (
-                {"values": "value", "units": "unit"}
-                if type == "par"
-                else {"levels": "lvl", "marginals": "mrg"}
-            )
             data.rename(columns=renames, inplace=True)
+
+            # For scalar items, return dict for compatibility with JDBC
+            if not bool(item.indexsets):
+                return {key: data[key].values[0] for key in renames.values()}
 
             return data
 
@@ -1014,21 +1064,34 @@ class IXMP4Backend(CachingBackend):
     # same here or do we expect user code to call this with name == "tec" if they're
     # interested in "technology"?
     def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> list[str]:
+        # NOTE ixmp_source treats "all" this way
+        if cat == "all":
+            return list(
+                map(str, self.index[ms].optimization.indexsets.get(name=name).data)
+            )
+
+        # Special treatment for 'technology' for historical reasons:
+        if name == "technology":
+            name = "tec"
         data = pd.DataFrame(
             self.index[ms].optimization.tables.get(name=f"cat_{name}").data
         )
+
+        if data.empty:
+            return []
+
         # This assumes there are only two columns: 'type_{name}' and the category name
         columns = data.columns.to_list()
         columns.remove(f"type_{name}")
 
         return data[data[f"type_{name}"] == cat][columns[0]].astype(str).to_list()
 
-    # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
-    # same here or do we expect user code to call this with name == "tec" if they're
-    # interested in "technology"?
     def cat_list(self, ms: Scenario, name: str) -> list[str]:
+        # Special treatment for 'technology' for historical reasons:
+        if name == "technology":
+            name = "tec"
         category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
-        return cast(list[str], category_indexset.data)
+        return [str(item) for item in category_indexset.data]
 
     def set_data(
         self,
@@ -1070,9 +1133,9 @@ class IXMP4Backend(CachingBackend):
         year: Sequence[str],
     ) -> Generator[tuple, Any, None]:
         data = self.index[ts].iamc.tabulate(
-            region={"name__in": region},
-            variable={"name__in": variable},
-            unit={"name__in": unit},
+            region={"name__in": region} if len(region) else None,
+            variable={"name__in": variable} if len(variable) else None,
+            unit={"name__in": unit} if len(unit) else None,
         )
 
         # Protect against empty data
@@ -1082,13 +1145,33 @@ class IXMP4Backend(CachingBackend):
             # step_year if type is ANNUAL or CATEGORICAL
             # step_category if type is CATEGORICAL
             # step_datetime if type is DATETIME
-            # We're only adding ANNUAL above for now, so let's assume that
-            data = data.loc[data["step_year"].isin(year)]
+            # Assuming that just one of these is present, identify it here:
+            year_columns = {
+                "year",
+                "step_year",
+                "step_category",
+                "step_datetime",
+            } & set(data.columns)
+            assert len(year_columns) == 1, (
+                f"Unexpected number of year columns found: {year_columns}"
+            )
+            year_column = list(year_columns)[0]
+
+            # Guard against empty year filter
+            if len(year):
+                data = data.loc[data[year_column].isin(year)]
+
+            # We seem to only deal with "Year" for now (maybe until supporting
+            # timeslices)
+            subannual = "Year" if year_column in {"year", "step_year"} else "subannual"
+            data = data.assign(subannual=subannual)
 
             # Select only the columns we're interested in
             # TODO the ixmp4 docstrings sounds like region, variable, and unit are not
             # part of the df?
-            data = data[["region", "variable", "unit", "step_year", "value"]]
+            data = data[
+                ["region", "variable", "unit", "subannual", year_column, "value"]
+            ]
 
         # TODO Why would we iterate and yield tuples instead of returning the whole df?
         for row in data.itertuples(index=False, name=None):

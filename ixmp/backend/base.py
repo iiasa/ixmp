@@ -649,15 +649,16 @@ class Backend(ABC):
         tuple
             The members of each tuple are:
 
-            ======== ===== ===
-            ID       Type  Description
-            ======== ===== ===
-            region   str   Region name
-            variable str   Variable name
-            unit     str   Unit symbol
-            year     int   Year
-            value    float Data value
-            ======== ===== ===
+            ========= ===== ===
+            ID        Type  Description
+            ========= ===== ===
+            region    str   Region name
+            variable  str   Variable name
+            unit      str   Unit symbol
+            subannual str   Type of subannuality
+            year      int   Year
+            value     float Data value
+            ========= ===== ===
         """
 
     @abstractmethod

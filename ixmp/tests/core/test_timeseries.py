@@ -166,6 +166,9 @@ class TestTimeSeries:
         with pytest.raises(ValueError):
             ts.add_timeseries(DATA[0].drop("unit", axis=1))
 
+    # NOTE Not yet implemented on IXMP4Backend properly. Doing so required optimization
+    # items in ixmp4 using versioning/changelog correctly.
+    @pytest.mark.jdbc
     def test_discard_changes(self, ts):
         ts.commit("")
         assert 0 == len(ts.timeseries())
@@ -391,6 +394,8 @@ class TestTimeSeries:
         obs = ts.get_geodata().sort_values("year").reset_index(drop=True)
         assert_frame_equal(exp, obs)
 
+    # NOTE remove_timeseries() not yet implemented on IXMP4Backend
+    @pytest.mark.jdbc
     @pytest.mark.parametrize("format", ["long", "wide"])
     @pytest.mark.parametrize(
         "N",

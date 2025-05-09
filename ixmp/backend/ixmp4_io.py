@@ -35,7 +35,7 @@ def _domain(item: Item4) -> Optional[list[str]]:
     if isinstance(item, (IndexSet, Scalar)):
         return None
     else:
-        return item.indexsets
+        return item.indexset_names
 
 
 def _records(
@@ -107,7 +107,7 @@ def _align_records_and_domain(
     assert isinstance(item, (Table, Parameter, Variable, Equation))
 
     # `records` may contain keys that are column_names, but not indexsets
-    domain_order = item.column_names or item.indexsets
+    domain_order = item.column_names or item.indexset_names
 
     if not domain_order:
         # This could happen for Variables or Equations
@@ -311,7 +311,7 @@ def _set_columns_to_read_from_records(
     # Prepare columns to select from container.data
     # DF also includes lower, upper, scale
     columns = ["levels", "marginals"]
-    item_columns = item.column_names or item.indexsets
+    item_columns = item.column_names or item.indexset_names
     if item_columns:
         item_columns.extend(columns)
 
@@ -346,7 +346,7 @@ def _read_variables_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.variables.add_data(
-                variable_id=variable.id, data=records[columns_of_interest]
+                id=variable.id, data=records[columns_of_interest]
             )
 
 
@@ -373,7 +373,7 @@ def _read_equations_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.equations.add_data(
-                equation_id=equation.id, data=records[columns_of_interest]
+                id=equation.id, data=records[columns_of_interest]
             )
 
 

@@ -261,7 +261,7 @@ class IXMP4Backend(CachingBackend):
                 run.scenario.name,
                 # TODO What are we going to use for scheme in ixmp4?
                 "IXMP4Run",
-                run.is_default(),
+                run.is_default,
                 # TODO Change this from being hardcoded
                 False,
                 # TODO Expose the creation, update and lock info in ixmp4
@@ -417,7 +417,7 @@ class IXMP4Backend(CachingBackend):
         return self.index[ts].version
 
     def is_default(self, ts: TimeSeries) -> bool:
-        return self.index[ts].is_default()
+        return self.index[ts].is_default
 
     def has_solution(self, s: Scenario) -> bool:
         return self.index[s].optimization.has_solution()
@@ -648,7 +648,7 @@ class IXMP4Backend(CachingBackend):
         if (
             isinstance(item, IndexSet)
             or isinstance(item, Scalar)
-            or (isinstance(item, (Variable, Equation)) and item.indexsets is None)
+            or (isinstance(item, (Variable, Equation)) and item.indexset_names is None)
         ):
             return cast(list[str], [])
         else:
@@ -657,11 +657,11 @@ class IXMP4Backend(CachingBackend):
                     f"Requested {sets_or_names}, but these are None for item "
                     f"{item.name}, falling back on (Index)Set names!"
                 )
-            assert item.indexsets  # Could only be None for Variables & Equations
+            assert item.indexset_names  # Could only be None for Variables & Equations
             return (
                 item.column_names
                 if item.column_names and sets_or_names == "names"
-                else item.indexsets
+                else item.indexset_names
             )
 
     def _add_data_to_set(
@@ -708,7 +708,7 @@ class IXMP4Backend(CachingBackend):
             table = self.index[s].optimization.tables.get(name=name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
-            keys = table.column_names or table.indexsets
+            keys = table.column_names or table.indexset_names
             data_to_add = pd.DataFrame({keys[i]: [key[i]] for i in range(len(key))})
 
             # Silently ignore duplicate data, see NOTE above
@@ -780,7 +780,7 @@ class IXMP4Backend(CachingBackend):
         if isinstance(key, str):
             key = [key]
 
-        keys = parameter.column_names or parameter.indexsets
+        keys = parameter.column_names or parameter.indexset_names
         data_to_add: dict[str, Union[list[float], list[str]]] = {
             keys[i]: [key[i]] for i in range(len(key))
         }
@@ -836,7 +836,7 @@ class IXMP4Backend(CachingBackend):
         item = self._get_indexset_or_table(s=s, name=name)
 
         if isinstance(item, Table):
-            columns = item.column_names or item.indexsets
+            columns = item.column_names or item.indexset_names
             df = pd.DataFrame(item.data, columns=columns)
             return (
                 df[df.isin(values=filters)[filters.keys()].all(axis=1)]
@@ -877,7 +877,7 @@ class IXMP4Backend(CachingBackend):
 
             if data.empty:
                 # Set correct columns
-                columns = item.column_names or item.indexsets
+                columns = item.column_names or item.indexset_names
                 unindexed_columns = (
                     ["value", "unit"] if type == "par" else ["lvl", "mrg"]
                 )
@@ -890,7 +890,7 @@ class IXMP4Backend(CachingBackend):
                     pd.DataFrame(
                         columns=columns if bool(columns) else unindexed_columns
                     )
-                    if bool(item.indexsets)
+                    if bool(item.indexset_names)
                     else {key: np.nan for key in renames.values()}
                 )
 
@@ -910,7 +910,7 @@ class IXMP4Backend(CachingBackend):
             data.rename(columns=renames, inplace=True)
 
             # For scalar items, return dict for compatibility with JDBC
-            if not bool(item.indexsets):
+            if not bool(item.indexset_names):
                 return {key: data[key].values[0] for key in renames.values()}
 
             return data
@@ -931,12 +931,12 @@ class IXMP4Backend(CachingBackend):
                 item.remove(data=cast(list[str], data[item.name].to_list()))
             else:
                 # TODO can we assume that keys follow same order as indexsets/columns?
-                columns = item.column_names or item.indexsets
+                columns = item.column_names or item.indexset_names
                 data = pd.DataFrame(keys, columns=columns)
                 item.remove(data=data)
         else:
             parameter = self._get_item(s=s, name=name, type="par")
-            columns = parameter.column_names or parameter.indexsets
+            columns = parameter.column_names or parameter.indexset_names
             data = pd.DataFrame(keys, columns=columns)
             parameter.remove(data=data)
 
@@ -999,8 +999,8 @@ class IXMP4Backend(CachingBackend):
             table = self.index[ms].optimization.tables.get(name=name)
 
             # Ensure the Table's dimensions are correct before setting variables
-            assert len(table.indexsets) == 1
-            indexset_name = table.indexsets[0]
+            assert len(table.indexset_names) == 1
+            indexset_name = table.indexset_names[0]
             column_name = table.name
 
         # Special treatment for 'technology' for historical reasons:
@@ -1117,12 +1117,14 @@ class IXMP4Backend(CachingBackend):
 
         # Add timeseries dataframe
         # TODO Is this really the only type we're interested in?
-        self.index[ts].iamc.add(
-            pd.DataFrame(
-                _data, columns=["step_year", "value", "region", "variable", "unit"]
-            ),
-            type=DataPoint.Type.ANNUAL,
-        )
+        run = self.index[ts]
+        with run.transact(f"set_data() for Run {run.id}"):
+            run.iamc.add(
+                pd.DataFrame(
+                    _data, columns=["step_year", "value", "region", "variable", "unit"]
+                ),
+                type=DataPoint.Type.ANNUAL,
+            )
 
     def get_data(
         self,

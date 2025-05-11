@@ -81,7 +81,9 @@ def _platform_default():
         },
         "ixmp4-local": {
             "class": "ixmp4",
-            "dsn": f"sqlite:///{ixmp4_databases.joinpath('ixmp4-local.sqlite3')}",
+            "dsn": f"sqlite:///{ixmp4_databases.joinpath('local.sqlite3')}",
+            "ixmp4_name": "local",
+            "jdbc_compat": True,
         },
     }
 

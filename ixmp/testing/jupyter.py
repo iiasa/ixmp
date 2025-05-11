@@ -127,6 +127,8 @@ def get_cell_output(nb, name_or_index, kind="data"):
         Kind of cell output to retrieve. For 'data', the data in format 'text/plain' is
         run through :func:`eval`. To retrieve an exception message, use 'evalue'.
     """
+    import numpy
+
     if isinstance(name_or_index, int):
         cell = nb.cells[name_or_index]
     else:
@@ -143,4 +145,5 @@ def get_cell_output(nb, name_or_index, kind="data"):
     except NameError:  # pragma: no cover
         raise ValueError(f"no cell named {name_or_index}")
     else:
-        return eval(result["text/plain"]) if kind == "data" else result
+        # NB eval(…, globals=…) as a keyword argument is only possible with Python ≥3.13
+        return eval(result["text/plain"], {"np": numpy}) if kind == "data" else result

@@ -108,6 +108,12 @@ class Options:
                 "databases", f"{self.ixmp4_name}.sqlite3"
             )
             self.dsn = f"sqlite:///{path}"
+        # Handle str value, e.g. from the command line
+        if isinstance(self.jdbc_compat, str):
+            val = self.jdbc_compat.title()
+            self.jdbc_compat = bool(
+                {"0": False, "False": False, "No": False, "True": True}.get(val, val)
+            )
 
     @classmethod
     def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
@@ -144,7 +150,7 @@ class Options:
             result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
         except AssertionError:  # pragma: no cover
             log.error(f"From ixmp4: {result}")
-            log.error(f"From ixmp: name = {self.ixmp4_name!r}, dsn = {self.dsn!r}")
+            log.error(f"From ixmp: name={self.ixmp4_name!r}, dsn={self.dsn!r}")
             raise
 
         return result

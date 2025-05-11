@@ -330,3 +330,27 @@ class TestIxmp4Functions:
                 init_items=True,
                 filters={"scenario": scenario},
             )
+
+
+class TestOptions:
+    @pytest.mark.parametrize(
+        "exp, jdbc_compat_arg",
+        (
+            (False, "0"),
+            (False, "false"),
+            (False, "False"),
+            (False, "no"),
+            (False, "NO"),
+            (True, "1"),
+            (True, "FOO"),
+            (True, "true"),
+            (True, "True"),
+            (True, "yes"),
+            (True, "YES"),
+        ),
+    )
+    def test_init(self, exp: bool, jdbc_compat_arg) -> None:
+        from ixmp.backend.ixmp4 import Options
+
+        opts = Options(ixmp4_name="foo", jdbc_compat=jdbc_compat_arg)
+        assert exp is opts.jdbc_compat

@@ -7,6 +7,7 @@ from click.exceptions import BadParameter, UsageError
 from pandas.testing import assert_frame_equal
 
 import ixmp
+from ixmp.backend import available
 from ixmp.cli import VersionType
 from ixmp.testing import models, populate_test_platform
 
@@ -153,6 +154,11 @@ def test_platform(ixmp_cli, tmp_path):
     rel = "./foo"
     r = call("add", "p3", "jdbc", "hsqldb", rel)
     assert Path(rel).resolve() == ixmp.config.get_platform_info("p3")[1]["path"]
+
+    if "ixmp4" in available():
+        # IXMP4 platform can be added using keyword arguments
+        r = call("add", "p4", "ixmp4", "ixmp4_name=p4", "jdbc_compat=true")
+        assert r.exit_code == 0
 
     # Platform can be removed
     r = call("remove", "p3")

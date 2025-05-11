@@ -294,23 +294,44 @@ def remove(name):
 
 
 @platform_group.command()
-@click.argument("name", metavar="PLATFORM")
+@click.argument("platform_name", metavar="PLATFORM")
 @click.argument("args", nargs=-1)
-def add(name, args):
+def add(platform_name, args):
     """Add PLATFORM, configured with ARGS.
 
     If PLATFORM is 'default', ARGS must be the name of another platform.
 
-    Otherwise, the first of ARGS is the backend. Currently only 'jdbc' is supported.
+    Otherwise, the first of ARGS is the backend class (either 'jdbc' or 'ixmp4') and
+    the remaining ARGS are either positional ("VALUE") or keyword ("NAME=VALUE")
+    arguments.
+
     For the 'jdbc' backend, the remaining ARGS must be one of:
 
     \b
-    - oracle URL USERNAME PASSWORD: where the URL is something like
-      example.com:PORT:SCHEMA. This configures a connection to an Oracle database.
-    - hsqldb PATH: where PATH is the path to a file that will contain the database. To
-      Use an existing database, give the file name without an extension.
+    - "oracle URL USERNAME PASSWORD", where URL is something like
+      "example.com:PORT:SCHEMA". This configures a connection to an Oracle database.
+    - "hsqldb PATH" where PATH is the path to the database files, including the
+      directory but not the file extensions. If the files does not exist, it will be
+      created.
+
+    For the 'ixmp4' backend, the remaining ARGS must all be keyword arguments, must
+    include at least "ixmp4_name=NAME". They may include:
+
+    - "dsn=DSN". If not supplied, this is constructed automatically from ixmp4_name in
+      the ixmp4 local data directory.
+    - "jdbc_compat=VALUE", with VALUE like "false", "False", or "0" being treated as
+      False, and all other values as True.
     """
-    ixmp.config.add_platform(name, *args)
+    # Separate positional and keyword arguments
+    _args, kwargs = [], {}
+    for arg in args:
+        arg_name, sep, value = arg.partition("=")
+        if sep == "=":
+            kwargs[arg_name] = value  # Keyword argument
+        else:
+            _args.append(arg)  # Positional argument
+
+    ixmp.config.add_platform(platform_name, *_args, **kwargs)
 
     # Save the configuration to file
     ixmp.config.save()

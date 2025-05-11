@@ -333,16 +333,16 @@ class IXMP4Backend(CachingBackend):
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
 
-        # NOTE ixmp4 doesn't store 'scheme', which could in principle be anything.
-        # Since this is a shim between message_ix/ixmp4, I'm hardcoding this as default.
         if isinstance(ts, Scenario):
-            if not ts.scheme:
-                ts.scheme = "IXMP4-MESSAGE"
+            # Retrieve the `scheme` attribute from the Run.meta dict
+            ts.scheme = str(run.meta.get("_ixmp_scheme", "")) or ts.scheme
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)
-        # TODO either do log.warning that annotation is unused or
-        # run.docs = annotation
+        with run.transact("Store ixmp.TimeSeries annotation, ixmp.Scenario.scheme"):
+            run.meta["_ixmp_annotation"] = annotation
+            if isinstance(ts, Scenario):
+                run.meta["_ixmp_scheme"] = ts.scheme
         self._index_and_set_attrs(run, ts)
 
     def clone(

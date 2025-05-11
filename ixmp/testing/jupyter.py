@@ -2,6 +2,7 @@
 
 import os
 import sys
+from typing import Optional
 from warnings import warn
 
 import pytest
@@ -9,7 +10,9 @@ import pytest
 nbformat = pytest.importorskip("nbformat")
 
 
-def run_notebook(nb_path, tmp_path, env=None, **kwargs):
+def run_notebook(
+    nb_path, tmp_path, env=None, *, default_platform: Optional[str] = None, **kwargs
+):
     """Execute a Jupyter notebook via :mod:`nbclient` and collect output.
 
     Parameters
@@ -20,6 +23,10 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
         A directory in which to create temporary output.
     env : dict, optional
         Execution environment for :mod:`nbclient`. Default: :obj:`os.environ`.
+    default_platform :
+        If given, adjust the ixmp :file:`config.json` in `env` to use the named platform
+        as the default before executing the notebook, and restore the prior value
+        afterwards.
     kwargs :
         Keyword arguments for :class:`nbclient.NotebookClient`. Defaults are set for:
 
@@ -48,6 +55,8 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
     import nbformat
     from nbclient import NotebookClient
 
+    from ixmp import config
+
     # Read the notebook
     nb = nbformat.read(nb_path, as_version=4)
 
@@ -63,12 +72,25 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
     kwargs.setdefault("kernel_name", kernel or f"python{sys.version_info[0]}")
     kwargs.setdefault("timeout", 10)
 
+    env = env or os.environ.copy()
+
+    if default_platform:
+        # Set the default platform in the tmp_env
+        assert config.path is not None and config.path.is_relative_to(env["IXMP_DATA"])
+
+        # Store the default platform
+        default_platform_pre = config.values["platform"]["default"]
+        # Change the default platform
+        config.add_platform("default", default_platform)
+        # Save config.json
+        config.save()
+
     # Create a client and use it to execute the notebook
     client = NotebookClient(nb, **kwargs, resources=dict(metadata=dict(path=tmp_path)))
 
     # Execute the notebook.
     # `env` is passed from nbclient to jupyter_client.launcher.launch_kernel()
-    client.execute(env=env or os.environ.copy())
+    client.execute(env=env)
 
     # Retrieve error information from cells
     errors = [
@@ -78,6 +100,11 @@ def run_notebook(nb_path, tmp_path, env=None, **kwargs):
         for output in cell["outputs"]
         if output.output_type == "error"
     ]
+
+    if default_platform:
+        # Restore the default platform name
+        config.add_platform("default", default_platform_pre)
+        config.save()
 
     return nb, errors
 

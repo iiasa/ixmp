@@ -907,10 +907,10 @@ class IXMP4Backend(CachingBackend):
                 _align_dtypes_for_filters(filters=filters, data=data)
                 filters = _remove_empty_lists(filters=filters)
 
-                if bool(filters):
+                if filters:
                     data = data[
                         data.isin(values=filters)[filters.keys()].all(axis=1)
-                    ].reset_index()
+                    ].reset_index(drop=True)
 
             # Rename columns
             data.rename(columns=renames, inplace=True)

@@ -304,13 +304,21 @@ class TestScenario:
         assert scen.idx_sets("d") == ["i", "j"]
         assert scen.idx_names("d") == ["i", "j"]
 
-    # FIXME IXMP4-backed par doesn't have 0 as a key; avoid this hardcoding
-    @pytest.mark.jdbc
-    def test_par(self, scen):
-        # Parameter data can be retrieved with filters
+    def test_par(self, scen: "ixmp.Scenario") -> None:
+        """Parameter data can be retrieved with filters."""
         df = scen.par("d", filters={"i": ["seattle"]})
+
+        # Data frame has the expected columns
+        assert ["i", "j", "value", "unit"] == list(df.columns)
+
+        # The expected number of values are retrieved
+        assert 3 == len(df)
+
         # Units are as expected
-        assert df.loc[0, "unit"] == "km"
+        # NB This test is insensitive to the contents of df.index since (as of #575) we
+        #    are not certain if a RangeIndex is promised for data frames returned by
+        #    Scenario.par()
+        assert "km" == df["unit"].iloc[0]
 
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])

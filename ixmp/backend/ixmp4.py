@@ -205,7 +205,7 @@ class IXMP4Backend(CachingBackend):
         self._platform = ixmp4_platform(_backend=self._backend)
 
         if opts.jdbc_compat:
-            for u in "???", "GWa", "USD/kWa", "cases", "kg", "km":
+            for u in "???", "GWa", "USD/km", "USD/kWa", "cases", "kg", "km":
                 try:
                     self.set_unit(u, "For compatibility with ixmp.JDBCBackend")
                 except NotUnique:

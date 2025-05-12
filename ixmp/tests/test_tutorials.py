@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pytest
 
+from ixmp.backend import available
 from ixmp.testing import get_cell_output, run_notebook
 
 group_base_name = platform.system() + platform.python_version()
@@ -29,9 +30,18 @@ def default_args():
 
 @FLAKY
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
-def test_py_transport(tutorial_path, tmp_path, tmp_env, default_args):
-    fname = tutorial_path / "transport" / "py_transport.ipynb"
-    nb, errors = run_notebook(fname, tmp_path, tmp_env, **default_args)
+@pytest.mark.parametrize("ixmp_backend", available())
+def test_py_transport(tmp_path, tmp_env, tutorial_path, default_args, ixmp_backend):
+    fname = tutorial_path.joinpath("transport", "py_transport.ipynb")
+
+    # Set the "default" platform to be either the platform named "local" or
+    # "ixmp4-local", according to the ixmp_backend parameter
+    p = {"jdbc": "local", "ixmp4": "ixmp4-local"}[ixmp_backend]
+
+    # Notebook runs without error
+    nb, errors = run_notebook(
+        fname, tmp_path, tmp_env, default_platform=p, **default_args
+    )
     assert errors == []
 
     # FIXME use get_cell_by_name instead of assuming cell count/order is fixed

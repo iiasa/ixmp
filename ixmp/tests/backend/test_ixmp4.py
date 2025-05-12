@@ -207,7 +207,7 @@ class TestIxmp4Functions:
             f"Discarding parent parameter {parent}; unused in ixmp4.",
             f"Discarding synonym parameter {synonym}; unused in ixmp4.",
             "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
-            "Using 'None' as the meaningsless default.",
+            "Using 'None' as a (meaningless) default.",
         ]
         assert caplog.messages == expected
 
@@ -330,3 +330,27 @@ class TestIxmp4Functions:
                 init_items=True,
                 filters={"scenario": scenario},
             )
+
+
+class TestOptions:
+    @pytest.mark.parametrize(
+        "exp, jdbc_compat_arg",
+        (
+            (False, "0"),
+            (False, "false"),
+            (False, "False"),
+            (False, "no"),
+            (False, "NO"),
+            (True, "1"),
+            (True, "FOO"),
+            (True, "true"),
+            (True, "True"),
+            (True, "yes"),
+            (True, "YES"),
+        ),
+    )
+    def test_init(self, exp: bool, jdbc_compat_arg) -> None:
+        from ixmp.backend.ixmp4 import Options
+
+        opts = Options(ixmp4_name="foo", jdbc_compat=jdbc_compat_arg)
+        assert exp is opts.jdbc_compat

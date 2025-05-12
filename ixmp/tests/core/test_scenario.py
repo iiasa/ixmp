@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 from shutil import copyfile
+from typing import TYPE_CHECKING
 
 import numpy.testing as npt
 import pandas as pd
@@ -9,6 +10,11 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import assert_logs, make_dantzig, models
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
+    from ixmp.core.platform import Platform
 
 
 # Fixtures
@@ -144,7 +150,7 @@ class TestScenario:
         # Value is changed only in the clone
         assert scen2.scalar("f") == {"unit": "USD/km", "value": 95}
 
-    def test_clone_scheme(self, request, test_mp) -> None:
+    def test_clone_scheme(self, request: "FixtureRequest", test_mp: "Platform") -> None:
         """:attr:`.Scenario.scheme` is preserved on clone."""
         # Create a string to be used as scheme name
         # NB this fails with JDBCBackend when using .nodeid directly, e.g.
@@ -153,15 +159,20 @@ class TestScenario:
         #    back end can handle.
         scheme = str(hash(request.node.nodeid))
 
-        s0 = ixmp.Scenario(
-            test_mp,
-            model="test_clone_scheme",
-            scenario="s",
-            version="new",
-            scheme=scheme,
-        )
-
+        m_s = dict(model="test_clone_scheme", scenario="s")
+        s0 = ixmp.Scenario(test_mp, **m_s, version="new", scheme=scheme)
         s0.commit("")
+
+        # FIXME The test fails on IXMP4Backend without this statement, but passes on
+        #       JDBCBackend. Adjust the behaviour of the former to match.
+        s0.set_as_default()
+
+        # Discard the reference to `s0` and load again as a new instance of Scenario
+        del s0
+        s0 = ixmp.Scenario(test_mp, **m_s)
+
+        # New instance has same scheme as the original instance
+        assert scheme == s0.scheme
 
         s1 = s0.clone()
 
@@ -304,13 +315,21 @@ class TestScenario:
         assert scen.idx_sets("d") == ["i", "j"]
         assert scen.idx_names("d") == ["i", "j"]
 
-    # FIXME IXMP4-backed par doesn't have 0 as a key; avoid this hardcoding
-    @pytest.mark.jdbc
-    def test_par(self, scen):
-        # Parameter data can be retrieved with filters
+    def test_par(self, scen: "ixmp.Scenario") -> None:
+        """Parameter data can be retrieved with filters."""
         df = scen.par("d", filters={"i": ["seattle"]})
+
+        # Data frame has the expected columns
+        assert ["i", "j", "value", "unit"] == list(df.columns)
+
+        # The expected number of values are retrieved
+        assert 3 == len(df)
+
         # Units are as expected
-        assert df.loc[0, "unit"] == "km"
+        # NB This test is insensitive to the contents of df.index since (as of #575) we
+        #    are not certain if a RangeIndex is promised for data frames returned by
+        #    Scenario.par()
+        assert "km" == df["unit"].iloc[0]
 
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])

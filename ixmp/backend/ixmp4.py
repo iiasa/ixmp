@@ -108,6 +108,12 @@ class Options:
                 "databases", f"{self.ixmp4_name}.sqlite3"
             )
             self.dsn = f"sqlite:///{path}"
+        # Handle str value, e.g. from the command line
+        if isinstance(self.jdbc_compat, str):
+            val = self.jdbc_compat.title()
+            self.jdbc_compat = bool(
+                {"0": False, "False": False, "No": False, "True": True}.get(val, val)
+            )
 
     @classmethod
     def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
@@ -144,7 +150,7 @@ class Options:
             result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
         except AssertionError:  # pragma: no cover
             log.error(f"From ixmp4: {result}")
-            log.error(f"From ixmp: name = {self.ixmp4_name!r}, dsn = {self.dsn!r}")
+            log.error(f"From ixmp: name={self.ixmp4_name!r}, dsn={self.dsn!r}")
             raise
 
         return result
@@ -158,6 +164,7 @@ class IXMP4Backend(CachingBackend):
 
     _platform: "ixmp4_platform"
     _backend: "ixmp4_backend"
+    _options: "Options"
 
     # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
     # subclasses of either)
@@ -177,7 +184,9 @@ class IXMP4Backend(CachingBackend):
         from ixmp4.data.backend import SqliteTestBackend
 
         # Handle arguments
-        opts = Options(ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat)
+        self._options = opts = Options(
+            ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat
+        )
 
         try:
             # Get an existing ixmp4.Backend object
@@ -196,7 +205,7 @@ class IXMP4Backend(CachingBackend):
         self._platform = ixmp4_platform(_backend=self._backend)
 
         if opts.jdbc_compat:
-            for u in "???", "GWa", "USD/kWa", "cases", "kg", "km":
+            for u in "???", "GWa", "USD/km", "USD/kWa", "cases", "kg", "km":
                 try:
                     self.set_unit(u, "For compatibility with ixmp.JDBCBackend")
                 except NotUnique:
@@ -208,6 +217,15 @@ class IXMP4Backend(CachingBackend):
                 self.set_node(name="World", hierarchy="common")
             except NotUnique:
                 pass
+
+    @property
+    def _log_level(self) -> int:
+        """Log level for compatibility messages.
+
+        Either :data:`logging.WARNING`, if :attr:`.Options.jdbc_compat` is :any:`False`,
+        or else :data:`logging.NOTSET`.
+        """
+        return logging.NOTSET if self._options.jdbc_compat else logging.WARNING
 
     # def __del__(self) -> None:
     #     self.close_db()
@@ -297,7 +315,7 @@ class IXMP4Backend(CachingBackend):
         if hierarchy is None:
             log.warning(
                 "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
-                "Using 'None' as the meaningsless default."
+                "Using 'None' as a (meaningless) default.",
             )
             hierarchy = "None"
         self._platform.regions.create(name=name, hierarchy=hierarchy)
@@ -327,16 +345,16 @@ class IXMP4Backend(CachingBackend):
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
 
-        # NOTE ixmp4 doesn't store 'scheme', which could in principle be anything.
-        # Since this is a shim between message_ix/ixmp4, I'm hardcoding this as default.
         if isinstance(ts, Scenario):
-            if not ts.scheme:
-                ts.scheme = "IXMP4-MESSAGE"
+            # Retrieve the `scheme` attribute from the Run.meta dict
+            ts.scheme = str(run.meta.get("_ixmp_scheme", "")) or ts.scheme
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)
-        # TODO either do log.warning that annotation is unused or
-        # run.docs = annotation
+        with run.transact("Store ixmp.TimeSeries annotation, ixmp.Scenario.scheme"):
+            run.meta["_ixmp_annotation"] = annotation
+            if isinstance(ts, Scenario):
+                run.meta["_ixmp_scheme"] = ts.scheme
         self._index_and_set_attrs(run, ts)
 
     def clone(
@@ -380,18 +398,23 @@ class IXMP4Backend(CachingBackend):
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
-        log.warning("ixmp4 backed Scenarios/Runs don't need to be checked out!")
+        log.log(
+            self._log_level, "ixmp4 backed Scenarios/Runs don't need to be checked out!"
+        )
 
     def discard_changes(self, ts: TimeSeries) -> None:
         log.warning(
+            self._log_level,
             "ixmp4 backed Scenarios/Runs are changed immediately, can't "
             "discard changes. To avoid the need, be sure to start work on "
-            "fresh clones."
+            "fresh clones.",
         )
 
     def commit(self, ts: TimeSeries, comment: str) -> None:
-        log.warning(
-            "ixmp4 backed Scenarios/Runs are changed immediately, no need for a commit!"
+        log.log(
+            self._log_level,
+            "ixmp4 backed Scenarios/Runs are changed immediately, "
+            "no need for a commit!",
         )
 
     def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
@@ -901,10 +924,10 @@ class IXMP4Backend(CachingBackend):
                 _align_dtypes_for_filters(filters=filters, data=data)
                 filters = _remove_empty_lists(filters=filters)
 
-                if bool(filters):
+                if filters:
                     data = data[
                         data.isin(values=filters)[filters.keys()].all(axis=1)
-                    ].reset_index()
+                    ].reset_index(drop=True)
 
             # Rename columns
             data.rename(columns=renames, inplace=True)

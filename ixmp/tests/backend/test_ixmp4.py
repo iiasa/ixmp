@@ -207,7 +207,7 @@ class TestIxmp4Functions:
             f"Discarding parent parameter {parent}; unused in ixmp4.",
             f"Discarding synonym parameter {synonym}; unused in ixmp4.",
             "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
-            "Using 'None' as the meaningsless default.",
+            "Using 'None' as a (meaningless) default.",
         ]
         assert caplog.messages == expected
 

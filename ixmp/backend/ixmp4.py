@@ -164,6 +164,7 @@ class IXMP4Backend(CachingBackend):
 
     _platform: "ixmp4_platform"
     _backend: "ixmp4_backend"
+    _options: "Options"
 
     # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
     # subclasses of either)
@@ -183,7 +184,9 @@ class IXMP4Backend(CachingBackend):
         from ixmp4.data.backend import SqliteTestBackend
 
         # Handle arguments
-        opts = Options(ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat)
+        self._options = opts = Options(
+            ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat
+        )
 
         try:
             # Get an existing ixmp4.Backend object
@@ -214,6 +217,15 @@ class IXMP4Backend(CachingBackend):
                 self.set_node(name="World", hierarchy="common")
             except NotUnique:
                 pass
+
+    @property
+    def _log_level(self) -> int:
+        """Log level for compatibility messages.
+
+        Either :data:`logging.WARNING`, if :attr:`.Options.jdbc_compat` is :any:`False`,
+        or else :data:`logging.NOTSET`.
+        """
+        return logging.NOTSET if self._options.jdbc_compat else logging.WARNING
 
     # def __del__(self) -> None:
     #     self.close_db()
@@ -303,7 +315,7 @@ class IXMP4Backend(CachingBackend):
         if hierarchy is None:
             log.warning(
                 "IXMP4Backend.set_node() requires to specify 'hierarchy'! "
-                "Using 'None' as the meaningsless default."
+                "Using 'None' as a (meaningless) default.",
             )
             hierarchy = "None"
         self._platform.regions.create(name=name, hierarchy=hierarchy)
@@ -386,18 +398,23 @@ class IXMP4Backend(CachingBackend):
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
-        log.warning("ixmp4 backed Scenarios/Runs don't need to be checked out!")
+        log.log(
+            self._log_level, "ixmp4 backed Scenarios/Runs don't need to be checked out!"
+        )
 
     def discard_changes(self, ts: TimeSeries) -> None:
         log.warning(
+            self._log_level,
             "ixmp4 backed Scenarios/Runs are changed immediately, can't "
             "discard changes. To avoid the need, be sure to start work on "
-            "fresh clones."
+            "fresh clones.",
         )
 
     def commit(self, ts: TimeSeries, comment: str) -> None:
-        log.warning(
-            "ixmp4 backed Scenarios/Runs are changed immediately, no need for a commit!"
+        log.log(
+            self._log_level,
+            "ixmp4 backed Scenarios/Runs are changed immediately, "
+            "no need for a commit!",
         )
 
     def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:

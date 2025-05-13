@@ -57,9 +57,6 @@ jobs:
         fetch-depth: ${{ env.depth }}
         fetch-tags: true
 
-    - name: TEMPORARY Work around actions/checkout#2041
-      run: git fetch --tags
-
     - name: Set up uv, Python
       uses: astral-sh/setup-uv@v6
       with:

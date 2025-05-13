@@ -92,12 +92,8 @@ jobs:
       shell: bash
 
     - name: Install the package and dependencies
-      # [docs] → [tests] → [report,tutorial]
-      # TODO Remove ixmp4 line once https://github.com/iiasa/ixmp4/pull/164 is merged
-      run: |
-        uv pip install \
-          "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items; python_version > '3.9'" \
-          .[docs]
+      # [docs] → [tests] → [ixmp4,report,tutorial]
+      run: uv pip install .[docs]
       shell: bash
 
     - name: "Install libpng-dev"  # for R 'png', required by reticulate

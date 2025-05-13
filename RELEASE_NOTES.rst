@@ -5,13 +5,11 @@ All changes
 -----------
 
 - Add :class:`.IXMP4Backend` as an alternative to :class:`.JDBCBackend` (:pull:`552`, :pull:`568`. :pull:`570`).
+  Please read the usage notes at :mod:`.backend.ixmp4` and :class:`.IXMP4Backend`,
+  and the linked `support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_.
 
-  - Improve :program:`ixmp platform add` to support adding :class:`.Platform` with :class:`.IXMP4Backend` (:pull:`575`).
-
-  Please note:
-
-  - This requires ixmp4, which is only compatible with Python 3.10 and above.
-  - :class:`.IXMP4Backend` is still missing several features and documentation, which will be added in subsequent PRs.
+  - New optional dependencies set ``ixmp[ixmp4]`` including ixmp4 version 0.10 (:pull:`552`, :pull:`576`).
+  - Improve the :program:`ixmp platform add` :doc:`command <cli>` to support adding :class:`.Platform` with :class:`.IXMP4Backend` (:pull:`575`).
 
 - Refine the method of locating the GAMS :attr:`~.GAMSInfo.executable` (:pull:`564`, :issue:`456`, :issue:`523`, :issue:`563`).
 

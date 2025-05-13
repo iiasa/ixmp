@@ -1,11 +1,20 @@
 .. currentmodule:: ixmp.backend
 
 Storage back ends (:mod:`ixmp.backend`)
-=======================================
+***************************************
 
-:mod:`ixmp` includes :class:`ixmp.backend.jdbc.JDBCBackend`, which can store data in many types of relational database management systems (RDBMS) that have Java DataBase Connector (JDBC) interfaces—hence its name.
+:mod:`ixmp` includes two storage back ends:
 
-:mod:`ixmp` is extensible to support other methods of storing data: in non-JDBC RDBMS, non-relational databases, local files, memory, or other ways.
+- :class:`ixmp.backend.jdbc.JDBCBackend`,
+  which can store data in many types of relational database management systems (RDBMS)
+  that have Java DataBase Connector (JDBC) interfaces—hence its name.
+- :class:`ixmp.backend.ixmp4.IXMP4Backend`,
+  which uses the `ixmp4 <https://docs.ece.iiasa.ac.at/projects/ixmp4/>`_ package
+  and in turn its storage options,
+  including the SQLite and PostgreSQL RDBMS.
+
+:mod:`ixmp` is extensible to support other methods of storing data:
+in non-JDBC or -ixmp4 RDBMS, non-relational databases, local files, memory, or other ways.
 Developers wishing to add such capabilities may subclass :class:`ixmp.backend.base.Backend` and implement its methods.
 
 .. contents::
@@ -13,11 +22,15 @@ Developers wishing to add such capabilities may subclass :class:`ixmp.backend.ba
    :backlinks: none
 
 Provided backends
------------------
+=================
 
 .. autodata:: ixmp.backend.BACKENDS
 
+
 .. currentmodule:: ixmp.backend.jdbc
+
+JDBCBackend
+-----------
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
    :members: handle_config, read_file, write_file
@@ -63,28 +76,65 @@ Provided backends
 
 .. currentmodule:: ixmp.backend.ixmp4
 
-.. warning::
-   `ixmp4 <https://github.com/iiasa/ixmp4/>`_ only supports Python 3.10 and above. 
-   Please ensure you are using a sufficiently recent Python version if you want to use IXMP4Backend.
-   If you are restricted to Python 3.9 and below, please use JDBCBackend instead.
+IXMP4Backend
+------------
+
+.. note::
+   As of version 0.10, `ixmp4 <https://github.com/iiasa/ixmp4/>`_ supports only Python 3.10 and above.
+
+   - If you want to use IXMP4Backend,
+     please ensure you are using a sufficiently recent Python version.
+   - If you are restricted to Python 3.9 and below,
+     please use JDBCBackend instead.
+
+.. automodule:: ixmp.backend.ixmp4
+   :members:
+   :exclude-members: IXMP4Backend
 
 .. autoclass:: ixmp.backend.ixmp4.IXMP4Backend
 
+   .. note::
+      As of ixmp version 3.11,
+      IXMP4Backend has only *partial* support for the APIs of :class:`ixmp.Platform`,
+      :class:`ixmp.TimeSeries`, :class:`ixmp.Scenario`, and :py:`message_ix.Scenario`,
+      and may not be as performant as JDBCBackend.
+      See `Support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_
+      and `issues labeled 'backend.ixmp4' <https://github.com/iiasa/ixmp/labels/backend.ixmp4>`_
+      for details of future work to expand support and improve performance.
+
+      Because IXMP4Backend uses ixmp4 version 0.10 (that is, prior to a 1.0 'stable' release):
+
+      - The ixmp4 API is not yet finalized and may change at any time.
+      - Complete documentation of the ixmp4 API itself is not yet available.
+
+      Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
+
+   IXMP4Backend supports storage in local, SQLite databases.
 
 .. currentmodule:: ixmp.backend
 
 Backend API
------------
+===========
+
+.. autosummary::
+
+   available
+   get_class
+
+.. currentmodule:: ixmp.backend.common
+
+.. autosummary::
+
+   ItemType
+   FIELDS
+   IAMC_IDX
 
 .. currentmodule:: ixmp.backend.base
 
 .. autosummary::
 
-   ixmp.backend.base.Backend
-   ixmp.backend.base.CachingBackend
-   ixmp.backend.ItemType
-   ixmp.backend.FIELDS
-   ixmp.backend.IAMC_IDX
+   Backend
+   CachingBackend
 
 - :class:`ixmp.Platform` implements a *user-friendly* API for scientific programming.
   This means its methods can take many types of arguments, check, and transform them—in a way that provides modeler-users with easy, intuitive workflows.
@@ -208,9 +258,13 @@ Backend API
 
    Subclasses **must** call :meth:`cache`, :meth:`cache_get`, and :meth:`cache_invalidate` as appropriate to manage the cache; CachingBackend does not enforce any such logic.
 
-
 .. automodule:: ixmp.backend
-   :members: FIELDS, IAMC_IDX
+   :members:
+   :exclude-members: ItemType
+
+.. automodule:: ixmp.backend.common
+   :members:
+   :exclude-members: ItemType
 
 .. autoclass:: ixmp.backend.ItemType
    :members:

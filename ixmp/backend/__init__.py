@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ItemType",
+    "available",
+    "get_class",
 ]
 
 #: Mapping from names to available backends. To register additional backends, add

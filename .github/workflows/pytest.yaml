@@ -11,6 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
   depth: 100
 
@@ -53,9 +57,6 @@ jobs:
         fetch-depth: ${{ env.depth }}
         fetch-tags: true
 
-    - name: TEMPORARY Work around actions/checkout#2041
-      run: git fetch --tags
-
     - name: Set up uv, Python
       uses: astral-sh/setup-uv@v6
       with:
@@ -89,16 +90,10 @@ jobs:
     - name: Set RETICULATE_PYTHON
       # Retrieve the Python executable set up above
       run: echo "RETICULATE_PYTHON=$(uv python find)" >> $GITHUB_ENV
-      shell: bash
 
     - name: Install the package and dependencies
-      # [docs] → [tests] → [report,tutorial]
-      # TODO Remove ixmp4 line once https://github.com/iiasa/ixmp4/pull/164 is merged
-      run: |
-        uv pip install \
-          "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/remove-linked-items-when-removing-indexset-items; python_version > '3.9'" \
-          .[docs]
-      shell: bash
+      # [docs] → [tests] → [ixmp4,report,tutorial]
+      run: uv pip install .[docs]
 
     - name: "Install libpng-dev"  # for R 'png', required by reticulate
       if: startsWith(matrix.os, 'ubuntu-')
@@ -122,7 +117,6 @@ jobs:
           --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
           --numprocesses=auto --dist=loadgroup
-      shell: bash
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v5

@@ -9,5 +9,5 @@ class PlatformArgs(TypedDict, total=False):
     name: NotRequired[Union[str, None]]
     # NB The class itself has Literal["ixmp4", "jdbc"] first as an aid to completion in
     #    IDE/interactive use, but for downstream code any str is valid, though may raise
-    #    in get_backend().
+    #    in get_class().
     backend: NotRequired[Union[str, None]]

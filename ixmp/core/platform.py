@@ -37,7 +37,7 @@ class Platform:
         Name of a specific :ref:`configured <configuration>` backend.
     backend
         Storage backend type. 'jdbc' corresponds to the built-in :class:`.JDBCBackend`;
-        see :func:`.get_backend`.
+        see :func:`~.backend.get_class`.
     backend_args
         Keyword arguments to specific to the `backend`. See :class:`.JDBCBackend`.
     """

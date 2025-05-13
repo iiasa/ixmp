@@ -88,11 +88,12 @@ __all__ = [
     "tmp_env",
 ]
 
+GHA = "GITHUB_ACTIONS" in os.environ
+
 # Provide a skip marker since ixmp4 is not published for Python 3.9
 min_ixmp4_version = pytest.mark.skipif(
     sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
 )
-
 
 # Pytest hooks
 

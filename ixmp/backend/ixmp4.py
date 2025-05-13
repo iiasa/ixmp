@@ -96,8 +96,8 @@ class Options:
     #: certain units and regions that are automatically added to any
     #: :class:`.JDBCBackend`. These include:
     #:
-    #: - Units: "???", "GWa", "USD/kWa", "cases", "kg", "km". Of these, only "cases" and
-    #:   "km" are used by the :mod:`message_ix` tutorials.
+    #: - Units: "???", "GWa", "USD/km", "USD/kWa", "cases", "kg", "km". Of these, only
+    #:   "cases" and "km" are used by the :mod:`message_ix` tutorials.
     #: - Regions: "World", in hierarchy "common".
     jdbc_compat: bool = False
 

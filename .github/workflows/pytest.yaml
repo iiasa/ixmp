@@ -11,6 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
   depth: 100
 
@@ -89,12 +93,10 @@ jobs:
     - name: Set RETICULATE_PYTHON
       # Retrieve the Python executable set up above
       run: echo "RETICULATE_PYTHON=$(uv python find)" >> $GITHUB_ENV
-      shell: bash
 
     - name: Install the package and dependencies
       # [docs] → [tests] → [ixmp4,report,tutorial]
       run: uv pip install .[docs]
-      shell: bash
 
     - name: "Install libpng-dev"  # for R 'png', required by reticulate
       if: startsWith(matrix.os, 'ubuntu-')
@@ -118,7 +120,6 @@ jobs:
           --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
           --numprocesses=auto --dist=loadgroup
-      shell: bash
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v5

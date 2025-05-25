@@ -12,7 +12,7 @@ from pytest import raises
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
-from ixmp.testing import DATA, GHA, add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 
 log = logging.getLogger(__name__)
@@ -385,9 +385,6 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-@pytest.mark.flaky(
-    reruns=5, rerun_delay=2, condition=GHA, reason="Flaky; see iiasa/ixmp#543"
-)
 def test_del_ts(request):
     mp = ixmp.Platform(
         backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem:test_del_ts"

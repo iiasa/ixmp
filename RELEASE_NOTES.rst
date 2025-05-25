@@ -12,6 +12,7 @@ All changes
   - Improve the :program:`ixmp platform add` :doc:`command <cli>` to support adding :class:`.Platform` with :class:`.IXMP4Backend` (:pull:`575`).
 
 - Refine the method of locating the GAMS :attr:`~.GAMSInfo.executable` (:pull:`564`, :issue:`456`, :issue:`523`, :issue:`563`).
+- Update installation instructions to align with current |MESSAGEix| install documentation (:pull:`577`).
 
 .. _v3.10.0:
 

@@ -387,7 +387,7 @@ def test_verbose_exception(test_mp, exception_verbose_true):
 
 def test_del_ts(request):
     mp = ixmp.Platform(
-        backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem:test_del_ts"
+        backend="jdbc", driver="hsqldb", url=f"jdbc:hsqldb:mem:{request.node.name}"
     )
 
     backend: ixmp.backend.jdbc.JDBCBackend = mp._backend  # type: ignore

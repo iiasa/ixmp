@@ -392,8 +392,10 @@ def test_del_ts(request):
 
     backend: ixmp.backend.jdbc.JDBCBackend = mp._backend  # type: ignore
 
-    # Number of Java objects referenced by the JDBCBackend
+    # Number of Java objects referenced by the JDBCBackend: force to 0 before test
+    backend.jindex.clear()
     N_obj = len(backend.jindex)
+    assert N_obj == 0
 
     # Number of new objects to create
     N = 8

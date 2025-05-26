@@ -1,198 +1,186 @@
 Installation
 ************
 
-Most users will have :mod:`ixmp` installed automatically when `installing MESSAGEix`_.
-The sections below cover other use cases.
+Most users of :mod:`ixmp` will have it installed automatically as a dependency of :mod:`message_ix`,
+for instance by following the :ref:`message_ix:install-quick` instructions.
 
-Ensure you have first read the :doc:`prerequisites <message_ix:prereqs>` for understanding and using |MESSAGEix|.
-These include specific points of knowledge that are necessary to understand these instructions and choose among different installation options.
+.. important:: If that is the case,
+   you **do not** need to also follow these instructions.
+
+The sections below cover *other* use cases, such as:
+
+- Using :mod:`ixmp` *alone*
+  —that is, *without* :mod:`message_ix`,
+  perhaps with other models or frameworks.
+
+- Installing :mod:`ixmp` from source for development purposes,
+  for instance for use with a source install of :mod:`message_ix`.
+
+.. |message-ix-adv| replace:: the |MESSAGEix| :doc:`message_ix:install-adv`
+
+They correspond to sections of |message-ix-adv|
+and reference its contents.
+They omit extra background information
+and discussion found in that guide.
+Be sure that you have the :doc:`prerequisite skills and knowledge <message_ix:prereqs>`;
+these include specific points of knowledge
+that are necessary to understand these instructions
+and choose among different installation options.
 
 To use :mod:`ixmp` from R, see :ref:`message_ix:install-r` in the |MESSAGEix| documentation.
-
-Use cases for installing ixmp directly include:
-
-- Installing *ixmp* to be used alone (i.e., with models or frameworks other than |MESSAGEix|).
-  Follow the sections:
-
-  - `Install system dependencies`_, then
-  - `Using Anaconda`_.
-
-- Installing *ixmp* from source, for development purposes, e.g. to be used with a source install of :mod:`message_ix`.
-  Follow the sections:
-
-  - `Install system dependencies`_, then
-  - `From source`_.
-
-**Contents:**
 
 .. contents::
    :local:
 
+.. _system-dependencies:
+
 Install system dependencies
 ===========================
 
-Python
-------
+Read and follow **each** of these sections of |message-ix-adv|:
 
-Python version 3.9 or later is required.
-
-GAMS (required)
----------------
-
-:mod:`ixmp` requires `GAMS`_.
-
-1. Download GAMS for your operating system; either the `latest version`_ or, for users not familiar with GAMS licenses, `version 29`_ (see note below).
-
-2. Run the installer.
-
-3. Ensure that the ``PATH`` environment variable on your system includes the path to the GAMS program:
-
-   - on Windows, in the GAMS installer…
-
-      - Check the box labeled “Use advanced installation mode.”
-      - Check the box labeled “Add GAMS directory to PATH environment variable” on the Advanced Options page.
-
-   - on other platforms (macOS or Linux), add the following line to a file such as :file:`~/.bash_profile` (macOS), :file:`~/.bashrc`, or :file:`~/.profile`::
-
-       export PATH=$PATH:/path/to/gams-directory-with-gams-binary
-
-.. note::
-   :mod:`message_ix` requires GAMS version 24.8; :mod:`ixmp` has no minimum requirement *per se*.
-   The latest version is recommended.
-
-   GAMS is proprietary software and requires a license to solve optimization problems.
-   To run both the :mod:`ixmp` and :mod:`message_ix` tutorials and test suites, a “free demonstration” license is required; the free license is suitable for these small models.
-   Versions of GAMS up to `version 29`_ include such a license with the installer; since version 30, the free demo license is no longer included, but may be requested via the GAMS website.
-
-.. note::
-   If you only have a license for an older version of GAMS, install both the older and the latest versions.
-
-
-Graphviz (optional)
--------------------
-
-:meth:`ixmp.Reporter.visualize <genno.Computer.visualize>` uses `Graphviz`_, a program for graph visualization.
-Installing ixmp causes the `graphviz <https://graphviz.readthedocs.io>`__ Python package to be installed.
-If you want to use :meth:`~genno.Computer.visualize` or run the test suite, the Graphviz program itself must also be installed; otherwise it is **optional**.
-
-If you install :mod:`ixmp` using Anaconda, Graphviz is installed automatically via `its conda-forge package`_.
-For other methods of installation, see the `Graphviz download page`_ for downloads and instructions for your system.
-
+- :ref:`message_ix:install-python`.
+- :ref:`message_ix:install-java`.
+- :ref:`message_ix:install-gams`.
+- :ref:`message_ix:install-graphviz`.
 
 Install :mod:`ixmp`
 ===================
 
-Using Anaconda
---------------
+Choose :program:`pip` or :program:`conda`
+-----------------------------------------
 
-After installing GAMS, we recommend that new users install Anaconda, and then use it to install :mod:`ixmp`.
-Advanced users may choose to install :mod:`ixmp` from source code (next section).
+Read :ref:`message_ix:install-pip-or-conda` in the |message-ix-adv|.
 
-4. Install Python via either `Miniconda`_ or `Anaconda`_. [1]_
-   We recommend the latest version; currently Python 3.13. [2]_
+Whichever option you choose,
+please skip over the unrelated sections below.
 
-5. Open a command prompt.
-   We recommend Windows users use the “Anaconda Prompt” to avoid issues with permissions and environment variables when installing and using :mod:`ixmp`.
-   This program is available in the Windows Start menu after installing Anaconda.
+Create and activate a virtual environment
+-----------------------------------------
 
-6. Configure conda to install :mod:`ixmp` from the conda-forge channel [3]_::
+Read and follow :ref:`message_ix:install-venv`.
 
-    $ conda config --prepend channels conda-forge
+Then,
+according to your choice above,
+follow *either* “Use pip” or “Use conda” below.
 
-7. Create a new conda enviroment.
-   This step is **required** if using Anaconda, but *optional* if using Miniconda.
-   This example uses the name ``ixmp_env``, but you can use any name of your choice::
+Use :program:`pip`
+------------------
 
-    $ conda create --name ixmp_env
-    $ conda activate ixmp_env
+.. _install-extras:
 
-6. Install the ``ixmp`` package into the current environment (either ``base``, or another name from step 7, e.g. ``ixmp_env``)::
+Choose optional dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    $ conda install -c conda-forge ixmp
+Optional dependencies
+(also called “extra requirements”)
+are gathered in groups.
+The example commands below include a string like ``[docs]``.
+This implies four of the five available groups of extra requirements for :mod:`ixmp`:
 
-.. [1] See the `conda glossary`_ for the differences between Anaconda and Miniconda, and the definitions of the terms ‘channel’ and ‘environment’ here.
-.. [2] On newer macOS systems with "Apple M1" processors: the Miniconda or Anaconda installers provided for M1 lead to errors in ixmp.
-   Instead, we recommend to use the macOS installers for "x86_64" processors on these systems.
-   See also :issue:`473`.
-.. [3] The ‘$’ character at the start of these lines indicates that the command text should be entered in the terminal or prompt, depending on the operating system.
-   Do not retype the ‘$’ character itself.
+- ``docs`` includes packages required to build this documentation locally,
+  including ``ixmp[tests]`` and all *its* requirements,
+- ``ixmp4`` includes packages required to use the :class:`.IXMP4Backend`,
+- ``report`` includes packages required to use the built-in :doc:`reporting <reporting>` features of :mod:`ixmp`,
+- ``tests`` includes packages required to run the test suite,
+  including ``ixmp[ixmp4]``, ``ixmp[report]``, ``ixmp[tutorial]`` and all the requirements in those groups, and
+- ``tutorial`` includes packages required to run the :doc:`tutorials <tutorials>`.
 
-.. note:: When using Anaconda (not Miniconda), steps (5) through (8) can also be performed using the graphical Anaconda Navigator.
-   See the `Anaconda Navigator documentation`_ for how to perform the various steps.
+Install the latest release from PyPI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+1. Install :mod:`ixmp` [1]_::
 
-From source
------------
+    pip install ixmp[docs]
 
-4. (Optional) If you intend to contribute changes to *ixmp*, first register a Github account, and fork the `ixmp repository <https://github.com/iiasa/ixmp>`_.
-   This will create a new repository ``<user>/ixmp``.
-   (Please also see :doc:`message_ix:contributing`.)
+.. [1] If using the (non-standard) :program:`zsh` shell,
+   note or recall that ``[...]`` is a `glob operator`_,
+   so the argument to pip must be quoted appropriately:
+   ``pip install 'ixmp[docs]'``.
 
-5. Clone either the main repository, or your fork; using the `Github Desktop`_ client, or the command line::
+At this point, installation is complete.
 
-    $ git clone git@github.com:iiasa/ixmp.git
+Install from GitHub
+~~~~~~~~~~~~~~~~~~~
+
+1. Run the following.
+   Replace ``<ref>`` with a specific Git reference such as a branch name
+   (for instance, the ``main`` development branch, or a branch associated with a pull request),
+   a tag, or a commit hash::
+
+    pip install git+ssh://git@github.com:iiasa/ixmp.git@<ref>[docs]
+
+   ``git+ssh://`` assumes that you `use SSH to authenticate to GitHub`_,
+   which we recommend.
+   If you instead use other methods,
+   then run::
+
+    pip install git+https://github.com/iiasa/ixmp.git@<ref>[docs]
+
+At this point, installation is complete.
+
+Install from a :program:`git` clone of the source code
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See the corresponding section in |message-ix-adv| for further details about editable installs,
+registering a GitHub account,
+and using a fork.
+
+1. Clone either the main repository, or your fork;
+   using the `Github Desktop`_ client,
+   or the command line::
+
+    git clone git@github.com:iiasa/ixmp.git
 
     # or:
-    $ git clone git@github.com:USER/ixmp.git
+    git clone git@github.com:<user>/ixmp.git
 
-6. Open a command prompt in the :file:`ixmp/` directory that is created, and type::
+2. Navigate to the ``ixmp`` directory created by :program:`git clone` in step (2).
+   Run the following [1]_::
 
-    $ pip install --editable .[docs,tests,tutorial]
+    pip install --editable .[docs]
 
-   The ``--editable`` flag ensures that changes to the source code are picked up every time ``import ixmp`` is used in Python code.
-   The ``[docs,tests,tutorial]`` extra dependencies ensure additional dependencies are installed.
+At this point, installation is complete.
 
-7. (Optional) Run the built-in test suite to check that :mod:`ixmp` functions correctly on your system::
+Use :program:`conda`
+--------------------
 
-    $ pytest
+1. Configure conda to install :mod:`ixmp` from the conda-forge ‘channel’::
 
+    conda config --prepend channels conda-forge
+
+2. Install and configure the `mamba solver`_,
+   which is faster and more reliable than conda's default solver::
+
+    conda install conda-libmamba-solver
+    conda config --set solver libmamba
+
+3. Create a new conda environment and activate it.
+   This step is **required** if using Anaconda_, but *optional* if using Miniconda_.
+   This example uses the name ``ixmp-env``, but you can use any name of your choice::
+
+    conda create --name ixmp-env
+    conda activate ixmp-env
+
+4. Install the :mod:`ixmp` package into the current environment
+   (either ``ixmp-env``, or another name from the previous step)::
+
+    conda install ixmp
+
+At this point, installation is complete.
 
 Troubleshooting
 ===============
 
-Run ``ixmp show-versions`` on the command line to check that you have all dependencies installed, or when reporting issues.
+To check that you have all dependencies installed,
+or when reporting issues,
+run the following::
 
-For Anaconda users experiencing problems during installation of ixmp, check that the following paths are part of the ``PATH`` environment variable, and add them if missing::
+   ixmp show-versions
 
-    C:\[YOUR ANACONDA LOCATION]\Anaconda3;
-    C:\[YOUR ANACONDA LOCATION]\Anaconda3\Scripts;
-    C:\[YOUR ANACONDA LOCATION]\Anaconda3\Library\bin;
-
-
-Install development tools
-=========================
-
-Developers making changes to the :mod:`ixmp` source **may** need one or more of the following tools.
-Users developing models using existing functionality **should not** need these tools.
-
-Git
-   Use one of:
-
-   - https://git-scm.com/downloads
-   - https://desktop.github.com
-   - https://www.gitkraken.com
-
-Java Development Kit (JDK)
-   - Install the Java Development Kit (JDK) for Java SE version 8 from https://www.oracle.com/technetwork/java/javase/downloads/index.html
-
-     .. note:: At this point, ixmp is not compatible with JAVA SE 9.
-
-   - Follow the `JDK website instructions`_ to set the ``JAVA_HOME`` environment variable; if ``JAVA_HOME`` does not exist, add it as a new system variable.
-
-   - Update your ``PATH`` environment variable to point to the JRE binaries and server installation (e.g., :file:`C:\\Program Files\\Java\\jdk[YOUR JDK VERSION]\\jre\\bin\\`, :file:`C:\\Program Files\\Java\\jdk[YOUR JDK VERSION]\\jre\\bin\\server`).
-
-     .. warning:: Do not overwrite the existing ``PATH`` environment variable, but add to the list of existing paths.
-
-.. _`installing MESSAGEix`: https://docs.messageix.org/en/latest/getting_started.html
-.. _`Anaconda`: https://www.continuum.io/downloads
-.. _`GAMS`: http://www.gams.com
-.. _`latest version`: https://www.gams.com/download/
-.. _`version 29`: https://www.gams.com/29/
-.. _Graphviz: https://www.graphviz.org
-.. _`its conda-forge package`: https://anaconda.org/conda-forge/graphviz
-.. _Graphviz download page: https://www.graphviz.org/download/
-.. _Miniconda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
-.. _conda glossary: https://docs.conda.io/projects/conda/en/latest/glossary.html
-.. _Anaconda Navigator documentation: https://docs.anaconda.com/anaconda/navigator/
+.. _`glob operator`: https://zsh.sourceforge.io/Doc/Release/Expansion.html#Glob-Operators
+.. _`mamba solver`: https://conda.github.io/conda-libmamba-solver/
+.. _`use SSH to authenticate to GitHub`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
 .. _`Github Desktop`: https://desktop.github.com
-.. _JDK website instructions: https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/
+.. _Anaconda: https://www.continuum.io/downloads
+.. _Miniconda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html

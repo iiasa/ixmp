@@ -12,7 +12,7 @@ from pytest import raises
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
-from ixmp.testing import DATA, GHA, add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 
 log = logging.getLogger(__name__)
@@ -385,26 +385,29 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-@pytest.mark.flaky(
-    reruns=5, rerun_delay=2, condition=GHA, reason="Flaky; see iiasa/ixmp#543"
-)
 def test_del_ts(request):
     mp = ixmp.Platform(
-        backend="jdbc",
-        driver="hsqldb",
-        url="jdbc:hsqldb:mem:test_del_ts",
+        backend="jdbc", driver="hsqldb", url=f"jdbc:hsqldb:mem:{request.node.name}"
     )
 
     backend: ixmp.backend.jdbc.JDBCBackend = mp._backend  # type: ignore
 
-    # Number of Java objects referenced by the JDBCBackend
+    # Number of Java objects referenced by the JDBCBackend: force to 0 before test
+    backend.jindex.clear()
     N_obj = len(backend.jindex)
+    assert N_obj == 0
 
-    # Create a list of some Scenario objects
+    # Number of new objects to create
     N = 8
+
+    # Create a list of `N` Scenario objects
+    # A new instance of make_dantzig() with an incremented version number
     scenarios = [make_dantzig(mp, request=request)]
+    # N-1 clones with distinct scenario names
     for i in range(1, N):
-        scenarios.append(scenarios[0].clone(scenario=f"{request.node.name} clone {i}"))
+        # Use a name ending "… clone 9", "… clone 10" to avoid overlap
+        name = f"{scenarios[0].scenario} clone {N_obj + i}"
+        scenarios.append(scenarios[0].clone(scenario=name))
 
     # Number of referenced objects has increased by 8
     assert len(backend.jindex) == N_obj + N
@@ -413,12 +416,18 @@ def test_del_ts(request):
     for i in range(N):
         s = scenarios.pop(0)
 
-        message = "\n".join(map(str, gc.get_referrers(s)))
+        # Number of references to `s`
+        N_ref = getrefcount(s)
 
-        # The variable 's' is the only reference to this Scenario object
-        assert 1 == getrefcount(s) - 1, (message, gc.garbage)
+        # The variable 's' should be the only reference to this Scenario object
+        if 1 != N_ref - 1:
+            # Show information about any other references
+            if refs := gc.get_referrers(s):  # pragma: no cover
+                lines = [f"{len(refs)} unexpected references to {s}:"]
+                lines.extend(map(str, refs))
+                log.warning("\n".join(lines))
 
-        # ID of the Scenario object
+        # Python ID of the Scenario object/instance
         s_id = id(s)
 
         # Underlying Java object
@@ -430,8 +439,8 @@ def test_del_ts(request):
 
         # Number of referenced objects decreases by 1
         assert len(backend.jindex) == N_obj + N - (i + 1)
-        # ID is no longer in JDBCBackend.jindex
-        assert s_id not in backend.jindex
+        # No object with `s_id` remains in JDBCBackend.jindex
+        assert s_id not in map(id, backend.jindex)
 
         # s_jobj is the only remaining reference to the Java object
         assert getrefcount(s_jobj) - 1 == 1

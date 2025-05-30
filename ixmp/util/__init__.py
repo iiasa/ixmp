@@ -587,7 +587,12 @@ def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) 
     SHOW_VERSION_PACKAGES
     """
     from importlib import import_module
-    from importlib.metadata import PackageNotFoundError, packages_distributions, version
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        from importlib.metadata import packages_distributions
+    except ImportError:  # Python 3.9
+        from importlib_metadata import packages_distributions  # type: ignore [no-redef]
     from subprocess import DEVNULL, check_output
 
     from xarray.util.print_versions import get_sys_info

@@ -26,6 +26,37 @@ log = logging.getLogger(__name__)
 # TODO remove when :func:`logger` is removed.
 _LOGGER = None
 
+#: Packages to inspect in :func:`show_versions`.
+SHOW_VERSION_PACKAGES: tuple[str, ...] = (
+    "",  # Prints a separator
+    # ixmp stack
+    "ixmp",
+    "message_ix",
+    "message_ix_models",
+    "message_data",
+    "",
+    # ixmp dependencies
+    "click",
+    "dask",
+    "genno",
+    "graphviz",
+    "ixmp4",
+    "jpype",
+    "openpyxl",
+    "pandas",
+    "pint",
+    "xarray",
+    "yaml",
+    "",
+    # Optional dependencies, dependencies of message_ix and message_data
+    "iam_units",
+    "jupyter",
+    "matplotlib",
+    "plotnine",
+    "pyam",
+    "",
+)
+
 
 def logger():
     """Access global logger.
@@ -548,87 +579,80 @@ def format_scenario_list(
     return lines
 
 
-def show_versions(file=sys.stdout):
-    """Print information about ixmp and its dependencies to *file*."""
-    import importlib
+def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) -> None:
+    """Print information about ixmp and its dependencies to `file`.
+
+    See also
+    --------
+    SHOW_VERSION_PACKAGES
+    """
+    from importlib import import_module
+    from importlib.metadata import PackageNotFoundError, packages_distributions, version
     from subprocess import DEVNULL, check_output
 
     from xarray.util.print_versions import get_sys_info
 
     from ixmp.model.gams import gams_info
 
-    def _git_log(mod):
-        cmd = ["git", "log", "--oneline", "--no-color", "--decorate", "-n 1"]
+    # Retrieve the mapping from package (e.g. 'yaml') to distribution ('PyYAML') names
+    package_to_dist = packages_distributions()
+
+    git_log_cmd = ["git", "log", "--oneline", "--no-color", "--decorate", "-n 1"]
+
+    def git_log(spec: "ModuleSpec") -> str:
+        """Retrieve Git log information about the module at `spec`."""
         try:
-            cwd = Path(mod.__file__).parent
-            info = check_output(cmd, cwd=cwd, encoding="utf-8", stderr=DEVNULL)
-        except Exception:
-            # Occurs if "git log" fails; or if mod.__file__ is None (#338)
-            return ""
+            assert spec.origin is not None
+            cwd = Path(spec.origin).parent
+            info = check_output(git_log_cmd, cwd=cwd, encoding="utf-8", stderr=DEVNULL)
+        except Exception:  # pragma: no cover
+            return ""  # Occurs if "git log" fails; or if spec.origin is None (#338)
         else:
-            return f"\n     {info.rstrip()}"
+            return f"\n{'git:':>18} {info.rstrip()}"
 
-    deps = [
-        None,  # Prints a separator
-        # ixmp stack
-        "ixmp",
-        "message_ix",
-        "message_ix_models",
-        "message_data",
-        None,
-        # ixmp dependencies
-        "click",
-        "dask",
-        "genno",
-        "graphviz",
-        "jpype",
-        "openpyxl",
-        "pandas",
-        "pint",
-        "xarray",
-        "yaml",
-        None,
-        # Optional dependencies, dependencies of message_ix and message_data
-        "iam_units",
-        "jupyter",
-        "matplotlib",
-        "plotnine",
-        "pyam",
-        None,
-    ]
-
-    info = []
-    for module_name in deps:
+    def module_version(spec: "ModuleSpec") -> str:
+        """Get the module version and any exception that occurs when importing it."""
+        try:
+            # Map from the package name to distribution name
+            v = version(package_to_dist.get(spec.name, [spec.name])[0])
+        except PackageNotFoundError:
+            v = "(not installed)"
         try:
             # Import the module
-            mod = sys.modules.get(module_name, None) or importlib.import_module(
-                module_name
-            )
-        except Exception:
-            # Couldn't import
-            info.append((module_name, None))
-            continue
+            sys.modules.get(spec.name, None) or import_module(spec.name)
+            exc_info = ""
+        except Exception as e:  # pragma: no cover
+            exc_info = f"\n    Error on import: {e!r}"
 
-        # Retrieve git log information, if any
-        gl = _git_log(mod)
-        version = getattr(mod, "__version__", "installed") or ""
-        info.append((module_name, version + gl))
+        return f"{v}{exc_info}"
 
-        if module_name == "jpype":
-            info.append(("… JVM path", mod.getDefaultJVMPath()))
+    info: list[tuple[str, str]] = []  # Info lines
 
-    # Also display GAMS version or diagnostic message
-    info.extend([("GAMS", gams_info().version), (None, None)])
+    for name in packages or SHOW_VERSION_PACKAGES:
+        if name == "":
+            info.append(("", ""))
+        elif spec := find_spec(name):
+            info.append((name, module_version(spec) + git_log(spec)))
 
-    # Use xarray to get system & Python information
+            # Additional info line for JPype
+            if name == "jpype":
+                stat = import_module(name).getDefaultJVMPath()
+                info.append((f"{'Java VM path':>17}", stat))
+        else:
+            # No spec associated with `module_name`
+            info.append((name, "(not installed)"))
+
+    # Add GAMS version and system directory
+    gi = gams_info()
+    info.extend([("GAMS", gi.version), (f"{'system dir':>17}", str(gi.system_dir))])
+
+    # Use xarray to get Python & system information
+    info.append(("", ""))
     info.extend(get_sys_info()[1:])  # Exclude the commit number
 
+    # Format and write to `file`
     for k, stat in info:
-        if (k, stat) == (None, None):
-            # Separator line
-            print("", file=file)
-        else:
-            print(f"{k + ':':12} {stat}", file=file)
+        print("" if (k == stat == "") else f"{k + ':':18} {stat}", file=file)
 
 
 def update_par(scenario, name, data):

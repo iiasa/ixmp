@@ -70,7 +70,8 @@ def configure_logging_and_warnings() -> None:
        is deprecated.”
     3. :class:`pandas.errors.SettingWithCopyWarning` in :py:`ixmp4.data.db.base` at
        L589, L590, L621.
-    4. :class:`DeprecationWarning` for calling :meth:`datetime.datetime.now`.
+    4. :class:`FutureWarning` for top-level imports from :py:`pandera`.
+    5. :class:`DeprecationWarning` for calling :meth:`datetime.datetime.now`.
     """
     import logging
     import warnings
@@ -90,6 +91,12 @@ def configure_logging_and_warnings() -> None:
         ".*A value is trying to be set on a copy of a slice from a DataFrame.*",
         SettingWithCopyWarning,
         "ixmp4.data.db.base",
+    )
+    warnings.filterwarnings(
+        "ignore",
+        r"Importing pandas-specific classes .* from the\s+top-level pandera module",
+        FutureWarning,
+        "pandera",
     )
     warnings.filterwarnings(
         "ignore", "datetime.datetime.now", DeprecationWarning, "sqlalchemy.sql.schema"

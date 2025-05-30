@@ -27,11 +27,11 @@ def get_class(name: str) -> type["ixmp.backend.base.Backend"]:
     if name == "ixmp4":
         from ixmp.util.ixmp4 import configure_logging_and_warnings
 
+        configure_logging_and_warnings()
+
         from . import ixmp4
 
         BACKENDS[name] = ixmp4.IXMP4Backend
-
-        configure_logging_and_warnings()
     elif name == "jdbc":
         from . import jdbc
 

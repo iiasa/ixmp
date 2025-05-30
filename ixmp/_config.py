@@ -62,6 +62,10 @@ def _locate(filename=None):
 def _platform_default():
     """Default values for the `platform` setting on BaseValues."""
     try:
+        from ixmp.util.ixmp4 import configure_logging_and_warnings
+
+        configure_logging_and_warnings()
+
         import ixmp4.conf
 
         # Use configured ixmp4 storage directory

@@ -1,8 +1,10 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- Quiet warnings occurring with ixmp4 v0.10.0 and pandera v0.24 (:pull:`579`).
 
 .. _v3.11.0:
 

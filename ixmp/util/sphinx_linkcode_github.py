@@ -117,6 +117,10 @@ class GitHubLinker:
         elif isinstance(obj, partial):
             # Reference the module in which the partial object is defined
             obj = sys.modules[obj.__module__]
+        elif type(obj).__name__ == "FixtureFunctionDefinition":
+            # Pytest v8.4 and later. This class is not part of the public API, so check
+            # via the class name only
+            obj = obj._get_wrapped_function()
 
         try:
             # Identify the source file and source lines
@@ -130,7 +134,7 @@ class GitHubLinker:
             # module instead.
             # TODO extend using e.g. ast to identify the source lines
             if what not in {"attribute", "data"}:
-                print(what, name, type(obj).__mro__)
+                log.error(f"{what=} {name=}, {type(obj).__mro__=}")
                 raise
         except Exception as e:  # Other exceptions
             log.info(f"{name} {e}")

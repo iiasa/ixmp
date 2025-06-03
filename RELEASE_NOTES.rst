@@ -1,8 +1,13 @@
-Next release
-============
+.. Next release
+.. ============
 
-All changes
------------
+.. All changes
+.. -----------
+
+.. _v3.11.1:
+
+v3.11.1 (2025-06-03)
+====================
 
 - Quiet warnings occurring with ixmp4 v0.10.0 and pandera v0.24 (:pull:`579`).
 

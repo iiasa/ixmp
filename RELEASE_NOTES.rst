@@ -11,9 +11,6 @@ All changes
 v3.11.0 (2025-05-26)
 ====================
 
-All changes
------------
-
 - Add :class:`.IXMP4Backend` as an alternative to :class:`.JDBCBackend` (:pull:`552`, :pull:`568`. :pull:`570`).
   Please read the usage notes at :mod:`.backend.ixmp4` and :class:`.IXMP4Backend`,
   and the linked `support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_.
@@ -29,9 +26,6 @@ All changes
 v3.10.0 (2025-02-19)
 ====================
 
-All changes
------------
-
 - :mod:`ixmp` is tested and compatible with `Python 3.13 <https://www.python.org/downloads/release/python-3130/>`__ (:pull:`544`).
 - Support for Python 3.8 is dropped (:pull:`544`), as it has reached end-of-life.
 - :mod:`ixmp` locates GAMS API libraries needed for the Java code underlying :class:`.JDBCBackend` based on the system GAMS installation (:pull:`532`).
@@ -44,9 +38,6 @@ All changes
 
 v3.9.0 (2024-06-04)
 ===================
-
-All changes
------------
 
 - Increase minimum required version of genno dependency to 1.20 (:pull:`514`).
 - To aid debugging when execution fails, :class:`.GAMSModel` also displays the path to the GAMS log file (:pull:`513`).
@@ -96,9 +87,6 @@ All changes
 v3.7.0 (2023-05-17)
 ===================
 
-All changes
------------
-
 - :mod:`ixmp` is tested and compatible with `Python 3.11 <https://www.python.org/downloads/release/python-3110/>`__ (:pull:`481`).
 - :mod:`ixmp` is tested and compatible with `pandas 2.0.0 <https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html>`__ (:pull:`471`).
   Note that `pandas 1.4.0 dropped support for Python 3.7 <https://pandas.pydata.org/docs/whatsnew/v1.4.0.html#increased-minimum-version-for-python>`__: thus while :mod:`ixmp` still supports Python 3.7 this is achieved with pandas 1.3.x, which may not receive further updates (the last patch release was in December 2021).
@@ -112,9 +100,6 @@ All changes
 v3.6.0 (2022-08-17)
 ===================
 
-All changes
------------
-
 - Optionally tolerate failures to add individual items in :func:`.store_ts` reporting computation (:pull:`451`); use ``timeseries_only=True`` in check-out to function with :class:`.Scenario` with solution data stored.
 - Bugfix: :class:`.Config` squashed configuration values read from :file:`config.json`, if the respective keys were registered in downstream packages, e.g. :mod:`message_ix`.
   Allow the values loaded from file to persist (:pull:`451`).
@@ -125,9 +110,6 @@ All changes
 
 v3.5.0 (2022-05-06)
 ===================
-
-All changes
------------
 
 - Add new logo and diagram to the documentation (:pull:`446`).
 - Raise an informative :class:`ValueError` when adding infinite values with :meth:`.add_timeseries`; this is unsupported on :class:`.JDBCBackend` when connected to an Oracle database (:pull:`443`, :issue:`442`).
@@ -199,9 +181,6 @@ All changes
 v3.2.0 (2021-01-24)
 ===================
 
-All changes
------------
-
 - Increase JPype minimum version to 1.2.1 (:pull:`394`).
 - Adjust test suite for pandas v1.2.0 (:pull:`391`).
 - Raise clearer exceptions from :meth:`.add_par` for incorrect parameters; silently handle empty data (:pull:`374`).
@@ -216,9 +195,6 @@ All changes
 
 v3.1.0 (2020-08-28)
 ===================
-
-All changes
------------
 
 ixmp v3.1.0 coincides with message_ix v3.1.0.
 

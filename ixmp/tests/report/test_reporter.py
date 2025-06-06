@@ -1,5 +1,8 @@
 import logging
 import re
+from collections.abc import Generator
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pint
 import pytest
@@ -9,13 +12,18 @@ import ixmp
 from ixmp.report.reporter import Reporter
 from ixmp.testing import add_test_data, assert_logs, make_dantzig
 
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
+    from ixmp.core.scenario import Scenario
+    from ixmp.testing import Runner
+
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
 test_args = ("Douglas Adams", "Hitchhiker")
 
 
 @pytest.fixture
-def scenario(test_mp):
+def scenario(test_mp: "Platform") -> Generator["Scenario", Any, None]:
     # from test_feature_timeseries.test_new_timeseries_as_year_value
     scen = ixmp.Scenario(test_mp, *test_args, version="new", annotation="foo")
     scen.commit("importing a testing timeseries")
@@ -23,12 +31,14 @@ def scenario(test_mp):
 
 
 @pytest.mark.usefixtures("protect_rename_dims")
-def test_configure(test_mp, test_data_path, request) -> None:
+def test_configure(
+    test_mp: "Platform", test_data_path: Path, request: pytest.FixtureRequest
+) -> None:
     # Configure globally; handles 'rename_dims' section
     configure(rename_dims={"i": "i_renamed"})
 
     # Test direct import
-    from ixmp.report import RENAME_DIMS
+    from ixmp.report.common import RENAME_DIMS
 
     assert "i" in RENAME_DIMS
 
@@ -36,14 +46,14 @@ def test_configure(test_mp, test_data_path, request) -> None:
     scen = make_dantzig(test_mp, request=request)
     rep = Reporter.from_scenario(scen)
     assert "d:i_renamed-j" in rep, rep.graph.keys()
-    assert ["seattle", "san-diego"] == rep.get("i_renamed")
+    assert ["seattle", "san-diego"] == rep.get("i_renamed")  # type: ignore[no-untyped-call]
 
     # Original name 'i' are not found in the reporter
     assert "d:i-j" not in rep, rep.graph.keys()
     pytest.raises(KeyError, rep.get, "i")
 
 
-def test_reporter_from_scenario(scenario) -> None:
+def test_reporter_from_scenario(scenario: "Scenario") -> None:
     r = Reporter.from_scenario(scenario)
 
     r.finalize(scenario)
@@ -51,7 +61,9 @@ def test_reporter_from_scenario(scenario) -> None:
     assert "scenario" in r.graph
 
 
-def test_platform_units(test_mp, caplog, ureg) -> None:
+def test_platform_units(
+    test_mp: "Platform", caplog: pytest.LogCaptureFixture, ureg: pint.UnitRegistry
+) -> None:
     """Test handling of units from ixmp.Platform.
 
     test_mp is loaded with some units including '-', '???', 'G$', etc. which
@@ -68,7 +80,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     x_key = rep.full_key("x")
 
     # Convert 'x' to dataframe
-    x = x.to_series().rename("value").reset_index()
+    x = x.to_series().rename("value").reset_index()  # type: ignore[no-untyped-call]
 
     # Exception message, formatted as a regular expression
     msg = r"unit '{}' cannot be parsed; contains invalid character\(s\) '{}+'"
@@ -90,7 +102,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
 
         # Parsing units with invalid chars raises an intelligible exception
         with pytest.raises(ComputationError, match=msg.format(expr, chars)):
-            rep.get(x_key)
+            rep.get(x_key)  # type: ignore[no-untyped-call]
 
     # Now using parseable but unrecognized units
     x["unit"] = "USD/kWa"
@@ -101,7 +113,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
 
     # Protect from --verbose command-line option, which sets the level to DEBUG
     with caplog.at_level(logging.INFO):
-        rep.get(x_key)
+        rep.get(x_key)  # type: ignore[no-untyped-call]
 
     # NB cannot use assert_logs here. report.util.parse_units uses the pint
     #    application registry, so depending which tests are run and in which order, this
@@ -116,7 +128,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     scen.add_par("x", x)
 
     caplog.clear()
-    rep.get(x_key)
+    rep.get(x_key)  # type: ignore[no-untyped-call]
     assert not any("Add unit definition: USD = [USD]" in m for m in caplog.messages)
 
     # Mixed units are discarded
@@ -126,7 +138,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     with assert_logs(
         caplog, ["x: mixed units", "kg", "USD/pkm", "discarded"], at_level=logging.INFO
     ):
-        rep.get(x_key)
+        rep.get(x_key)  # type: ignore[no-untyped-call]
 
     # Configured unit substitutions are applied
     rep.graph["config"]["units"] = dict(apply=dict(x="USD/pkm"))
@@ -134,7 +146,7 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     with assert_logs(
         caplog, "x: replace units dimensionless with USD/pkm", at_level=logging.INFO
     ):
-        x = rep.get(x_key)
+        x = rep.get(x_key)  # type: ignore[no-untyped-call]
 
     # Applied units are pint objects with the correct dimensionality
     unit = x.attrs["_unit"]
@@ -142,7 +154,12 @@ def test_platform_units(test_mp, caplog, ureg) -> None:
     assert unit.dimensionality == {"[USD]": 1, "[pkm]": -1}
 
 
-def test_cli(ixmp_cli, test_mp, test_data_path, request) -> None:
+def test_cli(
+    ixmp_cli: "Runner",
+    test_mp: "Platform",
+    test_data_path: Path,
+    request: pytest.FixtureRequest,
+) -> None:
     # Put something in the database
     test_mp.open_db()
     make_dantzig(test_mp, request=request)
@@ -187,7 +204,9 @@ seattle    chicago     1\.7
     ), result.output
 
 
-def test_filters(test_mp, tmp_path, caplog) -> None:
+def test_filters(
+    test_mp: "Platform", tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Reporting can be filtered ex ante."""
     scen = ixmp.Scenario(test_mp, "Reporting filters", "Reporting filters", "new")
     t, t_foo, t_bar, x = add_test_data(scen)
@@ -195,8 +214,8 @@ def test_filters(test_mp, tmp_path, caplog) -> None:
     rep = Reporter.from_scenario(scen)
     x_key = rep.full_key("x")
 
-    def assert_t_indices(labels):
-        assert set(rep.get(x_key).coords["t"].values) == set(labels)
+    def assert_t_indices(labels: list[str]) -> None:
+        assert set(rep.get(x_key).coords["t"].values) == set(labels)  # type: ignore[no-untyped-call]
 
     # 1. Set filters directly
     rep.graph["config"]["filters"] = {"t": t_foo}
@@ -256,4 +275,4 @@ def test_filters(test_mp, tmp_path, caplog) -> None:
         ),
         at_level=logging.DEBUG,
     ):
-        rep.get(x_key)
+        rep.get(x_key)  # type: ignore[no-untyped-call]

@@ -1,9 +1,9 @@
 import logging
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union, overload
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -12,6 +12,7 @@ import pandas as pd
 from ixmp import IAMC_IDX
 from ixmp.backend.common import FIELDS, ItemType
 from ixmp.core.platform import Platform
+from ixmp.types import VersionType
 from ixmp.util import (
     as_str_list,
     maybe_check_out,
@@ -52,17 +53,17 @@ class TimeSeries:
     scenario: str
 
     #: Version of the TimeSeries. Immutable for a specific instance.
-    version = None
+    version: Optional[int] = None
 
     def __init__(
         self,
         mp: Platform,
         model: str,
         scenario: str,
-        version: Optional[Union[int, str]] = None,
+        version: VersionType = None,
         annotation: Optional[str] = None,
-        **kwargs,
-    ):
+        scheme: Optional[str] = None,
+    ) -> None:
         # Check arguments
         if not isinstance(mp, Platform):
             raise TypeError("mp is not a valid `ixmp.Platform` instance")
@@ -77,12 +78,11 @@ class TimeSeries:
 
         # scheme= keyword argument only passed from Scenario.__init__; otherwise must be
         # None
-        scheme = kwargs.get("scheme", None)
         if scheme:
             if self.__class__ is TimeSeries:
                 raise TypeError("'scheme' argument to TimeSeries()")
             else:
-                self.scheme = scheme
+                self.scheme: Optional[str] = scheme
 
         # Set attributes
         self.model = model
@@ -91,28 +91,25 @@ class TimeSeries:
         # Store a weak reference to the Platform object. This reference is not enough
         # to keep the Platform alive, i.e. 'del mp' will work even while this TimeSeries
         # object lives.
-        self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)
+        # NOTE mypy says mp can never be a subtype of ProxyType, but removing the
+        # isinstance check leads to errors
+        # Annotating mp as Union[..., ProxyType[Platform]] doesn't help, either
+        self.platform: Platform = mp if isinstance(mp, ProxyType) else proxy(mp)  # type: ignore[unreachable]
 
         if version == "new":
             # Initialize a new object
-            self._backend("init", annotation)
+            # annotation will be "" if None is provided, convince type checker
+            assert annotation is not None
+            self.platform._backend.init(self, annotation)
         else:
             # Retrieve an existing object
             self.version = version
-            self._backend("get")
+            self.platform._backend.get(self)
 
-    def _backend(self, method, *args, **kwargs):
-        """Convenience for calling *method* on the backend.
-
-        The weak reference to the Platform object is used, if the Platform is still
-        alive.
-        """
-        return self.platform._backend(self, method, *args, **kwargs)
-
-    def __del__(self):
+    def __del__(self) -> None:
         # Instruct the back end to free memory associated with the TimeSeries
         try:
-            self._backend("del_ts")
+            self.platform._backend.del_ts(self)
         except (AttributeError, ReferenceError):
             pass  # The Platform has already been garbage-collected
 
@@ -185,7 +182,7 @@ class TimeSeries:
         --------
         util.maybe_check_out
         """
-        self._backend("check_out", timeseries_only)
+        self.platform._backend.check_out(self, timeseries_only)
 
     def commit(self, comment: str) -> None:
         """Commit all changed data to the database.
@@ -203,16 +200,16 @@ class TimeSeries:
         --------
         util.maybe_commit
         """
-        self._backend("commit", comment)
+        self.platform._backend.commit(self, comment)
 
     def discard_changes(self) -> None:
         """Discard all changes and reload from the database."""
-        self._backend("discard_changes")
+        self.platform._backend.discard_changes(self)
 
     @contextmanager
     def transact(
         self, message: str = "", condition: bool = True, discard_on_error: bool = False
-    ):
+    ) -> Generator[None, Any, None]:
         """Context manager to wrap code in a 'transaction'.
 
         Parameters
@@ -256,19 +253,19 @@ class TimeSeries:
 
     def set_as_default(self) -> None:
         """Set the current :attr:`version` as the default."""
-        self._backend("set_as_default")
+        self.platform._backend.set_as_default(self)
 
     def is_default(self) -> bool:
         """Return :obj:`True` if the :attr:`version` is the default version."""
-        return self._backend("is_default")
+        return self.platform._backend.is_default(self)
 
-    def last_update(self) -> str:
+    def last_update(self) -> Optional[str]:
         """Get the timestamp of the last update/edit of this TimeSeries."""
-        return self._backend("last_update")
+        return self.platform._backend.last_update(self)
 
     def run_id(self) -> int:
         """Get the run id of this TimeSeries."""
-        return self._backend("run_id")
+        return self.platform._backend.run_id(self)
 
     @property
     def url(self) -> str:
@@ -300,7 +297,7 @@ class TimeSeries:
 
     def preload_timeseries(self) -> None:
         """Preload timeseries data to in-memory cache. Useful for bulk updates."""
-        self._backend("preload")
+        self.platform._backend.preload(self)
 
     def add_timeseries(
         self,
@@ -368,7 +365,8 @@ class TimeSeries:
         df.columns = df.columns.astype(int)
 
         # Identify columns to drop
-        def predicate(y: Any) -> bool:
+        def predicate(_y: str) -> bool:
+            y = int(_y)
             return y < (year_lim[0] or y) or (year_lim[1] or y) < y
 
         df.drop(list(filter(predicate, df.columns)), axis=1, inplace=True)
@@ -378,8 +376,8 @@ class TimeSeries:
             assert isinstance(key, tuple)
             r, v, u, sa = key
             # Values as float; exclude NA
-            self._backend(
-                "set_data", r, v, data.astype(float).dropna().to_dict(), u, sa, meta
+            self.platform._backend.set_data(
+                self, r, v, data.astype(float).dropna().to_dict(), u, sa, meta
             )
 
     def timeseries(
@@ -423,8 +421,8 @@ class TimeSeries:
         """
         # Retrieve data, convert to pandas.DataFrame
         df = pd.DataFrame(
-            self._backend(
-                "get_data",
+            self.platform._backend.get_data(
+                self,
                 as_str_list(region) or [],
                 as_str_list(variable) or [],
                 as_str_list(unit) or [],
@@ -480,7 +478,7 @@ class TimeSeries:
 
         # Remove all years for a given (r, v, u) combination at once
         for (r, v, u, t), data in df.groupby(id_cols):
-            self._backend("delete", r, v, t, data["year"].tolist(), u)
+            self.platform._backend.delete(self, r, v, t, data["year"].tolist(), u)
 
     # Geodata
 
@@ -501,8 +499,8 @@ class TimeSeries:
             - `meta`
         """
         for _, row in df.astype({"year": int, "meta": int}).iterrows():
-            self._backend(
-                "set_geo",
+            self.platform._backend.set_geo(
+                self,
                 row.region,
                 row.variable,
                 row.subannual,
@@ -530,7 +528,7 @@ class TimeSeries:
         for (r, v, t, u), data in df.groupby(
             ["region", "variable", "subannual", "unit"]
         ):
-            self._backend("delete_geo", r, v, t, data["year"].tolist(), u)
+            self.platform._backend.delete_geo(self, r, v, t, data["year"].tolist(), u)
 
     def get_geodata(self) -> pd.DataFrame:
         """Fetch geodata and return it as dataframe.
@@ -542,14 +540,22 @@ class TimeSeries:
         """
         # TODO remove astype here; this is the responsibility of Backend
         return (
-            pd.DataFrame(self._backend("get_geo"), columns=FIELDS["ts_get_geo"])
+            pd.DataFrame(
+                self.platform._backend.get_geo(self), columns=FIELDS["ts_get_geo"]
+            )
             .reset_index(drop=True)
             .astype({"meta": "int64", "year": "int64"})
         )
 
     # Metadata
 
-    def get_meta(self, name: Optional[str] = None):
+    @overload
+    def get_meta(self, name: str) -> Any: ...
+
+    @overload
+    def get_meta(self, name: None = None) -> dict[str, Any]: ...
+
+    def get_meta(self, name: Optional[str] = None) -> Any:
         """Get :ref:`data-meta` for this object.
 
         Metadata with the given `name`, attached to this (:attr:`model` name,
@@ -565,7 +571,11 @@ class TimeSeries:
         )
         return all_meta[name] if name else all_meta
 
-    def set_meta(self, name_or_dict: Union[str, dict[str, Any]], value=None) -> None:
+    def set_meta(
+        self,
+        name_or_dict: Union[str, dict[str, Any]],
+        value: Optional[Union[bool, float, int, str]] = None,
+    ) -> None:
         """Set :ref:`data-meta` for this object.
 
         Parameters
@@ -586,7 +596,7 @@ class TimeSeries:
             name_or_dict, self.model, self.scenario, self.version
         )
 
-    def delete_meta(self, *args, **kwargs) -> None:
+    def delete_meta(self, *args: Any, **kwargs: Any) -> None:
         """Remove :ref:`data-meta` for this object.
 
         .. deprecated:: 3.1
@@ -617,7 +627,7 @@ class TimeSeries:
 
     def read_file(
         self,
-        path: PathLike,
+        path: PathLike[str],
         firstyear: Optional[int] = None,
         lastyear: Optional[int] = None,
     ) -> None:

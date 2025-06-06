@@ -1,11 +1,12 @@
 """Backend API."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from .common import ItemType
 
 if TYPE_CHECKING:
-    import ixmp.backend.base
+    from ixmp.backend.ixmp4 import IXMP4Backend
+    from ixmp.backend.jdbc import JDBCBackend
 
 __all__ = [
     "ItemType",
@@ -15,10 +16,10 @@ __all__ = [
 
 #: Mapping from names to available backends. To register additional backends, add
 #: entries to this dictionary.
-BACKENDS: dict[str, type["ixmp.backend.base.Backend"]] = {}
+BACKENDS: dict[str, Union[type["IXMP4Backend"], type["JDBCBackend"]]] = {}
 
 
-def get_class(name: str) -> type["ixmp.backend.base.Backend"]:
+def get_class(name: str) -> Union[type["IXMP4Backend"], type["JDBCBackend"]]:
     """Return a reference to a :class:`~.base.Backend` subclass.
 
     Note that unlike :func:`.model.get_class`, this function does not create a new

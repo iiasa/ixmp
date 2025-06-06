@@ -3,7 +3,7 @@
 #      behaviour they actually test.
 
 import copy
-from typing import Any, Generator
+from typing import Any, Generator, Union
 
 import pytest
 
@@ -46,7 +46,11 @@ def mp(test_mp_f: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
 @pytest.mark.jdbc
 class TestMeta:
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_set_meta_missing_argument(self, mp: ixmp.Platform, meta) -> None:
+    def test_set_meta_missing_argument(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         with pytest.raises(ValueError):
             mp.set_meta(meta)
         with pytest.raises(ValueError):
@@ -55,14 +59,22 @@ class TestMeta:
             mp.set_meta(meta, scenario=DANTZIG["scenario"], version=0)
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_set_get_meta(self, mp: ixmp.Platform, meta) -> None:
+    def test_set_get_meta(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         """Assert that storing+retrieving meta yields expected values."""
         mp.set_meta(meta, model=DANTZIG["model"])
         obs = mp.get_meta(model=DANTZIG["model"])
         assert obs == meta
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_unique_meta(self, mp: ixmp.Platform, meta) -> None:
+    def test_unique_meta(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         """
         When setting a meta category on two distinct levels, a uniqueness error is
         expected.
@@ -91,14 +103,22 @@ class TestMeta:
             mp.set_meta(meta, **DANTZIG, version=scenario.version)
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_set_get_meta_equals(self, mp: ixmp.Platform, meta) -> None:
+    def test_set_get_meta_equals(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         initial_meta = mp.get_meta(scenario=DANTZIG["scenario"])
         mp.set_meta(meta, model=DANTZIG["model"])
         obs_meta = mp.get_meta(scenario=DANTZIG["scenario"])
         assert obs_meta == initial_meta
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_unique_meta_model_scenario(self, mp: ixmp.Platform, meta) -> None:
+    def test_unique_meta_model_scenario(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         """
         When setting a meta key for a Model, it shouldn't be possible to set it
         for a Model+Scenario then.
@@ -119,18 +139,22 @@ class TestMeta:
             mp.set_meta(meta, **dantzig2)
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_get_meta_strict(self, mp: ixmp.Platform, meta) -> None:
+    def test_get_meta_strict(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         """
         Set meta indicators on several model/scenario/version levels and test
         the 'strict' parameter of get_meta().
         """
         # set meta on various levels
-        model_meta = {
+        model_meta: dict[str, Union[bool, int, str]] = {
             "model_int": 3,
             "model_string": "string_value",
             "model_bool": False,
         }
-        scenario_meta = {
+        scenario_meta: dict[str, Union[bool, int, str]] = {
             "scenario_int": 3,
             "scenario_string": "string_value",
             "scenario_bool": False,
@@ -219,7 +243,11 @@ class TestMeta:
         assert obs6_strict == meta_scen
 
     @pytest.mark.parametrize("meta", META_ENTRIES)
-    def test_unique_meta_scenario(self, mp: ixmp.Platform, meta) -> None:
+    def test_unique_meta_scenario(
+        self,
+        mp: ixmp.Platform,
+        meta: dict[str, Union[bool, int, str, list[Union[bool, float, int, str]]]],
+    ) -> None:
         """
         When setting a meta key on a specific Scenario run, setting the same key
         on an higher level (Model or Model+Scenario) should fail.

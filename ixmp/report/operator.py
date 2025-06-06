@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from itertools import zip_longest
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
 
 import genno
 import pandas as pd
@@ -15,7 +15,9 @@ from ixmp.util import to_iamc_layout
 from .util import dims_for_qty, get_reversed_rename_dims
 
 if TYPE_CHECKING:
+    from genno import Quantity
     from genno.types import AnyQuantity
+    from pyam import IamDataFrame
 
     from ixmp.core.scenario import Scenario
 
@@ -27,7 +29,7 @@ def data_for_quantity(
     name: str,
     column: Literal["mrg", "lvl", "value"],
     scenario: "Scenario",
-    config: Mapping[str, Mapping],
+    config: Mapping[str, Union[Mapping[str, Iterable[Any]], Iterable[str]]],
 ) -> "AnyQuantity":
     """Retrieve data from `scenario`.
 
@@ -55,7 +57,8 @@ def data_for_quantity(
     """
     log.debug(f"{name}: retrieve data")
 
-    registry = pint.get_application_registry()
+    # TODO Remove once pint adds annotation
+    registry = pint.get_application_registry()  # type: ignore[no-untyped-call]
 
     # Only use the relevant filters
     idx_names = scenario.idx_names(name)
@@ -67,11 +70,18 @@ def data_for_quantity(
         # Mapping from renamed dimensions to Scenario dimension names
         MAP = get_reversed_rename_dims()
 
-        filters_to_use = {}
+        filters_to_use: dict[str, Iterable[Any]] = {}
+
+        # Convince type checker of what we rely on
+        assert isinstance(filters, Mapping)
+
         for dim, values in filters.items():
             if dim in dims:
                 # *dim* is in this ixmp object, so the filter can be used
-                filters_to_use[MAP.get(dim, dim)] = values
+                # Convince type checker that key has correct type
+                key = MAP.get(dim, dim)
+                assert isinstance(key, str)
+                filters_to_use[key] = values
 
         filters = filters_to_use
 
@@ -118,7 +128,8 @@ def data_for_quantity(
 
     # Apply units
     try:
-        new_unit = config["units"]["apply"][name]
+        # NOTE Anything that's not indexable will result in a KeyError
+        new_unit = config["units"]["apply"][name]  # type: ignore[index]
     except KeyError:
         pass
     else:
@@ -139,7 +150,8 @@ def data_for_quantity(
 
     try:
         # Remove length-1 dimensions for scalars
-        qty = qty.squeeze("index", drop=True)
+        # TODO Remove once genno adds type hints
+        qty = qty.squeeze("index", drop=True)  # type: ignore[no-untyped-call]
     except (KeyError, ValueError):
         # KeyError if "index" does not exist; ValueError if its length is > 1
         pass
@@ -151,7 +163,7 @@ def data_for_quantity(
 _FROM_URL_REF: set[Any] = set()
 
 
-def from_url(url: str, cls=TimeSeries) -> "TimeSeries":
+def from_url(url: str, cls: type["TimeSeries"] = TimeSeries) -> "TimeSeries":
     """Return a :class:`.ixmp.TimeSeries` or subclass instance, given its `url`.
 
     Parameters
@@ -168,7 +180,12 @@ def from_url(url: str, cls=TimeSeries) -> "TimeSeries":
 
 def get_ts(
     ts: "TimeSeries",
-    filters: Optional[dict] = None,
+    filters: Optional[
+        Union[
+            dict[str, Optional[Union[int, Sequence[int]]]],
+            dict[str, Optional[Union[str, Sequence[str]]]],
+        ]
+    ] = None,
     iamc: bool = False,
     subannual: Union[bool, str] = "auto",
 ) -> pd.DataFrame:
@@ -187,7 +204,7 @@ def get_ts(
     return ts.timeseries(iamc=iamc, subannual=subannual, **filters)
 
 
-def map_as_qty(set_df: pd.DataFrame, full_set) -> "AnyQuantity":
+def map_as_qty(set_df: pd.DataFrame, full_set: Iterable[str]) -> "AnyQuantity":
     """Convert `set_df` to a :class:`.Quantity`.
 
     For the MESSAGE sets named ``cat_*`` (see :ref:`message_ix:mapping-sets`)
@@ -217,10 +234,13 @@ def map_as_qty(set_df: pd.DataFrame, full_set) -> "AnyQuantity":
     # Add a value column
     set_df["value"] = 1
 
-    return (
+    # NOTE Using pd.Series here works fine, but mypy rejects genno.Quantity, which is
+    # just a subclass, so actually works fine
+    # Mypy also considers genno.Quantity to be Any, it seems
+    return (  # type: ignore[no-any-return]
         set_df.set_index([set_from, set_to])["value"]
         .rename_axis(index=names)
-        .pipe(genno.Quantity)
+        .pipe(genno.Quantity)  # type: ignore[call-overload]
     )
 
 
@@ -266,7 +286,12 @@ def remove_ts(
         ts.commit(f"Remove time series data ({__name__}.remove_ts)")
 
 
-def store_ts(scenario, *data, strict: bool = False) -> None:
+# NOTE Not sure why mypy can't import from pyam here
+def store_ts(  # type: ignore[no-any-unimported]
+    scenario: "Scenario",
+    *data: Union[pd.DataFrame, "IamDataFrame"],
+    strict: bool = False,
+) -> None:
     """Store time series `data` on `scenario`.
 
     The data is stored using :meth:`.add_timeseries`; `scenario` is checked out and then
@@ -309,7 +334,11 @@ def store_ts(scenario, *data, strict: bool = False) -> None:
     scenario.commit(f"Data added using {__name__}")
 
 
-def update_scenario(scenario, *quantities, params=[]) -> None:
+def update_scenario(
+    scenario: "Scenario",
+    *quantities: Union["Quantity", pd.DataFrame],
+    params: list[str] = [],
+) -> None:
     """Update *scenario* with computed data from reporting *quantities*.
 
     Parameters

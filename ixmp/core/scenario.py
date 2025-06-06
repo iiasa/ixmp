@@ -1,11 +1,17 @@
 import logging
-from collections.abc import Callable, Iterable, MutableSequence, Sequence
+from collections.abc import (
+    Callable,
+    Generator,
+    Iterable,
+    Mapping,
+    MutableSequence,
+    Sequence,
+)
 from functools import partialmethod
 from itertools import zip_longest
-from numbers import Real
 from os import PathLike
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union, Unpack, overload
 from warnings import warn
 
 import pandas as pd
@@ -13,6 +19,13 @@ import pandas as pd
 from ixmp.backend.common import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
+from ixmp.types import (
+    GamsModelInitKwargs,
+    ItemTypeFlags,
+    ScenarioInitKwargs,
+    VersionType,
+    WriteFiltersKwargs,
+)
 from ixmp.util import as_str_list, check_year
 
 log = logging.getLogger(__name__)
@@ -47,10 +60,10 @@ class Scenario(TimeSeries):
         mp: Platform,
         model: str,
         scenario: str,
-        version: Optional[Union[int, str]] = None,
+        version: VersionType = None,
         scheme: Optional[str] = None,
         annotation: Optional[str] = None,
-        **model_init_args,
+        **model_init_args: Unpack[ScenarioInitKwargs],
     ) -> None:
         from ixmp.model import get_model
 
@@ -87,7 +100,9 @@ class Scenario(TimeSeries):
         model_class = get_model(self.scheme).__class__
 
         # Use the model class to initialize the Scenario
-        model_class.initialize(self, **model_init_args)
+        # TODO How to convince type checker that if 'cache' is in model_init_args, it
+        # is removed above?
+        model_class.initialize(self, **model_init_args)  # type: ignore[misc]
 
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.
@@ -135,7 +150,7 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return self._backend("item_index", name, "sets")
+        return self.platform._backend.item_index(self, name, "sets")
 
     def idx_names(self, name: str) -> list[str]:
         """Return the list of index names for an item (set, par, var, equ).
@@ -145,9 +160,15 @@ class Scenario(TimeSeries):
         name : str
             name of the item
         """
-        return self._backend("item_index", name, "names")
+        return self.platform._backend.item_index(self, name, "names")
 
-    def _keys(self, name, key_or_keys):
+    def _keys(
+        self,
+        name: str,
+        key_or_keys: Optional[
+            Union[str, Sequence[str], dict[str, Any], pd.DataFrame, range]
+        ],
+    ) -> Union[list[str], list[list[str]]]:
         if isinstance(key_or_keys, (list, pd.Series)):
             return as_str_list(key_or_keys)
         elif isinstance(key_or_keys, (pd.DataFrame, dict)):
@@ -159,8 +180,8 @@ class Scenario(TimeSeries):
             return [str(key_or_keys)]
 
     def set(
-        self, name: str, filters: Optional[dict[str, Sequence[str]]] = None, **kwargs
-    ) -> Union[list[str], pd.DataFrame]:
+        self, name: str, filters: Optional[Mapping[str, Iterable[object]]] = None
+    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]:
         """Return the (filtered) elements of a set.
 
         Parameters
@@ -176,13 +197,19 @@ class Scenario(TimeSeries):
         -------
         :class:`pandas.DataFrame`
         """
-        return self._backend("item_get_elements", "set", name, filters)
+        return self.platform._backend.item_get_elements(self, "set", name, filters)
 
     # FIXME reduce complexity 18 → ≤13
     def add_set(  # noqa: C901
         self,
         name: str,
-        key: Union[str, Sequence[str], dict, pd.DataFrame],
+        key: Union[
+            str,
+            Sequence[object],
+            dict[str, Union[list[int], list[str]]],
+            pd.DataFrame,
+            range,
+        ],
         comment: Union[str, Sequence[str], None] = None,
     ) -> None:
         """Add elements to an existing set.
@@ -219,7 +246,7 @@ class Scenario(TimeSeries):
         idx_names = self.idx_names(name)
 
         # List of keys
-        keys: MutableSequence[Union[str, MutableSequence[str]]] = []
+        keys: MutableSequence[Union[str, list[str]]] = []
         # List of comments for each key
         comments: list[Optional[str]] = []
 
@@ -251,7 +278,9 @@ class Scenario(TimeSeries):
                 # Dict of lists of key values
 
                 # Pop a 'comment' list from the dict
-                comments.extend(key.pop("comment", []))
+                # NOTE This converts an int-comment to str, too
+                _comment = list(map(str, key.pop("comment", [])))
+                comments.extend(_comment)
 
                 # Convert to list of list of key values
                 keys.extend(map(as_str_list, zip(*[key[i] for i in idx_names])))
@@ -263,7 +292,9 @@ class Scenario(TimeSeries):
                 keys.append(as_str_list(key))
             elif isinstance(key[0], list):
                 # List of lists of key values; convert to list of list of str
-                keys.extend(map(as_str_list, key))
+                # TODO Not sure why mypy complains here. as_str_list can handle all
+                # types of key and returns list[str], which can be used to extend keys
+                keys.extend(map(as_str_list, key))  # type: ignore[arg-type]
             else:
                 # Other, invalid value
                 raise ValueError(key)
@@ -295,15 +326,18 @@ class Scenario(TimeSeries):
                     f"{name}{idx_names!r}"
                 )
 
+            # Convince type checker that fillvalues are discarded
+            assert not isinstance(k, tuple)
+            assert not isinstance(c, tuple)
             elements.append((k, None, None, c))
 
         # Send to backend
-        self._backend("item_set_elements", "set", name, elements)
+        self.platform._backend.item_set_elements(self, "set", name, elements)
 
     def remove_set(
         self,
         name: str,
-        key: Optional[Union[str, Sequence[str], dict, pd.DataFrame]] = None,
+        key: Optional[Union[str, Sequence[str], dict[str, Any], pd.DataFrame]] = None,
     ) -> None:
         """Delete set elements or an entire set.
 
@@ -316,13 +350,18 @@ class Scenario(TimeSeries):
             Elements to be removed from set `name`.
         """
         if key is None:
-            self._backend("delete_item", "set", name)
+            self.platform._backend.delete_item(self, "set", name)
         else:
-            self._backend("item_delete_elements", "set", name, self._keys(name, key))
+            self.platform._backend.item_delete_elements(
+                self, "set", name, self._keys(name, key)
+            )
 
     def par(
-        self, name: str, filters: Optional[dict[str, Sequence[str]]] = None, **kwargs
-    ) -> pd.DataFrame:
+        self,
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+        **kwargs: Any,
+    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]:
         """Return parameter data.
 
         If `filters` is provided, only a subset of data, matching the filters, is
@@ -341,16 +380,50 @@ class Scenario(TimeSeries):
                 "ignored kwargs to Scenario.par(); will raise TypeError in 4.0",
                 DeprecationWarning,
             )
-        return self._backend("item_get_elements", "par", name, filters)
+        return self.platform._backend.item_get_elements(self, "par", name, filters)
 
+    @overload
     def items(
         self,
-        type: ItemType = ItemType.PAR,
-        filters: Optional[dict[str, Sequence[str]]] = None,
+        type: Literal[ItemType.PAR] = ItemType.PAR,
+        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+        *,
+        indexed_by: Optional[str] = None,
+        par_data: Optional[Literal[True]] = None,
+    ) -> Generator[tuple[str, pd.DataFrame], Any, None]: ...
+
+    @overload
+    def items(
+        self,
+        type: Literal[ItemType.PAR] = ItemType.PAR,
+        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+        *,
+        indexed_by: Optional[str] = None,
+        par_data: Literal[False],
+    ) -> Generator[str, Any, None]: ...
+
+    @overload
+    def items(
+        self,
+        type: Literal[ItemType.SET, ItemType.VAR, ItemType.EQU],
+        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
         *,
         indexed_by: Optional[str] = None,
         par_data: Optional[bool] = None,
-    ) -> Iterable[str]:
+    ) -> Generator[str, Any, None]: ...
+
+    def items(
+        self,
+        type: ItemTypeFlags = ItemType.PAR,
+        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+        *,
+        indexed_by: Optional[str] = None,
+        par_data: Optional[bool] = None,
+    ) -> Generator[
+        Union[tuple[str, Union[dict[str, Union[float, str]], pd.DataFrame]], str],
+        Any,
+        None,
+    ]:
         """Iterate over model data items.
 
         Parameters
@@ -360,7 +433,7 @@ class Scenario(TimeSeries):
             parameters.
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
-            :meth:`par`. Only value for :attr:`.ItemType.PAR`.
+            :meth:`par`. Only valid for :attr:`.ItemType.PAR`.
         indexed_by : str, optional
             If given, only iterate over items where one of the item dimensions is
             `indexed_by` the set of this name.
@@ -399,7 +472,13 @@ class Scenario(TimeSeries):
             par_data = False
 
         # Sorted list of items from the back end
-        names = sorted(self._backend("list_items", str(type.name).lower()))
+        # NOTE Convince type checker that all ItemType names are expected Literals
+        assert type.name is not None
+        _type: Union[Literal["set"], Literal["par"], Literal["equ"], Literal["var"]] = (
+            type.name.lower()  # type: ignore[assignment]
+        )
+
+        names: list[str] = sorted(self.platform._backend.list_items(self, _type))
 
         # Iterate over items
         for name in names:
@@ -418,12 +497,13 @@ class Scenario(TimeSeries):
                 # Retrieve the data, reducing the filters to only the dimensions of the
                 # item
                 _filters = {k: v for k, v in filters.items() if k in idx_names}
-                yield (name, self.par(name, filters=_filters))  # type: ignore [misc]
+                yield (name, self.par(name, filters=_filters))
             else:
                 # Only the name of the item
                 yield name
 
-    def has_item(self, name: str, item_type=ItemType.MODEL) -> bool:
+    # NOTE Changing the default here since that seems to be unused/untested
+    def has_item(self, name: str, item_type: ItemTypeFlags = ItemType.PAR) -> bool:
         """Check whether the Scenario has an item `name` of `item_type`.
 
         In general, user code **should** call one of :meth:`.has_equ`, :meth:`.has_par`,
@@ -453,11 +533,11 @@ class Scenario(TimeSeries):
 
     def init_item(
         self,
-        item_type: ItemType,
+        item_type: ItemTypeFlags,
         name: str,
         idx_sets: Optional[Sequence[str]] = None,
         idx_names: Optional[Sequence[str]] = None,
-    ):
+    ) -> None:
         """Initialize a new item `name` of type `item_type`.
 
         In general, user code **should** call one of :meth:`.init_set`,
@@ -494,9 +574,12 @@ class Scenario(TimeSeries):
                 f" {repr(idx_sets)}"
             )
 
-        return self._backend(
-            "init_item", str(item_type.name).lower(), name, idx_sets, idx_names
+        # NOTE Convince type checker that all ItemType names are expected Literals
+        assert item_type.name is not None
+        _type: Union[Literal["set"], Literal["par"], Literal["equ"], Literal["var"]] = (
+            item_type.name.lower()  # type: ignore[assignment]
         )
+        return self.platform._backend.init_item(self, _type, name, idx_sets, idx_names)
 
     #: Initialize a new equation. See :meth:`init_item`.
     init_equ = partialmethod(init_item, ItemType.EQU)
@@ -508,7 +591,7 @@ class Scenario(TimeSeries):
     init_var = partialmethod(init_item, ItemType.VAR)
 
     def list_items(
-        self, item_type: ItemType, indexed_by: Optional[str] = None
+        self, item_type: ItemTypeFlags, indexed_by: Optional[str] = None
     ) -> list[str]:
         """List all defined items of type `item_type`.
 
@@ -531,10 +614,12 @@ class Scenario(TimeSeries):
     def add_par(  # noqa: C901
         self,
         name: str,
-        key_or_data: Optional[Union[str, Sequence[str], dict, pd.DataFrame]] = None,
-        value=None,
-        unit: Optional[str] = None,
-        comment: Optional[str] = None,
+        key_or_data: Optional[
+            Union[str, Sequence[str], dict[str, Any], pd.DataFrame, range]
+        ] = None,
+        value: Optional[Union[float, Iterable[float]]] = None,
+        unit: Optional[Union[str, Iterable[str]]] = None,
+        comment: Optional[Union[str, Iterable[str]]] = None,
     ) -> None:
         """Set the values of a parameter.
 
@@ -569,7 +654,7 @@ class Scenario(TimeSeries):
         else:
             # One or more keys; convert to a list of strings
             if isinstance(key_or_data, range):
-                key_or_data = list(key_or_data)
+                key_or_data = list(map(str, key_or_data))
             keys = self._keys(name, key_or_data)
 
             # Check the type of value
@@ -579,20 +664,22 @@ class Scenario(TimeSeries):
                 if N_dim > 1 and len(keys) == N_dim:
                     # Ambiguous case: ._key() above returns ['dim_0', 'dim_1'], when we
                     # really want [['dim_0', 'dim_1']]
-                    keys = [keys]
+                    # TODO Adjust ignore comment once parametrized generics can be
+                    # checked
+                    keys = [keys]  # type: ignore[assignment]
 
                 # Use the same value for all keys
                 values: list[Any] = [float(value)] * len(keys)
             else:
                 # Multiple values
-                values = value
+                values = list(value) if value else []
 
-            data = pd.DataFrame(zip_longest(keys, values), columns=["key", "value"])
+            data = pd.DataFrame(zip_longest(keys, values), columns=["key", "value"])  # type: ignore[arg-type]
             if data.isna().any(axis=None):
                 raise ValueError("Length mismatch between keys and values")
 
         # Column types
-        types = {
+        types: dict[str, Union[type[float], type[str], type[object]]] = {
             "key": str if N_dim == 1 else object,
             "value": float,
             "unit": str,
@@ -634,9 +721,17 @@ class Scenario(TimeSeries):
         )
 
         # Store
-        self._backend("item_set_elements", "par", name, elements)
+        # TODO Not sure how to tell type checker, but columns are always converted to
+        # tuple[str | object, float, str, str]
+        self.platform._backend.item_set_elements(self, "par", name, elements)  # type: ignore[arg-type]
 
-    def init_scalar(self, name: str, val: Real, unit: str, comment=None) -> None:
+    def init_scalar(
+        self,
+        name: str,
+        val: Union[float, int],
+        unit: str,
+        comment: Optional[str] = None,
+    ) -> None:
         """Initialize a new scalar and set its value.
 
         Parameters
@@ -653,7 +748,7 @@ class Scenario(TimeSeries):
         self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
-    def scalar(self, name: str) -> dict[str, Union[Real, str]]:
+    def scalar(self, name: str) -> dict[str, Union[Union[float, int], str]]:
         """Return the value and unit of a scalar.
 
         Parameters
@@ -666,10 +761,16 @@ class Scenario(TimeSeries):
         dict
             with the keys "value" and "unit".
         """
-        return self._backend("item_get_elements", "par", name, None)
+        data = self.platform._backend.item_get_elements(self, "par", name, None)
+        assert isinstance(data, dict)
+        return data
 
     def change_scalar(
-        self, name: str, val: Real, unit: str, comment: Optional[str] = None
+        self,
+        name: str,
+        val: Union[float, int],
+        unit: str,
+        comment: Optional[str] = None,
     ) -> None:
         """Set the value and unit of a scalar.
 
@@ -684,11 +785,15 @@ class Scenario(TimeSeries):
         comment : str, optional
             Description of the change.
         """
-        self._backend(
-            "item_set_elements", "par", name, [(None, float(val), unit, comment)]
+        self.platform._backend.item_set_elements(
+            self, "par", name, [(None, float(val), unit, comment)]
         )
 
-    def remove_par(self, name: str, key=None) -> None:
+    def remove_par(
+        self,
+        name: str,
+        key: Optional[Union[pd.DataFrame, list[str], dict[str, list[str]]]] = None,
+    ) -> None:
         """Remove parameter values or an entire parameter.
 
         Parameters
@@ -702,12 +807,19 @@ class Scenario(TimeSeries):
             to the indices/dimensions of the parameter.
         """
         if key is None:
-            self._backend("delete_item", "par", name)
+            self.platform._backend.delete_item(self, "par", name)
         else:
-            self._backend("item_delete_elements", "par", name, self._keys(name, key))
+            self.platform._backend.item_delete_elements(
+                self, "par", name, self._keys(name, key)
+            )
 
     # FIXME What ensures that filters has the correct type?
-    def var(self, name: str, filters=None, **kwargs):
+    def var(
+        self,
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+        **kwargs: Any,
+    ) -> Union[dict[str, float], pd.DataFrame]:
         """Return a dataframe of (filtered) elements for a specific variable.
 
         Parameters
@@ -717,9 +829,14 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._backend("item_get_elements", "var", name, filters)
+        return self.platform._backend.item_get_elements(self, "var", name, filters)
 
-    def equ(self, name: str, filters=None, **kwargs) -> pd.DataFrame:
+    def equ(
+        self,
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+        **kwargs: Any,
+    ) -> Union[dict[str, float], pd.DataFrame]:
         """Return a dataframe of (filtered) elements for a specific equation.
 
         Parameters
@@ -729,7 +846,7 @@ class Scenario(TimeSeries):
         filters : dict
             index names mapped list of index set elements
         """
-        return self._backend("item_get_elements", "equ", name, filters)
+        return self.platform._backend.item_get_elements(self, "equ", name, filters)
 
     def clone(
         self,
@@ -780,15 +897,21 @@ class Scenario(TimeSeries):
         model = model or self.model
         scenario = scenario or self.scenario
 
-        args = [platform, model, scenario, annotation, keep_solution]
-        if check_year(shift_first_model_year, "first_model_year"):
-            args.append(shift_first_model_year)
-
-        return self._backend("clone", *args)
+        return self.platform._backend.clone(
+            self,
+            platform_dest=platform,
+            model=model,
+            scenario=scenario,
+            annotation=annotation,
+            keep_solution=keep_solution,
+            first_model_year=shift_first_model_year
+            if check_year(shift_first_model_year, "first_model_year")
+            else None,
+        )
 
     def has_solution(self) -> bool:
         """Return :obj:`True` if the Scenario contains model solution data."""
-        return self._backend("has_solution")
+        return self.platform._backend.has_solution(self)
 
     def remove_solution(self, first_model_year: Optional[int] = None) -> None:
         """Remove the solution from the scenario.
@@ -809,16 +932,16 @@ class Scenario(TimeSeries):
         """
         if self.has_solution():
             check_year(first_model_year, "first_model_year")
-            self._backend("clear_solution", first_model_year)
+            self.platform._backend.clear_solution(self, first_model_year)
         else:
             raise ValueError("This Scenario does not have a solution!")
 
     def solve(
         self,
         model: Optional[str] = None,
-        callback: Optional[Callable] = None,
+        callback: Optional[Callable[["Scenario"], bool]] = None,
         cb_kwargs: dict[str, Any] = {},
-        **model_options,
+        **model_options: Unpack[GamsModelInitKwargs],
     ) -> None:
         """Solve the model and store output.
 
@@ -883,9 +1006,10 @@ class Scenario(TimeSeries):
             cb = callback
         else:
 
-            def cb(scenario, **kwargs):
+            def cb(scenario: Scenario) -> bool:
                 return True
 
+        # NOTE This can never happen based on annotations
         # Flag to warn if the *callback* appears not to return anything
         warn_none = True
 
@@ -902,8 +1026,9 @@ class Scenario(TimeSeries):
             # Invoke the callback
             cb_result = cb(self, **cb_kwargs)
 
-            if cb_result is None and warn_none:
-                warn(
+            # NOTE This can never happen based on annotations, but we still test this
+            if cb_result is None and warn_none:  # type: ignore[unreachable]
+                warn(  # type: ignore[unreachable]
                     "solve(callback=...) argument returned None; will loop "
                     "indefinitely unless True is returned."
                 )
@@ -917,9 +1042,9 @@ class Scenario(TimeSeries):
     # Input and output
     def to_excel(
         self,
-        path: PathLike,
+        path: PathLike[str],
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Optional[dict[str, Union[Sequence[str], "Scenario"]]] = None,
+        filters: Optional[WriteFiltersKwargs] = None,
         max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.
@@ -958,7 +1083,7 @@ class Scenario(TimeSeries):
 
     def read_excel(
         self,
-        path: PathLike,
+        path: PathLike[str],
         add_units: bool = False,
         init_items: bool = False,
         commit_steps: bool = False,

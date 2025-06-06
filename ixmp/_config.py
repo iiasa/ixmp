@@ -1,10 +1,15 @@
 import json
 import logging
 import os
+from collections.abc import Generator
 from copy import copy
-from dataclasses import asdict, dataclass, field, fields, make_dataclass
+from dataclasses import Field, asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
+
+from ixmp.types import (
+    PlatformInitKwargs,
+)
 
 log = logging.getLogger(__name__)
 
@@ -15,13 +20,13 @@ class _JSONEncoder(json.JSONEncoder):
     The default JSONEncoder does not automatically convert pathlib.Path objects.
     """
 
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         if isinstance(o, Path):
             return str(o)
         return json.JSONEncoder.default(self, o)
 
 
-def _iter_config_paths():
+def _iter_config_paths() -> Generator[tuple[str, Path], Any, None]:
     """Yield recognized configuration paths, in order of priority."""
     try:
         yield "environment (IXMP_DATA)", Path(os.environ["IXMP_DATA"]).resolve()
@@ -39,7 +44,7 @@ def _iter_config_paths():
     yield "default", Path.home().joinpath(".local", "share", "ixmp")
 
 
-def _locate(filename=None):
+def _locate(filename: Optional[str] = None) -> Path:
     """Locate an existing director or `filename` in the ixmp configuration directory.
 
     If `filename` is :obj:`None` (the default), only directories are located.
@@ -59,7 +64,7 @@ def _locate(filename=None):
     )
 
 
-def _platform_default():
+def _platform_default() -> dict[str, Union[str, PlatformInitKwargs]]:
     """Default values for the `platform` setting on BaseValues."""
     try:
         from ixmp.util.ixmp4 import configure_logging_and_warnings
@@ -96,15 +101,19 @@ def _platform_default():
 class BaseValues:
     """Base class for storing configuration values."""
 
-    platform: dict = field(default_factory=_platform_default)
+    platform: dict[str, Union[str, PlatformInitKwargs]] = field(
+        default_factory=_platform_default
+    )
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Any:
         return getattr(self, name.replace(" ", "_"))
 
-    def __setitem__(self, name, value):
+    def __setitem__(self, name: str, value: Any) -> None:
         setattr(self, name.replace(" ", "_"), value)
 
-    def add_field(self, name, type_, default, **kwargs):
+    def add_field(
+        self, name: str, type_: Any, default: Any, **kwargs: Any
+    ) -> tuple[type, "BaseValues"]:
         # Check `name`
         name = name.replace(" ", "_")
         if (
@@ -123,7 +132,7 @@ class BaseValues:
         # Re-use current values and any defaults for the new fields
         return new_cls, new_cls(**asdict(self))
 
-    def delete_field(self, name):
+    def delete_field(self, name: str) -> tuple[type, "BaseValues"]:
         # Check `name`
         name = self.munge(name)
         if name in BaseValues.__dataclass_fields__:
@@ -132,7 +141,7 @@ class BaseValues:
         # Create a new dataclass, removing `name`
         fields = []
         for f in self.__dataclass_fields__.values():
-            if f.name == name or f in BaseValues.__dataclass_fields__:
+            if f.name == name or f in BaseValues.__dataclass_fields__.values():
                 continue
             fields.append((f.name, f.type, f))
         new_cls = make_dataclass("Values", fields, bases=(BaseValues,))
@@ -145,7 +154,7 @@ class BaseValues:
     def keys(self) -> tuple[str, ...]:
         return tuple(map(lambda f: f.name.replace("_", " "), fields(self)))
 
-    def set(self, name: str, value: Any, strict: bool = True):
+    def set(self, name: str, value: Any, strict: bool = True) -> None:
         f = self.get_field(name)
         if strict and f is None:
             raise KeyError(name)
@@ -165,15 +174,17 @@ class BaseValues:
 
     # Utilities
 
-    def get_field(self, name):
+    def get_field(self, name: str) -> Optional[Field[Any]]:
         """For `name` = "field name", retrieve a field "field_name", if any."""
         for f in fields(self):
             if f.name in (name, name.replace(" ", "_")):
                 return f
+        return None
 
-    def munge(self, name):
+    def munge(self, name: str) -> str:
         """Return a field name matching `name`."""
-        return self.get_field(name).name or name
+        field = self.get_field(name)
+        return field.name if field else name
 
 
 class Config:
@@ -247,7 +258,7 @@ class Config:
         if read:
             self.read()
 
-    def read(self):
+    def read(self) -> None:
         """Try to read configuration keys from file.
 
         If successful, the attribute :attr:`path` is set to the path of the file.
@@ -286,7 +297,9 @@ class Config:
         """Return the names of all registered configuration keys."""
         return self.values.keys()
 
-    def register(self, name: str, type_: type, default: Optional[Any] = None, **kwargs):
+    def register(
+        self, name: str, type_: type, default: Optional[Any] = None, **kwargs: Any
+    ) -> None:
         """Register a new configuration key.
 
         Parameters
@@ -312,7 +325,7 @@ class Config:
         """Unregister and clear the configuration key `name`."""
         self._ValuesClass, self.values = self.values.delete_field(name)
 
-    def set(self, name: str, value: Any, _strict: bool = True):
+    def set(self, name: str, value: Any, _strict: bool = True) -> None:
         """Set configuration key `name` to `value`.
 
         Parameters
@@ -325,11 +338,11 @@ class Config:
 
         self.values.set(name, value, _strict)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all configuration keys by setting empty or default values."""
         self.values = self._ValuesClass()
 
-    def save(self):
+    def save(self) -> None:
         """Write configuration keys to file.
 
         ``config.json`` is created in the first of the ixmp configuration directories
@@ -353,7 +366,7 @@ class Config:
         # Update the path attribute to match the written file
         self.path = path
 
-    def add_platform(self, name: str, *args, **kwargs):
+    def add_platform(self, name: str, *args: Union[str, Path], **kwargs: Any) -> None:
         """Add or overwrite information about a platform.
 
         Parameters
@@ -375,7 +388,7 @@ class Config:
         """
         if name == "default":
             assert len(args) == 1
-            info = args[0]
+            info: Union[str, Path, dict[str, Any]] = args[0]
 
             if info not in self.values["platform"]:
                 raise ValueError(f"Cannot set unknown {repr(info)} as default platform")
@@ -387,6 +400,7 @@ class Config:
             try:
                 # Get the backend class
                 cls = _args.pop(0)
+                assert isinstance(cls, str)
                 backend_class = get_class(cls)
             except IndexError:
                 raise ValueError("Must give at least 1 arg: backend class")
@@ -402,7 +416,7 @@ class Config:
 
         self.values["platform"][name] = info
 
-    def get_platform_info(self, name: str) -> tuple[str, dict[str, Any]]:
+    def get_platform_info(self, name: str) -> tuple[str, PlatformInitKwargs]:
         """Return information on configured Platform `name`.
 
         Parameters
@@ -436,7 +450,7 @@ class Config:
                 f"\nfrom {self.path}"
             ) from None
 
-    def remove_platform(self, name: str):
+    def remove_platform(self, name: str) -> None:
         """Remove the configuration for platform `name`."""
         self.values["platform"].pop(name)
 

@@ -1,13 +1,18 @@
 import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Union
 
 import pytest
 
 import ixmp
 from ixmp.testing import create_test_platform
 
+if TYPE_CHECKING:
+    from pytest_httpserver import HTTPServer
+
 
 @pytest.fixture
-def mock(httpserver):
+def mock(httpserver: "HTTPServer") -> "HTTPServer":
     """Mock server with responses for both tests."""
     from werkzeug import Request, Response
 
@@ -38,7 +43,12 @@ def mock(httpserver):
 
 
 @pytest.fixture
-def test_props(mock, request, tmp_path, test_data_path):
+def test_props(
+    mock: "HTTPServer",
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    test_data_path: Path,
+) -> Path:
     return create_test_platform(
         tmp_path, test_data_path, "test_access", auth_url=mock.url_for("")
     )
@@ -58,7 +68,12 @@ M = ["test_model", "non_existing_model"]
         ("non_existing_user", M, {"test_model": False, "non_existing_model": False}),
     ),
 )
-def test_check_access(test_props, user, models, exp):
+def test_check_access(
+    test_props: Path,
+    user: str,
+    models: Union[str, list[str]],
+    exp: Union[bool, dict[str, bool]],
+) -> None:
     """:meth:`.check_access` correctly handles certain arguments and responses."""
     mp = ixmp.Platform(backend="jdbc", dbprops=test_props)
     assert exp == mp.check_access(user, models)

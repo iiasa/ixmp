@@ -2,10 +2,13 @@ import gc
 import logging
 import os
 import platform
+from collections.abc import Callable, Generator
 from sys import getrefcount
+from typing import TYPE_CHECKING, Any, Optional, TypedDict, Union
 
 import jpype
 import numpy as np
+import pandas as pd
 import pytest
 from pytest import raises
 
@@ -14,8 +17,17 @@ import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
 from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
+from ixmp.types import PlatformInitKwargs
 
 log = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from ixmp.backend.jdbc import JDBCBackend
+    from ixmp.core.platform import Platform
+    from ixmp.core.scenario import Scenario
 
 
 @pytest.mark.flaky(
@@ -24,7 +36,7 @@ log = logging.getLogger(__name__)
     condition="GITHUB_ACTIONS" in os.environ and platform.system() == "Linux",
     reason="Flaky; see iiasa/ixmp#489",
 )
-def test_jvm_warn(recwarn):
+def test_jvm_warn(recwarn: pytest.WarningsRecorder) -> None:
     """Test that no warnings are issued on JVM start-up.
 
     A warning message is emitted e.g. for JPype 0.7 if the 'convertStrings'
@@ -45,7 +57,9 @@ def test_jvm_warn(recwarn):
         assert len(recwarn) == 0, recwarn.pop().message
 
 
-def test_close_default_logging(test_mp_f, capfd):
+def test_close_default_logging(
+    test_mp_f: "Platform", capfd: pytest.CaptureFixture[str]
+) -> None:
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
     mp = test_mp_f
@@ -63,7 +77,9 @@ def test_close_default_logging(test_mp_f, capfd):
 
 # NOTE IXMP4Backend's close_db() is a noop
 @pytest.mark.jdbc
-def test_close_increased_logging(test_mp_f, capfd):
+def test_close_increased_logging(
+    test_mp_f: "Platform", capfd: pytest.CaptureFixture[str]
+) -> None:
     """Platform.close_db() doesn't throw needless exceptions."""
     # Use the session-scoped fixture to avoid affecting other tests in this file
     mp = test_mp_f
@@ -91,20 +107,21 @@ VE = pytest.mark.xfail(raises=ValueError)
 
 class TestJDBCBackend:
     @pytest.fixture(scope="class")
-    def klass(self):
+    def klass(self) -> Generator[type["JDBCBackend"], Any, None]:
         """The JDBCBackend class."""
         yield ixmp.backend.jdbc.JDBCBackend
 
     @pytest.fixture(scope="function")
-    def mp(self):
+    def mp(self) -> Generator["Platform", Any, None]:
         """A Platform connected to a JDBCBackend."""
         yield ixmp.Platform(
             backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest"
         )
 
     @pytest.fixture()
-    def be(self, mp):
+    def be(self, mp: "Platform") -> Generator["JDBCBackend", Any, None]:
         """The Backend object itself."""
+        assert isinstance(mp._backend, ixmp.backend.jdbc.JDBCBackend)
         yield mp._backend
 
     @pytest.mark.parametrize(
@@ -133,18 +150,26 @@ class TestJDBCBackend:
             pytest.param(("hsqldb",), dict(), None, marks=VE),
         ),
     )
-    def test_handle_config(self, klass, args, kwargs, expected):
+    def test_handle_config(
+        self,
+        klass: type["JDBCBackend"],
+        args: tuple[str, ...],
+        kwargs: dict[str, str],
+        expected: Optional[dict[str, str]],
+    ) -> None:
         """Test :meth:`JDBCBackend.handle_config`."""
         assert expected == klass.handle_config(args, kwargs)
 
-    def test_handle_config_path(self, tmp_path, klass):
+    def test_handle_config_path(
+        self, tmp_path: "Path", klass: type["JDBCBackend"]
+    ) -> None:
         """Test :meth:`JDBCBackend.handle_config` for HyperSQL paths.
 
         This is separate from :func:`test_handle_config` because the
         :class:`~pathlib.Path` object stored/returned varies across platforms.
         """
         args = ("hsqldb", str(tmp_path))
-        kwargs = dict()
+        kwargs: dict[str, str] = dict()
 
         assert dict(driver="hsqldb", path=tmp_path) == klass.handle_config(args, kwargs)
 
@@ -165,7 +190,9 @@ class TestJDBCBackend:
             ),
         ),
     )
-    def test_init_item(self, mp, be, name, idx_sets):
+    def test_init_item(
+        self, mp: "Platform", be: "JDBCBackend", name: str, idx_sets: list[str]
+    ) -> None:
         """init_item() supports items that have fixed indices in ixmp_source."""
 
         # Create an ixmp.Scenario, coerce its scheme to MESSAGE, and then call
@@ -178,50 +205,54 @@ class TestJDBCBackend:
         # Initialize the item; succeeds
         be.init_item(s, type="var", name=name, idx_sets=idx_sets, idx_names=idx_sets)
 
-    def test_delete_item(self, mp, be):
+    def test_delete_item(self, mp: "Platform", be: "JDBCBackend") -> None:
         s = ixmp.Scenario(mp, "model name", "scenario name", version="new")
         with pytest.raises(KeyError):
             be.delete_item(s, "set", "foo")
 
-    def test_set_data_inf(self, mp):
+    def test_set_data_inf(self, mp: "Platform") -> None:
         """:meth:`JDBCBackend.set_data` errors on :data:`numpy.inf` values."""
         # Make `mp` think it is connected to an Oracle database
+        # NOTE mp inside this class only knows one backend
+        assert isinstance(mp._backend, ixmp.backend.jdbc.JDBCBackend)
         mp._backend._properties["jdbc.driver"] = DRIVER_CLASS["oracle"]
 
         # TimeSeries object and data to add
         ts = ixmp.TimeSeries(mp, "model name", "scenario name", version="new")
-        data = DATA[0].assign(value=[np.inf, -np.inf])
+        data = DATA[0].assign(value=pd.Series([np.inf, -np.inf]))
 
         with pytest.raises(
             ValueError, match=r"infinity \(at region=World, variable=Testing\)"
         ):
             ts.add_timeseries(data)  # Calls JDBCBackend.set_data
 
-    def test_set_unit(self, caplog, be):
+    def test_set_unit(
+        self, caplog: pytest.LogCaptureFixture, be: "JDBCBackend"
+    ) -> None:
         be.set_unit("", "comment")
         # No warning issued under pytest/driver=hsqldb; the exception only occurs with
         # driver=oracle
         assert [] == caplog.messages
 
-    def test_read_file(self, tmp_path, be):
+    def test_read_file(self, tmp_path: "Path", be: "JDBCBackend") -> None:
         """Cannot read CSV files."""
         with pytest.raises(NotImplementedError):
             be.read_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
 
-    def test_write_file(self, tmp_path, be):
+    def test_write_file(self, tmp_path: "Path", be: "JDBCBackend") -> None:
         """Cannot write CSV files."""
         with pytest.raises(NotImplementedError):
             be.write_file(tmp_path / "test.csv", ixmp.ItemType.ALL, filters={})
 
     # Specific to JDBCBackend
-    def test_gc(self, monkeypatch, be):
+    def test_gc(self, monkeypatch: pytest.MonkeyPatch, be: "JDBCBackend") -> None:
         monkeypatch.setattr(ixmp.backend.jdbc, "_GC_AGGRESSIVE", True)
         be.gc()
 
 
 # TODO IXMP4Backend needs to handle change_scalar() correctly
 @pytest.mark.jdbc
-def test_exceptions(test_mp):
+def test_exceptions(test_mp: "Platform") -> None:
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
     s.init_par("test_exception", [])
@@ -231,13 +262,13 @@ def test_exceptions(test_mp):
         s.change_scalar("test_exception", 42, unit="kg")
 
 
-def test_pass_properties():
+def test_pass_properties() -> None:
     ixmp.Platform(
         driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest", user="ixmp", password="ixmp"
     )
 
 
-def test_invalid_properties_file(test_data_path):
+def test_invalid_properties_file(test_data_path: "Path") -> None:
     # HyperSQL creates a file with a .properties suffix for every file-based
     # database, but these files do not contain the information needed to
     # instantiate a database connection
@@ -245,7 +276,11 @@ def test_invalid_properties_file(test_data_path):
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
-def test_connect_message(capfd, caplog, request):
+def test_connect_message(
+    capfd: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+    request: pytest.FixtureRequest,
+) -> None:
     msg = (
         f"connected to database 'jdbc:hsqldb:mem://{request.node.name}_0' "
         "(user: ixmp)..."
@@ -281,7 +316,7 @@ def test_connect_message(capfd, caplog, request):
 
 
 @pytest.mark.parametrize("arg", [True, False])
-def test_cache_arg(arg, request):
+def test_cache_arg(arg: bool, request: pytest.FixtureRequest) -> None:
     """Test 'cache' argument, passed to CachingBackend."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -297,9 +332,27 @@ def test_cache_arg(arg, request):
     assert len(mp._backend._cache) == (1 if arg else 0)
 
 
+class TestInitKwargs(TypedDict, total=False):
+    name: str
+    dbtype: str
+    backend: str
+    driver: str
+    path: str
+    url: str
+
+
 # This variable formerly had 'warns' as the third element in some tuples, to
 # test for deprecation warnings.
-INIT_PARAMS: tuple[tuple, ...] = (
+INIT_PARAMS: tuple[
+    tuple[
+        list[str],
+        TestInitKwargs,
+        Callable[..., Any],
+        Union[type[TypeError], type[ValueError]],
+        Optional[str],
+    ],
+    ...,
+] = (
     # Handled in JDBCBackend:
     (
         ["nonexistent.properties"],
@@ -341,13 +394,21 @@ INIT_PARAMS: tuple[tuple, ...] = (
 
 
 @pytest.mark.parametrize("args,kwargs,action,kind,match", INIT_PARAMS)
-def test_init(tmp_env, args, kwargs, action, kind, match):
+def test_init(
+    tmp_env: os._Environ[str],
+    args: list[str],
+    kwargs: TestInitKwargs,
+    action: Callable[..., Any],
+    kind: Union[type[TypeError], type[ValueError]],
+    match: Optional[str],
+) -> None:
     """Semantics for JDBCBackend.__init__()."""
+    # NOTE Triggering some errors on purpose
     with action(kind, match=match):
-        ixmp.Platform(*args, **kwargs)
+        ixmp.Platform(*args, **kwargs)  # type: ignore[misc]
 
 
-def test_gh_216(test_mp, request):
+def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
 
     filters = dict(i=["seattle", "beijing"])
@@ -359,7 +420,7 @@ def test_gh_216(test_mp, request):
 
 
 @pytest.fixture
-def exception_verbose_true():
+def exception_verbose_true() -> Generator[None, Any, None]:
     """A fixture which ensures JDBCBackend raises verbose exceptions.
 
     The set value is not disturbed for other tests/code.
@@ -372,7 +433,7 @@ def exception_verbose_true():
 
 # FIMXE This raises a RunNotFound on IXMP4Backend
 @pytest.mark.jdbc
-def test_verbose_exception(test_mp, exception_verbose_true):
+def test_verbose_exception(test_mp: "Platform", exception_verbose_true: None) -> None:
     # Exception stack trace is logged for debugging
     with pytest.raises(RuntimeError) as exc_info:
         ixmp.Scenario(test_mp, model="foo", scenario="bar", version=-1)
@@ -385,7 +446,7 @@ def test_verbose_exception(test_mp, exception_verbose_true):
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-def test_del_ts(request):
+def test_del_ts(request: pytest.FixtureRequest) -> None:
     mp = ixmp.Platform(
         backend="jdbc", driver="hsqldb", url=f"jdbc:hsqldb:mem:{request.node.name}"
     )
@@ -452,7 +513,7 @@ def test_del_ts(request):
 
 # NB coverage is omitted because this test is not included in the standard suite
 @pytest.mark.performance
-def test_gc_lowmem(request):  # pragma: no cover
+def test_gc_lowmem(request: pytest.FixtureRequest) -> None:  # pragma: no cover
     """Test Java-side garbage collection (GC).
 
     By default, this test limits the JVM memory to 7 MiB. To change this limit, use the
@@ -469,11 +530,11 @@ def test_gc_lowmem(request):  # pragma: no cover
     # Force Java GC
     jpype.java.lang.System.gc()
 
-    def allocate_scenarios(n):
+    def allocate_scenarios(n: int) -> None:
         for i in range(n):
             scenarios.append(ixmp.Scenario(mp, "foo", f"bar{i}", version="new"))
 
-    scenarios = []
+    scenarios: list["Scenario"] = []
     # Fill *scenarios* with Scenario object until out of memory
     raises(jpype.java.lang.OutOfMemoryError, allocate_scenarios, 100000)
     # Record the maximum number
@@ -491,16 +552,20 @@ def test_gc_lowmem(request):  # pragma: no cover
 
 
 @pytest.fixture(scope="session")
-def rc_data_size():  # pragma: no cover
+def rc_data_size() -> int:  # pragma: no cover
     """Number of data rows for :meth:`test_reload_cycle` and its fixtures."""
-    return 5e4
+    return int(5e4)
 
 
 @pytest.fixture(scope="session")
-def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: no cover
+def reload_cycle_scenario(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+    rc_data_size: int,
+) -> Generator["Scenario", Any, None]:  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
-    kwarg = dict()
+    kwarg: PlatformInitKwargs = dict(driver="hsqldb")
     max_memory = int(request.config.getoption("--ixmp-jvm-mem"))
     if max_memory > 0:
         kwarg["jvmargs"] = f"-Xmx{max_memory}M"
@@ -508,9 +573,11 @@ def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: n
     # Path for this database
     path = tmp_path_factory.mktemp("reload_cycle") / "base"
 
+    kwarg["path"] = path
+
     # Create the Platform. This should be the first in the process, so the
     # jvmargs are used in :func:`.jdbc.start_jvm`.
-    mp = ixmp.Platform(backend="jdbc", driver="hsqldb", path=path, **kwarg)
+    mp = ixmp.Platform(backend="jdbc", **kwarg)
 
     s0 = ixmp.Scenario(mp, model="foo", scenario="bar 0", version="new")
 
@@ -533,15 +600,15 @@ def reload_cycle_scenario(request, tmp_path_factory, rc_data_size):  # pragma: n
 @pytest.mark.parametrize("gc", [True, False], ids=bool_param_id("gc"))
 @pytest.mark.parametrize("gdx", [True, False], ids=bool_param_id("gdx"))
 def test_reload_cycle(
-    resource_limit,
-    reload_cycle_scenario,
-    tmp_path,
-    cache,
-    gc,
-    gdx,
-    rc_data_size,
-    N_cycles=2,
-):  # pragma: no cover
+    resource_limit: None,
+    reload_cycle_scenario: "Scenario",
+    tmp_path: "Path",
+    cache: bool,
+    gc: bool,
+    gdx: bool,
+    rc_data_size: int,
+    N_cycles: int = 2,
+) -> None:  # pragma: no cover
     """Test a cycle of Platform/Scenario reloading.
 
     This test simulates the usage in the 'runscripts' often used for the
@@ -580,14 +647,13 @@ def test_reload_cycle(
     #    suite
 
     # Clone reload_cycle_scenario onto a new Platform for this test
-    platform_args = dict(
-        backend="jdbc",
+    platform_args: PlatformInitKwargs = dict(
         driver="hsqldb",
         path=tmp_path / "testdb",
         cache=cache,
         log_level="WARNING",
     )
-    mp = ixmp.Platform(**platform_args)
+    mp: Optional["Platform"] = ixmp.Platform(backend="jdbc", **platform_args)
     reload_cycle_scenario.clone(platform=mp)
 
     # Throw away the reference to mp
@@ -603,7 +669,7 @@ def test_reload_cycle(
 
     for i in range(1, N_cycles + 1):
         # New Platform instance; throw away old reference
-        mp = ixmp.Platform(**platform_args)
+        mp = ixmp.Platform(backend="jdbc", **platform_args)
 
         # Load existing Scenario
         s0 = ixmp.Scenario(mp, model="foo", scenario=f"bar {i - 1}", version=1)
@@ -637,7 +703,8 @@ def test_reload_cycle(
 
         # Use, then throw away, references to s0 and data
         assert len(df_par) >= rc_data_size
-        s0, df_par = None, None
+        # s0, df_par = None, None
+        del s0, df_par
         # commented: omitted
         # assert len(df_ts) == rc_data_size
         # df_ts = None
@@ -661,14 +728,15 @@ def test_reload_cycle(
     )
 
     # Throw away reference to s1
-    s1 = None
+    # s1 = None
+    del s1
 
     memory_usage("shutdown")
 
 
 # TODO Not yet implemented by IXMP4Backend
 @pytest.mark.jdbc
-def test_docs(test_mp, request):
+def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
     # test model docs
     test_mp.set_doc("model", {scen.model: "Dantzig model"})
@@ -692,12 +760,13 @@ def test_docs(test_mp, request):
     assert ex.value.args[0] == exp
 
 
-def test_cache_clear(test_mp, request):
+def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Removing set elements causes the cache to be cleared entirely."""
     scen = make_dantzig(test_mp, request=request)
 
     # Load an item so that it is cached
     d0 = scen.par("d")
+    assert isinstance(d0, pd.DataFrame)
 
     # Remove a set element
     scen.check_out()
@@ -705,4 +774,6 @@ def test_cache_clear(test_mp, request):
 
     # The retrieved item content reflects the removal of 'topeka'; not the
     # cached value used to return d0
-    assert scen.par("d").shape[0] < d0.shape[0]
+    df = scen.par("d")
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape[0] < d0.shape[0]

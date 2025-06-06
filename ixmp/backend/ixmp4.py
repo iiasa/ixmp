@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from collections.abc import Generator, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import asdict, dataclass
 from os import PathLike
 from pathlib import Path
@@ -26,8 +26,9 @@ from typing_extensions import TypeAlias, Unpack
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+from ixmp.types import ItemTypeNames, ReadKwargs, WriteKwargs
 
-from .base import CachingBackend, ReadKwargs, WriteKwargs
+from .base import CachingBackend
 from .common import ItemType
 from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
@@ -35,13 +36,21 @@ log = logging.getLogger(__name__)
 
 
 # TODO Reconcile this with `as_str_list()`
-def _ensure_filters_values_are_lists(filters: dict[str, Union[Any, list[Any]]]) -> None:
+def _convert_filters_values_to_lists(
+    filters: Mapping[str, Union[Any, Sequence[Any]]],
+) -> dict[str, list[Any]]:
     """Convert singular values in `filters` to lists."""
+    result: dict[str, list[Any]] = {}
+
     for k, v in filters.items():
         if isinstance(v, dict):
-            filters[k] = list(map(str, v))
+            result[k] = list(map(str, v))
         elif not isinstance(v, list):
-            filters[k] = [v]
+            result[k] = [v]
+        else:
+            result[k] = v
+
+    return result
 
 
 def _align_dtypes_for_filters(
@@ -64,7 +73,9 @@ def _align_dtypes_for_filters(
                 ]
 
 
-def _remove_empty_lists(filters: dict[str, list[Any]]) -> dict[str, list[Any]]:
+def _remove_empty_lists(
+    filters: MutableMapping[str, list[Any]],
+) -> dict[str, list[Any]]:
     """Remove keys from `filters` whose values are empty lists."""
     result: dict[str, list[Any]] = {}
 
@@ -99,9 +110,9 @@ class Options:
     #: - Units: "???", "GWa", "USD/km", "USD/kWa", "cases", "kg", "km". Of these, only
     #:   "cases" and "km" are used by the :mod:`message_ix` tutorials.
     #: - Regions: "World", in hierarchy "common".
-    jdbc_compat: bool = False
+    jdbc_compat: Union[bool, str] = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.dsn:
             # Construct a DSN based on the platform name
             path = ixmp4.conf.settings.storage_directory.joinpath(
@@ -116,7 +127,9 @@ class Options:
             )
 
     @classmethod
-    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
+    def handle_config(
+        cls, args: Sequence[Any], kwargs: MutableMapping[str, Any]
+    ) -> dict[str, Any]:
         """Helper for :meth:`IXMP4Backend.handle_config`."""
         if len(args):
             raise ValueError(f"Unhandled positional args to IXMP4Backend: {args!r}")
@@ -179,9 +192,9 @@ class IXMP4Backend(CachingBackend):
         *,
         ixmp4_name: str,
         dsn: str = Options.dsn,
-        jdbc_compat: bool = Options.jdbc_compat,
+        jdbc_compat: Union[bool, str] = Options.jdbc_compat,
     ) -> None:
-        from ixmp4.data.backend import SqliteTestBackend
+        from ixmp4.data.backend.db import SqliteTestBackend
 
         # Handle arguments
         self._options = opts = Options(
@@ -240,7 +253,9 @@ class IXMP4Backend(CachingBackend):
 
     # Platform methods
     @classmethod
-    def handle_config(cls, args, kwargs):
+    def handle_config(
+        cls, args: Sequence[Any], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         return Options.handle_config(args, kwargs)
 
     # def close_db(self) -> None:
@@ -266,7 +281,7 @@ class IXMP4Backend(CachingBackend):
 
     def get_scenarios(
         self, default: bool, model: Optional[str], scenario: Optional[str]
-    ):
+    ) -> Generator[list[Union[bool, int, str]], Any, None]:
         runs = self._platform.runs.list(
             default_only=default,
             model={"name": model} if model else None,
@@ -275,8 +290,8 @@ class IXMP4Backend(CachingBackend):
 
         for run in runs:
             yield [
-                run.model.name,
-                run.scenario.name,
+                str(run.model.name),
+                str(run.scenario.name),
                 # TODO What are we going to use for scheme in ixmp4?
                 "IXMP4Run",
                 run.is_default,
@@ -292,7 +307,8 @@ class IXMP4Backend(CachingBackend):
                 "Some date",
                 # TODO Should Runs get .docs?
                 "Some docs",
-                run.version,
+                # TODO Check if types.Mapped is still the way to go in ixmp4
+                run.version,  # type: ignore[list-item]
             ]
 
     def set_unit(self, name: str, comment: str) -> None:
@@ -340,7 +356,8 @@ class IXMP4Backend(CachingBackend):
         v = run.version
         if ts.version is None:
             # The default version was requested; update the attribute
-            ts.version = v
+            # NOTE Seems like an error for mypy to not recognize v as int
+            ts.version = v  # type: ignore[assignment]
         elif v != ts.version:  # pragma: no cover
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
@@ -363,7 +380,7 @@ class IXMP4Backend(CachingBackend):
         platform_dest: Platform,
         model: str,
         scenario: str,
-        annotation: str,
+        annotation: Optional[str],
         keep_solution: bool,
         first_model_year: Optional[int] = None,
     ) -> Scenario:
@@ -386,7 +403,8 @@ class IXMP4Backend(CachingBackend):
             platform_dest,
             model,
             scenario,
-            version=cloned_run.version,
+            # NOTE Seems like an error for mypy to not recognize version as int
+            version=cloned_run.version,  # type: ignore[arg-type]
             scheme=s.scheme,
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
@@ -437,7 +455,8 @@ class IXMP4Backend(CachingBackend):
 
     def run_id(self, ts: TimeSeries) -> int:
         # TODO is the Run.version really what this function is after?
-        return self.index[ts].version
+        # NOTE Seems like an error for mypy to not recognize version as int
+        return self.index[ts].version  # type: ignore[return-value]
 
     def is_default(self, ts: TimeSeries) -> bool:
         return self.index[ts].is_default
@@ -497,7 +516,7 @@ class IXMP4Backend(CachingBackend):
     def init_item(
         self,
         s: Scenario,
-        type: Literal["set", "par", "equ", "var"],
+        type: ItemTypeNames,
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -520,7 +539,7 @@ class IXMP4Backend(CachingBackend):
                 column_names=list(idx_names) if idx_names else None,
             )
 
-    def list_items(self, s: Scenario, type: Literal["set", "par", "equ"]) -> list[str]:
+    def list_items(self, s: Scenario, type: ItemTypeNames) -> list[str]:
         if type == "set":
             indexset_repo = self._get_repo(s=s, type="indexset")
             set_repo = self._get_repo(s=s, type=type)
@@ -842,8 +861,11 @@ class IXMP4Backend(CachingBackend):
                     )
 
     def _get_set_data(
-        self, s: Scenario, name: str, filters: Optional[dict[str, list[Any]]] = None
-    ) -> Union[pd.Series, pd.DataFrame]:
+        self,
+        s: Scenario,
+        name: str,
+        filters: Optional[dict[str, list[Any]]] = None,
+    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]:
         """Get the data stored in `name` in `s`.
 
         Parameters
@@ -870,21 +892,49 @@ class IXMP4Backend(CachingBackend):
             series = pd.Series(item.data)
             return series[series.isin(values=filters[name])] if filters else series
 
+    @overload
     def item_get_elements(
         self,
         s: Scenario,
-        type: Literal["equ", "par", "set", "var"],
+        ix_type: Literal["set"],
         name: str,
-        filters: Optional[dict[str, Any]] = None,
-    ) -> Union[dict[str, Any], pd.Series, pd.DataFrame]:
-        if type == "set":
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]: ...
+
+    @overload
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: Literal["par"],
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]: ...
+
+    @overload
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: Literal["equ", "var"],
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+    ) -> Union[dict[str, float], pd.DataFrame]: ...
+
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: ItemTypeNames,
+        name: str,
+        filters: Optional[Mapping[str, Iterable[object]]] = None,
+    ) -> Union[dict[str, Any], "pd.Series[Union[float, int, str]]", pd.DataFrame]:
+        if ix_type == "set":
+            clean_filters: Optional[dict[str, list[Any]]] = None
             if filters:
-                _ensure_filters_values_are_lists(filters=filters)
-            return self._get_set_data(s=s, name=name, filters=filters)
+                clean_filters = _convert_filters_values_to_lists(filters=filters)
+            return self._get_set_data(s=s, name=name, filters=clean_filters)
         # TODO this is not handling scalars at the moment, but maybe try with type,
         # except NotFound, try scalar?
         else:
-            item = self._get_item(s=s, name=name, type=type)
+            item = self._get_item(s=s, name=name, type=ix_type)
 
             # TODO What about Scalars? How does message_ix load them?
 
@@ -894,7 +944,7 @@ class IXMP4Backend(CachingBackend):
             # ixmp.report.util::keys_for_quantity()
             renames = (
                 {"values": "value", "units": "unit"}
-                if type == "par"
+                if ix_type == "par"
                 else {"levels": "lvl", "marginals": "mrg"}
             )
 
@@ -902,7 +952,7 @@ class IXMP4Backend(CachingBackend):
                 # Set correct columns
                 columns = item.column_names or item.indexset_names
                 unindexed_columns = (
-                    ["value", "unit"] if type == "par" else ["lvl", "mrg"]
+                    ["value", "unit"] if ix_type == "par" else ["lvl", "mrg"]
                 )
                 if columns:
                     columns.extend(unindexed_columns)
@@ -920,13 +970,15 @@ class IXMP4Backend(CachingBackend):
             # Apply filters if requested
             if filters:
                 # isin() won't consider int(700) to be in ['700'], etc
-                _ensure_filters_values_are_lists(filters=filters)
-                _align_dtypes_for_filters(filters=filters, data=data)
-                filters = _remove_empty_lists(filters=filters)
+                clean_filters = _convert_filters_values_to_lists(filters=filters)
+                _align_dtypes_for_filters(filters=clean_filters, data=data)
+                clean_filters = _remove_empty_lists(filters=clean_filters)
 
-                if filters:
+                if clean_filters:
                     data = data[
-                        data.isin(values=filters)[filters.keys()].all(axis=1)
+                        data.isin(values=clean_filters)[clean_filters.keys()].all(
+                            axis=1
+                        )
                     ].reset_index(drop=True)
 
             # Rename columns
@@ -964,10 +1016,7 @@ class IXMP4Backend(CachingBackend):
             parameter.remove(data=data)
 
     def delete_item(
-        self,
-        s: Scenario,
-        type: Literal["set", "par", "equ", "indexset"],
-        name: str,
+        self, s: Scenario, type: Literal["set", "par", "equ"], name: str
     ) -> None:
         # NOTE We need to allow 'set' and 'indexset' for type for backward compatibility
         if type == "set":
@@ -1155,8 +1204,8 @@ class IXMP4Backend(CachingBackend):
         region: Sequence[str],
         variable: Sequence[str],
         unit: Sequence[str],
-        year: Sequence[str],
-    ) -> Generator[tuple, Any, None]:
+        year: Union[Sequence[int], Sequence[str]],
+    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         data = self.index[ts].iamc.tabulate(
             region={"name__in": region} if len(region) else None,
             variable={"name__in": variable} if len(variable) else None,
@@ -1210,7 +1259,7 @@ class IXMP4Backend(CachingBackend):
     # Handle I/O
 
     def write_file(
-        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack[WriteKwargs]
     ) -> None:
         """Write Platform, TimeSeries, or Scenario data to file.
 
@@ -1296,7 +1345,7 @@ class IXMP4Backend(CachingBackend):
             raise NotImplementedError
 
     def read_file(
-        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack[ReadKwargs]
     ) -> None:
         """Read Platform, TimeSeries, or Scenario data from file.
 
@@ -1369,7 +1418,7 @@ class IXMP4Backend(CachingBackend):
             raise NotImplementedError(path, item_type)
 
     # The below methods of base.Backend are not yet implemented
-    def _ni(self, *args, **kwargs):
+    def _ni(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
 
     delete = _ni

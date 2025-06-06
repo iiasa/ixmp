@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Literal, Optional, TypeVar, Union, cast
+from typing import Any, Literal, Optional, TypeVar, Union, cast
 
 import gams.transfer as gt
 import pandas as pd
@@ -80,7 +80,9 @@ def _records(
     return result
 
 
-def _ensure_correct_item_order(items: list[Item4], repo: Lister) -> list[Item4]:
+def _ensure_correct_item_order(
+    items: list[Item4], repo: Lister[Any, Any]
+) -> list[Item4]:
     """Reorder items to ensure the GDX file is written correctly.
 
     gamsapi stores all unique elements of all items in a single list internally. If item
@@ -120,7 +122,9 @@ def _align_records_and_domain(
         return {key: records[key] for key in domain_order}
 
 
-def _update_item_in_container(container: gt.Container, item: ContainerData) -> None:
+# NOTE gamsapi does not provide type hints, it seems, and even though we ignore missing
+# imports, we also need to explicitly accept 'Any' import like this
+def _update_item_in_container(container: gt.Container, item: ContainerData) -> None:  # type: ignore[no-any-unimported]
     """Update `item` in `container`.
 
     Note that this overwrites existing records of `item`.
@@ -142,7 +146,7 @@ def _update_item_in_container(container: gt.Container, item: ContainerData) -> N
         container.addVariable(**kwargs)
 
 
-def _add_items_to_container(
+def _add_items_to_container(  # type: ignore[no-any-unimported]
     container: gt.Container, items: list[ContainerData]
 ) -> None:
     """Add or update `items` to/in `container`."""
@@ -215,7 +219,7 @@ def _convert_ixmp4_items_to_containerdata(items: list[Item4]) -> list[ContainerD
     return container_items
 
 
-def _record_versions(container: gt.Container, packages: list[str]) -> None:
+def _record_versions(container: gt.Container, packages: Sequence[str]) -> None:  # type: ignore[no-any-unimported]
     """Store Python package versions as set elements to be written to GDX.
 
     The values are stored in a 2-dimensional set named ``ixmp_version``, where the
@@ -248,7 +252,7 @@ def write_run_to_gdx(
     run: Run,
     file_name: Path,
     container_data: list[ContainerData],
-    record_version_packages: list[str],
+    record_version_packages: Sequence[str],
     include_variables_and_equations: bool = False,
 ) -> None:
     """Write data from the `run` to a GDX file at `file_name` via a GAMS Container.
@@ -262,8 +266,9 @@ def write_run_to_gdx(
     container_data : list of :class:`ixmp.util.ixmp4.ContainerData`.
         Data that should also be written to the GDX file
         in the form of ContainerData.
-    record_version_packages : list of str
-        A list of package names for which versions will be stored in the GDX file.
+    record_version_packages : sequence of str
+        A sequence (e.g. list or tuple) of package names for which versions will be
+        stored in the GDX file.
     include_variables_and_equations: bool, optional
         Flag to indicate whether Variabels and Equations should be written to the GDX
         file.
@@ -275,7 +280,7 @@ def write_run_to_gdx(
     # Define the container
     container = gt.Container(system_directory=str(gams_info().system_dir))
 
-    repository: list[Lister] = [
+    repository: list[Lister[Any, Any]] = [
         run.optimization.indexsets,
         run.optimization.scalars,
         run.optimization.tables,
@@ -304,6 +309,10 @@ def write_run_to_gdx(
 
 # NOTE since we currently only read Variables and Equations, this function only covers
 # these cases
+# NOTE for the following three functions, we never actually handle 'AbstractVariable'
+# and 'AbstractEquation', but either API or DB layer Variable/Equation are fine. Both
+# have proper attributes defined. Maybe we could define a TypeAlias that catches both
+# cases and avoids the need of type: ignores
 def _set_columns_to_read_from_records(
     item: Union[AbstractVariable, AbstractEquation],
 ) -> list[str]:
@@ -313,9 +322,9 @@ def _set_columns_to_read_from_records(
     columns = ["levels", "marginals"]
     item_columns = item.column_names or item.indexset_names
     if item_columns:
-        item_columns.extend(columns)
+        item_columns.extend(columns)  # type: ignore[attr-defined]
 
-    return item_columns if item_columns else columns
+    return item_columns if item_columns else columns  # type: ignore[return-value]
 
 
 # NOTE not sure we only need equations and variables; if we need others, abstracting one
@@ -323,7 +332,7 @@ def _set_columns_to_read_from_records(
 # I'm keeping them separate for now
 
 
-def _read_variables_to_run(
+def _read_variables_to_run(  # type: ignore[no-any-unimported]
     container: gt.Container, run: Run, variables: Iterable[AbstractVariable]
 ) -> None:
     """Read `variables` from `container` and store them in `run`."""
@@ -346,11 +355,12 @@ def _read_variables_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.variables.add_data(
-                id=variable.id, data=records[columns_of_interest]
+                id=variable.id,  # type: ignore[arg-type]
+                data=records[columns_of_interest],
             )
 
 
-def _read_equations_to_run(
+def _read_equations_to_run(  # type: ignore[no-any-unimported]
     container: gt.Container, run: Run, equations: Iterable[AbstractEquation]
 ) -> None:
     """Read `equations` from `container` and store them in `run`."""
@@ -373,7 +383,8 @@ def _read_equations_to_run(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.equations.add_data(
-                id=equation.id, data=records[columns_of_interest]
+                id=equation.id,  # type: ignore[arg-type]
+                data=records[columns_of_interest],
             )
 
 

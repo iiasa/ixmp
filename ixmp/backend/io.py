@@ -1,11 +1,19 @@
 import logging
 from collections import deque
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import pandas as pd
 
+from ixmp.types import WriteFiltersKwargs
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from .common import ItemType
+
+if TYPE_CHECKING:
+    from ixmp.backend.base import Backend
+    from ixmp.core.scenario import Scenario
+    from ixmp.core.timeseries import TimeSeries
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +22,12 @@ log = logging.getLogger(__name__)
 EXCEL_MAX_ROWS = 1048576
 
 
-def ts_read_file(ts, path, firstyear=None, lastyear=None):
+def ts_read_file(
+    ts: "TimeSeries",
+    path: Path,
+    firstyear: Optional[int] = None,
+    lastyear: Optional[int] = None,
+) -> None:
     """Read data from a CSV or Microsoft Excel file at *path* into *ts*.
 
     See also
@@ -39,7 +52,14 @@ def ts_read_file(ts, path, firstyear=None, lastyear=None):
     ts.commit(msg)
 
 
-def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
+def s_write_excel(
+    be: "Backend",
+    s: "Scenario",
+    path: Path,
+    item_type: ItemType,
+    filters: Optional[WriteFiltersKwargs] = None,
+    max_row: Optional[int] = None,
+) -> None:
     """Write *s* to a Microsoft Excel file at *path*.
 
     See also
@@ -50,14 +70,14 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     filters = filters or dict()
 
     # Types of items to write
-    ix_types = ["set", "par"]
+    ix_types: list[Literal["set", "par", "var", "equ"]] = ["set", "par"]
     if ItemType.VAR in item_type:
         ix_types.append("var")
     if ItemType.EQU in item_type:
         ix_types.append("equ")
 
     # item name -> ixmp type
-    name_type = {}
+    name_type: dict[str, Literal["set", "par", "var", "equ"]] = {}
     for ix_type in ix_types:
         names = sorted(be.list_items(s, ix_type))
         name_type.update({n: ix_type for n in names})
@@ -74,8 +94,10 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     for name, ix_type in name_type.items():
         if ix_type == "par":
             # Use only the filters corresponding to dimensions of this item
-            item_filters = {
-                k: v for k, v in filters.items() if k in be.item_index(s, name, "names")
+            item_filters: Optional[dict[str, list[str]]] = {
+                k: v
+                for k, v in filters.items()
+                if k in be.item_index(s, name, "names") and isinstance(v, list)
             }
         else:
             item_filters = None
@@ -132,7 +154,13 @@ def s_write_excel(be, s, path, item_type, filters=None, max_row=None):
     writer.close()
 
 
-def maybe_init_item(scenario, ix_type, name, new_idx, path):
+def maybe_init_item(
+    scenario: "Scenario",
+    ix_type: Literal["set", "par", "equ", "var"],
+    name: str,
+    new_idx: Optional[list[str]],
+    path: Path,
+) -> None:
     """Call :meth:`~.init_set`, :meth:`.init_par`, etc. if possible.
 
     Logs an intelligible warning and then raises ValueError in two cases:
@@ -176,8 +204,13 @@ def maybe_init_item(scenario, ix_type, name, new_idx, path):
 
 # FIXME reduce complexity 22 → ≤13
 def s_read_excel(  # noqa: C901
-    be, s, path, add_units=False, init_items=False, commit_steps=False
-):
+    be: "Backend",
+    s: "Scenario",
+    path: Path,
+    add_units: bool = False,
+    init_items: bool = False,
+    commit_steps: bool = False,
+) -> None:
     """Read data from a Microsoft Excel file at *path* into *s*.
 
     See also
@@ -188,17 +221,27 @@ def s_read_excel(  # noqa: C901
 
     # Get item name -> ixmp type mapping as a pd.Series
     xf = pd.ExcelFile(path, engine="openpyxl")
-    name_type = xf.parse("ix_type_mapping", index_col="item")["ix_type"]
+    # NOTE This seems to work even though pandas says index_col needs type int
+    # (or Sequence[int] or None), so their type hint is wrong?
+    name_type: pd.Series[Literal["set", "par", "var", "equ"]] = xf.parse(
+        "ix_type_mapping",
+        index_col="item",  # type: ignore[arg-type]
+    )["ix_type"]
 
     # Queue of (set name, data) to add
-    sets_to_add = deque((n, None) for n in name_type.index[name_type == "set"])
+    sets_to_add: deque[tuple[str, Optional[pd.DataFrame]]] = deque(
+        (str(n), None) for n in name_type.index[name_type == "set"]
+    )
 
-    def parse_item_sheets(name):
+    def parse_item_sheets(name: str) -> pd.DataFrame:
         """Read data for item *name*, possibly across multiple sheets."""
         dfs = [xf.parse(name)]
 
         # Collect data from repeated sheets due to max_row limit
-        for x in filter(lambda n: n.startswith(name + "("), xf.sheet_names):
+        for x in filter(
+            lambda n: n.startswith(name + "("),
+            [str(sheet_name) for sheet_name in xf.sheet_names],
+        ):
             dfs.append(xf.parse(x))
 
         # Concatenate once and return
@@ -207,6 +250,9 @@ def s_read_excel(  # noqa: C901
     # Add sets in two passes:
     # 1. Index sets, required to initialize other sets.
     # 2. Sets indexed by others.
+
+    data: Optional[Union[pd.DataFrame, list[Union[str, list[str]]]]]
+
     while True:
         try:
             # Get an item from the queue
@@ -221,15 +267,12 @@ def s_read_excel(  # noqa: C901
             # Read data
             data = parse_item_sheets(name)
 
+        assert isinstance(data, pd.DataFrame)
+
         # Determine index set(s) for this set
-        idx_sets = data.columns.to_list()
-        if len(idx_sets) == 1:
-            if idx_sets == [0]:  # pragma: no cover
-                # Old-style export with uninformative '0' as a column header;
-                # assume it is an index set
-                log.warning(f"Add {name} with header '0' as index set")
-                idx_sets = None
-            elif idx_sets == [name]:
+        idx_sets: Optional[list[str]] = data.columns.to_list()
+        if idx_sets and len(idx_sets) == 1:
+            if idx_sets == [name]:
                 # Set's own name as column header -> an index set
                 idx_sets = None
             else:
@@ -251,7 +294,7 @@ def s_read_excel(  # noqa: C901
         # Convert data as expected by add_set
         if len(data.columns) == 1:
             # Convert data frame into 1-D vector
-            data = data.iloc[:, 0].values
+            data = data.iloc[:, 0].to_list()
 
             if idx_sets is not None:
                 # Indexed set must be input as list of list of str
@@ -268,9 +311,12 @@ def s_read_excel(  # noqa: C901
     units = set(be.get_units())
 
     # Add equ/par/var data
-    for name, ix_type in name_type[name_type != "set"].items():
+    for _name, ix_type in name_type[name_type != "set"].items():
+        # Not sure why _name is Hashable only
+        name = str(_name)
+
         if ix_type in ("equ", "var"):
-            log.info(f"Cannot read {ix_type} {repr(name)}")
+            log.info(f"Cannot read {ix_type} {repr(_name)}")
             continue
 
         # Only parameters beyond this point

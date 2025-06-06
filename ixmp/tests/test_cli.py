@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -9,10 +10,15 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.backend import available
 from ixmp.cli import VersionType
-from ixmp.testing import models, populate_test_platform
+from ixmp.testing import Runner, models, populate_test_platform
+
+if TYPE_CHECKING:
+    from click.testing import Result
+
+    from ixmp.core.platform import Platform
 
 
-def test_versiontype():
+def test_versiontype() -> None:
     vt = VersionType()
     # str converts to int
     assert vt.convert("1", None, None) == 1
@@ -30,7 +36,7 @@ def test_versiontype():
 
 # FIXME This should work for IXMP4Backend, I think
 @pytest.mark.jdbc
-def test_main(ixmp_cli, test_mp, tmp_path):
+def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # Name of a temporary file that doesn't exist
     tmp_path /= "temp.properties"
 
@@ -57,6 +63,7 @@ def test_main(ixmp_cli, test_mp, tmp_path):
     # --dbprops alone causes backend='jdbc' to be inferred (but an error
     # because temp.properties is empty)
     result = ixmp_cli.invoke(cmd[2:])
+    assert result.exception
     assert "Config file contains no database URL" in result.exception.args[0]
 
     # --url argument can be given
@@ -74,7 +81,7 @@ def test_main(ixmp_cli, test_mp, tmp_path):
     assert result.exit_code == UsageError.exit_code
 
 
-def test_config(ixmp_cli):
+def test_config(ixmp_cli: Runner) -> None:
     # ixmp has no string keys by default, so we insert a fake one
     ixmp.config.register("test key", str)
     ixmp.config.set("test key", "foo")
@@ -98,7 +105,7 @@ def test_config(ixmp_cli):
     ixmp.config.unregister("test key")
 
 
-def test_list(ixmp_cli, test_mp):
+def test_list(ixmp_cli: Runner, test_mp: "Platform") -> None:
     # NOTE Some other test may leak scenarios onto test_mp
     cmd = ["list", "--match", "no-scenario-named-foo"]
 
@@ -120,10 +127,10 @@ def test_list(ixmp_cli, test_mp):
     ), result.output
 
 
-def test_platform(ixmp_cli, tmp_path):
+def test_platform(ixmp_cli: Runner, tmp_path: Path) -> None:
     """Test 'platform' command."""
 
-    def call(*args, exit_0=True):
+    def call(*args: Any, exit_0: bool = True) -> "Result":
         result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
         assert not exit_0 or result.exit_code == 0, result.output
         return result
@@ -173,11 +180,13 @@ def test_platform(ixmp_cli, tmp_path):
     assert UsageError.exit_code == r.exit_code
 
 
-def test_platform_copy(ixmp_cli, tmp_path, request):
+def test_platform_copy(
+    ixmp_cli: Runner, tmp_path: Path, request: pytest.FixtureRequest
+) -> None:
     """Test 'platform' command."""
     test_specific_name = request.node.name
 
-    def call(*args, exit_0=True):
+    def call(*args: Any, exit_0: bool = True) -> "Result":
         result = ixmp_cli.invoke(["platform"] + list(map(str, args)))
         assert not exit_0 or result.exit_code == 0, result.output
         return result
@@ -228,7 +237,7 @@ def test_platform_copy(ixmp_cli, tmp_path, request):
 
 # TODO Version 1 for IXMP4Backend returns an empty DF for scen.timeseries()
 @pytest.mark.jdbc
-def test_import_ts(ixmp_cli, test_mp, test_data_path):
+def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) -> None:
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
 
@@ -276,7 +285,7 @@ def test_import_ts(ixmp_cli, test_mp, test_data_path):
     assert len(scen.timeseries(variable=["Testing"])) == 0
 
 
-def test_excel_io(ixmp_cli, test_mp, tmp_path):
+def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     populate_test_platform(test_mp)
     tmp_path /= "dantzig.xlsx"
 
@@ -292,7 +301,8 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
 
     # Export with a maximum row limit per sheet
     tmp_path2 = tmp_path.with_name("dantzig2.xlsx")
-    cmd = cmd[:-1] + [str(tmp_path2), "--max-row", 2]
+    # 2 seems to work fine, but int is not accepted by click's type hints
+    cmd = cmd[:-1] + [str(tmp_path2), "--max-row", "2"]
     result = ixmp_cli.invoke(cmd)
     assert result.exit_code == 0, result.output
 
@@ -341,7 +351,9 @@ def test_excel_io(ixmp_cli, test_mp, tmp_path):
 # or a default to be set for the corresponding Run before
 # since Run doesn't store `version`
 @pytest.mark.jdbc
-def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
+def test_excel_io_filters(
+    ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path
+) -> None:
     populate_test_platform(test_mp)
     tmp_path /= "dantzig.xlsx"
 
@@ -378,27 +390,28 @@ def test_excel_io_filters(ixmp_cli, test_mp, tmp_path):
     # Load one of the imported parameters
     scen = ixmp.Scenario(test_mp, "foo model", "bar scenario")
     d = scen.par("d")
+    assert isinstance(d, pd.DataFrame)
 
     # Data in (imported from) file has only filtered elements
     assert set(d["i"].unique()) == {"seattle"}
     assert len(d) == 3
 
 
-def test_report(ixmp_cli):
+def test_report(ixmp_cli: Runner) -> None:
     # 'report' without specifying a platform/scenario is a UsageError
     result = ixmp_cli.invoke(["report", "key"])
     assert result.exit_code == UsageError.exit_code
 
 
 @pytest.mark.usefixtures("protect_pint_app_registry", "protect_rename_dims")
-def test_show_versions(ixmp_cli):
+def test_show_versions(ixmp_cli: Runner) -> None:
     result = ixmp_cli.invoke(["show-versions"])
     assert result.exit_code == 0, result.output
 
 
 # FIXME This is again the parameter error for IXMP4Backend and the DantzigModel
 @pytest.mark.jdbc
-def test_solve(ixmp_cli, test_mp):
+def test_solve(ixmp_cli: Runner, test_mp: "Platform") -> None:
     populate_test_platform(test_mp)
     cmd = [
         "--platform",

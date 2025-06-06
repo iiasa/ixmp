@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Union
+from typing import Any, Literal, Union
 
 import pandas as pd
 import pytest
@@ -11,15 +11,15 @@ from ixmp.util.ixmp4 import ContainerData
 pytestmark = min_ixmp4_version
 
 
-# NOTE No return type for Python 3.9 compliance
+# NOTE Generic return type for Python 3.9 compliance
 @pytest.fixture
-def container():
+def container() -> Any:
     from gams.transfer import Container
 
     return Container(system_directory=str(gams_info().system_dir))
 
 
-def test__record_versions(container) -> None:
+def test__record_versions(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _record_versions
 
     # Test recording the package version of something that's always present
@@ -45,7 +45,7 @@ def test__record_versions(container) -> None:
     )
 
 
-def test__update_item_in_container(container) -> None:
+def test__update_item_in_container(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _update_item_in_container
 
     item_list = [
@@ -63,7 +63,7 @@ def test__update_item_in_container(container) -> None:
     assert all(container.hasSymbols(symbols=[item.name for item in item_list]))
 
 
-def test__add_items_to_container(container) -> None:
+def test__add_items_to_container(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _add_items_to_container
 
     # Test handling of empty list
@@ -103,7 +103,7 @@ def backend() -> Literal["ixmp4"]:
 class TestIxmp4IOFunctions:
     """Test group for all IO functions touching ixmp4 directly."""
 
-    def test__domain(self, run) -> None:
+    def test__domain(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _domain
 
         indexset = run.optimization.indexsets.create("Indexset")
@@ -114,7 +114,7 @@ class TestIxmp4IOFunctions:
         assert _domain(indexset) is None
         assert _domain(table) == [indexset.name]
 
-    def test__records(self, run) -> None:
+    def test__records(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _records
 
         run.backend.units.create("unit")
@@ -145,7 +145,7 @@ class TestIxmp4IOFunctions:
         expected.pop("units")
         assert _records(parameter) == expected
 
-    def test__ensure_correct_item_order(self, run) -> None:
+    def test__ensure_correct_item_order(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _ensure_correct_item_order
 
         years = run.optimization.indexsets.create("years")
@@ -158,7 +158,7 @@ class TestIxmp4IOFunctions:
             repo=run.optimization.indexsets,
         ) == [years, nodes, type_years, type_nodes]
 
-    def test__align_records_and_domain(self, run) -> None:
+    def test__align_records_and_domain(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _align_records_and_domain
 
         # Test item without domain order
@@ -187,7 +187,7 @@ class TestIxmp4IOFunctions:
 
         assert _align_records_and_domain(item=parameter, records=records) == expected
 
-    def test__convert_ixmp4_items_to_containerdata(self, run) -> None:
+    def test__convert_ixmp4_items_to_containerdata(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _convert_ixmp4_items_to_containerdata
 
         # Test handling of empty list
@@ -213,7 +213,7 @@ class TestIxmp4IOFunctions:
         assert table.name == table_data.name
         assert table.data == table_data.records
 
-    def test_write_run_to_gdx(self, run, tmp_path: Path) -> None:
+    def test_write_run_to_gdx(self, run: Any, tmp_path: Path) -> None:
         from gams.transfer import Container
 
         from ixmp.backend.ixmp4_io import write_run_to_gdx
@@ -236,7 +236,7 @@ class TestIxmp4IOFunctions:
         assert len(container.data) == 1
         assert "ixmp_version" in container.data.keys()
 
-    def test__set_columns_to_read_from_records(self, run) -> None:
+    def test__set_columns_to_read_from_records(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _set_columns_to_read_from_records
 
         default_columns = ["levels", "marginals"]
@@ -269,7 +269,7 @@ class TestIxmp4IOFunctions:
     # NOTE Keeping the read_equ()/read_var() tests separate because the read_*()
     # functions are separate
 
-    def test__read_variables_to_run(self, run, container) -> None:
+    def test__read_variables_to_run(self, run: Any, container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_variables_to_run
 
         indexset = run.optimization.indexsets.create("Indexset")
@@ -301,7 +301,7 @@ class TestIxmp4IOFunctions:
         )
         assert variable.data == expected
 
-    def test__read_equations_to_run(self, run, container) -> None:
+    def test__read_equations_to_run(self, run: Any, container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_equations_to_run
 
         indexset = run.optimization.indexsets.create("Indexset")
@@ -335,7 +335,7 @@ class TestIxmp4IOFunctions:
         )
         assert equation.data == expected
 
-    def test_read_gdx_to_run(self, run, tmp_path: Path) -> None:
+    def test_read_gdx_to_run(self, run: Any, tmp_path: Path) -> None:
         from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
         # NOTE Names without space to produce "valid GAMS names"

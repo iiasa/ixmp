@@ -36,16 +36,16 @@ import logging
 import os
 import shutil
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional, Sequence, Union, override
 
 import pint
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
@@ -152,7 +152,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     jdbc._GC_AGGRESSIVE = False
 
 
-def pytest_report_header(config, start_path) -> str:
+def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
     """Add the ixmp configuration to the pytest report header."""
     return f"ixmp config: {repr(ixmp_config.values)}"
 
@@ -174,15 +174,23 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 # Session-scoped fixtures
 
 
+class Runner(CliRunner):
+    @override
+    # Why does mypy ignore the decorator?
+    def invoke(self, args: Sequence[str]) -> Result:  # type: ignore[override]
+        return super().invoke(cli.main, args=args, env=self.tmp_env)
+
+    def __init__(self, env: os._Environ[str]) -> None:
+        super().__init__()
+
+        self.tmp_env = env
+
+
 @pytest.fixture(scope="session")
-def ixmp_cli(tmp_env):
+def ixmp_cli(tmp_env: os._Environ[str]) -> Generator["Runner", Any, None]:
     """A CliRunner object that invokes the ixmp command-line interface."""
 
-    class Runner(CliRunner):
-        def invoke(self, *args, **kwargs):
-            return super().invoke(cli.main, *args, env=tmp_env, **kwargs)
-
-    yield Runner()
+    yield Runner(env=tmp_env)
 
 
 @pytest.fixture(scope="module")
@@ -206,15 +214,16 @@ def test_data_path() -> Path:
 # NOTE We need to declare this as module-scope explicitly; otherwise, pytest creates
 # backend for pytest_generate_tests as function-scoped fixture automatically
 @pytest.fixture(scope="module")
-def backend(request):
-    return request.param
+def backend(request: pytest.FixtureRequest) -> Literal["ixmp4", "jdbc"]:
+    # pytest_generate_tests() applies these marks, pytest always only registers Any
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="module")
 def test_mp(
     request: pytest.FixtureRequest,
-    tmp_env,
-    test_data_path,
+    tmp_env: os._Environ[str],
+    test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
@@ -286,7 +295,8 @@ def tutorial_path() -> Path:
 @pytest.fixture(scope="session")
 def ureg() -> Generator[pint.UnitRegistry, Any, None]:
     """Application-wide units registry."""
-    registry = pint.get_application_registry()
+    # Pylance registers an ApplicationRegistry, so maybe try `follow-untyped-imports`?
+    registry = pint.get_application_registry()  # type: ignore[no-untyped-call]
 
     # Used by .compat.ixmp, .compat.pyam
     registry.define("USD = [USD]")
@@ -299,7 +309,7 @@ def ureg() -> Generator[pint.UnitRegistry, Any, None]:
 
 
 @pytest.fixture(scope="function")
-def protect_pint_app_registry():
+def protect_pint_app_registry() -> Generator[None, Any, None]:
     """Protect pint's application registry.
 
     Use this fixture on tests which invoke code that calls
@@ -311,13 +321,13 @@ def protect_pint_app_registry():
     # Use deepcopy() in case the wrapped code modifies the application
     # registry without swapping out the UnitRegistry instance for a different
     # one
-    saved = deepcopy(pint.get_application_registry())
+    saved = deepcopy(pint.get_application_registry())  # type: ignore[no-untyped-call]
     yield
-    pint.set_application_registry(saved)
+    pint.set_application_registry(saved)  # type: ignore[no-untyped-call]
 
 
 @pytest.fixture(scope="function")
-def protect_rename_dims():
+def protect_rename_dims() -> Generator[None, Any, None]:
     """Protect :data:`RENAME_DIMS`.
 
     Use this fixture on tests which invoke code that imports :mod:`message_ix`, e.g.
@@ -325,7 +335,7 @@ def protect_rename_dims():
     values to :data:`RENAME_DIMS`. Using this fixture ensures that the environment for
     other tests is not altered.
     """
-    from ixmp.report import RENAME_DIMS
+    from ixmp.report.common import RENAME_DIMS
 
     saved = deepcopy(RENAME_DIMS)  # Probably just copy() is sufficient
     yield
@@ -336,8 +346,8 @@ def protect_rename_dims():
 @pytest.fixture(scope="function")
 def test_mp_f(
     request: pytest.FixtureRequest,
-    tmp_env,
-    test_data_path,
+    tmp_env: os._Environ[str],
+    test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
@@ -352,9 +362,9 @@ def test_mp_f(
     yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
-# NOTE No type hint for Python 3.9 compliance
+# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def ixmp4_backend(test_mp: Platform):
+def ixmp4_backend(test_mp: Platform) -> Any:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
     assert isinstance(test_mp._backend, IXMP4Backend)
@@ -371,9 +381,9 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
     )
 
 
-# NOTE No type hint for Python 3.9 compliance
+# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def run(ixmp4_backend, scenario: Scenario):
+def run(ixmp4_backend: Any, scenario: Scenario) -> Any:
     return ixmp4_backend.index[scenario]
 
 
@@ -381,7 +391,11 @@ def run(ixmp4_backend, scenario: Scenario):
 
 
 @contextmanager
-def assert_logs(caplog, message_or_messages=None, at_level=None):
+def assert_logs(
+    caplog: pytest.LogCaptureFixture,
+    message_or_messages: Optional[Union[str, Iterable[str]]] = None,
+    at_level: Optional[int] = None,
+) -> Generator[None, Any, None]:
     """Assert that *message_or_messages* appear in logs.
 
     Use assert_logs as a context manager for a statement that is expected to trigger
@@ -406,22 +420,18 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
     __tracebackhide__ = True
 
     # Wrap a string in a list
-    expected = (
-        [message_or_messages]
-        if isinstance(message_or_messages, str)
-        else message_or_messages
-    )
+    expected = [message_or_messages] if isinstance(message_or_messages, str) else []
 
     # Record the number of records prior to the managed block
     first = len(caplog.records)
 
-    if at_level is not None:
-        # Use the pytest caplog fixture's built-in context manager to temporarily set
-        # the level of the 'ixmp' logger
-        ctx = caplog.at_level(at_level, logger="ixmp")
-    else:
-        # ctx does nothing
-        ctx = nullcontext()
+    # Use the pytest caplog fixture's built-in context manager to temporarily set the
+    # level of the 'ixmp' logger if requested; otherwise, ctx does nothing
+    ctx = (
+        caplog.at_level(at_level, logger="ixmp")
+        if at_level is not None
+        else nullcontext()
+    )
 
     try:
         with ctx:
@@ -446,7 +456,7 @@ def assert_logs(caplog, message_or_messages=None, at_level=None):
 # Utility functions
 
 
-def bool_param_id(name):
+def bool_param_id(name: str) -> Callable[[Any], str]:
     """Parameter ID callback for :meth:`pytest.mark.parametrize`.
 
     This formats a boolean value as 'name0' (False) or 'name1' (True) for
@@ -455,7 +465,9 @@ def bool_param_id(name):
     return lambda value: "{}{}".format(name, int(value))
 
 
-def create_test_platform(tmp_path, data_path, name, **properties):
+def create_test_platform(
+    tmp_path: Path, data_path: Path, name: str, **properties: object
+) -> Path:
     """Create a Platform for testing using specimen files '*name*.*'.
 
     Any of the following files from *data_path* are copied to *tmp_path*:
@@ -507,8 +519,8 @@ def create_test_platform(tmp_path, data_path, name, **properties):
 
 def _platform_fixture(
     request: pytest.FixtureRequest,
-    tmp_env,
-    test_data_path,
+    tmp_env: os._Environ[str],
+    test_data_path: Path,
     backend: Literal["jdbc", "ixmp4"],
 ) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""

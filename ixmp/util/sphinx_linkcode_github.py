@@ -3,11 +3,13 @@
 
 import inspect
 import sys
+from collections.abc import Callable, Sequence
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
-from types import FunctionType
-from typing import TYPE_CHECKING, Optional
+from types import FunctionType, ModuleType
+from typing import TYPE_CHECKING, Any, Optional, Union
 
+import sphinx.config
 from sphinx.util import logging
 
 if TYPE_CHECKING:
@@ -33,7 +35,7 @@ def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
         remote = repo.remote("origin")
 
         # Identify a branch whose head is the same as the current commit
-        refs = list(filter(lambda r: r.commit == commit, remote.refs))  # type: ignore
+        refs = list(filter(lambda r: r.commit == commit, remote.refs))
         if not refs:
             log.info(f"No remote branch for commit {commit}")
             raise ValueError
@@ -54,7 +56,7 @@ def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
 def find_remote_head(app: "sphinx.application.Sphinx") -> str:
     """Return a name for the remote branch containing the code."""
     # Value from configuration
-    cfg_remote_head = app.config["linkcode_github_remote_head"]
+    cfg_remote_head: str = app.config["linkcode_github_remote_head"]
     # Use GitPython to retrieve the repo information
     git_remote_head = find_remote_head_git(app)
 
@@ -72,10 +74,12 @@ def find_remote_head(app: "sphinx.application.Sphinx") -> str:
 
 
 @lru_cache()
-def package_base_path(obj) -> Path:
+def package_base_path(
+    obj: Union[Callable[[Any], Any], FunctionType, ModuleType],
+) -> Path:
     """Return the base path of the package containing `obj`."""
     # Module name: obj.__name__ if obj is a module
-    module_name = getattr(obj, "__module__", obj.__name__)
+    module_name: str = getattr(obj, "__module__", obj.__name__)
     # Path to the top-level package containing the module
     path = sys.modules[module_name.split(".")[0]].__file__
     assert path is not None
@@ -85,10 +89,12 @@ def package_base_path(obj) -> Path:
 class GitHubLinker:
     """Handler for storing files/line numbers for code objects and formatting links."""
 
-    def __init__(self):
-        self.line_numbers = dict()
+    def __init__(self) -> None:
+        self.line_numbers: dict[str, tuple[Path, int, int]] = dict()
 
-    def config_inited(self, app: "sphinx.application.Sphinx", config):
+    def config_inited(
+        self, app: "sphinx.application.Sphinx", config: sphinx.config.Config
+    ) -> None:
         """Handler for the Sphinx ``config-inited`` event."""
         self.base_url = (
             f"https://github.com/{config['linkcode_github_repo_slug']}/blob/"
@@ -97,8 +103,16 @@ class GitHubLinker:
         log.info(f"linkcode base URL: {self.base_url}")
 
     def autodoc_process_docstring(
-        self, app: "sphinx.application.Sphinx", what, name: str, obj, options, lines
-    ):
+        self,
+        app: "sphinx.application.Sphinx",
+        what: str,
+        name: str,
+        obj: Union[
+            property, FunctionType, _lru_cache_wrapper[Any], partial[Any], object
+        ],
+        options: Any,
+        lines: Sequence[str],
+    ) -> None:
         """Handler for the Sphinx ``autodoc-process-docstring`` event.
 
         Records the file and source line numbers containing `obj`.
@@ -106,28 +120,33 @@ class GitHubLinker:
         # TODO Handle wrapper_descriptor, e.g.
         #      message_ix_models.tests.model.test_bare.TestConfig.__init__
 
+        _obj: Union[
+            Callable[[Any], Any], FunctionType, ModuleType, _lru_cache_wrapper[Any]
+        ]
+
         # Identify the object for which to locate code
         if isinstance(obj, property):
             # Reference the getter method
-            obj = obj.fget
+            assert obj.fget
+            _obj = obj.fget
         elif isinstance(obj, (FunctionType, _lru_cache_wrapper)):
             # Reference a wrapped function, rather than the wrapper, which may be in the
             # standard library somewhere
-            obj = getattr(obj, "__wrapped__", obj)
+            _obj = getattr(obj, "__wrapped__", obj)
         elif isinstance(obj, partial):
             # Reference the module in which the partial object is defined
-            obj = sys.modules[obj.__module__]
+            _obj = sys.modules[obj.__module__]
         elif type(obj).__name__ == "FixtureFunctionDefinition":
             # Pytest v8.4 and later. This class is not part of the public API, so check
             # via the class name only
-            obj = obj._get_wrapped_function()
+            _obj = obj._get_wrapped_function()  # type: ignore[attr-defined]
 
         try:
             # Identify the source file and source lines
-            sf = inspect.getsourcefile(obj)
+            sf = inspect.getsourcefile(_obj)
             assert sf is not None
-            file = Path(sf).relative_to(package_base_path(obj))
-            lines, start_line = inspect.getsourcelines(obj)
+            file = Path(sf).relative_to(package_base_path(_obj))
+            lines, start_line = inspect.getsourcelines(_obj)
         except TypeError:
             # inspect.getsourcefile() can't handle ordinary class attributes or
             # module-level data. In linkcode_resolve we'll resolve to the `__init__` or
@@ -144,7 +163,7 @@ class GitHubLinker:
             # # Display information, for debugging
             # print(name, "→", self.line_numbers[name])
 
-    def linkcode_resolve(self, domain: str, info: dict) -> Optional[str]:
+    def linkcode_resolve(self, domain: str, info: dict[str, str]) -> Optional[str]:
         """Function for the :mod:`sphinx.ext.linkcode` setting of the same name.
 
         Returns URLs for code objects on GitHub, using information stored by
@@ -157,7 +176,7 @@ class GitHubLinker:
 
         try:
             # Use the info for the first of `candidates` available
-            line_info: tuple[str, int, int] = next(
+            line_info: tuple[Path, int, int] = next(
                 filter(None, map(self.line_numbers.get, candidates))
             )
         except StopIteration:
@@ -172,7 +191,7 @@ class GitHubLinker:
 LINKER = GitHubLinker()
 
 
-def setup(app: "sphinx.application.Sphinx"):
+def setup(app: "sphinx.application.Sphinx") -> None:
     """Sphinx extension registration hook."""
     # Required first-party extensions
     app.setup_extension("sphinx.ext.autodoc")

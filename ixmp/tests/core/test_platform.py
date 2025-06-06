@@ -5,7 +5,7 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Optional
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -18,7 +18,7 @@ from ixmp.backend.common import FIELDS
 from ixmp.testing import DATA, assert_logs, min_ixmp4_version, models
 
 if TYPE_CHECKING:
-    pass
+    from ixmp.types import PlatformInitKwargs
 
 
 @pytest.mark.usefixtures("tmp_env")
@@ -45,7 +45,7 @@ class TestPlatform:
         ),
     )
     def test_init1(
-        self, _backend: Literal["jdbc", "ixmp4"], backend_args: dict[str, str]
+        self, _backend: Literal["jdbc", "ixmp4"], backend_args: "PlatformInitKwargs"
     ) -> None:
         # Platform can be instantiated
         ixmp.Platform(backend=_backend, **backend_args)
@@ -83,7 +83,9 @@ def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
         ("FOO", ValueError),
     ],
 )
-def test_log_level(log_level_mp: ixmp.Platform, level: str, exc) -> None:
+def test_log_level(
+    log_level_mp: ixmp.Platform, level: str, exc: Optional[type[ValueError]]
+) -> None:
     """Log level can be set and retrieved."""
     if exc is None:
         log_level_mp.set_log_level(level)
@@ -260,7 +262,9 @@ def test_add_timeslice(test_mp: ixmp.Platform) -> None:
 
 # TODO Not yet implemented on IXMP4Backend
 @pytest.mark.jdbc
-def test_add_timeslice_duplicate(caplog, test_mp: ixmp.Platform) -> None:
+def test_add_timeslice_duplicate(
+    caplog: pytest.LogCaptureFixture, test_mp: ixmp.Platform
+) -> None:
     test_mp.add_timeslice("foo_slice", "foo_category", 0.2)
 
     # Adding same name with different duration raises an error

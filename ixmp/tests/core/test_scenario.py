@@ -1,7 +1,8 @@
 import re
+from collections.abc import Generator
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union, cast
 
 import numpy.testing as npt
 import pandas as pd
@@ -10,22 +11,30 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import assert_logs, make_dantzig, models
+from ixmp.types import GamsModelInitKwargs, ScenarioIdentifiers
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest
-
     from ixmp.core.platform import Platform
+    from ixmp.core.scenario import Scenario
+
+
+class AddParKwargs(TypedDict, total=False):
+    value: Union[float, list[int]]
+    unit: str
+    comment: str
 
 
 # Fixtures
 @pytest.fixture(scope="class")
-def scen(mp):
+def scen(mp: "Platform") -> Generator["Scenario", Any, None]:
     """The default version of the Dantzig on the mp."""
     yield ixmp.Scenario(mp, **models["dantzig"])
 
 
 @pytest.fixture(scope="function")
-def scen_empty(request, test_mp):
+def scen_empty(
+    request: pytest.FixtureRequest, test_mp: "Platform"
+) -> Generator["Scenario", Any, None]:
     """An empty Scenario with a temporary name on the test_mp."""
     yield ixmp.Scenario(
         test_mp,
@@ -36,7 +45,7 @@ def scen_empty(request, test_mp):
 
 
 @pytest.fixture(scope="function")
-def test_dict():
+def test_dict() -> dict[str, Union[bool, float, int, str]]:
     return {
         "test_string": "test12345",
         "test_number": 123.456,
@@ -53,7 +62,7 @@ class TestScenario:
     # Initialize Scenario
     # NOTE IXMP4-backed Scenarios start with version = 1
     @pytest.mark.jdbc
-    def test_init(self, test_mp, scen_empty):
+    def test_init(self, test_mp: "Platform", scen_empty: "Scenario") -> None:
         # Empty scenario has version == 0
         assert scen_empty.version == 0
 
@@ -84,7 +93,7 @@ class TestScenario:
         ):
             Scenario(test_mp, model="foo", scenario="bar", cache=False)
 
-    def test_default_version(self, mp: ixmp.Platform) -> None:
+    def test_default_version(self, mp: "Platform") -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"])
         scenario_df = mp.scenario_list(
             model=models["dantzig"]["model"], scen=models["dantzig"]["scenario"]
@@ -94,7 +103,7 @@ class TestScenario:
 
     # NOTE IXMP4(Backend) doesn't raise the same error/message as expected here
     @pytest.mark.jdbc
-    def test_from_url(self, mp, caplog):
+    def test_from_url(self, mp: "Platform", caplog: pytest.LogCaptureFixture) -> None:
         url = f"ixmp://{mp.name}/Douglas Adams/Hitchhiker"
 
         # Default version is loaded
@@ -103,6 +112,7 @@ class TestScenario:
             model=models["h2g2"]["model"], scen=models["h2g2"]["scenario"]
         )
         assert len(scenario_df["version"]) == 1
+        assert scen
         assert scen.version == scenario_df["version"].item()
 
         # Giving an invalid version with errors='raise' raises an exception
@@ -123,7 +133,7 @@ class TestScenario:
         assert scen is None and isinstance(mp, ixmp.Platform)
 
     # Clone Scenario
-    def test_clone(self, mp):
+    def test_clone(self, mp: "Platform") -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         scen.remove_solution()
         scen.check_out()
@@ -138,7 +148,7 @@ class TestScenario:
 
     # FIXME IXMP4Backend needs to handle change_scalar correctly
     @pytest.mark.jdbc
-    def test_clone_edit(self, scen):
+    def test_clone_edit(self, scen: "Scenario") -> None:
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
         scen2.change_scalar("f", 95.0, "USD/km")
@@ -150,7 +160,9 @@ class TestScenario:
         # Value is changed only in the clone
         assert scen2.scalar("f") == {"unit": "USD/km", "value": 95}
 
-    def test_clone_scheme(self, request: "FixtureRequest", test_mp: "Platform") -> None:
+    def test_clone_scheme(
+        self, request: pytest.FixtureRequest, test_mp: "Platform"
+    ) -> None:
         """:attr:`.Scenario.scheme` is preserved on clone."""
         # Create a string to be used as scheme name
         # NB this fails with JDBCBackend when using .nodeid directly, e.g.
@@ -159,7 +171,7 @@ class TestScenario:
         #    back end can handle.
         scheme = str(hash(request.node.nodeid))
 
-        m_s = dict(model="test_clone_scheme", scenario="s")
+        m_s: ScenarioIdentifiers = dict(model="test_clone_scheme", scenario="s")
         s0 = ixmp.Scenario(test_mp, **m_s, version="new", scheme=scheme)
         s0.commit("")
 
@@ -182,7 +194,7 @@ class TestScenario:
     # Initialize items
     # NOTE IXMP4Backend doesn't handle commits yet
     @pytest.mark.jdbc
-    def test_init_set(self, scen):
+    def test_init_set(self, scen: "Scenario") -> None:
         """Test ixmp.Scenario.init_set()."""
 
         # Add set on a locked scenario
@@ -203,7 +215,7 @@ class TestScenario:
     # FIXME IXMP4Backend recognized 'foo' as having no idx_sets, likely due to the
     # assumption of all names of all items being unique. We should drop that, it seems.
     @pytest.mark.jdbc
-    def test_init_par(self, scen) -> None:
+    def test_init_par(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
 
@@ -217,7 +229,7 @@ class TestScenario:
         with pytest.raises(ValueError, match="must have the same length"):
             scen.init_par("bar", idx_sets=("i", "j"), idx_names=("a", "b", "c"))
 
-    def test_init_scalar(self, scen):
+    def test_init_scalar(self, scen: "Scenario") -> None:
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
         scen2.init_scalar("g", 90.0, "USD/km")
@@ -226,22 +238,26 @@ class TestScenario:
     # Existence checks
     # TODO IXMP4Backend doesn't handle scalars correctly yet
     @pytest.mark.jdbc
-    def test_has_par(self, scen):
+    def test_has_par(self, scen: "Scenario") -> None:
         assert scen.has_par("f")
         assert not scen.has_par("m")
 
-    def test_has_set(self, scen):
+    def test_has_set(self, scen: "Scenario") -> None:
         assert scen.has_set("i")
         assert not scen.has_set("k")
 
-    def test_has_var(self, scen):
+    def test_has_var(self, scen: "Scenario") -> None:
         assert scen.has_var("x")
         assert not scen.has_var("y")
 
     # TODO IXMP4Backend doesn't handle scalars correctly yet
     @pytest.mark.jdbc
-    def test_scalar(self, scen):
+    def test_scalar(self, scen: "Scenario") -> None:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
+
+    ### TODO
+    ###
+    ### Check that the parametrization is still working
 
     # Store data
     @pytest.mark.parametrize(
@@ -279,21 +295,26 @@ class TestScenario:
             ),
         ),
     )
-    def test_add_par(self, scen, args, kwargs):
+    def test_add_par(
+        self,
+        scen: "Scenario",
+        args: tuple[str, Union[list[str], pd.DataFrame]],
+        kwargs: AddParKwargs,
+    ) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
     # TODO IXMP4Backend should support this, I think
     @pytest.mark.jdbc
-    def test_add_par2(self, scen):
+    def test_add_par2(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
         # Create a parameter with duplicate indices
         scen.init_par("foo", idx_sets=["i", "i", "j"], idx_names=["i0", "i1", "j"])
         scen.add_par("foo", pd.DataFrame(columns=["i0", "i1", "j"]), value=1.0)
 
-    def test_add_set(self, scen_empty) -> None:
+    def test_add_set(self, scen_empty: "Scenario") -> None:
         # NB See also test_set(), below
         scen = scen_empty
 
@@ -308,16 +329,20 @@ class TestScenario:
         # Bare str for 1-D set key is wrapped automatically
         scen.add_set("i", "i0")
         scen.add_set("foo", "i0")
-        assert {"i0"} == set(scen.set("foo")["i"])
+        foo = scen.set("foo")
+        assert isinstance(foo, pd.DataFrame)
+        assert {"i0"} == set(foo["i"])
 
     # Retrieve data
-    def test_idx(self, scen):
+    def test_idx(self, scen: "Scenario") -> None:
         assert scen.idx_sets("d") == ["i", "j"]
         assert scen.idx_names("d") == ["i", "j"]
 
-    def test_par(self, scen: "ixmp.Scenario") -> None:
+    def test_par(self, scen: "Scenario") -> None:
         """Parameter data can be retrieved with filters."""
         df = scen.par("d", filters={"i": ["seattle"]})
+        # We seem to rely on this
+        assert isinstance(df, pd.DataFrame)
 
         # Data frame has the expected columns
         assert ["i", "j", "value", "unit"] == list(df.columns)
@@ -336,7 +361,7 @@ class TestScenario:
 
     # FIXME IXMP4Backend is missing an item, likely the scalar f again
     @pytest.mark.jdbc
-    def test_items0(self, scen):
+    def test_items0(self, scen: "Scenario") -> None:
         # Without filters
         iterator = scen.items()
 
@@ -357,12 +382,12 @@ class TestScenario:
 
         # With filters
         iterator = scen.items(filters=dict(i=["seattle"]), par_data=True)
-        exp = [("a", 1), ("d", 3)]
+        exp_filters = [("a", 1), ("d", 3)]
         for i, (name, data) in enumerate(iterator):
             # Name is correct in the expected order
-            assert exp[i][0] == name
+            assert exp_filters[i][0] == name
             # Number of (filtered) rows is as expected
-            assert exp[i][1] == len(data)
+            assert exp_filters[i][1] == len(data)
 
         assert i == 1
 
@@ -383,14 +408,20 @@ class TestScenario:
             (ixmp.ItemType.VAR, "i", ["x"]),
         ),
     )
-    def test_items1(self, scen, item_type, indexed_by, exp):
+    def test_items1(
+        self,
+        scen: "Scenario",
+        item_type: Literal[
+            ixmp.ItemType.PAR, ixmp.ItemType.SET, ixmp.ItemType.VAR, ixmp.ItemType.EQU
+        ],
+        indexed_by: Optional[str],
+        exp: list[str],
+    ) -> None:
         # Function runs and yields the expected sequence of item names
         assert exp == list(scen.items(item_type, indexed_by=indexed_by, par_data=False))
 
-    def test_items2(self, caplog, scen):
-        item_type = ixmp.ItemType.SET
-
-        list(scen.items(item_type, filters={"foo": "bar"}))
+    def test_items2(self, caplog: pytest.LogCaptureFixture, scen: "Scenario") -> None:
+        list(scen.items(ixmp.ItemType.SET, filters={"foo": "bar"}))
 
         # Warning is logged
         assert (
@@ -398,7 +429,7 @@ class TestScenario:
             in caplog.messages
         )
 
-    def test_var(self, scen):
+    def test_var(self, scen: "Scenario") -> None:
         df = scen.var("x", filters={"i": ["seattle"]})
 
         # Labels along the 'j' dimension
@@ -410,7 +441,7 @@ class TestScenario:
 
     # TODO IXMP4Backend is not handling _cache correctly
     @pytest.mark.jdbc
-    def test_load_scenario_data(self, mp):
+    def test_load_scenario_data(self, mp: "Platform") -> None:
         """load_scenario_data() caches all data."""
         scen = ixmp.Scenario(mp, **models["dantzig"])
         scen.load_scenario_data()
@@ -425,13 +456,17 @@ class TestScenario:
         assert hits_before == 0
 
         # Retrieving the expected value
-        assert "km" == scen.par("d", filters={"i": ["seattle"]}).loc[0, "unit"]
+        df = scen.par("d", filters={"i": ["seattle"]})
+        assert isinstance(df, pd.DataFrame)
+        assert "km" == df.loc[0, "unit"]
 
         # Cache was used to return the value
         hits_after = scen.platform._backend._cache_hit[cache_key]
         assert hits_after == hits_before + 1
 
-    def test_load_scenario_data_clear_cache(self, monkeypatch, mp):
+    def test_load_scenario_data_clear_cache(
+        self, monkeypatch: pytest.MonkeyPatch, mp: "Platform"
+    ) -> None:
         # this fails on commit: 4376f54
         scen = ixmp.Scenario(mp, **models["dantzig"])
         scen.load_scenario_data()
@@ -446,7 +481,13 @@ class TestScenario:
     # TODO For IXMP4Backend, this somehow triggers a GAMS-related error, while this test
     # should never touch GAMS
     @pytest.mark.jdbc
-    def test_excel_io(self, scen, scen_empty, tmp_path, caplog):
+    def test_excel_io(
+        self,
+        scen: "Scenario",
+        scen_empty: "Scenario",
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
         tmp_path /= "output.xlsx"
 
         # FIXME remove_solution, check_out, commit, solve, commit should not
@@ -488,7 +529,11 @@ class TestScenario:
         # Contents of the Scenarios are the same, except for unreadable items
         assert set(scen_empty.par_list()) | {"baz_1", "baz_2"} == set(scen.par_list())
         assert set(scen_empty.set_list()) | {"baz_3"} == set(scen.set_list())
-        assert_frame_equal(scen_empty.set("foo"), scen.set("foo"))
+        empty_foo = scen_empty.set("foo")
+        foo = scen.set("foo")
+        assert isinstance(empty_foo, pd.DataFrame)
+        assert isinstance(foo, pd.DataFrame)
+        assert_frame_equal(empty_foo, foo)
         # NB could make a more exact comparison of the Scenarios
 
         # Pre-initialize skipped items 'baz_2' and 'baz_3'
@@ -531,7 +576,7 @@ class TestScenario:
     # NOTE IXMP4-backed Scenarios should not call remove_solution() if they don't have
     # one
     @pytest.mark.jdbc
-    def test_solve(self, tmp_path, scen):
+    def test_solve(self, tmp_path: Path, scen: "Scenario") -> None:
         from subprocess import run
 
         # Copy the dantzig model file into the `tmp_path`
@@ -568,7 +613,9 @@ class TestScenario:
     # Combined tests
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_meta(self, mp, test_dict):
+    def test_meta(
+        self, mp: "Platform", test_dict: dict[str, Union[bool, float, int, str]]
+    ) -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         for k, v in test_dict.items():
             scen.set_meta(k, v)
@@ -596,11 +643,14 @@ class TestScenario:
 
         # Setting with a type other than int, float, bool, str raises TypeError
         with pytest.raises(ValueError, match="Cannot use value"):
-            scen.set_meta("test_string", complex(1, 1))
+            # NOTE Triggering the error on purpose
+            scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_meta_bulk(self, mp, test_dict):
+    def test_meta_bulk(
+        self, mp: "Platform", test_dict: dict[str, Union[bool, float, int, str]]
+    ) -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         scen.set_meta(test_dict)
 
@@ -616,7 +666,7 @@ class TestScenario:
         assert scen.get_meta("new_attr") == "new_attr"
 
 
-def test_range(scen_empty):
+def test_range(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
     scen.init_set("ii")
@@ -631,7 +681,7 @@ def test_range(scen_empty):
     scen.add_par("new_par", ii, [1.2] * len(ii))
 
 
-def test_gh_210(scen_empty):
+def test_gh_210(scen_empty: "Scenario") -> None:
     scen = scen_empty
     i = ["i0", "i1", "i2"]
 
@@ -640,7 +690,10 @@ def test_gh_210(scen_empty):
     scen.init_par("foo", idx_sets="i")
 
     columns = ["i", "value"]
-    foo_data = pd.DataFrame(zip(i, [10, 20, 30]), columns=columns)
+
+    # NOTE For some reason, zip inside DataFrame changes expectations
+    data = zip(i, [10, 20, 30])
+    foo_data = pd.DataFrame(data, columns=columns)
 
     # foo_data is not modified by add_par()
     scen.add_par("foo", foo_data)
@@ -650,7 +703,7 @@ def test_gh_210(scen_empty):
 # NOTE IXMP4(Backend) raises an OptimizationDataValidationError if 'bar' is missing from
 # index set 'i' instead of a ValueError
 @pytest.mark.jdbc
-def test_set(scen_empty) -> None:
+def test_set(scen_empty: "Scenario") -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
 
@@ -683,7 +736,8 @@ def test_set(scen_empty) -> None:
     with pytest.raises(
         TypeError, match="must be str or list of str; got <class 'dict'>"
     ):
-        scen.add_set("i", dict(foo="bar"))
+        # NOTE Triggering this error on purpose
+        scen.add_set("i", dict(foo="bar"))  # type: ignore[dict-item]
 
     # Add elements to a 1D set
     scen.init_set("foo", "i", "dim_i")
@@ -736,7 +790,9 @@ def test_set(scen_empty) -> None:
     # Added elements from above; minus directly removed elements; minus i2
     # because it was removed from the set i that indexes dim_i of foo
     foo = {"i1", "i2", "i3", "i6", "i7", "i8"} - {"i2"} - {"i7", "i8"}
-    assert foo == set(scen.set("foo")["dim_i"])
+    return_foo = scen.set("foo")
+    assert isinstance(return_foo, pd.DataFrame)
+    assert foo == set(return_foo["dim_i"])
 
     # Remove a set completely
     assert "h" not in scen.set_list()
@@ -748,7 +804,7 @@ def test_set(scen_empty) -> None:
     assert "h" not in scen.set_list()
 
 
-def test_filter_str(scen_empty):
+def test_filter_str(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
     elements = ["foo", 42, object()]
@@ -760,7 +816,10 @@ def test_filter_str(scen_empty):
     scen.add_set("s", elements)
 
     # Elements are stored and returned as str
-    assert expected == scen.set("s").tolist()
+    s = scen.set("s")
+    assert isinstance(s, pd.Series)
+    assert s.dtype == "object"
+    assert expected == cast("pd.Series[str]", s.tolist())
 
     # Parameter defined over 's'
     p = pd.DataFrame.from_records(
@@ -777,13 +836,14 @@ def test_filter_str(scen_empty):
     # Values can be retrieved using non-string filters
     exp = p_exp.loc[1:, :].reset_index(drop=True)
     obs = scen.par("p", filters={"s": elements[1:]})
+    assert isinstance(obs, pd.DataFrame)
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
 # FIXME Calling scen.solve(change_distance, ...) triggers a bug in the GAMS code
 # IXMP4Backend might need to avoid similar calls (which properties exactly?)
 @pytest.mark.jdbc
-def test_solve_callback(test_mp, request):
+def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Test the callback argument to Scenario.solve().
 
     In real usage, callback() would compute some kind of convergence criterion. This
@@ -795,16 +855,17 @@ def test_solve_callback(test_mp, request):
     scen = make_dantzig(test_mp, request=request)
 
     # Solve the scenario as configured
-    solve_args = dict(model="dantzig", quiet=True)
-    scen.solve(**solve_args)
+    solve_args: GamsModelInitKwargs = dict(quiet=True)
+    scen.solve(model="dantzig", **solve_args)
 
     # Store the expected value of the decision variable, x
     expected = scen.var("x")
+    assert isinstance(expected, pd.DataFrame)
 
     # The reference distance between Seattle and New York is 2.5 [10^3 miles]
     d = [3.5, 2.0, 2.7, 2.5, 1.0]
 
-    def set_d(scenario, value):
+    def set_d(scenario: "Scenario", value: float) -> None:
         """Set the distance between Seattle and New York to *value*."""
         scenario.remove_solution()
         scenario.check_out()
@@ -817,10 +878,12 @@ def test_solve_callback(test_mp, request):
     # from the one stored as `expected`.
     set_d(scen, d[0])
 
-    def change_distance(scenario):
+    def change_distance(scenario: "Scenario") -> Optional[bool]:
         """Callback for model solution."""
         # Check if the model has 'converged' on the correct solution
-        if (scenario.var("x") == expected).all(axis=None):
+        result = scenario.var("x")
+        assert isinstance(result, pd.DataFrame)
+        if (result == expected).all(axis=None):
             return True
 
         # Convergence not reached
@@ -833,6 +896,8 @@ def test_solve_callback(test_mp, request):
         # # Trigger another solution of the model
         # return False
 
+        return None
+
     # Warning is raised because 'return False' is commented above, meaning user may
     # have forgotten any return statement in the callback
     message = (
@@ -841,7 +906,8 @@ def test_solve_callback(test_mp, request):
     )
     with pytest.warns(UserWarning, match=message):
         # Model iterates automatically
-        scen.solve(callback=change_distance, **solve_args)
+        # NOTE Triggering ill-returning callback on purpose
+        scen.solve(callback=change_distance, model="dantzig", **solve_args)  # type: ignore[arg-type]
 
     # Solution reached after 4 iterations, i.e. for d[4 - 1] == 2.5
     assert scen.iteration == 4
@@ -849,4 +915,4 @@ def test_solve_callback(test_mp, request):
     # Fails with invalid arguments
     scen.remove_solution()
     with pytest.raises(ValueError, match="callback='foo' is not callable"):
-        scen.solve(**solve_args, callback="foo")
+        scen.solve(model="dantzig", **solve_args, callback="foo")  # type: ignore[arg-type]

@@ -1,6 +1,7 @@
 """Tests for ixmp.util."""
 
 import logging
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,36 +11,40 @@ from pytest import mark, param
 
 from ixmp import Scenario, util
 from ixmp.testing import make_dantzig, populate_test_platform
+from ixmp.types import ScenarioIdentifiers, ScenarioInfo
+
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
 
 
 class TestDeprecatedPathFinder:
-    def test_import(self):
+    def test_import(self) -> None:
         with pytest.warns(
             DeprecationWarning,
             match="Importing from 'ixmp.reporting.computations' is deprecated and will "
             "fail in a future version. Use 'ixmp.report.operator'.",
         ):
-            import ixmp.reporting.computations  # type: ignore  # noqa: F401
+            import ixmp.reporting.computations  # noqa: F401
 
     @pytest.mark.filterwarnings("ignore")
-    def test_import1(self):
+    def test_import1(self) -> None:
         """utils can be imported from ixmp, but raises DeprecationWarning."""
         from ixmp import utils
 
         assert "diff" in dir(utils)
 
-    def test_importerror(self):
+    def test_importerror(self) -> None:
         with pytest.warns(DeprecationWarning), pytest.raises(ImportError):
-            import ixmp.reporting.foo  # type: ignore  # noqa: F401
+            import ixmp.reporting.foo  # noqa: F401
 
 
-def test_check_year():
+def test_check_year() -> None:
     # If y is a string value, raise a Value Error.
 
     y1 = "a"
     s1 = "a"
     with pytest.raises(ValueError):
-        assert util.check_year(y1, s1)
+        assert util.check_year(y1, s1)  # type: ignore[arg-type]
 
     # If y = None.
 
@@ -56,7 +61,7 @@ def test_check_year():
     assert util.check_year(y3, s3) is True
 
 
-def test_diff_identical(test_mp, request):
+def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() of identical Scenarios."""
     scen_a = make_dantzig(test_mp, request=request)
     scen_b = make_dantzig(test_mp, request=request)
@@ -74,7 +79,7 @@ def test_diff_identical(test_mp, request):
 
 # FIXME I don't see why IXMP4Backend shouldn't support this, but it's failing.
 @pytest.mark.jdbc
-def test_diff_data(test_mp, request):
+def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the same items, but different data."""
     scen_a = make_dantzig(test_mp, request=request)
     scen_b = make_dantzig(test_mp, request=request)
@@ -84,13 +89,26 @@ def test_diff_data(test_mp, request):
     scen_b.check_out()
 
     # Remove elements from "b"
-    drop_args = dict(labels=["value", "unit"], axis=1)
-    scen_a.remove_par("b", scen_a.par("b").iloc[0:1, :].drop(**drop_args))
-    scen_b.remove_par("b", scen_b.par("b").iloc[1:2, :].drop(**drop_args))
+
+    # NOTE I couldn't get **drop_args to be seen as containing the right entries, even
+    # with TypedDict, which should be ideal for the purpose
+    df_b_a = scen_a.par("b")
+    assert isinstance(df_b_a, pd.DataFrame)
+    df_b_b = scen_b.par("b")
+    assert isinstance(df_b_b, pd.DataFrame)
+    scen_a.remove_par("b", df_b_a.iloc[0:1, :].drop(labels=["value", "unit"], axis=1))
+    scen_b.remove_par("b", df_b_b.iloc[1:2, :].drop(labels=["value", "unit"], axis=1))
     # Remove elements from "d"
-    scen_a.remove_par("d", scen_a.par("d").query("i == 'san-diego'").drop(**drop_args))
+    df_d_a = scen_a.par("d")
+    assert isinstance(df_d_a, pd.DataFrame)
+    scen_a.remove_par(
+        "d",
+        df_d_a.query("i == 'san-diego'").drop(labels=["value", "unit"], axis=1),
+    )
     # Modify values in "d"
-    scen_b.add_par("d", scen_b.par("d").query("i == 'seattle'").assign(value=123.4))
+    df_d_b = scen_b.par("d")
+    assert isinstance(df_d_b, pd.DataFrame)
+    scen_b.add_par("d", df_d_b.query("i == 'seattle'").assign(value=123.4))
 
     # Expected results
     exp_b = pd.DataFrame(
@@ -135,7 +153,7 @@ def test_diff_data(test_mp, request):
             pdt.assert_frame_equal(exp_d.iloc[[0, 3], :].reset_index(drop=True), df)
 
 
-def test_diff_items(test_mp, request):
+def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the different items."""
     scen_a = make_dantzig(test_mp, request=request)
     scen_b = make_dantzig(test_mp, request=request)
@@ -161,7 +179,11 @@ def test_diff_items(test_mp, request):
 # TODO IXMP4Backend doesn't handle retrieval of scalars correctly yet;
 # but look here for a test case!
 @pytest.mark.jdbc
-def test_discard_on_error(caplog, test_mp, request):
+def test_discard_on_error(
+    caplog: pytest.LogCaptureFixture,
+    test_mp: "Platform",
+    request: pytest.FixtureRequest,
+) -> None:
     caplog.set_level(logging.INFO, "ixmp.util")
 
     # Create a test scenario, checked-in state
@@ -202,24 +224,30 @@ def test_discard_on_error(caplog, test_mp, request):
     assert dict(value=90, unit="USD/km") == s.scalar("f")
 
 
-def test_filtered():
+def test_filtered() -> None:
     df = pd.DataFrame()
     assert df is util.filtered(df, filters=None)
 
 
-def test_isscalar():
+def test_isscalar() -> None:
     with pytest.warns(DeprecationWarning):
         assert False is util.isscalar([3, 4])
 
 
-def test_logger_deprecated():
+def test_logger_deprecated() -> None:
     with pytest.warns(DeprecationWarning):
         util.logger()
 
 
-m_s = dict(model="m", scenario="s")
+m_s = ScenarioIdentifiers(model="m", scenario="s")
 
-URLS = [
+URLS: list[
+    tuple[
+        str,
+        Optional[dict[str, str]],
+        Optional[Union[ScenarioIdentifiers, ScenarioInfo]],
+    ]
+] = [
     ("ixmp://example/m/s", dict(name="example"), m_s),
     (
         "ixmp://example/m/s#42",
@@ -236,28 +264,32 @@ URLS = [
     ("m/s#42", dict(), dict(model="m", scenario="s", version=42)),
     # Invalid values
     # Wrong scheme
-    param("foo://example/m/s", None, None, marks=mark.xfail(raises=ValueError)),
+    # NOTE Somehow, pytest doesn't export the ParameterSet for annotations, but all of
+    # these are intentionally failing, anyway
+    param("foo://example/m/s", None, None, marks=mark.xfail(raises=ValueError)),  # type: ignore[list-item]
     # No Scenario name
-    param("ixmp://example/m", None, None, marks=mark.xfail(raises=ValueError)),
+    param("ixmp://example/m", None, None, marks=mark.xfail(raises=ValueError)),  # type: ignore[list-item]
     # Version not an integer
     param(
         "ixmp://example/m/s#notaversion",
         None,
         None,
         marks=mark.xfail(raises=ValueError),
-    ),
+    ),  # type: ignore[list-item]
     # Query string not supported
     param(
         "ixmp://example/m/s?querystring",
         None,
         None,
         marks=mark.xfail(raises=ValueError),
-    ),
+    ),  # type: ignore[list-item]
 ]
 
 
 @pytest.mark.parametrize("url, p, s", URLS)
-def test_parse_url(url, p, s):
+def test_parse_url(
+    url: str, p: Optional[dict[str, str]], s: Optional[ScenarioIdentifiers]
+) -> None:
     platform_info, scenario_info = util.parse_url(url)
 
     # Expected platform and scenario information is returned
@@ -265,7 +297,7 @@ def test_parse_url(url, p, s):
     assert scenario_info == s
 
 
-def test_format_scenario_list(test_mp_f):
+def test_format_scenario_list(test_mp_f: "Platform") -> None:
     # Use the function-scoped fixture for precise version numbers
     mp = test_mp_f
     populate_test_platform(mp)
@@ -300,7 +332,7 @@ def test_format_scenario_list(test_mp_f):
 
 # IXMP4Backend doesn't have proper commits yet, so these never raise RuntimeErrors
 @pytest.mark.jdbc
-def test_maybe_commit(caplog, test_mp):
+def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     s = Scenario(test_mp, "maybe_commit", "maybe_commit", version="new")
 
     # A new Scenario is not committed, so this works

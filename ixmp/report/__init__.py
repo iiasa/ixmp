@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import genno.config
 from genno import (
     ComputationError,
@@ -26,8 +28,9 @@ __all__ = [
 ]
 
 
-@genno.config.handles("filters", iterate=False)
-def filters(c: Computer, filters: dict):
+# TODO Remove once genno adds annotation
+@genno.config.handles("filters", iterate=False)  # type: ignore[misc]
+def filters(c: Computer, filters: dict[str, Any]) -> None:
     """Handle the entire ``filters:`` config section."""
     # Ensure a filters dict exists
     c.graph["config"].setdefault("filters", dict())
@@ -45,20 +48,20 @@ def filters(c: Computer, filters: dict):
             c.graph["config"]["filters"].pop(key, None)
 
 
-@genno.config.handles("rename_dims", iterate=False)
-def rename_dims(c: Computer, info: dict):
+@genno.config.handles("rename_dims", iterate=False)  # type: ignore[misc]
+def rename_dims(c: Computer, info: dict[str, str]) -> None:
     """Handle the entire ``rename_dims:`` config section."""
     common.RENAME_DIMS.update(info)
 
 
 # keep=True is different vs. genno.config
-@genno.config.handles("units", iterate=False, discard=False)
-def units(c: Computer, info: dict):
+@genno.config.handles("units", iterate=False, discard=False)  # type: ignore[misc]
+def units(c: Computer, info: dict[str, str]) -> None:
     """Handle the entire ``units:`` config section."""
     genno.config.units(c, info)
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Optional[dict[str, str]]:
     if name == "RENAME_DIMS":
         return common.RENAME_DIMS
     else:

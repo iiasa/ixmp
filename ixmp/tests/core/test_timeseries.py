@@ -1,6 +1,8 @@
 import logging
 import re
+from collections.abc import Generator
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import pandas as pd
 import pytest
@@ -9,6 +11,10 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import IAMC_IDX, Scenario, TimeSeries
 from ixmp.testing import DATA, models
+from ixmp.types import ScenarioIdentifiers
+
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]
@@ -19,12 +25,12 @@ COLS_WITH_SUBANNUAL.insert(4, "subannual")
 
 
 # Utility methods
-def expected(df, ts):
+def expected(df: pd.DataFrame, ts: TimeSeries) -> pd.DataFrame:
     """Modify *df* with the 'model' and 'scenario' name from *ts."""
     return df.assign(model=ts.model, scenario=ts.scenario)
 
 
-def wide(df):
+def wide(df: pd.DataFrame) -> pd.DataFrame:
     """Transform *df* from long to wide format."""
     other_cols = [c for c in df.columns if c not in ["year", "value"] + IAMC_IDX]
     return (
@@ -34,14 +40,23 @@ def wide(df):
     )
 
 
-def assert_geodata(obs, exp):
+def assert_geodata(obs: pd.DataFrame, exp: pd.DataFrame) -> None:
     obs = obs.sort_values("year")
     exp = exp.sort_values("year")
     for column in obs.columns:
-        npt.assert_array_equal(exp.get(column), obs.get(column))
+        exp_column = exp.get(column)
+        obs_column = exp.get(column)
+        assert isinstance(exp_column, pd.Series)
+        assert isinstance(obs_column, pd.Series)
+        npt.assert_array_equal(exp_column, obs_column)
 
 
-def assert_timeseries(scen, exp=DATA["timeseries"], cols=None, subannual=None):
+def assert_timeseries(
+    scen: TimeSeries,
+    exp: pd.DataFrame = DATA["timeseries"],
+    cols: Optional[Union[str, list[str]]] = None,
+    subannual: Optional[Union[bool, str]] = None,
+) -> None:
     """Asserts scenario timeseries are similar to expected
 
     Compares region, variable, unit, year and subannual (if available).
@@ -79,7 +94,9 @@ class TestTimeSeries:
     """
 
     @pytest.fixture(scope="function", params=[TimeSeries, Scenario])
-    def ts(self, request, mp):
+    def ts(
+        self, request: pytest.FixtureRequest, mp: "Platform"
+    ) -> Generator[Union[TimeSeries, Scenario], Any, None]:
         """An empty TimeSeries with a temporary name on the :func:`mp`."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name
@@ -90,27 +107,31 @@ class TestTimeSeries:
 
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])
-    def test_init(self, test_mp, cls):
+    def test_init(
+        self, test_mp: "Platform", cls: Union[type[TimeSeries], type[Scenario]]
+    ) -> None:
         # Something other than a Platform as mp argument
         with pytest.raises(TypeError):
-            cls(None, "model name", "scenario name")
+            # NOTE Triggering this error on purpose
+            cls(None, "model name", "scenario name")  # type: ignore[arg-type]
 
         # Invalid version argument
         with pytest.raises(ValueError):
-            cls(test_mp, "model name", "scenario name", version=3.4)
+            # NOTE Triggering this error on purpose
+            cls(test_mp, "model name", "scenario name", version=3.4)  # type: ignore[arg-type]
 
-    def test_init2(self, test_mp):
+    def test_init2(self, test_mp: "Platform") -> None:
         # Scheme argument
         with pytest.raises(TypeError, match="'scheme' argument"):
             TimeSeries(test_mp, "m", "s", scheme="scheme")
 
     # TimeSeries methods
 
-    def test_has_solution(self, ts):
+    def test_has_solution(self, ts: TimeSeries) -> None:
         """:meth:`.TimeSeries.has_solution` is always :obj:`False`."""
         assert False is ts.has_solution()
 
-    def test_default(self, mp, ts):
+    def test_default(self, mp: "Platform", ts: TimeSeries) -> None:
         # NB this is required before the is_default method can be used
         # FIXME should return False regardless
         ts.commit("")
@@ -133,7 +154,7 @@ class TestTimeSeries:
 
     # NOTE IXMP4Backend doesn't handle commits yet, so run_id is 1 immediately
     @pytest.mark.jdbc
-    def test_run_id(self, ts):
+    def test_run_id(self, ts: TimeSeries) -> None:
         # New, un-committed TimeSeries has run_id of -1
         assert ts.run_id() == -1
 
@@ -143,7 +164,7 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_last_update(self, ts):
+    def test_last_update(self, ts: TimeSeries) -> None:
         # New, un-committed TimeSeries has no last update date
         assert ts.last_update() is None
 
@@ -151,11 +172,12 @@ class TestTimeSeries:
 
         # After committing, last_update() returns a string
         last_update = ts.last_update()
+        assert last_update is not None
         actual = datetime.strptime(last_update, "%Y-%m-%d %H:%M:%S.%f")
         assert abs(actual - datetime.now()) < timedelta(seconds=1)
 
     @pytest.mark.parametrize("format", ["long", "wide"])
-    def test_add_timeseries(self, ts, format):
+    def test_add_timeseries(self, ts: TimeSeries, format: str) -> None:
         data = DATA[0] if format == "long" else wide(DATA[0])
 
         # Add data
@@ -169,7 +191,7 @@ class TestTimeSeries:
     # NOTE Not yet implemented on IXMP4Backend properly. Doing so required optimization
     # items in ixmp4 using versioning/changelog correctly.
     @pytest.mark.jdbc
-    def test_discard_changes(self, ts):
+    def test_discard_changes(self, ts: TimeSeries) -> None:
         ts.commit("")
         assert 0 == len(ts.timeseries())
 
@@ -184,7 +206,7 @@ class TestTimeSeries:
     # 0 rows
     @pytest.mark.jdbc
     @pytest.mark.parametrize("format", ["long", "wide"])
-    def test_get(self, ts, format):
+    def test_get(self, ts: TimeSeries, format: str) -> None:
         data = DATA[0] if format == "long" else wide(DATA[0])
 
         ts.add_timeseries(data)
@@ -200,7 +222,8 @@ class TestTimeSeries:
         # NB this included check_like=True to be tolerant of JDBCBackend returning
         #    columns in unpredictable order. In pandas 1.2.0, this caused an exception;
         #    see pandas-dev/pandas#39168. Removed until the upstream bug is fixed.
-        assert_frame_equal(exp, ts.timeseries(**args))
+        timeseries = ts.timeseries(iamc=True) if format == "wide" else ts.timeseries()
+        assert_frame_equal(exp, timeseries)
 
     @pytest.mark.parametrize(
         "year_arg",
@@ -212,27 +235,28 @@ class TestTimeSeries:
             pytest.param(["2010"], marks=pytest.mark.xfail),
         ],
     )
-    def test_get_year(self, ts, year_arg):
+    def test_get_year(
+        self, ts: TimeSeries, year_arg: Union[int, list[int], list[str]]
+    ) -> None:
         """`year` arg to :meth:`.TimeSeries.timeseries` accepts only :class:`int`."""
         ts.add_timeseries(DATA[0])
         ts.commit("")
 
         # year filters with integer values are handled correctly (iiasa/ixmp#440)
-        ts.timeseries(year=year_arg)
+        # NOTE Triggering this error on purpose
+        ts.timeseries(year=year_arg)  # type: ignore[arg-type]
 
     # FIXME IXMP4Backend seems to handle timeseries() incorrectly; the last call returns
     # 0 rows
     @pytest.mark.jdbc
     @pytest.mark.parametrize("format", ["long", "wide"])
-    def test_edit(self, mp, ts, format):
+    def test_edit(self, mp: "Platform", ts: TimeSeries, format: str) -> None:
         """Tests that data can be overwritten."""
         data = expected(DATA[0], ts)
         all_data = [data.loc[0:0, :]]
-        args = {}
 
         if format == "wide":
             data = wide(data)
-            args["iamc"] = True
 
         ts.add_timeseries(data)
         ts.commit("initial data")
@@ -258,14 +282,20 @@ class TestTimeSeries:
         exp = pd.concat(all_data).reset_index(drop=True)
         if format == "wide":
             exp = wide(exp)
-        assert_frame_equal(exp, ts.timeseries(**args))
+        timeseries = ts.timeseries(iamc=True) if format == "wide" else ts.timeseries()
+        assert_frame_equal(exp, timeseries)
 
     # NOTE IXMP4Backend requires version-specifier or setting a default for the
     # corresponding Run since Run doesn't store `version`
     @pytest.mark.jdbc
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])
-    def test_edit_with_region_synonyms(self, mp, ts, cls):
-        info = dict(model=ts.model, scenario=ts.scenario)
+    def test_edit_with_region_synonyms(
+        self,
+        mp: "Platform",
+        ts: TimeSeries,
+        cls: Union[type[TimeSeries], type[Scenario]],
+    ) -> None:
+        info: ScenarioIdentifiers = dict(model=ts.model, scenario=ts.scenario)
 
         mp.add_region_synonym("Hell", "World")
 
@@ -298,7 +328,7 @@ class TestTimeSeries:
             ),
         ],
     )
-    def test_remove(self, mp, ts, commit):
+    def test_remove(self, ts: TimeSeries, commit: bool) -> None:
         df = expected(DATA[2050], ts)
 
         ts.add_timeseries(DATA[2050])
@@ -334,7 +364,9 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_transact_discard(self, caplog, mp, ts):
+    def test_transact_discard(
+        self, caplog: pytest.LogCaptureFixture, mp: "Platform", ts: TimeSeries
+    ) -> None:
         caplog.set_level(logging.INFO, "ixmp.util")
 
         df = expected(DATA[2050], ts)
@@ -349,7 +381,7 @@ class TestTimeSeries:
                 ts.remove_timeseries(df[df.year == 2010])
 
                 # Trigger AttributeError
-                ts.foo_bar()
+                ts.foo_bar()  # type: ignore[attr-defined]
 
         # Reopen the database connection
         mp.open_db()
@@ -366,7 +398,7 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_add_geodata(self, ts):
+    def test_add_geodata(self, ts: TimeSeries) -> None:
         # Empty TimeSeries includes no geodata
         assert_frame_equal(DATA["geo"].loc[[False, False, False]], ts.get_geodata())
 
@@ -381,9 +413,11 @@ class TestTimeSeries:
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
     @pytest.mark.parametrize(
-        "rows", [(1,), (1, 2), (0, 1, 2)], ids=["single", "multiple", "all"]
+        "rows",
+        [[1], [1, 2], [0, 1, 2]],
+        ids=["single", "multiple", "all"],
     )
-    def test_remove_geodata(self, ts, rows):
+    def test_remove_geodata(self, ts: TimeSeries, rows: list[int]) -> None:
         ts.add_geodata(DATA["geo"])
         ts.remove_geodata(DATA["geo"].take(rows))
         ts.commit("")
@@ -408,7 +442,7 @@ class TestTimeSeries:
             ),
         ),
     )
-    def test_long_variable_name(self, ts, format, N):
+    def test_long_variable_name(self, ts: TimeSeries, format: str, N: int) -> None:
         """Variable names up to 256 characters can be added or removed."""
         data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
 
@@ -425,15 +459,17 @@ class TestTimeSeries:
 
     # Metadata
 
-    def test_set_meta(self, ts):
+    def test_set_meta(self, ts: TimeSeries) -> None:
         # Raises TypeError when first argument is not str or dict
         with pytest.raises(TypeError):
-            ts.set_meta(["foo", "bar"])
+            ts.set_meta(["foo", "bar"])  # type: ignore[arg-type]
 
     # FIXME all tests below this line need cleanup
 
     @pytest.mark.parametrize("format", ["long", "wide"])
-    def test_add_timeseries_with_extra_col(self, caplog, ts, format):
+    def test_add_timeseries_with_extra_col(
+        self, caplog: pytest.LogCaptureFixture, ts: TimeSeries, format: str
+    ) -> None:
         _data = DATA[0].copy()
         _data["climate_model"] = [0, 1]
         data = _data if format == "long" else wide(_data)
@@ -449,10 +485,10 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_new_timeseries_as_iamc(self, test_mp):
+    def test_new_timeseries_as_iamc(self, test_mp: "Platform") -> None:
         # TODO rescue use of subannual= here
 
-        scen = TimeSeries(test_mp, *models["h2g2"], version="new", annotation="fo")
+        scen = TimeSeries(test_mp, **models["h2g2"], version="new", annotation="fo")
         scen.add_timeseries(
             DATA["timeseries"].pivot_table(values="value", index=IDX_COLS)
         )
@@ -474,10 +510,10 @@ class TestTimeSeries:
         exp["subannual"] = "Year"
         assert_timeseries(scen, exp=exp, cols=COLS_WITH_SUBANNUAL, subannual=True)
 
-    def test_new_timeseries_error(self, test_mp):
-        scen = TimeSeries(test_mp, *models["h2g2"], version="new", annotation="fo")
-        df = {"year": [2010, 2020], "value": [23.5, 23.6]}
-        df = pd.DataFrame.from_dict(df)
+    def test_new_timeseries_error(self, test_mp: "Platform") -> None:
+        scen = TimeSeries(test_mp, **models["h2g2"], version="new", annotation="fo")
+        df_dict = {"year": [2010, 2020], "value": [23.5, 23.6]}
+        df = pd.DataFrame.from_dict(df_dict)
         df["region"] = "World"
         df["variable"] = "Testing"
         # column `unit` is missing
@@ -485,9 +521,9 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_new_subannual_timeseries_as_iamc(self, mp):
+    def test_new_subannual_timeseries_as_iamc(self, mp: "Platform") -> None:
         mp.add_timeslice("Summer", "Season", 1.0 / 4)
-        scen = TimeSeries(mp, *models["h2g2"], version="new", annotation="fo")
+        scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         timeseries = DATA["timeseries"].pivot_table(values="value", index=IDX_COLS)
         scen.add_timeseries(timeseries)
         scen.commit("adding yearly data")
@@ -524,15 +560,15 @@ class TestTimeSeries:
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_fetch_empty_geodata(self, mp):
-        scen = TimeSeries(mp, *models["h2g2"], version="new", annotation="fo")
+    def test_fetch_empty_geodata(self, mp: "Platform") -> None:
+        scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         empty = scen.get_geodata()
         assert_geodata(empty, DATA["geo"].loc[[False, False, False]])
 
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
-    def test_remove_multiple_geodata(self, mp):
-        scen = TimeSeries(mp, *models["h2g2"], version="new", annotation="fo")
+    def test_remove_multiple_geodata(self, mp: "Platform") -> None:
+        scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         scen.add_geodata(DATA["geo"])
         row = DATA["geo"].loc[[False, True, True]]
         scen.remove_geodata(row)

@@ -1,14 +1,15 @@
 import logging
 import re
 import sys
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Generator, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from types import ModuleType
+from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -16,9 +17,10 @@ import numpy as np
 import pandas as pd
 
 from ixmp.backend.common import ItemType
+from ixmp.types import PlatformInfo, ScenarioInfo
 
 if TYPE_CHECKING:
-    from ixmp import TimeSeries
+    from ixmp import Platform, Scenario, TimeSeries
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +60,7 @@ SHOW_VERSION_PACKAGES: tuple[str, ...] = (
 )
 
 
-def logger():
+def logger() -> logging.Logger:
     """Access global logger.
 
     .. deprecated:: 3.3
@@ -80,7 +82,10 @@ def logger():
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> list[str]:
+def as_str_list(
+    arg: Optional[Union[str, dict[str, Any], Iterable[object]]],
+    idx_names: Optional[Iterable[str]] = None,
+) -> list[str]:
     """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
@@ -103,10 +108,12 @@ def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> list[str]:
         else:
             return [str(arg)]
     else:
+        # We assume that this is always true, tell mypy
+        assert isinstance(arg, (Mapping, pd.Series))
         return [str(arg[idx]) for idx in idx_names]
 
 
-def isscalar(x):
+def isscalar(x: object) -> bool:
     """Returns True if `x` is a scalar."""
     warn(
         "ixmp.util.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
@@ -115,15 +122,20 @@ def isscalar(x):
     return np.isscalar(x)
 
 
-def check_year(y, s):
+def check_year(
+    y: Optional[int], s: Optional[Union[int, str]]
+) -> Optional[Literal[True]]:
     """Returns True if y is an int, raises an error if y is not None"""
     if y is not None:
         if not isinstance(y, int):
             raise ValueError("arg `{}` must be an integer!".format(s))
         return True
+    return None
 
 
-def diff(a, b, filters=None) -> Iterator[tuple[str, pd.DataFrame]]:
+def diff(
+    a: "Scenario", b: "Scenario", filters: Optional[dict[str, Sequence[str]]] = None
+) -> Iterator[tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
     :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
@@ -203,7 +215,7 @@ def diff(a, b, filters=None) -> Iterator[tuple[str, pd.DataFrame]]:
 
 
 @contextmanager
-def discard_on_error(ts: "TimeSeries"):
+def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
     """Context manager to discard changes to `ts` and close the DB on any exception.
 
     For :class:`.JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
@@ -247,7 +259,7 @@ def discard_on_error(ts: "TimeSeries"):
         raise
 
 
-def maybe_check_out(timeseries, state=None):
+def maybe_check_out(timeseries: "TimeSeries", state: Optional[bool] = None) -> bool:
     """Check out `timeseries` depending on `state`.
 
     If `state` is :obj:`None`, then :meth:`.TimeSeries.check_out` is called.
@@ -287,7 +299,9 @@ def maybe_check_out(timeseries, state=None):
         return True
 
 
-def maybe_commit(timeseries, condition, message):
+def maybe_commit(
+    timeseries: "TimeSeries", condition: Union[bool, int], message: str
+) -> bool:
     """Commit `timeseries` with `message` if `condition` is :obj:`True`.
 
     Returns
@@ -314,7 +328,7 @@ def maybe_commit(timeseries, condition, message):
         return True
 
 
-def maybe_convert_scalar(obj) -> pd.DataFrame:
+def maybe_convert_scalar(obj: Union[dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
     """Convert `obj` to :class:`pandas.DataFrame`.
 
     Parameters
@@ -334,7 +348,7 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
         return obj
 
 
-def parse_url(url):
+def parse_url(url: str) -> tuple[PlatformInfo, ScenarioInfo]:
     """Parse *url* and return Platform and Scenario information.
 
     A URL (Uniform Resource Locator), as the name implies, uniquely identifies
@@ -369,11 +383,11 @@ def parse_url(url):
     if components.scheme not in ("ixmp", ""):
         raise ValueError("URL must begin with ixmp:// or //")
 
-    platform_info = dict()
+    platform_info: PlatformInfo = dict()
     if components.netloc:
         platform_info["name"] = components.netloc
 
-    scenario_info = dict()
+    scenario_info = ScenarioInfo(scenario="", model="")
 
     path = components.path.split("/")
     if len(path):
@@ -391,7 +405,7 @@ def parse_url(url):
 
     if len(components.fragment):
         try:
-            version = int(components.fragment)
+            version: Union[int, Literal["new"]] = int(components.fragment)
         except ValueError:
             if components.fragment != "new":
                 raise ValueError(
@@ -449,7 +463,7 @@ def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def year_list(x):
+def year_list(x: Iterable[Any]) -> list[Any]:
     """Return the elements of x that can be cast to year (int)."""
     lst = []
     for i in x:
@@ -461,7 +475,15 @@ def year_list(x):
     return lst
 
 
-def filtered(df, filters):
+def filtered(
+    df: pd.DataFrame,
+    filters: Optional[
+        Mapping[
+            str,
+            Optional[Union[str, dict[str, Any], Iterable[object]]],
+        ]
+    ],
+) -> pd.DataFrame:
     """Returns a filtered dataframe based on a filters dictionary"""
     if filters is None:
         return df
@@ -474,8 +496,13 @@ def filtered(df, filters):
 
 
 def format_scenario_list(
-    platform, model=None, scenario=None, match=None, default_only=False, as_url=False
-):
+    platform: "Platform",
+    model: Optional[str] = None,
+    scenario: Optional[str] = None,
+    match: Optional[re.Pattern[str]] = None,
+    default_only: bool = False,
+    as_url: bool = False,
+) -> list[str]:
     """Return a formatted list of TimeSeries on *platform*.
 
     Parameters
@@ -500,21 +527,19 @@ def format_scenario_list(
         If *as_url* is :obj:`False`, also include summary information.
     """
 
-    try:
-        match = re.compile(".*" + match + ".*")
-    except TypeError:
-        pass
+    if match:
+        match = re.compile(".*" + match.pattern + ".*")
 
-    def describe(df):
+    def describe(df: pd.DataFrame) -> "pd.Series[Union[int, str]]":
         N = len(df)
         min = df.version.min()
         max = df.version.max()
 
-        result = dict(N=N, range="")
+        result: dict[str, Union[int, str]] = dict(N=N, range="")
         if N > 1:
             result["range"] = "{}–{}".format(min, max)
             if N != max:
-                result["range"] += " ({} versions)".format(N)
+                result["range"] = str(result["range"]) + " ({} versions)".format(N)
 
         try:
             mask = df.is_default.astype(bool)
@@ -541,23 +566,32 @@ def format_scenario_list(
     info["scenario"] = info["scenario"].str.cat(info["default"].astype(str), sep="#")
 
     if match:
-        info = info[info["model"].str.match(match) | info["scenario"].str.match(match)]
+        info = info[
+            info["model"].str.match(str(match)) | info["scenario"].str.match(str(match))
+        ]
 
     lines = []
 
     if as_url:
         info["url"] = f"ixmp://{platform.name}"
-        urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")
+        _model = info["model"]
+        # TODO It seems that pandas-stubs is out-of-date with pandas here: from
+        # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html
+        # > If others is a list-like that contains a combination of Series, Index or
+        # > np.ndarray (1-dim), then all elements will be unpacked and must satisfy the
+        # > above criteria individually.
+        # Open an issue/remove once pandas-stubs recognizes this as correct
+        urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")  # type: ignore[list-item]
         lines = urls.tolist()
     else:
         width = 0 if not len(info) else info["scenario"].str.len().max()
         info["scenario"] = info["scenario"].str.ljust(width + 2)
 
-        for model, m_info in info.groupby("model"):
+        for m, m_info in info.groupby("model"):
             lines.extend(
                 [
                     "",
-                    model + "/",
+                    str(m) + "/",
                     "  " + "\n  ".join(m_info["scenario"].str.cat(m_info["range"])),
                 ]
             )
@@ -579,7 +613,9 @@ def format_scenario_list(
     return lines
 
 
-def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) -> None:
+def show_versions(
+    file: IO[str] = sys.stdout, *, packages: Optional[Iterable[str]] = None
+) -> None:
     """Print information about ixmp and its dependencies to `file`.
 
     See also
@@ -592,7 +628,7 @@ def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) 
     try:
         from importlib.metadata import packages_distributions
     except ImportError:  # Python 3.9
-        from importlib_metadata import packages_distributions  # type: ignore [no-redef]
+        from importlib_metadata import packages_distributions
     from subprocess import DEVNULL, check_output
 
     from xarray.util.print_versions import get_sys_info
@@ -653,19 +689,24 @@ def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) 
 
     # Use xarray to get Python & system information
     info.append(("", ""))
-    info.extend(get_sys_info()[1:])  # Exclude the commit number
+    # Exclude the commit number
+    # NOTE xarray's function is not typed, unfortunately
+    info.extend(get_sys_info()[1:])  # type: ignore[no-untyped-call]
 
     # Format and write to `file`
     for k, stat in info:
         print("" if (k == stat == "") else f"{k + ':':18} {stat}", file=file)
 
 
-def update_par(scenario, name, data):
+def update_par(scenario: "Scenario", name: str, data: pd.DataFrame) -> None:
     """Update parameter *name* in *scenario* using *data*, without overwriting.
 
     Only values which do not already appear in the parameter data are added.
     """
-    tmp = pd.concat([scenario.par(name), data])
+    par_df = scenario.par(name)
+    # We seem to rely on this, even though `.par` could return a Scalar/dict
+    assert isinstance(par_df, pd.DataFrame)
+    tmp = pd.concat([par_df, data])
     columns = list(filter(lambda c: c != "value", tmp.columns))
     tmp = tmp.drop_duplicates(subset=columns, keep=False)
 
@@ -676,7 +717,7 @@ def update_par(scenario, name, data):
 class DeprecatedPathFinder(MetaPathFinder):
     """Handle imports from deprecated module locations."""
 
-    map: Mapping[re.Pattern, str]
+    map: Mapping[re.Pattern[str], str]
 
     def __init__(self, package: str, name_map: Mapping[str, str]):
         # Prepend the package name to the source and destination
@@ -686,7 +727,7 @@ class DeprecatedPathFinder(MetaPathFinder):
         }
 
     @lru_cache(maxsize=128)
-    def new_name(self, name):
+    def new_name(self, name: str) -> str:
         # Apply each pattern in self.map successively
         new_name = name
         for pattern, repl in self.map.items():
@@ -704,7 +745,12 @@ class DeprecatedPathFinder(MetaPathFinder):
 
         return new_name
 
-    def find_spec(self, name, path, target=None):
+    def find_spec(
+        self,
+        name: str,
+        path: Optional[Sequence[str]] = None,
+        target: Optional[ModuleType] = None,
+    ) -> Optional[ModuleSpec]:
         new_name = self.new_name(name)
         if new_name == name:
             return None  # No known transformation; let the importlib defaults handle.
@@ -713,6 +759,10 @@ class DeprecatedPathFinder(MetaPathFinder):
         spec = find_spec(new_name)
         if not spec:
             return None
+
+        # NOTE We seem to rely on this, otherwise, the SourceFileLoader below wouldn't
+        # work
+        assert spec.origin
 
         # Create a new spec that loads the module from its current location as if it
         # were `name`

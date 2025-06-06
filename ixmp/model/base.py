@@ -3,8 +3,9 @@ import os
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack, cast
 
+from ixmp.types import GamsModelInitKwargs, InitializeItemsKwargs
 from ixmp.util import maybe_check_out, maybe_commit
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ class Model(ABC):
     name: str = "base"
 
     @abstractmethod
-    def __init__(self, name, **kwargs):
+    def __init__(self, **kwargs: Unpack[GamsModelInitKwargs]) -> None:
         """Constructor.
 
         **Required.**
@@ -42,7 +43,7 @@ class Model(ABC):
         return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
     @staticmethod
-    def enforce(scenario):
+    def enforce(scenario: "Scenario") -> None:
         """Enforce data consistency in `scenario`.
 
         **Optional**; the default implementation does nothing. Subclass implementations
@@ -63,7 +64,7 @@ class Model(ABC):
         """
 
     @classmethod
-    def initialize(cls, scenario):
+    def initialize(cls, scenario: "Scenario") -> None:
         """Set up *scenario* with required items.
 
         **Optional**; the default implementation does nothing. Subclass implementations
@@ -86,7 +87,9 @@ class Model(ABC):
         log.debug(f"No initialization for {repr(scenario.scheme)}-scheme Scenario")
 
     @classmethod
-    def initialize_items(cls, scenario: "Scenario", items: Mapping[str, dict]) -> None:
+    def initialize_items(
+        cls, scenario: "Scenario", items: Mapping[str, InitializeItemsKwargs]
+    ) -> None:
         """Helper for :meth:`initialize`.
 
         All of the `items` are added to `scenario`. Existing items are not modified.
@@ -128,9 +131,9 @@ class Model(ABC):
         # Lists of items initialized
         items_initialized = []
 
-        for name, item_info in items.items():
+        for name, _item_info in items.items():
             # Copy so that pop() below does not modify *items*
-            item_info = item_info.copy()
+            item_info = {k: v for k, v in _item_info.items()}
 
             # Check that the item exists
             ix_type = item_info.pop("ix_type")
@@ -147,7 +150,8 @@ class Model(ABC):
                 for key, values in item_info.items():
                     values = values or []
                     existing = getattr(scenario, key)(name)
-                    if existing != list(values):
+                    # NOTE After pop, the remaining objects are list[str] | None
+                    if existing != list(cast(list[str], values)):
                         # The existing index sets or names do not match
                         log.warning(
                             f"Existing index {key.split('_')[-1]} of "
@@ -186,7 +190,7 @@ class Model(ABC):
             maybe_check_out(scenario)
 
     @abstractmethod
-    def run(self, scenario):
+    def run(self, scenario: "Scenario") -> None:
         """Execute the model.
 
         **Required.** Implementations of :meth:`run`:

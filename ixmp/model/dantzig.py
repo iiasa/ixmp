@@ -1,13 +1,19 @@
 from collections import ChainMap
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from ixmp.types import InitializeItemsKwargs
 from ixmp.util import maybe_check_out, maybe_commit, update_par
 
 from .gams import GAMSModel
 
-ITEMS = {
+if TYPE_CHECKING:
+    from ixmp.core.scenario import Scenario
+
+
+ITEMS: dict[str, InitializeItemsKwargs] = {
     # Plants
     "i": dict(ix_type="set"),
     # Markets
@@ -28,9 +34,12 @@ ITEMS = {
     "supply": dict(ix_type="equ", idx_sets=["i"]),
 }
 
-DATA = {
+INDEXSET_DATA: dict[str, list[str]] = {
     "i": ["seattle", "san-diego"],
     "j": ["new-york", "chicago", "topeka"],
+}
+
+TABLE_DATA: dict[str, pd.DataFrame] = {
     "a": pd.DataFrame(
         [
             ["seattle", 350, "cases"],
@@ -57,8 +66,9 @@ DATA = {
         ],
         columns="i j value unit".split(),
     ),
-    "f": (90.0, "USD/km"),
 }
+
+SCALAR_DATA: dict[str, tuple[float, str]] = {"f": (90.0, "USD/km")}
 
 
 class DantzigModel(GAMSModel):
@@ -78,7 +88,7 @@ class DantzigModel(GAMSModel):
     )
 
     @classmethod
-    def initialize(cls, scenario, with_data=False):
+    def initialize(cls, scenario: "Scenario", with_data: bool = False) -> None:
         """Initialize the problem.
 
         If *with_data* is :obj:`True` (default: :obj:`False`), the set and parameter
@@ -94,15 +104,15 @@ class DantzigModel(GAMSModel):
         checkout = maybe_check_out(scenario)
 
         # Add set elements
-        scenario.add_set("i", DATA["i"])
-        scenario.add_set("j", DATA["j"])
+        scenario.add_set("i", INDEXSET_DATA["i"])
+        scenario.add_set("j", INDEXSET_DATA["j"])
 
         # Add parameter values
-        update_par(scenario, "a", DATA["a"])
-        update_par(scenario, "b", DATA["b"])
-        update_par(scenario, "d", DATA["d"])
+        update_par(scenario, "a", TABLE_DATA["a"])
+        update_par(scenario, "b", TABLE_DATA["b"])
+        update_par(scenario, "d", TABLE_DATA["d"])
 
         # TODO avoid overwriting the existing value
-        scenario.change_scalar("f", *DATA["f"])
+        scenario.change_scalar("f", *SCALAR_DATA["f"])
 
         maybe_commit(scenario, checkout, f"{cls.__name__}.initialize")

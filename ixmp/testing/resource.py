@@ -2,6 +2,7 @@
 
 import logging
 from collections import namedtuple
+from collections.abc import Generator, Iterable
 from typing import Any, Optional
 
 try:
@@ -22,11 +23,11 @@ log = logging.getLogger(__name__)
 MemInfo = namedtuple("MemInfo", "profiled max_rss jvm_total jvm_free jvm_used python")
 
 
-def format_meminfo(arr, cls=float):
+def format_meminfo(arr: Iterable[Any], cls: type = float) -> MemInfo:
     """Return a namedtuple for `arr`, with values as `cls`."""
     # Format strings
-    cls = "{: >7.2f}".format if cls is str else cls
-    return MemInfo(*map(cls, arr))
+    func = "{: >7.2f}".format if cls is str else cls
+    return MemInfo(*map(func, arr))
 
 
 # Variables for memory_usage
@@ -35,7 +36,7 @@ _PREV = np.zeros(6)
 _RT: Optional[Any] = None
 
 
-def memory_usage(message="", reset=False):
+def memory_usage(message: str = "", reset: bool = False) -> MemInfo:
     """Profile memory usage from within a test function.
 
     The Python package ``memory_profiler`` and JPype_ are used to report memory
@@ -112,30 +113,30 @@ def memory_usage(message="", reset=False):
     result.append(result[0] - result[-1])
 
     # Convert to a numpy array
-    result = np.array(result)
+    result_array = np.array(result)
 
     # Difference versus previous call
-    delta = result - _PREV
+    delta = result_array - _PREV
 
     # Store current *result* to compute *delta* in subsequent calls
-    _PREV = result
+    _PREV = result_array
 
     # Log the results
     msg = "\n".join(
         [
             f"{_COUNT:3d} {message}",
-            repr(format_meminfo(result, str)),
+            repr(format_meminfo(result_array, str)),
             repr(format_meminfo(delta, str)),
         ]
     )
     log.debug(msg)
 
     # Return the current result
-    return format_meminfo(result)
+    return format_meminfo(result_array)
 
 
 @pytest.fixture(scope="function")
-def resource_limit(request):
+def resource_limit(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
     """A fixture that limits Python :mod:`resources <resource>`.
 
     See the documentation (``pytest --help``) for the ``--resource-limit`` command-line

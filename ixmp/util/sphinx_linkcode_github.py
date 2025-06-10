@@ -108,7 +108,7 @@ class GitHubLinker:
         what: str,
         name: str,
         obj: Union[
-            property, FunctionType, _lru_cache_wrapper[Any], partial[Any], object
+            property, FunctionType, "_lru_cache_wrapper[Any]", partial[Any], object
         ],
         options: Any,
         lines: Sequence[str],
@@ -121,7 +121,7 @@ class GitHubLinker:
         #      message_ix_models.tests.model.test_bare.TestConfig.__init__
 
         _obj: Union[
-            Callable[[Any], Any], FunctionType, ModuleType, _lru_cache_wrapper[Any]
+            Callable[[Any], Any], FunctionType, ModuleType, "_lru_cache_wrapper[Any]"
         ]
 
         # Identify the object for which to locate code

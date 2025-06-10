@@ -1,9 +1,10 @@
 from itertools import chain, repeat
-from typing import Literal, Union, cast
+from typing import Any, Literal, Union, cast
 
 import dask
 import pandas as pd
-from genno.core.computer import Computer, Key
+from genno import Key
+from genno.core.computer import Computer
 
 from ixmp.core.scenario import Scenario
 from ixmp.report import common
@@ -15,15 +16,16 @@ from .util import keys_for_quantity
 class Reporter(Computer):
     """Class for describing and executing computations."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # TODO Remove once genno adds annotation
+        super().__init__(*args, **kwargs)  # type: ignore[no-untyped-call]
 
         # Append ixmp.report.operator to the modules in which the Computer will look up
         # names
         self.require_compat(operator)
 
     @classmethod
-    def from_scenario(cls, scenario: Scenario, **kwargs) -> "Reporter":
+    def from_scenario(cls, scenario: Scenario, **kwargs: Any) -> "Reporter":
         """Create a Reporter by introspecting `scenario`.
 
         Parameters
@@ -84,7 +86,10 @@ class Reporter(Computer):
             try:
                 # Convert Series to list; protect list so that dask schedulers do not
                 # try to interpret its contents as further tasks
-                elements = dask.core.quote(cast(pd.Series, elements).tolist())
+                # NOTE Not annotated by dask; no PR or issue open to address this
+                elements = dask.core.quote(
+                    cast("pd.Series[Union[float, int, str]]", elements).tolist()
+                )  # type: ignore[no-untyped-call]
             except AttributeError:  # pragma: no cover
                 # pd.DataFrame for a multidimensional set; store as-is
                 # TODO write tests for this
@@ -103,7 +108,7 @@ class Reporter(Computer):
         """
         self.graph["scenario"] = scenario
 
-    def set_filters(self, **filters) -> None:
+    def set_filters(self, **filters: Any) -> None:
         """Apply `filters` ex ante (before computations occur).
 
         See the description of :func:`.filters` under :ref:`reporting-config`.

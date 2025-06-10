@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from ixmp import TimeSeries
+from ixmp import Platform, TimeSeries
 from ixmp.backend.base import Backend, CachingBackend
 from ixmp.backend.common import ItemType
 from ixmp.testing import make_dantzig
@@ -12,13 +13,19 @@ from ixmp.testing import make_dantzig
 class BE1(Backend):
     """Incomplete subclass."""
 
+    def __init__(self) -> None:
+        super().__init__()
 
-def noop(self, *args, **kwargs):
+
+def noop(self: Backend, *args: Any, **kwargs: Any) -> Any:
     pass
 
 
 class BE2(Backend):
     """Complete subclass."""
+
+    def __init__(self) -> None:
+        super().__init__()
 
     add_model_name = noop
     add_scenario_name = noop
@@ -67,14 +74,15 @@ class BE2(Backend):
     set_unit = noop
 
 
-def test_class():
+def test_class() -> None:
     # An incomplete Backend subclass can't be instantiated
     with pytest.raises(
         TypeError,
         match="Can't instantiate abstract class BE1 with(out an implementation for)? "
         "abstract methods",
     ):
-        BE1()
+        # NOTE Triggering the error on purpose
+        BE1()  # type: ignore[abstract]
 
     # Complete subclass can be instantiated
     BE2()
@@ -82,24 +90,24 @@ def test_class():
 
 class TestBackend:
     @pytest.fixture
-    def be(self):
+    def be(self) -> BE2:
         return BE2()
 
     # Methods with a default implementation
-    def test_get_auth(self, be):
+    def test_get_auth(self, be: BE2) -> None:
         assert dict(foo=True, bar=True, baz=True) == be.get_auth(
             "user", "foo bar baz".split(), "access"
         )
 
-    def test_get_log_level(self, be):
+    def test_get_log_level(self, be: BE2) -> None:
         # The value may differ according to the the test environment, so only check type
         assert isinstance(be.get_log_level(), str)
 
-    def test_read_file(self, be):
+    def test_read_file(self, be: BE2) -> None:
         with pytest.raises(NotImplementedError):
             be.read_file(Path("foo"), ItemType.VAR)
 
-    def test_write_file(self, be):
+    def test_write_file(self, be: BE2) -> None:
         with pytest.raises(NotImplementedError):
             be.write_file(Path("foo"), ItemType.VAR)
 
@@ -113,22 +121,23 @@ class TestBackend:
         pytest.param(tuple(), dict(bar=""), marks=pytest.mark.xfail(raises=ValueError)),
     ),
 )
-def test_handle_config(args, kwargs):
+def test_handle_config(args: tuple[str, ...], kwargs: dict[str, str]) -> None:
     """Test :meth:`JDBCBackend.handle_config`."""
     assert dict() == Backend.handle_config(args, kwargs)
 
 
 class TestCachingBackend:
-    def test_cache_non_hashable(self):
+    def test_cache_non_hashable(self) -> None:
         filters = {"s": ["foo", 42, object()]}
 
         # _cache_key() cannot handle non-hashable object()
         with pytest.raises(
             TypeError, match="Object of type object is not JSON serializable"
         ):
-            CachingBackend._cache_key(object(), "par", "p", filters)
+            # NOTE Triggering the error on purpose
+            CachingBackend._cache_key(object(), "par", "p", filters)  # type: ignore[arg-type]
 
-    def test_cache_invalidate(self, test_mp):
+    def test_cache_invalidate(self, test_mp: Platform) -> None:
         backend = test_mp._backend
 
         ts = TimeSeries(test_mp, model="foo", scenario="bar", version="new")
@@ -137,10 +146,10 @@ class TestCachingBackend:
 
     # TODO IXMP4Backend needs to handle ._cache correctly
     @pytest.mark.jdbc
-    def test_del_ts(self, test_mp, request):
+    def test_del_ts(self, test_mp: Platform, request: pytest.FixtureRequest) -> None:
         """Test CachingBackend.del_ts()."""
         # Since CachingBackend is an abstract class, test it via JDBCBackend
-        backend: CachingBackend = test_mp._backend  # type: ignore
+        backend = test_mp._backend
         cache_size_pre = len(backend._cache)
 
         # Load data, thereby adding to the cache

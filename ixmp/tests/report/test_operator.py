@@ -1,7 +1,7 @@
 import logging
 import re
 from functools import partial
-from typing import cast
+from typing import TYPE_CHECKING
 
 import genno
 import pandas as pd
@@ -12,7 +12,7 @@ from genno.testing import assert_qty_equal
 from pandas.testing import assert_frame_equal
 
 from ixmp import Scenario, TimeSeries
-from ixmp.model.dantzig import DATA as dantzig_data
+from ixmp.model.dantzig import TABLE_DATA as dantzig_data
 from ixmp.report.operator import (
     from_url,
     get_ts,
@@ -24,10 +24,13 @@ from ixmp.report.operator import (
 from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
 
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
+
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
 
-def test_from_url(test_mp, request) -> None:
+def test_from_url(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     ts = make_dantzig(test_mp, request=request)
 
     full_url = f"ixmp://{ts.platform.name}/{ts.url}"
@@ -45,9 +48,16 @@ def test_from_url(test_mp, request) -> None:
     assert ts.url == result.url
 
 
+# TODO For all genno-related type ignores, remove once genno adds annotations
+
+
 # FIXME Not sure why introducing the Computer fails for IXMP4Backend
 @pytest.mark.jdbc
-def test_get_remove_ts(caplog, test_mp, request) -> None:
+def test_get_remove_ts(
+    caplog: pytest.LogCaptureFixture,
+    test_mp: "Platform",
+    request: pytest.FixtureRequest,
+) -> None:
     ts = make_dantzig(test_mp, request=request)
 
     caplog.set_level(logging.INFO, "ixmp")
@@ -58,12 +68,12 @@ def test_get_remove_ts(caplog, test_mp, request) -> None:
 
     # Can be used through a Computer
 
-    c = Computer()
+    c = Computer()  # type: ignore[no-untyped-call]
     c.require_compat("ixmp.report.operator")
     c.add("scenario", ts)
 
     key = c.add("test1", "get_ts", "scenario", filters=dict(variable="GDP"))
-    result1 = c.get(key)
+    result1 = c.get(key)  # type: ignore[no-untyped-call]
     assert 3 == len(result1)
 
     # remove_ts() can be used through Computer
@@ -71,7 +81,7 @@ def test_get_remove_ts(caplog, test_mp, request) -> None:
 
     # Task runs, logs
     with assert_logs(caplog, "Remove 5 of 5 (1964 <= year) rows of time series data"):
-        c.get(key)
+        c.get(key)  # type: ignore[no-untyped-call]
 
     # See comment above; only one row is removed
     assert 6 - 3 == len(ts.timeseries())
@@ -111,7 +121,11 @@ def test_map_as_qty() -> None:
 
 # FIXME IXMP4Backend seems to return d with unexpected ordering
 @pytest.mark.jdbc
-def test_update_scenario(caplog, test_mp, request) -> None:
+def test_update_scenario(
+    caplog: pytest.LogCaptureFixture,
+    test_mp: "Platform",
+    request: pytest.FixtureRequest,
+) -> None:
     scen = make_dantzig(test_mp, request=request)
     scen.check_out()
     scen.add_set("j", "toronto")
@@ -122,13 +136,13 @@ def test_update_scenario(caplog, test_mp, request) -> None:
     assert 6 == N_before
 
     # A Computer used as calculation engine
-    c = Computer()
+    c = Computer()  # type: ignore[no-untyped-call]
 
     # Target Scenario for updating data
     c.add("target", scen)
 
     # Create a pd.DataFrame suitable for Scenario.add_par()
-    d = cast(pd.DataFrame, dantzig_data["d"])
+    d = dantzig_data["d"]
     data = d.query("j == 'chicago'").assign(j="toronto")
     data["value"] += 1.0
 
@@ -141,7 +155,7 @@ def test_update_scenario(caplog, test_mp, request) -> None:
     # Trigger the computation that results in data being added
     with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
         # Returns nothing
-        assert c.get("test 1") is None
+        assert c.get("test 1") is None  # type: ignore[no-untyped-call]
 
     # Rows were added to the parameter
     assert len(scen.par("d")) == N_before + len(data)
@@ -159,17 +173,21 @@ def test_update_scenario(caplog, test_mp, request) -> None:
 
     # Trigger the computation
     with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
-        c.get("test 2")
+        c.get("test 2")  # type: ignore[no-untyped-call]
 
     # All the rows have been updated
-    assert_frame_equal(scen.par("d"), data)
+    # TODO We should probably rework scen.par() to only return pd.DataFrame and handle
+    # scalars differently
+    par_df = scen.par("d")
+    assert isinstance(par_df, pd.DataFrame)
+    assert_frame_equal(par_df, data)
 
 
 # FIXME Nots ure why this fails on IXMP4Backend
 @pytest.mark.jdbc
-def test_store_ts(request, caplog, test_mp) -> None:
+def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     # Computer and target scenario
-    c = Computer()
+    c = Computer()  # type: ignore[no-untyped-call]
 
     # Target scenario
     model_name = __name__
@@ -198,7 +216,7 @@ def test_store_ts(request, caplog, test_mp) -> None:
     assert 0 == len(scen.timeseries())
 
     # The computation runs successfully
-    c.get("test 1")
+    c.get("test 1")  # type: ignore[no-untyped-call]
 
     # All rows from both inputs are present
     assert len(input_1) + len(input_2) == len(scen.timeseries())
@@ -213,7 +231,7 @@ def test_store_ts(request, caplog, test_mp) -> None:
 
     # Succeeds with default strict=False
     caplog.clear()
-    c.get("test 2")
+    c.get("test 2")  # type: ignore[no-untyped-call]
 
     # A message is logged
     r = caplog.record_tuples[-1]
@@ -231,4 +249,4 @@ def test_store_ts(request, caplog, test_mp) -> None:
         ComputationError,
         match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
     ):
-        c.get("test 2")
+        c.get("test 2")  # type: ignore[no-untyped-call]

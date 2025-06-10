@@ -1,6 +1,8 @@
 import os
 import platform
 import sys
+from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import pytest
@@ -21,8 +23,12 @@ FLAKY = pytest.mark.flaky(
 )
 
 
+class DefaultKwargs(TypedDict, total=False):
+    timeout: int
+
+
 @pytest.fixture(scope="session")
-def default_args():
+def default_args() -> DefaultKwargs:
     """Default arguments for :func:`.run_notebook."""
     # Use a longer timeout for GHA
     return dict(timeout=30) if GHA else dict()
@@ -31,7 +37,13 @@ def default_args():
 @FLAKY
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
 @pytest.mark.parametrize("ixmp_backend", available())
-def test_py_transport(tmp_path, tmp_env, tutorial_path, default_args, ixmp_backend):
+def test_py_transport(
+    tmp_path: Path,
+    tmp_env: os._Environ[str],
+    tutorial_path: Path,
+    default_args: DefaultKwargs,
+    ixmp_backend: str,
+) -> None:
     fname = tutorial_path.joinpath("transport", "py_transport.ipynb")
 
     # Set the "default" platform to be either the platform named "local" or
@@ -49,7 +61,12 @@ def test_py_transport(tmp_path, tmp_env, tutorial_path, default_args, ixmp_backe
 
 
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
-def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env, default_args):
+def test_py_transport_scenario(
+    tutorial_path: Path,
+    tmp_path: Path,
+    tmp_env: os._Environ[str],
+    default_args: DefaultKwargs,
+) -> None:
     fname = tutorial_path / "transport" / "py_transport_scenario.ipynb"
     nb, errors = run_notebook(fname, tmp_path, tmp_env, **default_args)
     assert errors == []
@@ -63,7 +80,12 @@ def test_py_transport_scenario(tutorial_path, tmp_path, tmp_env, default_args):
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")
-def test_R_transport(tutorial_path, tmp_path, tmp_env, default_args):
+def test_R_transport(
+    tutorial_path: Path,
+    tmp_path: Path,
+    tmp_env: os._Environ[str],
+    default_args: DefaultKwargs,
+) -> None:
     fname = tutorial_path / "transport" / "R_transport.ipynb"
     nb, errors = run_notebook(
         fname, tmp_path, tmp_env, kernel_name="IR", **default_args
@@ -75,7 +97,12 @@ def test_R_transport(tutorial_path, tmp_path, tmp_env, default_args):
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")
-def test_R_transport_scenario(tutorial_path, tmp_path, tmp_env, default_args):
+def test_R_transport_scenario(
+    tutorial_path: Path,
+    tmp_path: Path,
+    tmp_env: os._Environ[str],
+    default_args: DefaultKwargs,
+) -> None:
     fname = tutorial_path / "transport" / "R_transport_scenario.ipynb"
     nb, errors = run_notebook(
         fname, tmp_path, tmp_env, kernel_name="IR", **default_args

@@ -1,4 +1,6 @@
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -6,18 +8,18 @@ from ixmp._config import Config, _JSONEncoder, _locate
 
 
 @pytest.fixture(scope="function")
-def cfg():
+def cfg() -> Generator[Config, Any, None]:
     """Return a :class:`ixmp._config.Config` object without reading a file."""
     yield Config(read=False)
 
 
-def test_encoder():
+def test_encoder() -> None:
     # Custom encoder properly raises TypeError for unhandled value
     with pytest.raises(TypeError):
         _JSONEncoder().encode({"foo": range(10)})
 
 
-def test_locate(cfg):
+def test_locate(cfg: Config) -> None:
     try:
         # The result of this test depends on the user's environment. If
         # $HOME/.local/share/ixmp exists, the call will succeed; otherwise, it will
@@ -31,7 +33,7 @@ def test_locate(cfg):
 
 
 class TestConfig:
-    def test_set_get(self, cfg):
+    def test_set_get(self, cfg: Config) -> None:
         # ixmp has no string keys by default, so we insert a fake one
         cfg.register("test key", str, None)
         cfg.values["test key"] = "foo"
@@ -47,13 +49,13 @@ class TestConfig:
         cfg.set("test key", None)
         assert cfg.get("test key") == "bar"
 
-    def test_set_invalid_type(self, cfg):
+    def test_set_invalid_type(self, cfg: Config) -> None:
         """set() with invalid type raises exception."""
         cfg.register("test key", int, None)
         with pytest.raises(TypeError):
             cfg.set("test key", "foo")
 
-    def test_register(self, cfg):
+    def test_register(self, cfg: Config) -> None:
         # New key can be registered
         cfg.register("new key", int, 42)
 
@@ -71,7 +73,9 @@ class TestConfig:
         cfg.set("new key 2", "/foo/bar/baz")
         assert isinstance(cfg.get("new key 2"), Path)
 
-    def test_register_late(self, monkeypatch, tmp_path):
+    def test_register_late(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """Calling Config.register() after load from file retains existing values."""
         # Temporarily set IXMP_DATA to an empty directory, temporary for this function
         monkeypatch.setenv("IXMP_DATA", str(tmp_path))
@@ -96,7 +100,7 @@ class TestConfig:
         cfg.save()
         assert """  "foo": 456""" in tmp_path.joinpath("config.json").read_text()
 
-    def test_platform(self, cfg):
+    def test_platform(self, cfg: Config) -> None:
         # Default platform is 'local'
         assert cfg.values["platform"]["default"] == "local"
 
@@ -117,7 +121,7 @@ class TestConfig:
         with pytest.raises(ValueError):
             cfg.get_platform_info("nonexistent")
 
-    def test_platform_jvmargs(self, cfg):
+    def test_platform_jvmargs(self, cfg: Config) -> None:
         """JVM arguments are understood by add_platform."""
         cfg.add_platform("foo", "jdbc", "hsqldb", "/path/to/db", "-Xmx12G")
         assert "-Xmx12G" == cfg.get_platform_info("foo")[1]["jvmargs"]

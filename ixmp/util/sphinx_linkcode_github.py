@@ -45,7 +45,7 @@ def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
         return refs[0].remote_head
     except ValueError:  # Either no remote "origin", or raised explicitly
         # Same, but locally
-        refs = list(filter(lambda b: b.commit == commit, repo.branches))  # type: ignore
+        refs = list(filter(lambda b: b.commit == commit, repo.branches))
         if not refs:
             log.info(f"Unable to identify a branch for commit {commit}")
             return None

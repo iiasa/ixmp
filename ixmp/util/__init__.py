@@ -499,7 +499,7 @@ def format_scenario_list(
     platform: "Platform",
     model: Optional[str] = None,
     scenario: Optional[str] = None,
-    match: Optional[re.Pattern[str]] = None,
+    match: Optional[Union[str, re.Pattern[str]]] = None,
     default_only: bool = False,
     as_url: bool = False,
 ) -> list[str]:
@@ -528,7 +528,8 @@ def format_scenario_list(
     """
 
     if match:
-        match = re.compile(".*" + match.pattern + ".*")
+        _match = match if isinstance(match, str) else match.pattern
+        match = re.compile(".*" + _match + ".*")
 
     def describe(df: pd.DataFrame) -> "pd.Series[Union[int, str]]":
         N = len(df)

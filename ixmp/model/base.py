@@ -3,7 +3,10 @@ import os
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Unpack, cast
+from typing import TYPE_CHECKING, cast
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
 
 from ixmp.types import GamsModelInitKwargs, InitializeItemsKwargs
 from ixmp.util import maybe_check_out, maybe_commit

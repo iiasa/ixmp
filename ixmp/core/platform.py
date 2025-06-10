@@ -7,12 +7,14 @@ from typing import (
     Literal,
     Optional,
     Union,
-    Unpack,
     cast,
 )
 
 import numpy as np
 import pandas as pd
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
 
 from ixmp._config import config
 from ixmp.backend.common import FIELDS, ItemType

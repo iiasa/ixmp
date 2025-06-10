@@ -11,10 +11,13 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, Unpack, overload
+from typing import Any, Literal, Optional, Union, overload
 from warnings import warn
 
 import pandas as pd
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
 
 from ixmp.backend.common import ItemType
 from ixmp.core.platform import Platform

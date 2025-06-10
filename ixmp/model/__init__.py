@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Optional, Union, Unpack
+from typing import TYPE_CHECKING, Optional, Union
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
 
 from .dantzig import DantzigModel
 from .gams import GAMSModel

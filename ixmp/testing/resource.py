@@ -32,7 +32,7 @@ def format_meminfo(arr: Iterable[Any], cls: type = float) -> MemInfo:
 
 # Variables for memory_usage
 _COUNT = 0
-_PREV = np.zeros(6)
+_PREV: np.ndarray[tuple[int, ...], np.dtype[Any]] = np.zeros(6)
 _RT: Optional[Any] = None
 
 

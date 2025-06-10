@@ -21,6 +21,7 @@ from ixmp4.core.optimization.variable import Variable, VariableRepository
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 # TODO Import this from typing when dropping Python 3.11
+# TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
 from typing_extensions import TypeAlias, Unpack
 
 from ixmp.core.platform import Platform

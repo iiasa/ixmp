@@ -6,12 +6,14 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Literal,
-    NotRequired,
     Optional,
-    TypeAlias,
     TypedDict,
     Union,
 )
+
+# TODO Import from typing when dropping support for Python 3.10 (NotRequired)
+# TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
+from typing_extensions import NotRequired, TypeAlias
 
 from ixmp.backend.common import ItemType
 

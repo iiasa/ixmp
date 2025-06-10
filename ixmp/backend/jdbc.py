@@ -22,16 +22,17 @@ from typing import (
     Literal,
     Optional,
     Union,
-    Unpack,
     cast,
     overload,
-    override,
 )
 from weakref import WeakKeyDictionary
 
 import jpype
 import numpy as np
 import pandas as pd
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack, override
 
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario

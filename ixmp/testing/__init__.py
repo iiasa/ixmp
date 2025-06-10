@@ -41,11 +41,14 @@ from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal, Optional, Sequence, Union, override
+from typing import Any, Literal, Optional, Sequence, Union
 
 import pint
 import pytest
 from click.testing import CliRunner, Result
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config

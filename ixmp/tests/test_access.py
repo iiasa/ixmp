@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     from pytest_httpserver import HTTPServer
 
 
+# FIXME Why are these type: ignores required by mypy as run via pre-commit, but not on
+# the CLI?
 @pytest.fixture
-def mock(httpserver: "HTTPServer") -> "HTTPServer":
+def mock(httpserver: "HTTPServer") -> "HTTPServer":  # type: ignore[no-any-unimported]
     """Mock server with responses for both tests."""
     from werkzeug import Request, Response
 
@@ -43,7 +45,7 @@ def mock(httpserver: "HTTPServer") -> "HTTPServer":
 
 
 @pytest.fixture
-def test_props(
+def test_props(  # type: ignore[no-any-unimported]
     mock: "HTTPServer",
     request: pytest.FixtureRequest,
     tmp_path: Path,

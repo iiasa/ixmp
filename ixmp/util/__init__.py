@@ -629,7 +629,7 @@ def show_versions(
     try:
         from importlib.metadata import packages_distributions
     except ImportError:  # Python 3.9
-        from importlib_metadata import packages_distributions
+        from importlib_metadata import packages_distributions  # type: ignore[no-redef]
     from subprocess import DEVNULL, check_output
 
     from xarray.util.print_versions import get_sys_info

@@ -361,17 +361,10 @@ class TestScenario:
 
     # FIXME IXMP4Backend is missing an item, likely the scalar f again
     @pytest.mark.jdbc
-    def test_items0(self, scen: "Scenario") -> None:
-        # Without filters
-        iterator = scen.items()
-
-        # next() can be called → an iterator was returned
-        with pytest.warns(FutureWarning, match="par_data=False will be the default"):
-            next(iterator)
-
+    def test_iter_par_data(self, scen: "Scenario") -> None:
         # Iterator returns the expected parameter names
         exp = ["a", "b", "d", "f"]
-        for i, (name, data) in enumerate(scen.items(par_data=True)):
+        for i, (name, data) in enumerate(scen.iter_par_data()):
             # Name is correct in the expected order
             assert exp[i] == name
             # Data is one of the return types of .par()
@@ -381,7 +374,7 @@ class TestScenario:
         assert i == 3
 
         # With filters
-        iterator = scen.items(filters=dict(i=["seattle"]), par_data=True)
+        iterator = scen.iter_par_data(filters=dict(i=["seattle"]))
         exp_filters = [("a", 1), ("d", 3)]
         for i, (name, data) in enumerate(iterator):
             # Name is correct in the expected order
@@ -421,13 +414,15 @@ class TestScenario:
         assert exp == list(scen.items(item_type, indexed_by=indexed_by, par_data=False))
 
     def test_items2(self, caplog: pytest.LogCaptureFixture, scen: "Scenario") -> None:
-        list(scen.items(ixmp.ItemType.SET, filters={"foo": "bar"}))
-
-        # Warning is logged
-        assert (
-            "Scenario.items(…, filters=…) has no effect for item type 'set'"
-            in caplog.messages
-        )
+        """DeprecationWarning is omitted for filters keyword argument."""
+        with pytest.warns(
+            DeprecationWarning,
+            match=re.escape(
+                "Scenario.items(…, filters=…) keyword argument; use "
+                "Scenario.iter_par_data()"
+            ),
+        ):
+            list(scen.items(ixmp.ItemType.SET, filters={"foo": "bar"}))
 
     def test_var(self, scen: "Scenario") -> None:
         df = scen.var("x", filters={"i": ["seattle"]})

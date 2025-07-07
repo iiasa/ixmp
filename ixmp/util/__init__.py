@@ -16,8 +16,6 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from ixmp.backend.common import ItemType
-
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
     from ixmp.types import ParData, PlatformInfo, ScenarioIdentifiers
@@ -149,10 +147,7 @@ def diff(
         tuples of item name and data.
     """
     # Iterators; index 0 corresponds to `a`, 1 to `b`
-    items = [
-        a.items(filters=filters, type=ItemType.PAR, par_data=True),
-        b.items(filters=filters, type=ItemType.PAR, par_data=True),
-    ]
+    items = [a.iter_par_data(filters=filters), b.iter_par_data(filters=filters)]
     # State variables for loop
     name = ["", ""]
     data: list["ParData"] = [pd.DataFrame(), pd.DataFrame()]
@@ -161,43 +156,41 @@ def diff(
     name[0], data[0] = next(items[0])
     name[1], data[1] = next(items[1])
 
+    merge_kw = dict(how="outer", sort=True, suffixes=("_a", "_b"), indicator=True)
+
     while True:
         # Convert scalars to pd.DataFrame
         data = list(map(maybe_convert_scalar, data))
+
+        left, right = data
+
+        if not isinstance(left, pd.DataFrame) or not isinstance(right, pd.DataFrame):
+            log.warning("Not implemented: diff() dict values for scalars")
+            continue
+
+        df_l, df_r = left, right
 
         # Compare the names from `a` and `b` to ensure matching items
         if name[0] == name[1]:
             # Matching items in `a` and `b`
             current_name = name[0]
-            left, right = data
         else:
             # Mismatched; either `a` or `b` has no data for these filters
             current_name = min(*name)
             if name[0] > current_name:
                 # No data in `a` for `current_name`; create an empty DataFrame
-                left, right = pd.DataFrame(columns=data[1].columns), data[1]
+                df_l = pd.DataFrame(columns=right.columns)
             else:
-                left, right = data[0], pd.DataFrame(columns=data[0].columns)
+                df_r = pd.DataFrame(columns=left.columns)
 
         # Either merge on remaining columns; or, for scalars, on the indices
-        on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg: Mapping[str, Any] = (
-            dict(on=on) if on else dict(left_index=True, right_index=True)
-        )
+        if on := sorted(set(left.columns) - {"value", "unit"}):
+            kw: dict[str, Any] = merge_kw | dict(on=on)
+        else:
+            kw = merge_kw | dict(left_index=True, right_index=True)
 
         # Merge the data from each side
-        yield (
-            current_name,
-            pd.merge(
-                left,
-                right,
-                how="outer",
-                **on_arg,
-                sort=True,
-                suffixes=("_a", "_b"),
-                indicator=True,
-            ),
-        )
+        yield (current_name, pd.merge(df_l, df_r, **kw))
 
         # Maybe advance each iterators
         for i in (0, 1):

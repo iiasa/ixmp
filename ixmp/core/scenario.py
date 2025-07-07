@@ -1,9 +1,8 @@
 import logging
 from collections.abc import (
     Callable,
-    Generator,
     Iterable,
-    Mapping,
+    Iterator,
     MutableSequence,
     Sequence,
 )
@@ -386,48 +385,13 @@ class Scenario(TimeSeries):
             )
         return self.platform._backend.item_get_elements(self, "par", name, filters)
 
-    @overload
     def items(
         self,
-        type: Literal[ItemType.PAR] = ItemType.PAR,
-        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+        type: ItemType = ItemType.PAR,
         *,
         indexed_by: Optional[str] = None,
-        par_data: Optional[Literal[True]] = None,
-    ) -> Generator[tuple[str, pd.DataFrame], Any, None]: ...
-
-    @overload
-    def items(
-        self,
-        type: Literal[ItemType.PAR] = ItemType.PAR,
-        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
-        *,
-        indexed_by: Optional[str] = None,
-        par_data: Literal[False],
-    ) -> Generator[str, Any, None]: ...
-
-    @overload
-    def items(
-        self,
-        type: Literal[ItemType.SET, ItemType.VAR, ItemType.EQU],
-        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
-        *,
-        indexed_by: Optional[str] = None,
-        par_data: Optional[bool] = None,
-    ) -> Generator[str, Any, None]: ...
-
-    def items(
-        self,
-        type: ItemTypeFlags = ItemType.PAR,
-        filters: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
-        *,
-        indexed_by: Optional[str] = None,
-        par_data: Optional[bool] = None,
-    ) -> Generator[
-        Union[tuple[str, Union[dict[str, Union[float, str]], pd.DataFrame]], str],
-        Any,
-        None,
-    ]:
+        **kwargs: Any,
+    ) -> Iterator[str]:
         """Iterate over model data items.
 
         Parameters
@@ -435,76 +399,75 @@ class Scenario(TimeSeries):
         type : .ItemType, optional
             Types of items to iterate, for instance :attr:`.ItemType.PAR` for
             parameters.
+        indexed_by : str, optional
+            If given, only iterate over items where one of the item dimensions is
+            `indexed_by` the set of this name.
+
+        Yields
+        ------
+        str
+            Names of items.
+        """
+        # Handle deprecated items
+        if bool(kwargs.get("filters")):
+            warn(
+                "Scenario.items(…, filters=…) keyword argument; use "
+                "Scenario.iter_par_data()",
+                DeprecationWarning,
+                2,
+            )
+        elif kwargs.get("par_data", None) is not None:
+            warn(
+                "Scenario.items(…, par_data=True); use Scenario.iter_par_data()",
+                DeprecationWarning,
+                2,
+            )
+
+        # Iterate over items
+        for name in sorted(self.platform._backend.list_items(self, type.name.lower())):
+            # Skip if `indexed_by` is given but is not in the index sets of `name`
+            if indexed_by not in set(self.idx_sets(name)) | {None}:
+                continue
+
+            yield name
+
+    def iter_par_data(
+        self, filters: "Filters" = None, *, indexed_by: Optional[str] = None
+    ) -> Iterator[tuple[str, "ParData"]]:
+        """Iterate over tuples of parameter names and data.
+
+        Parameters
+        ----------
         filters : dict, optional
             Filters for values along dimensions; same as the `filters` argument to
             :meth:`par`. Only valid for :attr:`.ItemType.PAR`.
         indexed_by : str, optional
             If given, only iterate over items where one of the item dimensions is
             `indexed_by` the set of this name.
-        par_data : bool, optional
-            If :any:`True` (the default) and `type` is :attr:`.ItemType.PAR`, also
-            iterate over data for each parameter.
 
         Yields
         ------
-        str
-            if `type` is not :attr:`.ItemType.PAR`, or `par_data` is :any:`False`:
-            names of items.
         tuple
-            if `type` is :attr:`.ItemType.PAR` and `par_data` is :any:`True`:
-            each tuple is (item name, item data).
+            containing:
+
+            1. Parameter name.
+            2. Parameter data.
         """
         # Handle `filters` argument
-        if filters is None:
-            filters = dict()
-        elif type != ItemType.PAR:
-            log.warning(
-                "Scenario.items(…, filters=…) has no effect for item type "
-                + repr(type.name).lower()
-            )
+        filters = filters or dict()
 
-        # Handle `par_data` argument
-        if type == ItemType.PAR and par_data is None:
-            warn(
-                "using default par_data=True. In a future version of ixmp, "
-                "par_data=False will be the default.",
-                FutureWarning,
-                2,
-            )
-            par_data = True
-        elif par_data is None:
-            par_data = False
-
-        # Sorted list of items from the back end
-        # NOTE Convince type checker that all ItemType names are expected Literals
-        assert type.name is not None
-        _type: Union[Literal["set"], Literal["par"], Literal["equ"], Literal["var"]] = (
-            type.name.lower()  # type: ignore[assignment]
-        )
-
-        names: list[str] = sorted(self.platform._backend.list_items(self, _type))
-
-        # Iterate over items
-        for name in names:
+        for name in self.items(ItemType.PAR, indexed_by=indexed_by):
             idx_names = set(self.idx_names(name))
-            idx_sets = set(self.idx_sets(name))
 
-            # Skip if:
-            # - No overlap between given filters and this item's dimensions; or
-            # - indexed_by= is given but is not in the index sets of `name`.
-            if (len(filters) and not set(filters) & idx_names) or (
-                indexed_by not in (idx_sets | {None})
-            ):
+            # Skip if no overlap between given filters and this item's dimensions
+            if filters and not set(filters) & idx_names:
                 continue
 
-            if type is ItemType.PAR and par_data:
-                # Retrieve the data, reducing the filters to only the dimensions of the
-                # item
-                _filters = {k: v for k, v in filters.items() if k in idx_names}
-                yield (name, self.par(name, filters=_filters))
-            else:
-                # Only the name of the item
-                yield name
+            # Reduce the filters to only the dimensions of the item
+            _filters = {k: v for k, v in filters.items() if k in idx_names}
+
+            # Retrieve the data
+            yield (name, self.par(name, filters=_filters))
 
     # NOTE Changing the default here since that seems to be unused/untested
     def has_item(self, name: str, item_type: "ModelItemType" = ItemType.PAR) -> bool:
@@ -524,7 +487,7 @@ class Scenario(TimeSeries):
         --------
         items
         """
-        return name in self.items(item_type, par_data=False)
+        return name in self.items(item_type)
 
     #: Check whether the scenario has a equation `name`. See :meth:`has_item`.
     has_equ = partialmethod(has_item, item_type=ItemType.EQU)
@@ -603,7 +566,7 @@ class Scenario(TimeSeries):
         --------
         items
         """
-        return list(self.items(item_type, indexed_by=indexed_by, par_data=False))
+        return list(self.items(item_type, indexed_by=indexed_by))
 
     #: List all defined equations. See :meth:`list_items`.
     equ_list = partialmethod(list_items, ItemType.EQU)

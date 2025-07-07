@@ -1,32 +1,64 @@
 """Types for type hinting and checking of :mod:`ixmp` and downstream code."""
 
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Literal,
-    Optional,
-    TypedDict,
-    Union,
-)
+from typing import Any, Literal, Optional, TypedDict, Union
 
-# TODO Import from typing when dropping support for Python 3.10 (NotRequired)
-# TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
+import pandas
+
+# Compatibility with Python 3.11 and earlier
+# TODO Use "from typing import NotRequired" when dropping support for Python 3.10
+# TODO Use "type x = ..." instead of TypeAlias when dropping support for Python 3.11
 from typing_extensions import NotRequired, TypeAlias
 
 from ixmp.backend.common import ItemType
+from ixmp.core.scenario import Scenario
+from ixmp.core.timeseries import TimeSeries
+from ixmp.util.ixmp4 import ContainerData
 
-if TYPE_CHECKING:
-    from ixmp.core.scenario import Scenario
-    from ixmp.core.timeseries import TimeSeries
-    from ixmp.util.ixmp4 import ContainerData
-
-
-ItemTypeNames: TypeAlias = Literal["set", "par", "equ", "var"]
-ItemTypeFlags: TypeAlias = Literal[
-    ItemType.PAR, ItemType.SET, ItemType.EQU, ItemType.VAR
+#: Filters arguments to many functions. Generally non-str elements are converted to
+#: str(). Since object.__str__() exists, any Python class has a string representation.
+Filters: TypeAlias = Optional[
+    Union[
+        Mapping[str, Union[Any, Sequence[Any]]],
+        Mapping[str, Any],
+    ]
 ]
+
+#: Any of the members of :attr:`ItemType.MODEL`.
+ModelItemType: TypeAlias = Literal[
+    ItemType.EQU, ItemType.PAR, ItemType.SET, ItemType.VAR
+]
+
+#: Return type of :meth:`.Scenario.set` for a simple/non-indexed set.
+SimpleSetData: TypeAlias = "pandas.Series[Union[float, int, str]]"
+
+#: Return type of :meth:`.Scenario.set`.
+SetData: TypeAlias = Union[SimpleSetData, pandas.DataFrame]
+
+
+class ScalarParData(TypedDict):
+    """Return type of :meth:`Scenario.par` for a 0-dimensional parameter."""
+
+    value: float
+    unit: str
+
+
+#: Return type of :meth:`.Scenario.par`.
+ParData: TypeAlias = Union[ScalarParData, pandas.DataFrame]
+
+
+class ScalarSolutionData(TypedDict):
+    """Return type of :meth:`Scenario.equ` or :meth:`.var` for a 0-dimensional item."""
+
+    lvl: float
+    mrg: float
+
+
+#: Return type of :meth:`.Scenario.equ` and :meth:`.Scenario.var`.
+SolutionData: TypeAlias = Union[ScalarSolutionData, pandas.DataFrame]
+
 VersionType: TypeAlias = Optional[Union[int, Literal["new"]]]
 
 
@@ -63,9 +95,11 @@ class PlatformInitKwargs(BackendInitKwargs, JDBCBackendInitKwargs):
 
 
 class InitializeItemsKwargs(TypedDict):
-    ix_type: Literal["set", "par", "equ", "var"]
-    idx_sets: NotRequired[Optional[list[str]]]
-    idx_names: NotRequired[Optional[list[str]]]
+    """Keyword arguments to :meth:`.base.Model.initialize_items`."""
+
+    ix_type: str
+    idx_sets: NotRequired[Optional[Sequence[str]]]
+    idx_names: NotRequired[Optional[Sequence[str]]]
 
 
 class GamsModelInitKwargs(TypedDict, total=False):
@@ -91,15 +125,17 @@ class ScenarioInitKwargs(TypedDict, total=False):
     with_data: bool
 
 
-class ScenarioIdentifiers(TypedDict):
-    """Identifiers of a Scenario."""
+class ModelScenario(TypedDict):
+    """Partial identifiers of a :class:`.Scenario`."""
 
     model: str
     scenario: str
 
 
-class ScenarioInfo(ScenarioIdentifiers):
-    version: NotRequired[Optional[Union[int, Literal["new"]]]]
+class ScenarioIdentifiers(ModelScenario):
+    """Identifiers of a :class:`.Scenario`."""
+
+    version: NotRequired[VersionType]
 
 
 class PlatformInfo(TypedDict):

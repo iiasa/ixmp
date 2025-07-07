@@ -545,7 +545,7 @@ def format_scenario_list(
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
         .groupby(["model", "scenario"], group_keys=True)
-        .apply(describe, include_groups=False)
+        .apply(describe)
     )
 
     # If we have no results; re-create a minimal empty data frame
@@ -565,16 +565,8 @@ def format_scenario_list(
     lines = []
 
     if as_url:
-        info["url"] = f"ixmp://{platform.name}"
-        _model = info["model"]
-        # TODO It seems that pandas-stubs is out-of-date with pandas here: from
-        # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html
-        # > If others is a list-like that contains a combination of Series, Index or
-        # > np.ndarray (1-dim), then all elements will be unpacked and must satisfy the
-        # > above criteria individually.
-        # Open an issue/remove once pandas-stubs recognizes this as correct
-        urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")  # type: ignore[list-item]
-        lines = urls.tolist()
+        url_pre = f"ixmp://{platform.name}/"
+        lines.extend((url_pre + info["model"] + "/" + info["scenario"]).tolist())
     else:
         width = 0 if not len(info) else info["scenario"].str.len().max()
         info["scenario"] = info["scenario"].str.ljust(width + 2)

@@ -83,7 +83,7 @@ def logger() -> logging.Logger:
 
 
 def as_str_list(
-    arg: Optional[Union[str, dict[str, Any], Iterable[object]]],
+    arg: Optional[Union[int, str, dict[str, Any], Iterable[object]]],
     idx_names: Optional[Iterable[str]] = None,
 ) -> list[str]:
     """Convert various `arg` to list of str.
@@ -103,7 +103,7 @@ def as_str_list(
         # arg must be iterable
         # NB narrower ABC Sequence does not work here; e.g. test_excel_io() fails via
         #    Scenario.add_set().
-        if isinstance(arg, Iterable) and not isinstance(arg, str):
+        if isinstance(arg, Iterable) and not isinstance(arg, (int, str)):
             return list(map(str, arg))
         else:
             return [str(arg)]

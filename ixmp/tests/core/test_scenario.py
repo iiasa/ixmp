@@ -426,6 +426,7 @@ class TestScenario:
 
     def test_var(self, scen: "Scenario") -> None:
         df = scen.var("x", filters={"i": ["seattle"]})
+        assert isinstance(df, pd.DataFrame)
 
         # Labels along the 'j' dimension
         npt.assert_array_equal(df["j"], ["new-york", "chicago", "topeka"])

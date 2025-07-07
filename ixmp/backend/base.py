@@ -14,20 +14,23 @@ from collections.abc import (
 )
 from copy import copy
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 import pandas as pd
 
-# TODO Import this from typing when dropping Python 3.11
+# Compatibility with Python 3.11
+# TODO Use "from typing import Unpack" when dropping support for Python 3.11
 from typing_extensions import Unpack
 
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
-from ixmp.types import ItemTypeNames, ReadKwargs, WriteFiltersKwargs, WriteKwargs
 
 from .common import ItemType
 from .io import s_read_excel, s_write_excel, ts_read_file
+
+if TYPE_CHECKING:
+    from ixmp.types import ReadKwargs, WriteFiltersKwargs, WriteKwargs
 
 
 class Backend(ABC):
@@ -398,7 +401,10 @@ class Backend(ABC):
         """
 
     def read_file(
-        self, path: os.PathLike[str], item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+        self,
+        path: os.PathLike[str],
+        item_type: ItemType,
+        **kwargs: Unpack["ReadKwargs"],
     ) -> None:
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
@@ -439,7 +445,7 @@ class Backend(ABC):
         --------
         write_file
         """
-        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        filters: "WriteFiltersKwargs" = kwargs["filters"] if "filters" in kwargs else {}
         s, _ = self._handle_rw_filters(filters=filters)
 
         path = Path(path)
@@ -464,7 +470,10 @@ class Backend(ABC):
             raise NotImplementedError
 
     def write_file(
-        self, path: os.PathLike[str], item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+        self,
+        path: os.PathLike[str],
+        item_type: ItemType,
+        **kwargs: Unpack["WriteKwargs"],
     ) -> None:
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
@@ -498,7 +507,7 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
         # any other filters
-        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        filters: "WriteFiltersKwargs" = kwargs["filters"] if "filters" in kwargs else {}
         s, kwargs["filters"] = self._handle_rw_filters(filters=filters)
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
@@ -631,8 +640,8 @@ class Backend(ABC):
 
     @staticmethod
     def _handle_rw_filters(
-        filters: WriteFiltersKwargs,
-    ) -> tuple[Optional[TimeSeries], WriteFiltersKwargs]:
+        filters: "WriteFiltersKwargs",
+    ) -> tuple[Optional[TimeSeries], "WriteFiltersKwargs"]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
@@ -872,7 +881,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_items(self, s: Scenario, type: ItemTypeNames) -> list[str]:
+    def list_items(self, s: Scenario, type: str) -> list[str]:
         """Return a list of names of items of `type`.
 
         Parameters
@@ -884,7 +893,7 @@ class Backend(ABC):
     def init_item(
         self,
         s: Scenario,
-        type: ItemTypeNames,
+        type: str,
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -970,7 +979,7 @@ class Backend(ABC):
     def item_get_elements(
         self,
         s: Scenario,
-        ix_type: ItemTypeNames,
+        ix_type: str,
         name: str,
         filters: Optional[Mapping[str, Iterable[object]]] = None,
     ) -> Union[

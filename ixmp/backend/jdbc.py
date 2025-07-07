@@ -38,7 +38,6 @@ from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.types import (
-    ItemTypeNames,
     JDBCBackendInitKwargs,
     ReadKwargs,
     VersionType,
@@ -1072,13 +1071,13 @@ class JDBCBackend(CachingBackend):
         assert isinstance(result, bool)
         return result
 
-    def list_items(self, s: Scenario, type: ItemTypeNames) -> list[str]:
+    def list_items(self, s: Scenario, type: str) -> list[str]:
         return to_pylist(getattr(self.jindex[s], f"get{type.title()}List")())
 
     def init_item(
         self,
         s: Scenario,
-        type: ItemTypeNames,
+        type: str,
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -1164,7 +1163,7 @@ class JDBCBackend(CachingBackend):
     def item_get_elements(  # noqa: C901
         self,
         s: Scenario,
-        ix_type: ItemTypeNames,
+        ix_type: str,
         name: str,
         filters: Optional[Mapping[str, Iterable[object]]] = None,
     ) -> Union[

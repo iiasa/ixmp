@@ -517,7 +517,7 @@ class IXMP4Backend(CachingBackend):
     def init_item(
         self,
         s: Scenario,
-        type: ItemTypeNames,
+        type: str,
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -923,7 +923,7 @@ class IXMP4Backend(CachingBackend):
     def item_get_elements(
         self,
         s: Scenario,
-        ix_type: ItemTypeNames,
+        ix_type: str,
         name: str,
         filters: Optional[Mapping[str, Iterable[object]]] = None,
     ) -> Union[dict[str, Any], "pd.Series[Union[float, int, str]]", pd.DataFrame]:

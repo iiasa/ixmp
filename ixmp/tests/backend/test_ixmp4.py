@@ -54,20 +54,20 @@ class TestIxmp4Functions:
             ixmp4_backend._ni()
 
     def test__get_repo(self, ixmp4_backend: Any, scenario: Scenario) -> None:
-        from ixmp4.core.optimization.equation import EquationRepository
-        from ixmp4.core.optimization.indexset import IndexSetRepository
-        from ixmp4.core.optimization.parameter import ParameterRepository
-        from ixmp4.core.optimization.scalar import ScalarRepository
-        from ixmp4.core.optimization.table import TableRepository
-        from ixmp4.core.optimization.variable import VariableRepository
+        from ixmp4.core.optimization.equation import Equation, EquationRepository
+        from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+        from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
+        from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
+        from ixmp4.core.optimization.table import Table, TableRepository
+        from ixmp4.core.optimization.variable import Variable, VariableRepository
 
-        repos: dict[Literal["indexset", "scalar", "set", "par", "equ", "var"], Any] = {
-            "indexset": IndexSetRepository,
-            "scalar": ScalarRepository,
-            "set": TableRepository,
-            "par": ParameterRepository,
-            "equ": EquationRepository,
-            "var": VariableRepository,
+        repos = {
+            IndexSet: IndexSetRepository,
+            Scalar: ScalarRepository,
+            Table: TableRepository,
+            Parameter: ParameterRepository,
+            Equation: EquationRepository,
+            Variable: VariableRepository,
         }
 
         # Test correct kind of instance is returned
@@ -76,26 +76,20 @@ class TestIxmp4Functions:
             assert isinstance(repo, expected_repo)
 
     def test__find_item(self, ixmp4_backend: Any, scenario: Scenario) -> None:
+        from ixmp4.core.optimization.indexset import IndexSet
+
         # Test unknown item name raises
-        with pytest.raises(KeyError, match="No item called 'NotFound' found"):
+        with pytest.raises(KeyError, match="No item named 'NotFound' in this Scenario"):
             ixmp4_backend._find_item(s=scenario, name="NotFound")
 
         # Test finding an item and its type
         name = "foo"
-        _type: Literal["indexset"] = "indexset"
+        _type = IndexSet
         scenario.init_set(name=name)
-        return_type, return_item = ixmp4_backend._find_item(
+        return_item = ixmp4_backend._find_item(
             s=scenario, name=name, types=tuple([_type])
         )
-        assert (_type, name) == (return_type, return_item.name)
-
-    def test__get_item(self, ixmp4_backend: Any, scenario: Scenario) -> None:
-        # Test getting an item
-        name = "foo"
-        _type: Literal["indexset"] = "indexset"
-        scenario.init_set(name=name)
-        indexset = ixmp4_backend._get_item(s=scenario, name=name, type=_type)
-        assert indexset.name == name
+        assert (_type, name) == (type(return_item), return_item.name)
 
     def test__get_indexset_or_table(
         self, ixmp4_backend: Any, scenario: Scenario

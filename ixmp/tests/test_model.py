@@ -109,7 +109,7 @@ def test_model_initialize(
     s.init_par("b", idx_sets=["i"], idx_names=["i_dim"])
 
     # Logs an error message
-    with assert_logs(caplog, "Existing index sets of 'b' ['i'] do not match ['j']"):
+    with assert_logs(caplog, "Existing index sets of 'b' ('i',) do not match ('j',)"):
         DantzigModel.initialize(s)
 
 

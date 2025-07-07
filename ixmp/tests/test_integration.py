@@ -56,10 +56,7 @@ def test_run_clone(
 
     # cloning with `keep_solution=True` and `first_model_year` raises a warning
     scen.clone(keep_solution=True, shift_first_model_year=2005)
-    assert (
-        "Override keep_solution=True for shift_first_model_year"
-        == caplog.records[-1].message
-    )
+    assert "Override keep_solution=True for shift_first_model_year" in caplog.messages
 
     # cloning with `keep_solution=False` drops the solution and only keeps
     # timeseries set as `meta=True`

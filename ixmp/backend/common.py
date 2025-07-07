@@ -1,7 +1,14 @@
 """Common structures shared by all backends."""
 
-from enum import IntFlag
-from typing import Union
+from enum import IntFlag, auto
+from typing import TYPE_CHECKING, Union
+
+# Compatibility with Python 3.9
+# TODO Use "from typing import …" when dropping support for Python 3.9
+from typing_extensions import TypeGuard
+
+if TYPE_CHECKING:
+    from ixmp.types import ModelItemType
 
 #: Lists of field names for tuples returned by Backend API methods.
 #:
@@ -52,37 +59,35 @@ IAMC_IDX: list[Union[str, int]] = ["model", "scenario", "region", "variable", "u
 class ItemType(IntFlag):
     """Type of data items in :class:`.ixmp.TimeSeries` and :class:`.ixmp.Scenario`."""
 
-    # NB the docstring comments ('#:') are placed as they are to ensure the
-    #    output is readable.
-
-    TS = 1
     #: Time series data variable.
-    T = TS
+    TS = auto()
 
-    SET = 2
     #: Set.
-    S = SET
+    SET = auto()
 
-    PAR = 4
     #: Parameter.
-    P = PAR
+    PAR = auto()
 
-    VAR = 8
     #: Model variable.
-    V = VAR
+    VAR = auto()
 
-    EQU = 16
     #: Equation.
-    E = EQU
+    EQU = auto()
 
-    MODEL = SET + PAR + VAR + EQU
-    #: All kinds of model-related data, i.e. :attr:`SET`, :attr:`PAR`,
-    #: :attr:`VAR` and :attr:`EQU`.
-    M = MODEL
+    #: All kinds of model-related data, i.e. :attr:`SET`, :attr:`PAR`, :attr:`VAR` and
+    # :attr:`EQU`.
+    MODEL = SET | PAR | VAR | EQU
 
     #: Model solution data, i.e. :attr:`VAR` and :attr:`EQU`.
-    SOLUTION = VAR + EQU
+    SOLUTION = VAR | EQU
 
-    ALL = TS + MODEL
     #: All data, i.e. :attr:`MODEL` and :attr:`TS`.
-    A = ALL
+    ALL = TS | MODEL
+
+    @property
+    def name(self) -> str:
+        return str(super().name)
+
+    @staticmethod
+    def is_model_data(value: "ItemType") -> TypeGuard["ModelItemType"]:
+        return bool(value & ItemType.MODEL)

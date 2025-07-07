@@ -299,9 +299,7 @@ def maybe_check_out(timeseries: "TimeSeries", state: Optional[bool] = None) -> b
         return True
 
 
-def maybe_commit(
-    timeseries: "TimeSeries", condition: Union[bool, int], message: str
-) -> bool:
+def maybe_commit(timeseries: "TimeSeries", condition: bool, message: str) -> bool:
     """Commit `timeseries` with `message` if `condition` is :obj:`True`.
 
     Returns

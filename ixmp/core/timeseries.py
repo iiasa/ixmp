@@ -106,6 +106,20 @@ class TimeSeries:
             self.version = version
             self.platform._backend.get(self)
 
+    def _backend(self, method: str, *args: Any, **kwargs: Any) -> Any:
+        """Convenience method for calling `method` on the backend.
+
+        The weak reference to the Platform object is used, if it has not been garbage
+        collected.
+        """
+        warn(
+            f"ixmp.TimeSeries._backend({method!r}, …); call "
+            "TimeSeries.platform._backend.{method}(…) instead",
+            DeprecationWarning,
+            2,
+        )
+        return self.platform._backend(self, method, *args, **kwargs)
+
     def __del__(self) -> None:
         # Instruct the back end to free memory associated with the TimeSeries
         try:

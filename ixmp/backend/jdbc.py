@@ -18,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
     Optional,
@@ -37,16 +38,23 @@ from typing_extensions import Unpack, override
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
-from ixmp.types import (
-    JDBCBackendInitKwargs,
-    ReadKwargs,
-    VersionType,
-    WriteKwargs,
-)
 from ixmp.util import as_str_list, filtered
 
 from .base import CachingBackend
 from .common import FIELDS, ItemType
+
+if TYPE_CHECKING:
+    from ixmp.types import (
+        Filters,
+        JDBCBackendInitKwargs,
+        ParData,
+        ReadKwargs,
+        SetData,
+        SolutionData,
+        VersionType,
+        WriteKwargs,
+    )
+
 
 log = logging.getLogger(__name__)
 
@@ -304,7 +312,7 @@ class JDBCBackend(CachingBackend):
         dbprops: Optional[os.PathLike[str]] = None,
         cache: bool = True,
         log_level: Optional[Union[int, str]] = None,
-        **kwargs: Unpack[JDBCBackendInitKwargs],
+        **kwargs: Unpack["JDBCBackendInitKwargs"],
     ) -> None:
         properties: Optional[Any] = None
 
@@ -597,7 +605,7 @@ class JDBCBackend(CachingBackend):
         self,
         path: Path,  # type: ignore[override]
         item_type: ItemType,
-        **kwargs: Unpack[ReadKwargs],
+        **kwargs: Unpack["ReadKwargs"],
     ) -> None:
         """Read Platform, TimeSeries, or Scenario data from file.
 
@@ -668,7 +676,7 @@ class JDBCBackend(CachingBackend):
         self,
         path: os.PathLike[str],
         item_type: ItemType,
-        **kwargs: Unpack[WriteKwargs],
+        **kwargs: Unpack["WriteKwargs"],
     ) -> None:
         """Write Platform, TimeSeries, or Scenario data to file.
 
@@ -1138,8 +1146,8 @@ class JDBCBackend(CachingBackend):
         s: Scenario,
         ix_type: Literal["set"],
         name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]: ...
+        filters: "Filters" = None,
+    ) -> "SetData": ...
 
     @overload
     def item_get_elements(
@@ -1147,8 +1155,8 @@ class JDBCBackend(CachingBackend):
         s: Scenario,
         ix_type: Literal["par"],
         name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]: ...
+        filters: "Filters" = None,
+    ) -> "ParData": ...
 
     @overload
     def item_get_elements(
@@ -1156,22 +1164,13 @@ class JDBCBackend(CachingBackend):
         s: Scenario,
         ix_type: Literal["equ", "var"],
         name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, float], pd.DataFrame]: ...
+        filters: "Filters" = None,
+    ) -> "SolutionData": ...
 
     # FIXME reduce complexity 18 → ≤13
     def item_get_elements(  # noqa: C901
-        self,
-        s: Scenario,
-        ix_type: str,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[
-        dict[str, Union[float, str]],
-        dict[str, float],
-        "pd.Series[Union[float, int, str]]",
-        pd.DataFrame,
-    ]:
+        self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         if filters:
             # Convert filter elements to strings
             filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
@@ -1219,12 +1218,7 @@ class JDBCBackend(CachingBackend):
         else:
             jList = item.getElements()
 
-        result: Union[
-            pd.DataFrame,
-            "pd.Series[Union[float, int, str]]",
-            dict[str, float],
-            dict[str, Union[float, str]],
-        ]
+        result: Union["SetData", "ParData", "SolutionData"]
 
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
@@ -1359,7 +1353,7 @@ class JDBCBackend(CachingBackend):
         self,
         model: Optional[str] = None,
         scenario: Optional[str] = None,
-        version: VersionType = None,
+        version: "VersionType" = None,
         strict: bool = False,
     ) -> dict[str, Any]:
         self._validate_meta_args(model, scenario, version)
@@ -1434,13 +1428,7 @@ class JDBCBackend(CachingBackend):
 
     # Helpers; not part of the Backend interface
 
-    def _get_item(
-        self,
-        s: Scenario,
-        ix_type: Literal["set", "par", "equ", "var", "item"],
-        name: str,
-        load: bool = True,
-    ) -> Any:
+    def _get_item(self, s: Scenario, item: Item, load: bool = True) -> Any:
         """Return the Java object for item `name` of `ix_type`.
 
         Parameters
@@ -1462,27 +1450,6 @@ class JDBCBackend(CachingBackend):
                 raise KeyError(name) from None
             else:  # pragma: no cover
                 _raise_jexception(e)
-
-    # Functions to override type hints of CachingBackend
-
-    def cache_get(
-        self,
-        ts: TimeSeries,
-        ix_type: str,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[Any]]],
-    ) -> Union[
-        dict[str, Union[float, str]], "pd.Series[Union[float, int, str]]", pd.DataFrame
-    ]:
-        # NOTE Based on how we use self.cache() above, cache will only have these values
-        return cast(
-            Union[
-                dict[str, Union[float, str]],
-                "pd.Series[Union[float, int, str]]",
-                pd.DataFrame,
-            ],
-            super().cache_get(ts, ix_type, name, filters),
-        )
 
 
 def start_jvm(jvmargs: Optional[Union[str, list[str]]] = None) -> None:

@@ -11,7 +11,7 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 from warnings import warn
 
 import pandas as pd
@@ -22,14 +22,20 @@ from typing_extensions import Unpack
 from ixmp.backend.common import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
-from ixmp.types import (
-    GamsModelInitKwargs,
-    ItemTypeFlags,
-    ScenarioInitKwargs,
-    VersionType,
-    WriteFiltersKwargs,
-)
 from ixmp.util import as_str_list, check_year
+
+if TYPE_CHECKING:
+    from ixmp.types import (
+        Filters,
+        GamsModelInitKwargs,
+        ModelItemType,
+        ParData,
+        ScalarParData,
+        ScenarioInitKwargs,
+        SolutionData,
+        VersionType,
+        WriteFiltersKwargs,
+    )
 
 log = logging.getLogger(__name__)
 
@@ -63,10 +69,10 @@ class Scenario(TimeSeries):
         mp: Platform,
         model: str,
         scenario: str,
-        version: VersionType = None,
+        version: "VersionType" = None,
         scheme: Optional[str] = None,
         annotation: Optional[str] = None,
-        **model_init_args: Unpack[ScenarioInitKwargs],
+        **model_init_args: Unpack["ScenarioInitKwargs"],
     ) -> None:
         from ixmp.model import get_model
 
@@ -183,7 +189,7 @@ class Scenario(TimeSeries):
             return [str(key_or_keys)]
 
     def set(
-        self, name: str, filters: Optional[Mapping[str, Iterable[object]]] = None
+        self, name: str, filters: "Filters" = None
     ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]:
         """Return the (filtered) elements of a set.
 
@@ -359,12 +365,7 @@ class Scenario(TimeSeries):
                 self, "set", name, self._keys(name, key)
             )
 
-    def par(
-        self,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-        **kwargs: Any,
-    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]:
+    def par(self, name: str, filters: "Filters" = None, **kwargs: Any) -> "ParData":
         """Return parameter data.
 
         If `filters` is provided, only a subset of data, matching the filters, is
@@ -506,7 +507,7 @@ class Scenario(TimeSeries):
                 yield name
 
     # NOTE Changing the default here since that seems to be unused/untested
-    def has_item(self, name: str, item_type: ItemTypeFlags = ItemType.PAR) -> bool:
+    def has_item(self, name: str, item_type: "ModelItemType" = ItemType.PAR) -> bool:
         """Check whether the Scenario has an item `name` of `item_type`.
 
         In general, user code **should** call one of :meth:`.has_equ`, :meth:`.has_par`,
@@ -536,7 +537,7 @@ class Scenario(TimeSeries):
 
     def init_item(
         self,
-        item_type: ItemTypeFlags,
+        item_type: "ModelItemType",
         name: str,
         idx_sets: Optional[Sequence[str]] = None,
         idx_names: Optional[Sequence[str]] = None,
@@ -594,7 +595,7 @@ class Scenario(TimeSeries):
     init_var = partialmethod(init_item, ItemType.VAR)
 
     def list_items(
-        self, item_type: ItemTypeFlags, indexed_by: Optional[str] = None
+        self, item_type: "ModelItemType", indexed_by: Optional[str] = None
     ) -> list[str]:
         """List all defined items of type `item_type`.
 
@@ -751,8 +752,8 @@ class Scenario(TimeSeries):
         self.init_par(name, [], [])
         self.change_scalar(name, val, unit, comment)
 
-    def scalar(self, name: str) -> dict[str, Union[Union[float, int], str]]:
-        """Return the value and unit of a scalar.
+    def scalar(self, name: str) -> "ScalarParData":
+        """Return the value and unit of a scalar parameter.
 
         Parameters
         ----------
@@ -818,11 +819,8 @@ class Scenario(TimeSeries):
 
     # FIXME What ensures that filters has the correct type?
     def var(
-        self,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-        **kwargs: Any,
-    ) -> Union[dict[str, float], pd.DataFrame]:
+        self, name: str, filters: "Filters" = None, **kwargs: Any
+    ) -> "SolutionData":
         """Return a dataframe of (filtered) elements for a specific variable.
 
         Parameters
@@ -835,11 +833,8 @@ class Scenario(TimeSeries):
         return self.platform._backend.item_get_elements(self, "var", name, filters)
 
     def equ(
-        self,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-        **kwargs: Any,
-    ) -> Union[dict[str, float], pd.DataFrame]:
+        self, name: str, filters: "Filters" = None, **kwargs: Any
+    ) -> "SolutionData":
         """Return a dataframe of (filtered) elements for a specific equation.
 
         Parameters
@@ -944,7 +939,7 @@ class Scenario(TimeSeries):
         model: Optional[str] = None,
         callback: Optional[Callable[["Scenario"], bool]] = None,
         cb_kwargs: dict[str, Any] = {},
-        **model_options: Unpack[GamsModelInitKwargs],
+        **model_options: Unpack["GamsModelInitKwargs"],
     ) -> None:
         """Solve the model and store output.
 
@@ -1047,7 +1042,7 @@ class Scenario(TimeSeries):
         self,
         path: PathLike[str],
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Optional[WriteFiltersKwargs] = None,
+        filters: Optional["WriteFiltersKwargs"] = None,
         max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.

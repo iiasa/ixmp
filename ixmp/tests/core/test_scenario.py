@@ -11,11 +11,11 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import assert_logs, make_dantzig, models
-from ixmp.types import GamsModelInitKwargs, ScenarioIdentifiers
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
     from ixmp.core.scenario import Scenario
+    from ixmp.types import GamsModelInitKwargs, ModelScenario
 
 
 class AddParKwargs(TypedDict, total=False):
@@ -171,7 +171,7 @@ class TestScenario:
         #    back end can handle.
         scheme = str(hash(request.node.nodeid))
 
-        m_s: ScenarioIdentifiers = dict(model="test_clone_scheme", scenario="s")
+        m_s: "ModelScenario" = dict(model="test_clone_scheme", scenario="s")
         s0 = ixmp.Scenario(test_mp, **m_s, version="new", scheme=scheme)
         s0.commit("")
 
@@ -855,7 +855,7 @@ def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> 
     scen = make_dantzig(test_mp, request=request)
 
     # Solve the scenario as configured
-    solve_args: GamsModelInitKwargs = dict(quiet=True)
+    solve_args: "GamsModelInitKwargs" = dict(quiet=True)
     scen.solve(model="dantzig", **solve_args)
 
     # Store the expected value of the decision variable, x

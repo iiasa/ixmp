@@ -16,8 +16,6 @@ from copy import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
-import pandas as pd
-
 # Compatibility with Python 3.11
 # TODO Use "from typing import Unpack" when dropping support for Python 3.11
 from typing_extensions import Unpack
@@ -30,7 +28,15 @@ from .common import ItemType
 from .io import s_read_excel, s_write_excel, ts_read_file
 
 if TYPE_CHECKING:
-    from ixmp.types import ReadKwargs, WriteFiltersKwargs, WriteKwargs
+    from ixmp.types import (
+        Filters,
+        ParData,
+        ReadKwargs,
+        SetData,
+        SolutionData,
+        WriteFiltersKwargs,
+        WriteKwargs,
+    )
 
 
 class Backend(ABC):
@@ -950,21 +956,13 @@ class Backend(ABC):
 
     @overload
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: Literal["set"],
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]: ...
+        self, s: Scenario, ix_type: Literal["set"], name: str, filters: "Filters" = None
+    ) -> "SetData": ...
 
     @overload
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: Literal["par"],
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]: ...
+        self, s: Scenario, ix_type: Literal["par"], name: str, filters: "Filters" = None
+    ) -> "ParData": ...
 
     @overload
     def item_get_elements(
@@ -972,22 +970,13 @@ class Backend(ABC):
         s: Scenario,
         ix_type: Literal["equ", "var"],
         name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, float], pd.DataFrame]: ...
+        filters: "Filters" = None,
+    ) -> "SolutionData": ...
 
     @abstractmethod
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: str,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[
-        dict[str, Union[float, str]],
-        dict[str, float],
-        "pd.Series[Union[float, int, str]]",
-        pd.DataFrame,
-    ]:
+        self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         """Return elements of item `name`.
 
         Parameters
@@ -1280,7 +1269,9 @@ class CachingBackend(Backend):
 
     #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on the
     #: subclass' usage of the cache.
-    _cache: MutableMapping[tuple[Hashable, ...], object] = {}
+    _cache: MutableMapping[
+        tuple[Hashable, ...], Union["SetData", "ParData", "SolutionData"]
+    ] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
     #: using :meth:`cache_get`.
@@ -1329,12 +1320,8 @@ class CachingBackend(Backend):
             return (ts_id, ix_type, name, hash(json.dumps(sorted(filters.items()))))
 
     def cache_get(
-        self,
-        ts: TimeSeries,
-        ix_type: str,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[Any]]],
-    ) -> object:
+        self, ts: TimeSeries, ix_type: str, name: str, filters: "Filters"
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         """Retrieve value from cache.
 
         The value in :attr:`_cache` is copied to avoid cached values being modified by
@@ -1358,8 +1345,8 @@ class CachingBackend(Backend):
         ts: TimeSeries,
         ix_type: str,
         name: str,
-        filters: Optional[Mapping[str, Iterable[Any]]],
-        value: object,
+        filters: "Filters",
+        value: Union["SetData", "ParData", "SolutionData"],
     ) -> bool:
         """Store `value` in cache.
 

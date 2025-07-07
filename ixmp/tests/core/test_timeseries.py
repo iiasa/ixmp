@@ -11,10 +11,10 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import IAMC_IDX, Scenario, TimeSeries
 from ixmp.testing import DATA, models
-from ixmp.types import ScenarioIdentifiers
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
+    from ixmp.types import ScenarioIdentifiers
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]
@@ -295,7 +295,7 @@ class TestTimeSeries:
         ts: TimeSeries,
         cls: Union[type[TimeSeries], type[Scenario]],
     ) -> None:
-        info: ScenarioIdentifiers = dict(model=ts.model, scenario=ts.scenario)
+        info: "ScenarioIdentifiers" = dict(model=ts.model, scenario=ts.scenario)
 
         mp.add_region_synonym("Hell", "World")
 

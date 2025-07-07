@@ -12,10 +12,10 @@ from ixmp.model.base import Model, ModelError
 from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import GAMSInfo, gams_version
 from ixmp.testing import assert_logs, make_dantzig
-from ixmp.types import GamsModelInitKwargs
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
+    from ixmp.types import GamsModelInitKwargs
 
 
 def test_base_model() -> None:
@@ -177,7 +177,7 @@ class TestGAMSModel:
         self,
         test_data_path: Path,
         dantzig: Scenario,
-        kwargs: GamsModelInitKwargs,
+        kwargs: "GamsModelInitKwargs",
     ) -> None:
         """Options to GAMSModel are handled without error."""
         kwargs["quiet"] = True

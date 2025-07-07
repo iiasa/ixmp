@@ -17,10 +17,10 @@ import numpy as np
 import pandas as pd
 
 from ixmp.backend.common import ItemType
-from ixmp.types import PlatformInfo, ScenarioInfo
 
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
+    from ixmp.types import ParData, PlatformInfo, ScenarioIdentifiers
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def diff(
     ]
     # State variables for loop
     name = ["", ""]
-    data: list[pd.DataFrame] = [pd.DataFrame(), pd.DataFrame()]
+    data: list["ParData"] = [pd.DataFrame(), pd.DataFrame()]
 
     # Elements for first iteration
     name[0], data[0] = next(items[0])
@@ -326,7 +326,7 @@ def maybe_commit(timeseries: "TimeSeries", condition: bool, message: str) -> boo
         return True
 
 
-def maybe_convert_scalar(obj: Union[dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
+def maybe_convert_scalar(obj: Union["ParData"]) -> pd.DataFrame:
     """Convert `obj` to :class:`pandas.DataFrame`.
 
     Parameters
@@ -346,7 +346,7 @@ def maybe_convert_scalar(obj: Union[dict[str, Any], pd.DataFrame]) -> pd.DataFra
         return obj
 
 
-def parse_url(url: str) -> tuple[PlatformInfo, ScenarioInfo]:
+def parse_url(url: str) -> tuple["PlatformInfo", "ScenarioIdentifiers"]:
     """Parse *url* and return Platform and Scenario information.
 
     A URL (Uniform Resource Locator), as the name implies, uniquely identifies
@@ -381,11 +381,11 @@ def parse_url(url: str) -> tuple[PlatformInfo, ScenarioInfo]:
     if components.scheme not in ("ixmp", ""):
         raise ValueError("URL must begin with ixmp:// or //")
 
-    platform_info: PlatformInfo = dict()
+    platform_info: "PlatformInfo" = dict()
     if components.netloc:
         platform_info["name"] = components.netloc
 
-    scenario_info = ScenarioInfo(scenario="", model="")
+    scenario_info: "ScenarioIdentifiers" = dict(scenario="", model="")
 
     path = components.path.split("/")
     if len(path):
@@ -529,7 +529,7 @@ def format_scenario_list(
         _match = match if isinstance(match, str) else match.pattern
         match = re.compile(".*" + _match + ".*")
 
-    def describe(df: pd.DataFrame) -> "pd.Series[Union[int, str]]":
+    def describe(df: pd.DataFrame) -> "pd.Series[Any]":
         N = len(df)
         min = df.version.min()
         max = df.version.max()

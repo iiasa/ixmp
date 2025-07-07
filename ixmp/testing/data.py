@@ -13,9 +13,9 @@ import pytest
 from ixmp import IAMC_IDX, Platform, Scenario, TimeSeries
 
 if TYPE_CHECKING:
-    from ixmp.types import ScenarioIdentifiers, ScenarioInfo
+    from ixmp.types import ModelScenario, ScenarioIdentifiers
 
-    class ScenarioKwargs(ScenarioInfo, total=False):
+    class ScenarioKwargs(ScenarioIdentifiers, total=False):
         """Keyword arguments to Scenario.__init__()."""
 
         scheme: str
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 #: Common (model name, scenario name) pairs for testing.
-SCEN: dict[str, "ScenarioIdentifiers"] = {
+SCEN: dict[str, "ModelScenario"] = {
     "dantzig": dict(model="canning problem", scenario="standard"),
     "h2g2": dict(model="Douglas Adams", scenario="Hitchhiker"),
 }

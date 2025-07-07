@@ -3,7 +3,7 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -12,7 +12,6 @@ import pandas as pd
 from ixmp import IAMC_IDX
 from ixmp.backend.common import FIELDS, ItemType
 from ixmp.core.platform import Platform
-from ixmp.types import VersionType
 from ixmp.util import (
     as_str_list,
     maybe_check_out,
@@ -21,6 +20,9 @@ from ixmp.util import (
     to_iamc_layout,
     year_list,
 )
+
+if TYPE_CHECKING:
+    from ixmp.types import VersionType
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ class TimeSeries:
         mp: Platform,
         model: str,
         scenario: str,
-        version: VersionType = None,
+        version: "VersionType" = None,
         annotation: Optional[str] = None,
         scheme: Optional[str] = None,
     ) -> None:

@@ -895,21 +895,13 @@ class IXMP4Backend(CachingBackend):
 
     @overload
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: Literal["set"],
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]: ...
+        self, s: Scenario, ix_type: Literal["set"], name: str, filters: "Filters" = None
+    ) -> "SetData": ...
 
     @overload
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: Literal["par"],
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, Union[float, str]], pd.DataFrame]: ...
+        self, s: Scenario, ix_type: Literal["par"], name: str, filters: "Filters" = None
+    ) -> "ParData": ...
 
     @overload
     def item_get_elements(
@@ -917,16 +909,12 @@ class IXMP4Backend(CachingBackend):
         s: Scenario,
         ix_type: Literal["equ", "var"],
         name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, float], pd.DataFrame]: ...
+        filters: "Filters" = None,
+    ) -> "SolutionData": ...
 
     def item_get_elements(
-        self,
-        s: Scenario,
-        ix_type: str,
-        name: str,
-        filters: Optional[Mapping[str, Iterable[object]]] = None,
-    ) -> Union[dict[str, Any], "pd.Series[Union[float, int, str]]", pd.DataFrame]:
+        self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         if ix_type == "set":
             clean_filters: Optional[dict[str, list[Any]]] = None
             if filters:
@@ -1260,7 +1248,7 @@ class IXMP4Backend(CachingBackend):
     # Handle I/O
 
     def write_file(
-        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack["WriteKwargs"]
     ) -> None:
         """Write Platform, TimeSeries, or Scenario data to file.
 
@@ -1346,7 +1334,7 @@ class IXMP4Backend(CachingBackend):
             raise NotImplementedError
 
     def read_file(
-        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+        self, path: PathLike[str], item_type: ItemType, **kwargs: Unpack["ReadKwargs"]
     ) -> None:
         """Read Platform, TimeSeries, or Scenario data from file.
 

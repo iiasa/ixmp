@@ -8,18 +8,20 @@ from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
 
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
-from ixmp.types import GamsModelInitKwargs, RunKwargs, WriteFiltersKwargs
 from ixmp.util import as_str_list
 from ixmp.util.ixmp4 import ContainerData
 
 from .base import Model, ModelError
+
+if TYPE_CHECKING:
+    from ixmp.types import GamsModelInitKwargs, RunKwargs
 
 log = logging.getLogger(__name__)
 
@@ -250,7 +252,7 @@ class GAMSModel(Model):
         "container_data": [],
     }
 
-    def __init__(self, **model_options: Unpack[GamsModelInitKwargs]) -> None:
+    def __init__(self, **model_options: Unpack["GamsModelInitKwargs"]) -> None:
         name_ = model_options.get("name_", None)
         self.model_name = self.clean_path(name_ or self.name)
 
@@ -416,7 +418,7 @@ class GAMSModel(Model):
         delattr(self, "scenario")
 
         # Common argument for write_file and read_file
-        s_arg = RunKwargs(filters=WriteFiltersKwargs(scenario=scenario))
+        s_arg: "RunKwargs" = dict(filters=dict(scenario=scenario))
 
         # Instruct ixmp4 to record package versions
         if backend_type == "ixmp4":

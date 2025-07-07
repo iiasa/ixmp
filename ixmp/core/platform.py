@@ -18,15 +18,12 @@ from typing_extensions import Unpack
 
 from ixmp._config import config
 from ixmp.backend.common import FIELDS, ItemType
-from ixmp.types import (
-    PlatformInitKwargs,
-    WriteFiltersKwargs,
-)
 from ixmp.util import as_str_list
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
     from ixmp.backend.jdbc import JDBCBackend
+    from ixmp.types import PlatformInitKwargs, WriteFiltersKwargs
 
 
 log = logging.getLogger(__name__)
@@ -80,7 +77,7 @@ class Platform:
         self,
         name: Optional[str] = None,
         backend: Union[Literal["ixmp4", "jdbc"], str, None] = None,
-        **backend_args: Unpack[PlatformInitKwargs],
+        **backend_args: Unpack["PlatformInitKwargs"],
     ) -> None:
         from ixmp.backend import get_class
 
@@ -91,7 +88,7 @@ class Platform:
             elif backend is None:
                 # Only backend_args given
                 log.info("Using default JDBC backend")
-                kwargs: PlatformInitKwargs = {"class": "jdbc"}
+                kwargs: "PlatformInitKwargs" = {"class": "jdbc"}
             else:
                 # Backend and maybe backend_args were given
                 kwargs = {"class": backend}
@@ -256,7 +253,7 @@ class Platform:
                 "Invalid arguments: export_all_runs cannot be used when providing a "
                 "model or scenario."
             )
-        filters = WriteFiltersKwargs(
+        filters: "WriteFiltersKwargs" = dict(
             scenario=as_str_list(scenario),
             model=as_str_list(model),
             variable=as_str_list(variable),

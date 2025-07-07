@@ -1,13 +1,15 @@
 from collections.abc import Iterable
 from pathlib import Path
 from re import Pattern
-from typing import Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 import click
 
 import ixmp
-from ixmp.types import PlatformInitKwargs
-from ixmp.types import VersionType as VersionTypeAlias
+
+if TYPE_CHECKING:
+    from ixmp.types import PlatformInitKwargs
+    from ixmp.types import VersionType as VersionTypeAlias
 
 ScenarioClass: type[ixmp.Scenario] = ixmp.Scenario
 
@@ -73,7 +75,7 @@ def main(
     dbprops: Optional[Path],
     model: Optional[str],
     scenario: Optional[str],
-    version: VersionTypeAlias,
+    version: "VersionTypeAlias",
 ) -> None:
     ctx.obj = dict()
 
@@ -408,7 +410,7 @@ def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
     import shutil
     from copy import deepcopy
 
-    def _check(name: str) -> PlatformInitKwargs:
+    def _check(name: str) -> "PlatformInitKwargs":
         """Retrieve platform configuration and check."""
         _, cfg = ixmp.config.get_platform_info(name)
 

@@ -4,16 +4,16 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from ixmp.types import InitializeItemsKwargs
 from ixmp.util import maybe_check_out, maybe_commit, update_par
 
 from .gams import GAMSModel
 
 if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
+    from ixmp.types import InitializeItemsKwargs
 
 
-ITEMS: dict[str, InitializeItemsKwargs] = {
+ITEMS: dict[str, "InitializeItemsKwargs"] = {
     # Plants
     "i": dict(ix_type="set"),
     # Markets

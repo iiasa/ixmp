@@ -5,11 +5,10 @@ from collections.abc import Generator
 from copy import copy
 from dataclasses import Field, asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from ixmp.types import (
-    PlatformInitKwargs,
-)
+if TYPE_CHECKING:
+    from ixmp.types import PlatformInitKwargs
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +63,7 @@ def _locate(filename: Optional[str] = None) -> Path:
     )
 
 
-def _platform_default() -> dict[str, Union[str, PlatformInitKwargs]]:
+def _platform_default() -> dict[str, Union[str, "PlatformInitKwargs"]]:
     """Default values for the `platform` setting on BaseValues."""
     try:
         from ixmp.util.ixmp4 import configure_logging_and_warnings
@@ -101,7 +100,7 @@ def _platform_default() -> dict[str, Union[str, PlatformInitKwargs]]:
 class BaseValues:
     """Base class for storing configuration values."""
 
-    platform: dict[str, Union[str, PlatformInitKwargs]] = field(
+    platform: dict[str, Union[str, "PlatformInitKwargs"]] = field(
         default_factory=_platform_default
     )
 
@@ -416,7 +415,7 @@ class Config:
 
         self.values["platform"][name] = info
 
-    def get_platform_info(self, name: str) -> tuple[str, PlatformInitKwargs]:
+    def get_platform_info(self, name: str) -> tuple[str, "PlatformInitKwargs"]:
         """Return information on configured Platform `name`.
 
         Parameters

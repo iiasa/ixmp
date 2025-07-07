@@ -17,7 +17,6 @@ import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
 from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
-from ixmp.types import PlatformInitKwargs
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
     from ixmp.backend.jdbc import JDBCBackend
     from ixmp.core.platform import Platform
     from ixmp.core.scenario import Scenario
+    from ixmp.types import PlatformInitKwargs
 
 
 @pytest.mark.flaky(
@@ -565,7 +565,7 @@ def reload_cycle_scenario(
 ) -> Generator["Scenario", Any, None]:  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
-    kwarg: PlatformInitKwargs = dict(driver="hsqldb")
+    kwarg: "PlatformInitKwargs" = dict(driver="hsqldb")
     max_memory = int(request.config.getoption("--ixmp-jvm-mem"))
     if max_memory > 0:
         kwarg["jvmargs"] = f"-Xmx{max_memory}M"
@@ -647,7 +647,7 @@ def test_reload_cycle(
     #    suite
 
     # Clone reload_cycle_scenario onto a new Platform for this test
-    platform_args: PlatformInitKwargs = dict(
+    platform_args: "PlatformInitKwargs" = dict(
         driver="hsqldb",
         path=tmp_path / "testdb",
         cache=cache,

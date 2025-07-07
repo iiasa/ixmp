@@ -1,7 +1,7 @@
 """Tests for ixmp.util."""
 
 import logging
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
@@ -11,10 +11,10 @@ from pytest import mark, param
 
 from ixmp import Scenario, util
 from ixmp.testing import make_dantzig, populate_test_platform
-from ixmp.types import ScenarioIdentifiers, ScenarioInfo
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
+    from ixmp.types import ScenarioIdentifiers
 
 
 class TestDeprecatedPathFinder:
@@ -239,15 +239,9 @@ def test_logger_deprecated() -> None:
         util.logger()
 
 
-m_s = ScenarioIdentifiers(model="m", scenario="s")
+m_s: "ScenarioIdentifiers" = dict(model="m", scenario="s")
 
-URLS: list[
-    tuple[
-        str,
-        Optional[dict[str, str]],
-        Optional[Union[ScenarioIdentifiers, ScenarioInfo]],
-    ]
-] = [
+URLS: list[tuple[str, Optional[dict[str, str]], Optional["ScenarioIdentifiers"]]] = [
     ("ixmp://example/m/s", dict(name="example"), m_s),
     (
         "ixmp://example/m/s#42",
@@ -288,7 +282,7 @@ URLS: list[
 
 @pytest.mark.parametrize("url, p, s", URLS)
 def test_parse_url(
-    url: str, p: Optional[dict[str, str]], s: Optional[ScenarioIdentifiers]
+    url: str, p: Optional[dict[str, str]], s: Optional["ScenarioIdentifiers"]
 ) -> None:
     platform_info, scenario_info = util.parse_url(url)
 

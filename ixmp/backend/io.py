@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import pandas as pd
 
-from ixmp.types import WriteFiltersKwargs
 from ixmp.util import as_str_list, maybe_check_out, maybe_commit
 
 from .common import ItemType
@@ -14,6 +13,7 @@ if TYPE_CHECKING:
     from ixmp.backend.base import Backend
     from ixmp.core.scenario import Scenario
     from ixmp.core.timeseries import TimeSeries
+    from ixmp.types import WriteFiltersKwargs
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def s_write_excel(
     s: "Scenario",
     path: Path,
     item_type: ItemType,
-    filters: Optional[WriteFiltersKwargs] = None,
+    filters: Optional["WriteFiltersKwargs"] = None,
     max_row: Optional[int] = None,
 ) -> None:
     """Write *s* to a Microsoft Excel file at *path*.

@@ -1,11 +1,14 @@
 from dataclasses import dataclass
-from typing import Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import pandas as pd
 
-# TODO Import this from typing when dropping Python 3.11
+# Compatibility with Python 3.9
+# TODO Import this from typing when Python 3.10 is the minimum supported
+from typing_extensions import TypeGuard
 
-# These are based on existing calls within ixmp
+if TYPE_CHECKING:
+    from ixmp.backend.ixmp4 import IXMP4Backend
 
 
 @dataclass
@@ -69,3 +72,15 @@ def configure_logging_and_warnings() -> None:
     warnings.filterwarnings(
         "ignore", "datetime.datetime.now", DeprecationWarning, "sqlalchemy.sql.schema"
     )
+
+
+def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
+    """Type guard to ensure that `obj` is an IXMP4Backend."""
+    import ixmp.backend
+
+    if "ixmp4" not in ixmp.backend.available():
+        return False
+
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    return isinstance(obj, IXMP4Backend)

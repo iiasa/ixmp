@@ -212,11 +212,11 @@ class Scenario(TimeSeries):
         self,
         name: str,
         key: Union[
+            int,
             str,
-            Sequence[object],
-            dict[str, Union[list[int], list[str]]],
+            Iterable[object],
+            dict[str, Union[Sequence[int], Sequence[str]]],
             pd.DataFrame,
-            range,
         ],
         comment: Union[str, Sequence[str], None] = None,
     ) -> None:
@@ -260,7 +260,7 @@ class Scenario(TimeSeries):
 
         # Check arguments and convert to two lists: keys and comments
         if len(idx_names) == 0:
-            # Basic set. Keys must be strings.
+            # Basic set not indexed by others. Keys must be strings.
             if isinstance(key, (dict, pd.DataFrame)):
                 raise TypeError(
                     f"keys for basic set {name!r} must be str or list of str; got "
@@ -269,43 +269,41 @@ class Scenario(TimeSeries):
 
             # Ensure keys is a list of str
             keys.extend(as_str_list(key))
+        elif isinstance(key, pd.DataFrame):
+            # DataFrame of key values and perhaps comments
+            try:
+                # Pop a 'comment' column off the DataFrame, convert to list
+                comments.extend(key.pop("comment"))
+            except KeyError:
+                pass
+
+            # Convert key to list of list of key values
+            for row in key.to_dict(orient="records"):
+                keys.append(as_str_list(row, idx_names=idx_names))
+        elif isinstance(key, dict):
+            # Dict of lists of key values
+
+            # Pop a 'comment' list from the dict
+            # NOTE This converts an int-comment to str, too
+            _comment = list(map(str, key.pop("comment", [])))
+            comments.extend(_comment)
+
+            # Convert to list of list of key values
+            keys.extend(map(as_str_list, zip(*[key[i] for i in idx_names])))
+        elif isinstance(key, (int, str)) and len(idx_names) == 1:
+            # Bare key given for a 1D set; wrap for convenience
+            keys.append([str(key)])
+        elif hasattr(key, "__getitem__") and isinstance(key[0], (int, str)):
+            # List of key values; wrap
+            keys.append(as_str_list(key))
+        elif hasattr(key, "__getitem__") and isinstance(key[0], list):
+            # List of lists of key values; convert to list of list of str
+            # TODO Not sure why mypy complains here. as_str_list can handle all
+            # types of key and returns list[str], which can be used to extend keys
+            keys.extend(map(as_str_list, key))  # type: ignore[arg-type]
         else:
-            # Set defined over 1+ other sets
-            if isinstance(key, pd.DataFrame):
-                # DataFrame of key values and perhaps comments
-                try:
-                    # Pop a 'comment' column off the DataFrame, convert to list
-                    comments.extend(key.pop("comment"))
-                except KeyError:
-                    pass
-
-                # Convert key to list of list of key values
-                for row in key.to_dict(orient="records"):
-                    keys.append(as_str_list(row, idx_names=idx_names))
-            elif isinstance(key, dict):
-                # Dict of lists of key values
-
-                # Pop a 'comment' list from the dict
-                # NOTE This converts an int-comment to str, too
-                _comment = list(map(str, key.pop("comment", [])))
-                comments.extend(_comment)
-
-                # Convert to list of list of key values
-                keys.extend(map(as_str_list, zip(*[key[i] for i in idx_names])))
-            elif isinstance(key, str) and len(idx_names) == 1:
-                # Bare key given for a 1D set; wrap for convenience
-                keys.append([key])
-            elif isinstance(key[0], str):
-                # List of key values; wrap
-                keys.append(as_str_list(key))
-            elif isinstance(key[0], list):
-                # List of lists of key values; convert to list of list of str
-                # TODO Not sure why mypy complains here. as_str_list can handle all
-                # types of key and returns list[str], which can be used to extend keys
-                keys.extend(map(as_str_list, key))  # type: ignore[arg-type]
-            else:
-                # Other, invalid value
-                raise ValueError(key)
+            # Other, invalid value
+            raise ValueError(key)
 
         if isinstance(comment, str) or comment is None:
             comments.append(comment)
@@ -318,7 +316,7 @@ class Scenario(TimeSeries):
             comments = comments * len(keys)
 
         # Elements to send to backend
-        elements = []
+        elements: list[tuple[Any, Optional[float], Optional[str], Optional[str]]] = []
 
         # Combine iterators to tuples. If the lengths are mismatched, the sentinel
         # value 'False' is filled in
@@ -335,8 +333,7 @@ class Scenario(TimeSeries):
                 )
 
             # Convince type checker that fillvalues are discarded
-            assert not isinstance(k, tuple)
-            assert not isinstance(c, tuple)
+            assert not isinstance(k, tuple) and not isinstance(c, tuple)
             elements.append((k, None, None, c))
 
         # Send to backend

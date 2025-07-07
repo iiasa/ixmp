@@ -732,7 +732,7 @@ def test_set(scen_empty: "Scenario") -> None:
         TypeError, match="must be str or list of str; got <class 'dict'>"
     ):
         # NOTE Triggering this error on purpose
-        scen.add_set("i", dict(foo="bar"))  # type: ignore[dict-item]
+        scen.add_set("i", dict(foo="bar"))
 
     # Add elements to a 1D set
     scen.init_set("foo", "i", "dim_i")
@@ -807,13 +807,14 @@ def test_filter_str(scen_empty: "Scenario") -> None:
 
     scen.init_set("s")
 
-    # Set elements can be added which are not str
+    # Set elements can be added which are not str; they are converted to str
     scen.add_set("s", elements)
 
     # Elements are stored and returned as str
     s = scen.set("s")
     assert isinstance(s, pd.Series)
     assert s.dtype == "object"
+    assert all(isinstance(element, str) for element in s)
     assert expected == cast("pd.Series[str]", s.tolist())
 
     # Parameter defined over 's'

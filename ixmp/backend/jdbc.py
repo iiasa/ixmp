@@ -35,6 +35,8 @@ import pandas as pd
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack, override
 
+from ixmp.core.item import CLASS as ITEM_CLASS
+from ixmp.core.item import Item, Set
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
@@ -1137,7 +1139,7 @@ class JDBCBackend(CachingBackend):
     def item_index(
         self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
     ) -> list[str]:
-        jitem = self._get_item(s, "item", name, load=False)
+        jitem = self._get_item(s, Item(name), load=False)
         return list(getattr(jitem, f"getIdx{sets_or_names.title()}")())
 
     @overload
@@ -1195,7 +1197,7 @@ class JDBCBackend(CachingBackend):
         # Failed to load item from cache
 
         # Retrieve the item
-        item = self._get_item(s, ix_type, name, load=True)
+        item = self._get_item(s, ITEM_CLASS[ix_type](name), load=True)
         idx_names = list(item.getIdxNames())
         idx_sets = list(item.getIdxSets())
 
@@ -1211,7 +1213,9 @@ class JDBCBackend(CachingBackend):
                 elements = idx_set.tolist()
 
                 # Filter for only included values and store
-                filtered_elements = filter(lambda e: e in values, elements)
+                filtered_elements: Iterable[Union[float, int, str]] = filter(
+                    lambda e: e in values, elements
+                )
                 jFilter.put(idx_name, to_jlist(filtered_elements))
 
             jList = item.getElements(jFilter)
@@ -1276,13 +1280,9 @@ class JDBCBackend(CachingBackend):
             result = pd.Series(item.getCol(0, jList)[:], dtype=object)
         elif ix_type == "par":
             # Scalar parameter
-            # NOTE Not sure why we have to tell mypy this cast
-            result = cast(
-                dict[str, Union[float, str]],
-                dict(
-                    value=float(item.getScalarValue().floatValue()),
-                    unit=str(item.getScalarUnit()),
-                ),
+            result = dict(
+                value=float(item.getScalarValue().floatValue()),
+                unit=str(item.getScalarUnit()),
             )
         elif ix_type in ("equ", "var"):
             # Scalar equation or variable
@@ -1303,7 +1303,7 @@ class JDBCBackend(CachingBackend):
         name: str,
         elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
     ) -> None:
-        jobj = self._get_item(s, type, name)
+        jobj = self._get_item(s, ITEM_CLASS[type](name))
 
         try:
             for key, value, unit, comment in elements:
@@ -1339,14 +1339,15 @@ class JDBCBackend(CachingBackend):
         name: str,
         keys: Iterable[Iterable[str]],
     ) -> None:
-        jitem = self._get_item(s, type, name, load=False)
+        item = ITEM_CLASS[type](name)
+        jitem = self._get_item(s, item, load=False)
         for key in keys:
             jitem.removeElement(to_jlist(key))
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed
         # on the next call to item_get_elements.
-        args = (s,) if type == "set" else (s, type, name)
+        args = (s,) if isinstance(item, Set) else (s, type, name)
         self.cache_invalidate(*args)
 
     def get_meta(
@@ -1439,15 +1440,16 @@ class JDBCBackend(CachingBackend):
             elements can be loaded later using ``item.loadItemElementsfromDB()``.
         """
         # getItem is not overloaded to accept a second bool argument
-        args = [name] + ([load] if ix_type != "item" else [])
+        args = [item.name] + ([load] if item.ix_type != "item" else [])
         try:
-            return getattr(self.jindex[s], f"get{ix_type.title()}")(*args)
+            type_name = item.ix_type.title()
+            return getattr(self.jindex[s], f"get{type_name}")(*args)
         except java.IxException as e:
             # Regex for similar but not consistent messages from Java code
-            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this Scenario!"
+            msg = f"No (item|{type_name}) '?{item.name}'? exists in this Scenario!"
             if re.match(msg, e.args[0]):
                 # Re-raise as a Python KeyError
-                raise KeyError(name) from None
+                raise KeyError(item.name) from None
             else:  # pragma: no cover
                 _raise_jexception(e)
 

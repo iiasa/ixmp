@@ -11,6 +11,7 @@ repos:
     - nbclient
     - pandas-stubs
     - pytest
+    - pytest_httpserver
     - Sphinx
     - werkzeug
     - xarray

@@ -11,6 +11,7 @@ from pytest import mark, param
 
 from ixmp import Scenario, util
 from ixmp.testing import make_dantzig, populate_test_platform
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -167,13 +168,24 @@ def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None
     scen_b.remove_par("d")
 
     # Compare different scenarios without filters
+    names = set()
     for name, df in util.diff(scen_a, scen_b):
-        pass  # No check on the contents
+        names.add(name)
+
+    # All items are included in the comparison, e.g. "b" from scen_b, "d" from scen_a.
+    exp_names = {"a", "b", "d", "f"}
+    if is_ixmp4backend(scen_a.platform._backend):
+        # IXMP4Backend does yet not support scalar parameters
+        exp_names.remove("f")
+    assert exp_names == names
 
     # Compare different scenarios with filters
-    iterator = util.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
-    for name, df in iterator:
-        pass  # No check of the contents
+    names = set()
+    for name, df in util.diff(scen_a, scen_b, filters=dict(j=["chicago"])):
+        names.add(name)
+
+    # Only the parameters indexed by "j" are compared
+    assert {"b", "d"} == names
 
 
 # TODO IXMP4Backend doesn't handle retrieval of scalars correctly yet;

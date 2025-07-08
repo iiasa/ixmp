@@ -7,6 +7,7 @@ from functools import lru_cache
 from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
+from itertools import chain, repeat
 from pathlib import Path
 from types import ModuleType
 from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
@@ -18,7 +19,7 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
-    from ixmp.types import ParData, PlatformInfo, ScenarioIdentifiers
+    from ixmp.types import Filters, ParData, PlatformInfo, ScenarioIdentifiers
 
 log = logging.getLogger(__name__)
 
@@ -132,79 +133,74 @@ def check_year(
 
 
 def diff(
-    a: "Scenario", b: "Scenario", filters: Optional[dict[str, Sequence[str]]] = None
+    a: "Scenario", b: "Scenario", filters: "Filters" = None
 ) -> Iterator[tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
     :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
     parameters are compared. :func:`~pandas.merge` is called with the arguments
-    ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
+    :py:`how="outer", sort=True, suffixes=("_a", "_b"), indicator=True`; the merge is
     performed on all columns except 'value' or 'unit'.
+
+    Parameters
+    ----------
+    filters
+        if given, only parameters with the given dimensions and data with the respective
+        labels are included.
 
     Yields
     ------
     tuple of str, pandas.DataFrame
         tuples of item name and data.
     """
-    # Iterators; index 0 corresponds to `a`, 1 to `b`
-    items = [a.iter_par_data(filters=filters), b.iter_par_data(filters=filters)]
-    # State variables for loop
-    name = ["", ""]
-    data: list["ParData"] = [pd.DataFrame(), pd.DataFrame()]
-
-    # Elements for first iteration
-    name[0], data[0] = next(items[0])
-    name[1], data[1] = next(items[1])
-
+    # Common keyword arguments for DataFrame.merge()
     merge_kw = dict(how="outer", sort=True, suffixes=("_a", "_b"), indicator=True)
 
-    while True:
+    def _diff_inner(x: "ParData", y: "ParData") -> pd.DataFrame:
         # Convert scalars to pd.DataFrame
-        data = list(map(maybe_convert_scalar, data))
+        x = maybe_convert_scalar(x)
+        y = maybe_convert_scalar(y)
 
-        left, right = data
-
-        if not isinstance(left, pd.DataFrame) or not isinstance(right, pd.DataFrame):
-            log.warning("Not implemented: diff() dict values for scalars")
-            continue
-
-        df_l, df_r = left, right
-
-        # Compare the names from `a` and `b` to ensure matching items
-        if name[0] == name[1]:
-            # Matching items in `a` and `b`
-            current_name = name[0]
-        else:
-            # Mismatched; either `a` or `b` has no data for these filters
-            current_name = min(*name)
-            if name[0] > current_name:
-                # No data in `a` for `current_name`; create an empty DataFrame
-                df_l = pd.DataFrame(columns=right.columns)
-            else:
-                df_r = pd.DataFrame(columns=left.columns)
+        # No data from `x` → empty data frame with columns needed to merge
+        x = pd.DataFrame(columns=y.columns) if x.empty else x
+        y = pd.DataFrame(columns=x.columns) if y.empty else y
 
         # Either merge on remaining columns; or, for scalars, on the indices
-        if on := sorted(set(left.columns) - {"value", "unit"}):
+        if on := sorted(set(x.columns) - {"value", "unit"}):
             kw: dict[str, Any] = merge_kw | dict(on=on)
         else:
             kw = merge_kw | dict(left_index=True, right_index=True)
 
         # Merge the data from each side
-        yield (current_name, pd.merge(df_l, df_r, **kw))
+        return pd.merge(x, y, **kw).astype({"value_a": float})
 
-        # Maybe advance each iterators
-        for i in (0, 1):
-            try:
-                if name[i] == current_name:
-                    # data was compared in this iteration; advance
-                    name[i], data[i] = next(items[i])
-            except StopIteration:
-                # No more data for this iterator.
-                # Use "~" because it sorts after all ASCII characters
-                name[i], data[i] = "~ end", pd.DataFrame()
+    # Iterator over parameter data from `b`, followed by name="~ end"/empty data frame
+    items_b = chain(b.iter_par_data(filters=filters), repeat(("~ end", pd.DataFrame())))
 
-        if name[0] == name[1] == "~ end":
-            break
+    # Retrieved from items_b but not yet compared
+    saved: dict[str, "ParData"] = {}
+
+    # Iterate over names and data from `a`
+    for name_a, data_a in a.iter_par_data(filters=filters):
+        # Use counterpart from `b` already retrieved during a previous iteration
+        if name_a in saved:
+            name_b, data_b = name_a, saved.pop(name_a)
+        else:
+            # Advance `items_b` until reaching an item with matching name or "~ end"
+            for name_b, data_b in items_b:
+                if name_b in (name_a, "~ end"):
+                    break
+
+                # Some other, non-matching item → store for later use
+                saved[name_b] = data_b
+
+        # Yield the diff between data_a and data_b
+        yield name_a, _diff_inner(data_a, data_b)
+
+    # Any remaining items in `saved` have no counterpart in `a`. Diff these against
+    # empty data.
+    for name_b, data_b in saved.items():
+        yield name_b, _diff_inner(pd.DataFrame(), data_b)
 
 
 @contextmanager

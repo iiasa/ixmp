@@ -250,8 +250,6 @@ class TestScenario:
         assert scen.has_var("x")
         assert not scen.has_var("y")
 
-    # TODO IXMP4Backend doesn't handle scalars correctly yet
-    @pytest.mark.jdbc
     def test_scalar(self, scen: "Scenario") -> None:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
 

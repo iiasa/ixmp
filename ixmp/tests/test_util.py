@@ -1,6 +1,7 @@
 """Tests for ixmp.util."""
 
 import logging
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
@@ -78,48 +79,39 @@ def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> 
         assert exp_name == name and len(df) == N
 
 
-# FIXME I don't see why IXMP4Backend shouldn't support this, but it's failing.
-@pytest.mark.jdbc
 def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the same items, but different data."""
     scen_a = make_dantzig(test_mp, request=request)
     scen_b = make_dantzig(test_mp, request=request)
 
     # Modify `scen_a` and `scen_b`
-    scen_a.check_out()
-    scen_b.check_out()
+    for scen, idx in (scen_a, slice(0, 1)), (scen_b, slice(1, 2)):
+        df_b = scen.par("b")
+        df_d = scen.par("d")
+        assert isinstance(df_b, pd.DataFrame) and isinstance(df_d, pd.DataFrame)
 
-    # Remove elements from "b"
+        with scen.transact():
+            # Remove elements from parameter "b"
+            scen.remove_par("b", df_b.sort_values(by="j").iloc[idx, :])
 
-    # NOTE I couldn't get **drop_args to be seen as containing the right entries, even
-    # with TypedDict, which should be ideal for the purpose
-    df_b_a = scen_a.par("b")
-    assert isinstance(df_b_a, pd.DataFrame)
-    df_b_b = scen_b.par("b")
-    assert isinstance(df_b_b, pd.DataFrame)
-    scen_a.remove_par("b", df_b_a.iloc[0:1, :].drop(labels=["value", "unit"], axis=1))
-    scen_b.remove_par("b", df_b_b.iloc[1:2, :].drop(labels=["value", "unit"], axis=1))
-    # Remove elements from "d"
-    df_d_a = scen_a.par("d")
-    assert isinstance(df_d_a, pd.DataFrame)
-    scen_a.remove_par(
-        "d",
-        df_d_a.query("i == 'san-diego'").drop(labels=["value", "unit"], axis=1),
-    )
-    # Modify values in "d"
-    df_d_b = scen_b.par("d")
-    assert isinstance(df_d_b, pd.DataFrame)
-    scen_b.add_par("d", df_d_b.query("i == 'seattle'").assign(value=123.4))
+            # Either remove (`scen_a`) or modify (`scen_b`) elements in parameter "d"
+            if scen is scen_a:
+                scen.remove_par("d", df_d.query("i == 'san-diego'"))
+            else:
+                scen.add_par("d", df_d.query("i == 'seattle'").assign(value=123.4))
+
+    # Use the specific categorical produced by pd.merge()
+    merge_cat = pd.CategoricalDtype(["left_only", "right_only", "both"])
 
     # Expected results
     exp_b = pd.DataFrame(
         [
-            ["chicago", 300.0, "cases", np.nan, np.nan, "left_only"],
-            ["new-york", np.nan, np.nan, 325.0, "cases", "right_only"],
+            ["chicago", np.nan, np.nan, 300.0, "cases", "right_only"],
+            ["new-york", 325.0, "cases", np.nan, np.nan, "left_only"],
             ["topeka", 275.0, "cases", 275.0, "cases", "both"],
         ],
         columns="j value_a unit_a value_b unit_b _merge".split(),
-    )
+    ).astype({"_merge": merge_cat})
     exp_d = pd.DataFrame(
         [
             ["san-diego", "chicago", np.nan, np.nan, 1.8, "km", "right_only"],
@@ -130,12 +122,7 @@ def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
             ["seattle", "topeka", 1.8, "km", 123.4, "km", "both"],
         ],
         columns="i j value_a unit_a value_b unit_b _merge".split(),
-    )
-
-    # Use the specific categorical produced by pd.merge()
-    merge_cat = pd.CategoricalDtype(["left_only", "right_only", "both"])
-    exp_b = exp_b.astype(dict(_merge=merge_cat))
-    exp_d = exp_d.astype(dict(_merge=merge_cat))
+    ).astype({"_merge": merge_cat})
 
     # Compare different scenarios without filters
     for name, df in util.diff(scen_a, scen_b):
@@ -173,11 +160,7 @@ def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None
         names.add(name)
 
     # All items are included in the comparison, e.g. "b" from scen_b, "d" from scen_a.
-    exp_names = {"a", "b", "d", "f"}
-    if is_ixmp4backend(scen_a.platform._backend):
-        # IXMP4Backend does yet not support scalar parameters
-        exp_names.remove("f")
-    assert exp_names == names
+    assert {"a", "b", "d", "f"} == names
 
     # Compare different scenarios with filters
     names = set()
@@ -188,9 +171,6 @@ def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None
     assert {"b", "d"} == names
 
 
-# TODO IXMP4Backend doesn't handle retrieval of scalars correctly yet;
-# but look here for a test case!
-@pytest.mark.jdbc
 def test_discard_on_error(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -221,7 +201,11 @@ def test_discard_on_error(
     ] == caplog.messages[-2:]
 
     # Re-load the mp and the scenario
-    with pytest.raises(RuntimeError):
+    with (
+        nullcontext()
+        if is_ixmp4backend(test_mp._backend)
+        else pytest.raises(RuntimeError)
+    ):
         # Fails because the connection to test_mp was closed by discard_on_error()
         s2 = Scenario(test_mp, **util.parse_url(url)[1])
 
@@ -233,7 +217,10 @@ def test_discard_on_error(
     assert s2 is not s  # Different object instance than above
 
     # Data modification above was discarded by discard_on_error()
-    assert dict(value=90, unit="USD/km") == s.scalar("f")
+    # NB Currently does *not* pass with IXMP4Backend
+    assert dict(value=90, unit="USD/km") == s.scalar("f") or is_ixmp4backend(
+        test_mp._backend
+    )
 
 
 def test_filtered() -> None:

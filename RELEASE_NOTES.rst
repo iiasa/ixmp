@@ -1,8 +1,11 @@
-.. Next release
-.. ============
+Next release
+============
 
-.. All changes
-.. -----------
+All changes
+-----------
+
+- Document (at :ref:`system-dependencies`) that JRE version ≥ 11 is required
+  when using :class:`.JDBCBackend` with :mod:`jpype` version ≥ 1.6.0 (:pull:`586`).
 
 .. _v3.11.1:
 

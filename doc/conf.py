@@ -83,6 +83,9 @@ html_theme = "sphinx_rtd_theme"
 # -- Options for genno.compat.sphinx.rewrite_refs --------------------------------------
 
 reference_aliases = {
+    # Resolve e.g. :mod:`jpype` to the main docs page, since its intersphinx inventory
+    # does not contain an entry for the top-level module.
+    "jpype$": ":std:doc:`jpype <jpype:index>`",
     r"(genno\.|)Quantity": "genno.core.attrseries.AttrSeries",
     "AnyQuantity": ":data:`genno.core.quantity.AnyQuantity`",
 }
@@ -116,7 +119,7 @@ def local_inv(name: str, *parts: str) -> Optional[str]:
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
     "genno": ("https://genno.readthedocs.io/en/latest/", (local_inv("genno"), None)),
-    "jpype": ("https://jpype.readthedocs.io/en/latest", None),
+    "jpype": ("https://jpype.readthedocs.io/en/stable", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
     "message-ix-models": (
         "https://docs.messageix.org/projects/models/en/latest/",

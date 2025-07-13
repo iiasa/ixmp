@@ -41,6 +41,16 @@ Read and follow **each** of these sections of |message-ix-adv|:
 
 - :ref:`message_ix:install-python`.
 - :ref:`message_ix:install-java`.
+
+  .. note:: With :class:`.JDBCBackend`,
+     :mod:`ixmp` uses the :mod:`jpype` package (`‘JPype1’`_ on PyPI)
+     to invoke code and data storage features implemented in Java.
+     From JPype version 1.6.0 (released 2025-07-07),
+     :ref:`its requirements <jpype:userguide:key requirements>` include Java Runtime Environment (JRE) version 11 or greater.
+     You **should** use such a JRE version.
+     If it is only possible to use JRE version 8,
+     then install JPype1 version 1.5.2 or earlier.
+
 - :ref:`message_ix:install-gams`.
 - :ref:`message_ix:install-graphviz`.
 
@@ -178,6 +188,7 @@ run the following::
 
    ixmp show-versions
 
+.. _`‘JPype1’`: https://pypi.org/project/jpype1
 .. _`glob operator`: https://zsh.sourceforge.io/Doc/Release/Expansion.html#Glob-Operators
 .. _`mamba solver`: https://conda.github.io/conda-libmamba-solver/
 .. _`use SSH to authenticate to GitHub`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent

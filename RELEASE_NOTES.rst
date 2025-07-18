@@ -1,11 +1,62 @@
 Next release
 ============
 
+Migration notes
+---------------
+
+- Replace calls to :meth:`.Scenario.items` with :py:`par_data=True`:
+
+  .. code-block:: python
+
+     for name, df in scenario.items(..., par_data=True):
+         ...
+
+  with:
+
+  .. code-block:: python
+
+     for name, df in scenario.iter_par_data(...):
+         ...
+
+- Replace use of the shorthand:
+
+  .. code-block:: python
+
+     scenario._backend("method_name", ...)
+
+  with:
+
+  .. code-block:: python
+
+     scenario.platform._backend.method_name(...)
+
 All changes
 -----------
 
+- Improve :class:`.IXMP4Backend` (:pull:`581`):
+
+  - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).
+
+- New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
+  :meth:`.Scenario.items` no longer supports iterating over item *contents*.
+- Improve type hinting in :mod:`ixmp` (:pull:`581`).
+  This supports more precise and complete type checking of downstream code that uses :mod:`ixmp`.
+
+  - New module :mod:`ixmp.types` containing types for annotating code that uses :mod:`ixmp`.
+  - New type guard function :func:`.util.ixmp4.is_ixmp4backend`.
+
+- Update :class:`.ItemType` (:pull:`581`):
+
+  - New method :meth:`~.ItemType.is_model_data`.
+  - Remove short aliases such as :py:`ItemType.S` for :attr:`~.ItemType.SET`.
+
+- New module/class :class:`ixmp.core.item.Item` and subclasses (:pull:`581`).
+  These encapsulate structural information about :ref:`data-model-data`.
 - Document (at :ref:`system-dependencies`) that JRE version ≥ 11 is required
   when using :class:`.JDBCBackend` with :mod:`jpype` version ≥ 1.6.0 (:pull:`586`).
+- The :meth:`.TimeSeries._backend` shorthand method is deprecated (:pull:`581`).
+  Calling this method emits :class:`DeprecationWarning`,
+  and the method will be removed in a future version of :mod:`ixmp`.
 
 .. _v3.11.1:
 

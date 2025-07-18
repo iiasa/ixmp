@@ -3,22 +3,12 @@ from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import pandas as pd
 
-# TODO Import this from typing when dropping Python 3.11
-from typing_extensions import TypedDict
+# Compatibility with Python 3.9
+# TODO Import this from typing when Python 3.10 is the minimum supported
+from typing_extensions import TypeGuard
 
 if TYPE_CHECKING:
-    from ixmp.core.scenario import Scenario
-
-
-# These are based on existing calls within ixmp
-class WriteFiltersKwargs(TypedDict, total=False):
-    scenario: "Scenario | list[str]"
-    model: list[str]
-    variable: list[str]
-    unit: list[str]
-    region: list[str]
-    default: bool
-    export_all_runs: bool
+    from ixmp.backend.ixmp4 import IXMP4Backend
 
 
 @dataclass
@@ -37,25 +27,6 @@ class ContainerData:
     ]
     domain: Optional[list[str]] = None
     docs: Optional[str] = None
-
-
-class WriteKwargs(TypedDict, total=False):
-    filters: WriteFiltersKwargs
-    record_version_packages: list[str]
-    container_data: list[ContainerData]
-
-
-class ReadKwargs(TypedDict, total=False):
-    filters: WriteFiltersKwargs
-    firstyear: Optional[Any]
-    lastyear: Optional[Any]
-    add_units: bool
-    init_items: bool
-    commit_steps: bool
-    check_solution: bool
-    comment: str
-    equ_list: list[str]
-    var_list: list[str]
 
 
 def configure_logging_and_warnings() -> None:
@@ -101,3 +72,25 @@ def configure_logging_and_warnings() -> None:
     warnings.filterwarnings(
         "ignore", "datetime.datetime.now", DeprecationWarning, "sqlalchemy.sql.schema"
     )
+
+
+def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
+    """Type guard to ensure that `obj` is an IXMP4Backend.
+
+    Example
+    -------
+    >>> import message_ix
+    >>> from ixmp import Platform
+    >>> mp = Platform(...)
+    >>> s = message_ix.Scenario(mp, ...)
+    >>> assert is_ixmp4backend(mp._backend)
+    >>> assert is_ixmp4backend(s.platform._backend)
+    """
+    import ixmp.backend
+
+    if "ixmp4" not in ixmp.backend.available():
+        return False
+
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
+    return isinstance(obj, IXMP4Backend)

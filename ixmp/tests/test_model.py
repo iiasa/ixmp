@@ -1,6 +1,10 @@
 import logging
 import re
+from collections.abc import Generator
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
+import pandas as pd
 import pytest
 
 from ixmp import Scenario
@@ -9,8 +13,12 @@ from ixmp.model.dantzig import DantzigModel
 from ixmp.model.gams import GAMSInfo, gams_version
 from ixmp.testing import assert_logs, make_dantzig
 
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
+    from ixmp.types import GamsModelInitKwargs
 
-def test_base_model():
+
+def test_base_model() -> None:
     # An incomplete Backend subclass can't be instantiated
     class M1(Model):
         pass
@@ -20,13 +28,17 @@ def test_base_model():
         match="Can't instantiate abstract class M1 with(out an implementation for)? "
         "abstract methods",
     ):
-        M1()
+        M1(name_="test")  # type: ignore[abstract]
 
 
 # FIXME IXMP4Backend doesn't handle scenario.change_scalar() correctly:
 # We can't just create() it, it might already exist, so then we need update()
 @pytest.mark.jdbc
-def test_model_initialize(test_mp, caplog, request):
+def test_model_initialize(
+    test_mp: "Platform",
+    caplog: pytest.LogCaptureFixture,
+    request: pytest.FixtureRequest,
+) -> None:
     # Model.initialize runs on an empty Scenario
     s = make_dantzig(test_mp, request=request)
     b1 = s.par("b")
@@ -45,6 +57,7 @@ def test_model_initialize(test_mp, caplog, request):
     b2 = s.par("b")
     assert len(b2) == 3
     # ...but modified value(s) are not overwritten
+    assert isinstance(b2, pd.DataFrame)
     assert (b2.query("j == 'chicago'")["value"] == new_value).all()
 
     # Unrecognized Scenario(scheme=...) is initialized using the base method, a
@@ -76,7 +89,7 @@ def test_model_initialize(test_mp, caplog, request):
             scenario="scenario-name",
             version="new",
             scheme="unknown",
-            bad_arg1=111,
+            bad_arg1=111,  # type: ignore[call-arg]
         )
 
     with pytest.raises(TypeError, match="unexpected keyword argument 'bad_arg2'"):
@@ -87,7 +100,7 @@ def test_model_initialize(test_mp, caplog, request):
             version="new",
             scheme="dantzig",
             with_data=True,
-            bad_arg2=222,
+            bad_arg2=222,  # type: ignore[call-arg]
         )
 
     # Replace b[j] with a parameter of the same name, but different indices
@@ -96,11 +109,11 @@ def test_model_initialize(test_mp, caplog, request):
     s.init_par("b", idx_sets=["i"], idx_names=["i_dim"])
 
     # Logs an error message
-    with assert_logs(caplog, "Existing index sets of 'b' ['i'] do not match ['j']"):
+    with assert_logs(caplog, "Existing index sets of 'b' ('i',) do not match ('j',)"):
         DantzigModel.initialize(s)
 
 
-def test_gams_version():
+def test_gams_version() -> None:
     parts = gams_version().split(".")
 
     # Returns a version string like X.Y.Z, in which each part is a number (no leading or
@@ -110,7 +123,7 @@ def test_gams_version():
 
 
 class TestGAMSInfo:
-    def test_version(self, monkeypatch, tmp_path) -> None:
+    def test_version(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """:attr:`GAMSInfo.version` contains useful info if no installation found."""
         # Set the expected name of the GAMS executable to a non-existent program
         monkeypatch.setattr(GAMSInfo, "_name", "__F_O_O")
@@ -130,14 +143,16 @@ class TestGAMSInfo:
 
 class TestGAMSModel:
     @pytest.fixture(scope="class")
-    def dantzig(self, test_mp, request):
+    def dantzig(
+        self, test_mp: "Platform", request: pytest.FixtureRequest
+    ) -> Generator[Scenario, Any, None]:
         yield make_dantzig(test_mp, request=request)
 
     # FIXME The name_ seems to be handled correctly, but IXMP4Backend struggles with
     # make_dantzig().clone().solve() somehow.
     @pytest.mark.jdbc
     @pytest.mark.parametrize("char", r'<>"/\|?*')
-    def test_filename_invalid_char(self, dantzig, char):
+    def test_filename_invalid_char(self, dantzig: Scenario, char: str) -> None:
         """Model can be solved with invalid character names."""
         name = f"foo{char}bar"
         s = dantzig.clone(model=name, scenario=name)
@@ -158,11 +173,17 @@ class TestGAMSModel:
         ],
         ids=["null-comment", "null-list", "empty-list"],
     )
-    def test_GAMSModel_solve(test_data_path, dantzig, kwargs):
+    def test_GAMSModel_solve(
+        self,
+        test_data_path: Path,
+        dantzig: Scenario,
+        kwargs: "GamsModelInitKwargs",
+    ) -> None:
         """Options to GAMSModel are handled without error."""
-        dantzig.clone().solve(**kwargs, quiet=True)
+        kwargs["quiet"] = True
+        dantzig.clone().solve(**kwargs)
 
-    def test_error_message(self, test_data_path, test_mp):
+    def test_error_message(self, test_data_path: Path, test_mp: "Platform") -> None:
         """GAMSModel.solve() displays a user-friendly message on error."""
         # Empty Scenario
         s = Scenario(test_mp, model="foo", scenario="bar", version="new")

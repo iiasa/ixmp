@@ -2,25 +2,41 @@
 
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
-from collections.abc import Hashable, Iterable, MutableMapping, Sequence
+from collections.abc import (
+    Generator,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from copy import copy
-from os import PathLike
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
-import pandas as pd
-
-# TODO Import this from typing when dropping Python 3.11
+# Compatibility with Python 3.11
+# TODO Use "from typing import Unpack" when dropping support for Python 3.11
 from typing_extensions import Unpack
 
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
-from ixmp.util.ixmp4 import ReadKwargs, WriteFiltersKwargs, WriteKwargs
 
 from .common import ItemType
 from .io import s_read_excel, s_write_excel, ts_read_file
+
+if TYPE_CHECKING:
+    from ixmp.types import (
+        Filters,
+        ParData,
+        ReadKwargs,
+        SetData,
+        SolutionData,
+        WriteFilters,
+        WriteKwargs,
+    )
 
 
 class Backend(ABC):
@@ -39,10 +55,10 @@ class Backend(ABC):
     #   values are returned.
     # - Use "OPTIONAL:" for methods that are not @abstractmethod.
 
-    def __init__(self):
+    def __init__(self) -> None:
         """OPTIONAL: Initialize the backend."""
 
-    def __call__(self, obj, method, *args, **kwargs):
+    def __call__(self, obj: TimeSeries, method: str, *args: Any, **kwargs: Any) -> Any:
         """Call the backend method `method` for `obj`.
 
         The class attribute obj._backend_prefix is used to determine a prefix for the
@@ -53,7 +69,9 @@ class Backend(ABC):
     # Platform methods
 
     @classmethod
-    def handle_config(cls, args: Sequence, kwargs: MutableMapping) -> dict[str, Any]:
+    def handle_config(
+        cls, args: Sequence[Any], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """OPTIONAL: Handle platform/backend config arguments.
 
         Returns a :class:`dict` to be stored in the configuration file. This
@@ -107,7 +125,9 @@ class Backend(ABC):
         return logging.getLevelName(logging.getLogger(__name__).getEffectiveLevel())
 
     @abstractmethod
-    def set_doc(self, domain: str, docs) -> None:
+    def set_doc(
+        self, domain: str, docs: Union[dict[str, str], Iterable[tuple[str, str]]]
+    ) -> None:
         """Save documentation to database
 
         Parameters
@@ -120,7 +140,9 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_doc(self, domain: str, name: Optional[str] = None) -> Union[str, dict]:
+    def get_doc(
+        self, domain: str, name: Optional[str] = None
+    ) -> Union[str, dict[str, str]]:
         """Read documentation from database
 
         Parameters
@@ -317,9 +339,7 @@ class Backend(ABC):
     @abstractmethod
     def get_scenarios(
         self, default: bool, model: Optional[str], scenario: Optional[str]
-    ) -> Iterable[
-        tuple[str, str, str, bool, bool, str, str, str, str, str, str, str, int]
-    ]:
+    ) -> Generator[list[Union[bool, int, str]], Any, None]:
         """Iterate over TimeSeries stored on the Platform.
 
         Scenarios, as subclasses of TimeSeries, are also included.
@@ -387,7 +407,10 @@ class Backend(ABC):
         """
 
     def read_file(
-        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[ReadKwargs]
+        self,
+        path: os.PathLike[str],
+        item_type: ItemType,
+        **kwargs: Unpack["ReadKwargs"],
     ) -> None:
         """OPTIONAL: Read Platform, TimeSeries, or Scenario data from file.
 
@@ -428,20 +451,35 @@ class Backend(ABC):
         --------
         write_file
         """
-        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        filters: "WriteFilters" = kwargs["filters"] if "filters" in kwargs else {}
         s, _ = self._handle_rw_filters(filters=filters)
-        _kwargs = {k: v for (k, v) in kwargs.items() if k != "filters"}
 
         path = Path(path)
-        if path.suffix in (".csv", ".xlsx") and item_type is ItemType.TS and s:
-            ts_read_file(s, path, **_kwargs)
-        elif path.suffix == ".xlsx" and item_type is ItemType.MODEL and s:
-            s_read_excel(self, s, path, **_kwargs)
+        if (
+            path.suffix in (".csv", ".xlsx")
+            and item_type is ItemType.TS
+            and isinstance(s, TimeSeries)
+        ):
+            firstyear = kwargs.get("firstyear", None)
+            lastyear = kwargs.get("lastyear", None)
+            ts_read_file(s, path, firstyear, lastyear)
+        elif (
+            path.suffix == ".xlsx"
+            and item_type is ItemType.MODEL
+            and isinstance(s, Scenario)
+        ):
+            add_units = kwargs.get("add_units", False)
+            init_items = kwargs.get("init_items", False)
+            commit_steps = kwargs.get("commit_steps", False)
+            s_read_excel(self, s, path, add_units, init_items, commit_steps)
         else:
             raise NotImplementedError
 
     def write_file(
-        self, path: PathLike, item_type: ItemType, **kwargs: Unpack[WriteKwargs]
+        self,
+        path: os.PathLike[str],
+        item_type: ItemType,
+        **kwargs: Unpack["WriteKwargs"],
     ) -> None:
         """OPTIONAL: Write Platform, TimeSeries, or Scenario data to file.
 
@@ -475,12 +513,16 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
         # any other filters
-        filters = kwargs["filters"] if "filters" in kwargs else WriteFiltersKwargs()
+        filters: "WriteFilters" = kwargs["filters"] if "filters" in kwargs else {}
         s, kwargs["filters"] = self._handle_rw_filters(filters=filters)
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
         path = Path(path)
-        if path.suffix == ".xlsx" and item_type in xlsx_types and s:
+        if (
+            path.suffix == ".xlsx"
+            and item_type in xlsx_types
+            and isinstance(s, Scenario)
+        ):
             s_write_excel(
                 be=self,
                 s=s,
@@ -604,8 +646,8 @@ class Backend(ABC):
 
     @staticmethod
     def _handle_rw_filters(
-        filters: WriteFiltersKwargs,
-    ) -> tuple[Optional[TimeSeries], WriteFiltersKwargs]:
+        filters: "WriteFilters",
+    ) -> tuple[Optional[TimeSeries], "WriteFilters"]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
@@ -629,8 +671,8 @@ class Backend(ABC):
         region: Sequence[str],
         variable: Sequence[str],
         unit: Sequence[str],
-        year: Sequence[str],
-    ) -> Iterable[tuple[str, str, str, int, float]]:
+        year: Union[Sequence[int], Sequence[str]],
+    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         """Retrieve time series data.
 
         Parameters
@@ -641,7 +683,7 @@ class Backend(ABC):
             Variable names to filter results.
         unit : list of str
             Unit symbols to filter results.
-        year : list of str
+        year : list of int or list of str
             Years to filter results.
 
         Yields
@@ -664,7 +706,7 @@ class Backend(ABC):
     @abstractmethod
     def get_geo(
         self, ts: TimeSeries
-    ) -> Iterable[tuple[str, str, int, str, str, str, bool]]:
+    ) -> Generator[tuple[str, str, int, str, str, str, bool], Any, None]:
         """Retrieve time-series 'geodata'.
 
         Yields
@@ -807,7 +849,7 @@ class Backend(ABC):
         platform_dest: Platform,
         model: str,
         scenario: str,
-        annotation: str,
+        annotation: Optional[str],
         keep_solution: bool,
         first_model_year: Optional[int] = None,
     ) -> Scenario:
@@ -821,7 +863,7 @@ class Backend(ABC):
             New model name.
         scenario : str
             New scenario name.
-        annotation : str
+        annotation : str, optional
             Description for the creation of the new scenario.
         keep_solution : bool
             If :obj:`True`, model solution data is also cloned. If
@@ -845,19 +887,19 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def list_items(self, s: Scenario, type: Literal["set", "par", "equ"]) -> list[str]:
+    def list_items(self, s: Scenario, type: str) -> list[str]:
         """Return a list of names of items of `type`.
 
         Parameters
         ----------
-        type : 'set' or 'par' or 'equ'
+        type : 'set' or 'par' or 'equ' or 'var
         """
 
     @abstractmethod
     def init_item(
         self,
         s: Scenario,
-        type: Literal["set", "par", "equ", "var"],
+        type: str,
         name: str,
         idx_sets: Sequence[str],
         idx_names: Optional[Sequence[str]],
@@ -912,19 +954,34 @@ class Backend(ABC):
         list of str
         """
 
-    @abstractmethod
+    @overload
+    def item_get_elements(
+        self, s: Scenario, ix_type: Literal["set"], name: str, filters: "Filters" = None
+    ) -> "SetData": ...
+
+    @overload
+    def item_get_elements(
+        self, s: Scenario, ix_type: Literal["par"], name: str, filters: "Filters" = None
+    ) -> "ParData": ...
+
+    @overload
     def item_get_elements(
         self,
         s: Scenario,
-        type: Literal["equ", "par", "set", "var"],
+        ix_type: Literal["equ", "var"],
         name: str,
-        filters: Optional[dict[str, list[Any]]] = None,
-    ) -> Union[dict[str, Any], pd.Series, pd.DataFrame]:
+        filters: "Filters" = None,
+    ) -> "SolutionData": ...
+
+    @abstractmethod
+    def item_get_elements(
+        self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         """Return elements of item `name`.
 
         Parameters
         ----------
-        type : str
+        ix_type : str
             Type of the item.
         name : str
             Name of the item.
@@ -941,9 +998,9 @@ class Backend(ABC):
         Returns
         -------
         pandas.Series
-            When `type` is 'set' and `name` an index set (not indexed by other sets).
+            When `ix_type` is 'set' and `name` an index set (not indexed by other sets).
         dict
-            When `type` is 'equ', 'par', or 'var' and `name` is scalar (zero-
+            When `ix_type` is 'equ', 'par', or 'var' and `name` is scalar (zero-
             dimensional). The value has the keys 'value' and 'unit' (for 'par') or 'lvl'
             and 'mrg' (for 'equ' or 'var').
         pandas.DataFrame
@@ -1004,7 +1061,11 @@ class Backend(ABC):
 
     @abstractmethod
     def item_delete_elements(
-        self, s: Scenario, type: Literal["par", "set"], name: str, keys
+        self,
+        s: Scenario,
+        type: Literal["par", "set"],
+        name: str,
+        keys: Iterable[Sequence[str]],
     ) -> None:
         """Remove elements of item `name`.
 
@@ -1030,7 +1091,7 @@ class Backend(ABC):
         model: Optional[str],
         scenario: Optional[str],
         version: Optional[int],
-        strict: bool,
+        strict: bool = False,
     ) -> dict[str, Any]:
         """Retrieve all metadata attached to a specific target.
 
@@ -1054,8 +1115,8 @@ class Backend(ABC):
             Scenario name of metadata target.
         version : int, optional
             :attr:`.TimeSeries.version` of metadata target.
-        strict : bool
-            Only retrieve metadata from the specified target.
+        strict : bool, optional
+            Only retrieve metadata from the specified target. Default :obj:`False`.
 
         Returns
         -------
@@ -1072,7 +1133,7 @@ class Backend(ABC):
     @abstractmethod
     def set_meta(
         self,
-        meta: dict,
+        meta: dict[str, Union[bool, float, int, str]],
         model: Optional[str],
         scenario: Optional[str],
         version: Optional[int],
@@ -1103,7 +1164,7 @@ class Backend(ABC):
     @abstractmethod
     def remove_meta(
         self,
-        names: list,
+        names: list[str],
         model: Optional[str],
         scenario: Optional[str],
         version: Optional[int],
@@ -1132,7 +1193,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def clear_solution(self, s: Scenario, from_year=None):
+    def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
         """Remove data associated with a model solution.
 
         .. todo:: Document.
@@ -1208,15 +1269,17 @@ class CachingBackend(Backend):
 
     #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on the
     #: subclass' usage of the cache.
-    _cache: dict[tuple, object] = {}
+    _cache: MutableMapping[
+        tuple[Hashable, ...], Union["SetData", "ParData", "SolutionData"]
+    ] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
     #: using :meth:`cache_get`.
-    _cache_hit: dict[tuple, int] = {}
+    _cache_hit: dict[tuple[Hashable, ...], int] = {}
 
     # Backend API methods
 
-    def __init__(self, cache_enabled=True):
+    def __init__(self, cache_enabled: bool = True) -> None:
         super().__init__()
 
         self.cache_enabled = cache_enabled
@@ -1225,7 +1288,7 @@ class CachingBackend(Backend):
         self._cache = {}
         self._cache_hit = {}
 
-    def del_ts(self, ts: TimeSeries):
+    def del_ts(self, ts: TimeSeries) -> None:
         """Invalidate cache entries associated with `ts`."""
         self.cache_invalidate(ts)
 
@@ -1237,7 +1300,7 @@ class CachingBackend(Backend):
         ts: TimeSeries,
         ix_type: Optional[str],
         name: Optional[str],
-        filters: Optional[dict[str, Hashable]] = None,
+        filters: Optional[Mapping[str, Iterable[Any]]] = None,
     ) -> tuple[Hashable, ...]:
         """Return a hashable cache key.
 
@@ -1257,8 +1320,8 @@ class CachingBackend(Backend):
             return (ts_id, ix_type, name, hash(json.dumps(sorted(filters.items()))))
 
     def cache_get(
-        self, ts: TimeSeries, ix_type: str, name: str, filters: dict
-    ) -> Optional[Any]:
+        self, ts: TimeSeries, ix_type: str, name: str, filters: "Filters"
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         """Retrieve value from cache.
 
         The value in :attr:`_cache` is copied to avoid cached values being modified by
@@ -1278,7 +1341,12 @@ class CachingBackend(Backend):
             raise KeyError(ts, ix_type, name, filters)
 
     def cache(
-        self, ts: TimeSeries, ix_type: str, name: str, filters: dict, value: Any
+        self,
+        ts: TimeSeries,
+        ix_type: str,
+        name: str,
+        filters: "Filters",
+        value: Union["SetData", "ParData", "SolutionData"],
     ) -> bool:
         """Store `value` in cache.
 
@@ -1304,7 +1372,7 @@ class CachingBackend(Backend):
         ts: TimeSeries,
         ix_type: Optional[str] = None,
         name: Optional[str] = None,
-        filters: Optional[dict] = None,
+        filters: Optional[Mapping[str, Iterable[Any]]] = None,
     ) -> None:
         """Invalidate cached values.
 
@@ -1320,7 +1388,7 @@ class CachingBackend(Backend):
 
         if filters is None:
             i = slice(1) if (ix_type is name is None) else slice(3)
-            to_remove: Iterable[tuple] = filter(
+            to_remove: Iterable[tuple[Hashable, ...]] = filter(
                 lambda k: k[i] == key[i], self._cache.keys()
             )
         else:

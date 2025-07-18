@@ -231,8 +231,8 @@ Utilities for documentation
 
       https://github.com/{repo_slug}/blob/{remote_head}/path/to/source.py#L123-L456
 
-Utilities for testing
-~~~~~~~~~~~~~~~~~~~~~
+Utilities for testing and type checking
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: ixmp.testing
 
@@ -245,3 +245,8 @@ Utilities for testing
 
 .. automodule:: ixmp.testing.data
    :members: DATA, HIST_DF, TS_DF
+
+.. currentmodule:: ixmp.types
+
+.. automodule:: ixmp.types
+   :members:

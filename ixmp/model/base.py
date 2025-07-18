@@ -2,13 +2,19 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Optional, cast
 
+# Compatibility with Python 3.11 and earlier
+# TODO Use "from typing import Unpack" when dropping support for Python 3.11
+from typing_extensions import Unpack
+
+from ixmp.backend.common import ItemType
 from ixmp.util import maybe_check_out, maybe_commit
 
 if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
+    from ixmp.types import GamsModelInitKwargs, InitializeItemsKwargs
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +28,7 @@ class Model(ABC):
     name: str = "base"
 
     @abstractmethod
-    def __init__(self, name, **kwargs):
+    def __init__(self, **kwargs: Unpack["GamsModelInitKwargs"]) -> None:
         """Constructor.
 
         **Required.**
@@ -42,7 +48,7 @@ class Model(ABC):
         return re.sub("[{}]+".format(re.escape(chars)), "_", value)
 
     @staticmethod
-    def enforce(scenario):
+    def enforce(scenario: "Scenario") -> None:
         """Enforce data consistency in `scenario`.
 
         **Optional**; the default implementation does nothing. Subclass implementations
@@ -63,7 +69,7 @@ class Model(ABC):
         """
 
     @classmethod
-    def initialize(cls, scenario):
+    def initialize(cls, scenario: "Scenario") -> None:
         """Set up *scenario* with required items.
 
         **Optional**; the default implementation does nothing. Subclass implementations
@@ -86,12 +92,14 @@ class Model(ABC):
         log.debug(f"No initialization for {repr(scenario.scheme)}-scheme Scenario")
 
     @classmethod
-    def initialize_items(cls, scenario: "Scenario", items: Mapping[str, dict]) -> None:
+    def initialize_items(
+        cls, scenario: "Scenario", items: Mapping[str, "InitializeItemsKwargs"]
+    ) -> None:
         """Helper for :meth:`initialize`.
 
         All of the `items` are added to `scenario`. Existing items are not modified.
-        Errors are logged if the description in `items` conflicts with the index set(s)
-        and/or index name(s) of existing items.
+        Warnings are logged if the description in `items` conflicts with the index
+        set(s) and/or index name(s) of existing items.
 
         initialize_items may perform one commit. `scenario` is in the same state
         (checked in, or checked out) after initialize_items is complete.
@@ -103,8 +111,8 @@ class Model(ABC):
         items :
             Keys are names of ixmp items (set, parameter, equation, or variable) to
             initialize. Values are :class:`dict`, and each **must** have the key
-            'ix_type' (one of 'set', 'par', 'equ', or 'var'); any other entries are
-            keyword arguments to the corresponding methods such as :meth:`.init_set`.
+            'ix_type' (one of 'set', 'par', 'equ', or 'var'); other keys ("idx_sets" and
+            optionally "idx_names") are keyword arguments to :meth:`.init_item`.
 
         Raises
         ------
@@ -114,10 +122,7 @@ class Model(ABC):
 
         See also
         --------
-        .init_equ
-        .init_par
-        .init_set
-        .init_var
+        Scenario.init_item
         """
         # Don't know if the Scenario is checked out
         checkout = None
@@ -125,42 +130,46 @@ class Model(ABC):
         # Lists of items in the Scenario
         existing_items = dict()
 
-        # Lists of items initialized
+        # List of items initialized
         items_initialized = []
 
-        for name, item_info in items.items():
-            # Copy so that pop() below does not modify *items*
-            item_info = item_info.copy()
+        for name, info in items.items():
+            # Keyword args to Scenario.init_item()
+            init_kw: dict[str, Any] = dict(name=name)
 
-            # Check that the item exists
-            ix_type = item_info.pop("ix_type")
+            # Convert str into a member of the ix_type Enum
+            _t = ItemType[info["ix_type"].upper()]
+            assert ItemType.is_model_data(_t)
 
-            if ix_type not in existing_items:
-                # Store a list of items of *ix_type*
-                method = getattr(scenario, f"{ix_type}_list")
-                existing_items[ix_type] = method()
+            # Store a list of items of `ix_type`
+            if _t not in existing_items:
+                existing_items[_t] = scenario.list_items(_t)
 
-            # Item must be initialized if it does not exist
+            exists: bool = name in existing_items[_t]
+            for key, method in (
+                ("idx_sets", scenario.idx_sets),
+                ("idx_names", scenario.idx_names),
+            ):
+                # Copy the values from `info` to `init_kw`
+                if values := cast(Optional[Sequence[str]], info.get(key)):
+                    init_kw[key] = tuple(values)
 
-            if name in existing_items[ix_type]:
-                # Item exists; check its index sets and names
-                for key, values in item_info.items():
-                    values = values or []
-                    existing = getattr(scenario, key)(name)
-                    if existing != list(values):
-                        # The existing index sets or names do not match
+                # If the item exists; check its index sets/names
+                if exists:
+                    existing = tuple(method(name))
+                    if existing != init_kw.get(key, ()):
                         log.warning(
-                            f"Existing index {key.split('_')[-1]} of "
-                            f"{repr(name)} {repr(existing)} do not match "
-                            f"{repr(values)}"
+                            f"Existing index {key.split('_')[-1]} of {name!r} "
+                            f"{existing!r} do not match {init_kw.get(key, ())!r}"
                         )
 
-                # Skip; can't do anything to existing items
+            # Can't do anything to existing items
+            if exists:
                 continue
 
             # Item doesn't exist and must be initialized
 
-            # Possibly check out the Scenario
+            # Check out the Scenario, if not already checked out
             try:
                 checkout = maybe_check_out(scenario, checkout)
             except ValueError as exc:  # pragma: no cover
@@ -170,23 +179,23 @@ class Model(ABC):
                 log.error(str(exc))
                 return
 
-            # Get the appropriate method, e.g. init_set, and add the item
-            log.info(f"Initialize {ix_type} {repr(name)} as {item_info}")
-            getattr(scenario, f"init_{ix_type}")(name=name, **item_info)
+            # Initialize the item
+            log.info(f"Initialize {_t} {name!r} as {info}")
+            scenario.init_item(_t, **init_kw)
 
             # Record
             items_initialized.append(name)
 
         maybe_commit(
-            scenario, len(items_initialized), f"{cls.__name__}.initialize_items"
+            scenario, bool(items_initialized), f"{cls.__name__}.initialize_items"
         )
 
-        if len(items_initialized) and not checkout:
+        if items_initialized and not checkout:
             # Scenario was originally in a checked out state; restore
             maybe_check_out(scenario)
 
     @abstractmethod
-    def run(self, scenario):
+    def run(self, scenario: "Scenario") -> None:
         """Execute the model.
 
         **Required.** Implementations of :meth:`run`:

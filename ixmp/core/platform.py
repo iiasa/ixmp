@@ -1,18 +1,29 @@
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from os import PathLike
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
 
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
+
 from ixmp._config import config
 from ixmp.backend.common import FIELDS, ItemType
 from ixmp.util import as_str_list
-from ixmp.util.ixmp4 import WriteFiltersKwargs
 
 if TYPE_CHECKING:
-    from ixmp.backend.base import Backend
+    from ixmp.backend.ixmp4 import IXMP4Backend
+    from ixmp.backend.jdbc import JDBCBackend
+    from ixmp.types import PlatformInitKwargs, WriteFilters
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +54,7 @@ class Platform:
     """
 
     # Storage back end for the platform
-    _backend: "Backend"
+    _backend: Union["JDBCBackend", "IXMP4Backend"]
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
@@ -66,8 +77,8 @@ class Platform:
         self,
         name: Optional[str] = None,
         backend: Union[Literal["ixmp4", "jdbc"], str, None] = None,
-        **backend_args,
-    ):
+        **backend_args: Unpack["PlatformInitKwargs"],
+    ) -> None:
         from ixmp.backend import get_class
 
         if name is None:
@@ -77,7 +88,7 @@ class Platform:
             elif backend is None:
                 # Only backend_args given
                 log.info("Using default JDBC backend")
-                kwargs = {"class": "jdbc"}
+                kwargs: "PlatformInitKwargs" = {"class": "jdbc"}
             else:
                 # Backend and maybe backend_args were given
                 kwargs = {"class": backend}
@@ -93,12 +104,17 @@ class Platform:
         backend_class = get_class(kwargs.pop("class"))
 
         # Instantiate the backend
-        self._backend = backend_class(**kwargs)
+        # FIXME We should clean up the use of one variable called 'kwargs' for various
+        # purposes. In this case, what ensures that if backend_class is an instance of
+        # JDBCBackend, kwargs is JDBCBackendInitKwargs (i.e. compatible with it)?
+        # And same for ixmp4. In the interest of time, I'm skipping this for now.
+        self._backend = backend_class(**kwargs)  # type: ignore[misc]
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Callable[..., Any]:
         """Convenience for methods of Backend."""
         if name in self._backend_direct:
-            return getattr(self._backend, name)
+            # All entries in that list are Callables
+            return cast(Callable[..., Any], getattr(self._backend, name))
         else:
             raise AttributeError(name)
 
@@ -186,13 +202,13 @@ class Platform:
 
     def export_timeseries_data(
         self,
-        path: PathLike,
+        path: PathLike[str],
         default: bool = True,
         model: Optional[str] = None,
         scenario: Optional[str] = None,
-        variable=None,
-        unit=None,
-        region=None,
+        variable: Optional[Union[str, list[str]]] = None,
+        unit: Optional[Union[str, list[str]]] = None,
+        region: Optional[Union[str, list[str]]] = None,
         export_all_runs: bool = False,
     ) -> None:
         """Export time series data to CSV file across multiple :class:`.TimeSeries`.
@@ -223,11 +239,11 @@ class Platform:
             Only return data for this model name.
         scenario: str, optional
             Only return data for this scenario name.
-        variable: list of str, optional
+        variable: str or list of str, optional
             Only return data for variable name(s) in this list.
-        unit: list of str, optional
+        unit: str or list of str, optional
             Only return data for unit name(s) in this list.
-        region: list of str, optional
+        region: str or list of str, optional
             Only return data for region(s) in this list.
         export_all_runs: bool, optional
             Export all existing model+scenario run combinations.
@@ -237,7 +253,7 @@ class Platform:
                 "Invalid arguments: export_all_runs cannot be used when providing a "
                 "model or scenario."
             )
-        filters = WriteFiltersKwargs(
+        filters: "WriteFilters" = dict(
             scenario=as_str_list(scenario),
             model=as_str_list(model),
             variable=as_str_list(variable),
@@ -284,7 +300,7 @@ class Platform:
         """
         return pd.DataFrame(self._backend.get_nodes(), columns=FIELDS["get_nodes"])
 
-    def _existing_node(self, name):
+    def _existing_node(self, name: str) -> bool:
         """Check whether the node `name` has been defined.
 
         If :obj:`True`, log a warning and return True. Otherwise, return False.

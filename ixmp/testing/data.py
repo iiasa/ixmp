@@ -2,7 +2,7 @@
 import sys
 from itertools import product
 from math import ceil
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import genno
 import numpy as np
@@ -13,30 +13,18 @@ import pytest
 from ixmp import IAMC_IDX, Platform, Scenario, TimeSeries
 
 if TYPE_CHECKING:
-    from typing import TypedDict
+    from ixmp.types import ModelScenario, TimeSeriesIdentifiers
 
-    class ScenarioIdentifiers(TypedDict):
-        """Identifiers of a Scenario.
-
-        Used only for type checking in this file, so version is omitted.
-        """
-
-        model: str
-        scenario: str
-
-    class ScenarioKwargs(TypedDict, total=False):
+    class ScenarioKwargs(TimeSeriesIdentifiers, total=False):
         """Keyword arguments to Scenario.__init__()."""
 
-        model: str
-        scenario: str
-        version: str
         scheme: str
         annotation: str
-        with_data: Optional[bool]
+        with_data: bool
 
 
 #: Common (model name, scenario name) pairs for testing.
-SCEN: dict[str, "ScenarioIdentifiers"] = {
+SCEN: dict[str, "ModelScenario"] = {
     "dantzig": dict(model="canning problem", scenario="standard"),
     "h2g2": dict(model="Douglas Adams", scenario="Hitchhiker"),
 }
@@ -134,7 +122,7 @@ DATA = {
 }
 
 
-def add_random_model_data(scenario, length):
+def add_random_model_data(scenario: Scenario, length: int) -> int:
     """Add a set and parameter with given *length* to *scenario*.
 
     The set is named 'random_set'. The parameter is named 'random_par', and has two
@@ -152,7 +140,9 @@ def add_random_model_data(scenario, length):
     return len(par_data)
 
 
-def add_test_data(scen: Scenario):
+def add_test_data(
+    scen: Scenario,
+) -> tuple[list[str], list[str], list[str], genno.Quantity]:
     """Populate `scen` with test data."""
     # New sets
     t_foo = ["foo{}".format(i) for i in (1, 2, 3)]
@@ -167,13 +157,14 @@ def add_test_data(scen: Scenario):
     scen.add_set("y", y)
 
     # Data
-    ureg = pint.get_application_registry()
+    ureg = pint.get_application_registry()  # type: ignore[no-untyped-call]
     x = genno.Quantity(
         np.random.rand(len(t), len(y)), coords={"t": t, "y": y}, units=ureg.kg
     )
 
     # As a pd.DataFrame with units
-    x_df = x.to_series().rename("value").reset_index()
+    # TODO Remove once genno adds annotation
+    x_df = x.to_series().rename("value").reset_index()  # type: ignore[no-untyped-call]
     x_df["unit"] = "kg"
 
     scen.init_par("x", ["t", "y"])
@@ -299,7 +290,7 @@ def populate_test_platform(platform: Platform) -> None:
     s4.set_as_default()
 
 
-def random_model_data(length):
+def random_model_data(length: int) -> tuple[list[str], pd.DataFrame]:
     """Random (set, parameter) data with at least *length* elements.
 
     See also
@@ -328,7 +319,7 @@ def random_model_data(length):
     return set_data, par_data
 
 
-def random_ts_data(length):
+def random_ts_data(length: Union[float, int]) -> pd.DataFrame:
     """A :class:`pandas.DataFrame` of time series data with `length` rows.
 
     Suitable for passage to :meth:`.TimeSeries.add_timeseries`.

@@ -1,6 +1,9 @@
 import logging
+from pathlib import Path
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
@@ -8,13 +11,21 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import HIST_DF, TS_DF, make_dantzig, models
 
+if TYPE_CHECKING:
+    from ixmp.core.platform import Platform
+    from ixmp.core.scenario import Scenario
+
 TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
 # FIXME IXMP4Backend seems to return columns with no/wrong names for scen.timeseries()
 @pytest.mark.jdbc
-def test_run_clone(caplog, test_mp, request):
+def test_run_clone(
+    caplog: pytest.LogCaptureFixture,
+    test_mp: "Platform",
+    request: pytest.FixtureRequest,
+) -> None:
     caplog.set_level(logging.WARNING)
 
     # this test is designed to cover the full functionality of the GAMS API
@@ -28,7 +39,7 @@ def test_run_clone(caplog, test_mp, request):
     assert np.isclose(scen.var("z")["lvl"], 153.675)
     assert_frame_equal(
         scen.timeseries(iamc=True),
-        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+        TS_DF.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
     )
 
     # cloning with `keep_solution=True` keeps all timeseries and the solution
@@ -36,18 +47,16 @@ def test_run_clone(caplog, test_mp, request):
     assert np.isclose(scen2.var("z")["lvl"], 153.675)
     assert_frame_equal(
         scen2.timeseries(iamc=True),
-        TS_DF.assign(scenario=[scen.scenario, scen.scenario]),
+        TS_DF.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
     )
 
     # version attribute of the clone increments the original (GitHub #211)
+    assert scen.version is not None
     assert scen2.version == scen.version + 1
 
     # cloning with `keep_solution=True` and `first_model_year` raises a warning
     scen.clone(keep_solution=True, shift_first_model_year=2005)
-    assert (
-        "Override keep_solution=True for shift_first_model_year"
-        == caplog.records[-1].message
-    )
+    assert "Override keep_solution=True for shift_first_model_year" in caplog.messages
 
     # cloning with `keep_solution=False` drops the solution and only keeps
     # timeseries set as `meta=True`
@@ -64,13 +73,15 @@ def test_run_clone(caplog, test_mp, request):
     assert np.isnan(scen4.var("z")["lvl"])
     assert_frame_equal(
         scen4.timeseries(iamc=True),
-        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+        TS_DF_CLEARED.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
     )
 
 
 # FIXME Fix IXMP4Backend return value for s.var()["lvl"] so that np.isnan() accepts it
 @pytest.mark.jdbc
-def test_run_remove_solution(test_mp, request):
+def test_run_remove_solution(
+    test_mp: "Platform", request: pytest.FixtureRequest
+) -> None:
     # create a new instance of the transport problem and solve it
     mp = test_mp
     scen = make_dantzig(mp, solve=True, quiet=True, request=request)
@@ -97,28 +108,30 @@ def test_run_remove_solution(test_mp, request):
     assert np.isnan(scen3.var("z")["lvl"])
     assert_frame_equal(
         scen3.timeseries(iamc=True),
-        TS_DF_CLEARED.assign(scenario=[scen.scenario, scen.scenario]),
+        TS_DF_CLEARED.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
     )
 
 
-def scenario_list(mp):
+def scenario_list(mp: "Platform") -> pd.DataFrame:
     return mp.scenario_list(default=False)[["model", "scenario"]]
 
 
-def assert_multi_db(mp1, mp2):
+def assert_multi_db(mp1: "Platform", mp2: "Platform") -> None:
     assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
 
 
-def get_distance(scen):
-    return scen.par("d").set_index(["i", "j"]).loc["san-diego", "topeka"]["value"]
+def get_distance(scen: "Scenario") -> "pd.Series[Union[float, int]]":
+    d = scen.par("d")
+    assert isinstance(d, pd.DataFrame)
+    return d.set_index(["i", "j"]).loc[("san-diego", "topeka"), :]["value"]
 
 
-def test_multi_db_run(tmpdir, request):
+def test_multi_db_run(tmp_path: Path, request: pytest.FixtureRequest) -> None:
     # create a new instance of the transport problem and solve it
-    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
+    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp1")
     scen1 = make_dantzig(mp1, solve=True, quiet=True, request=request)
 
-    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
+    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp2")
     # add other unit to make sure that the mapping is correct during clone
     mp2.add_unit("wrong_unit")
     mp2.add_region("wrong_region", "country")
@@ -134,36 +147,48 @@ def test_multi_db_run(tmpdir, request):
     del mp2
 
     # reopen the connection to the second platform and reload scenario
-    _mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
+    _mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp2")
     assert_multi_db(mp1, _mp2)
     args = models["dantzig"].copy()
-    args.update(scenario=request.node.name)
+    args["scenario"] = request.node.name
     scen2 = ixmp.Scenario(_mp2, **args)
 
     # check that sets, variables and parameter were copied correctly
     assert_array_equal(scen1.set("i"), scen2.set("i"))
-    assert_frame_equal(scen1.par("d"), scen2.par("d"))
+    d1 = scen1.par("d")
+    d2 = scen2.par("d")
+    assert isinstance(d1, pd.DataFrame)
+    assert isinstance(d2, pd.DataFrame)
+    assert_frame_equal(d1, d2)
     assert np.isclose(scen2.var("z")["lvl"], 153.675)
-    assert_frame_equal(scen1.var("x"), scen2.var("x"))
+    x1 = scen1.var("x")
+    x2 = scen2.var("x")
+    assert isinstance(x1, pd.DataFrame)
+    assert isinstance(x2, pd.DataFrame)
+    assert_frame_equal(x1, x2)
 
     # check that custom unit, region and timeseries are migrated correctly
     assert scen2.par("f")["value"] == 90.0
     assert scen2.par("f")["unit"] == "USD/km"
     assert_frame_equal(
         scen2.timeseries(iamc=True),
-        TS_DF.assign(scenario=[scen2.scenario, scen2.scenario]),
+        TS_DF.assign(scenario=pd.Series([scen2.scenario, scen2.scenario])),
     )
 
 
-def test_multi_db_edit_source(tmpdir, request):
+def test_multi_db_edit_source(tmp_path: Path, request: pytest.FixtureRequest) -> None:
     # create a new instance of the transport problem
-    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
+    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp1")
     scen1 = make_dantzig(mp1, request=request)
 
-    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
+    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp2")
     scen2 = scen1.clone(platform=mp2)
 
-    assert_frame_equal(scen1.par("d"), scen2.par("d"))
+    d1 = scen1.par("d")
+    d2 = scen2.par("d")
+    assert isinstance(d1, pd.DataFrame)
+    assert isinstance(d2, pd.DataFrame)
+    assert_frame_equal(d1, d2)
 
     scen1.check_out()
     scen1.add_par("d", ["san-diego", "topeka"], 1.5, "km")
@@ -180,15 +205,19 @@ def test_multi_db_edit_source(tmpdir, request):
     assert_multi_db(mp1, mp2)
 
 
-def test_multi_db_edit_target(tmpdir, request):
+def test_multi_db_edit_target(tmp_path: Path, request: pytest.FixtureRequest) -> None:
     # create a new instance of the transport problem
-    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp1")
+    mp1 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp1")
     scen1 = make_dantzig(mp1, request=request)
 
-    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmpdir / "mp2")
+    mp2 = ixmp.Platform(backend="jdbc", driver="hsqldb", path=tmp_path / "mp2")
     scen2 = scen1.clone(platform=mp2)
 
-    assert_frame_equal(scen1.par("d"), scen2.par("d"))
+    d1 = scen1.par("d")
+    d2 = scen2.par("d")
+    assert isinstance(d1, pd.DataFrame)
+    assert isinstance(d2, pd.DataFrame)
+    assert_frame_equal(d1, d2)
 
     scen2.check_out()
     scen2.add_par("d", ["san-diego", "topeka"], 1.5, "km")

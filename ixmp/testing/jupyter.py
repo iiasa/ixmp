@@ -2,17 +2,24 @@
 
 import os
 import sys
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional, Union
 from warnings import warn
 
 import pytest
+from nbformat import NotebookNode
 
 nbformat = pytest.importorskip("nbformat")
 
 
 def run_notebook(
-    nb_path, tmp_path, env=None, *, default_platform: Optional[str] = None, **kwargs
-):
+    nb_path: os.PathLike[str],
+    tmp_path: Path,
+    env: Optional[os._Environ[str]] = None,
+    *,
+    default_platform: Optional[str] = None,
+    **kwargs: Any,
+) -> tuple[NotebookNode, list[Any]]:
     """Execute a Jupyter notebook via :mod:`nbclient` and collect output.
 
     Parameters
@@ -58,7 +65,8 @@ def run_notebook(
     from ixmp import config
 
     # Read the notebook
-    nb = nbformat.read(nb_path, as_version=4)
+    # TODO Remove once nbformat adds annotation
+    nb: NotebookNode = nbformat.read(nb_path, as_version=4)  # type: ignore[no-untyped-call]
 
     # Set default keywords
     kwargs.setdefault("allow_errors", False)
@@ -72,11 +80,13 @@ def run_notebook(
     kwargs.setdefault("kernel_name", kernel or f"python{sys.version_info[0]}")
     kwargs.setdefault("timeout", 10)
 
-    env = env or os.environ.copy()
+    env_to_use = env or os.environ.copy()
 
     if default_platform:
         # Set the default platform in the tmp_env
-        assert config.path is not None and config.path.is_relative_to(env["IXMP_DATA"])
+        assert config.path is not None and config.path.is_relative_to(
+            env_to_use["IXMP_DATA"]
+        )
 
         # Store the default platform
         default_platform_pre = config.values["platform"]["default"]
@@ -90,7 +100,7 @@ def run_notebook(
 
     # Execute the notebook.
     # `env` is passed from nbclient to jupyter_client.launcher.launch_kernel()
-    client.execute(env=env)
+    client.execute(env=env_to_use)
 
     # Retrieve error information from cells
     errors = [
@@ -109,7 +119,9 @@ def run_notebook(
     return nb, errors
 
 
-def get_cell_output(nb, name_or_index, kind="data"):
+def get_cell_output(
+    nb: NotebookNode, name_or_index: Union[int, str], kind: str = "data"
+) -> Any:
     """Retrieve a cell from `nb` according to its metadata `name_or_index`:
 
     The Jupyter notebook format allows specifying a document-wide unique 'name' metadata

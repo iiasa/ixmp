@@ -1,8 +1,15 @@
+from collections.abc import Iterable
 from pathlib import Path
+from re import Pattern
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 import click
 
 import ixmp
+
+if TYPE_CHECKING:
+    from ixmp.types import PlatformInitKwargs
+    from ixmp.types import VersionType as VersionTypeAlias
 
 ScenarioClass: type[ixmp.Scenario] = ixmp.Scenario
 
@@ -12,10 +19,32 @@ class VersionType(click.ParamType):
 
     name = "version"  # https://github.com/pallets/click/issues/411
 
-    def convert(self, value, param, ctx):
-        """Fail if `value` is not :class:`int` or 'all'."""
+    @overload
+    def convert(
+        self,
+        value: int,
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> int: ...
+
+    @overload
+    def convert(
+        self,
+        value: str,
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> Union[int, Literal["new"]]: ...
+
+    def convert(
+        self,
+        value: Union[int, str],
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> Union[int, Literal["new"]]:
+        """Fail if `value` is not :class:`int` or 'new'."""
         if value == "new":
-            return value
+            # FIXME Not sure why mypy doesn't recognize this as Literal["new"]
+            return value  # type: ignore[return-value]
         elif isinstance(value, int):
             return value
         else:
@@ -39,7 +68,15 @@ class VersionType(click.ParamType):
 @click.option("--scenario", help="Scenario name.")
 @click.option("--version", type=VersionType(), help="Scenario version.")
 @click.pass_context
-def main(ctx, url, platform, dbprops, model, scenario, version):
+def main(
+    ctx: click.Context,
+    url: Optional[str],
+    platform: Optional[str],
+    dbprops: Optional[Path],
+    model: Optional[str],
+    scenario: Optional[str],
+    version: "VersionTypeAlias",
+) -> None:
     ctx.obj = dict()
 
     # Load the indicated Platform
@@ -84,7 +121,9 @@ def main(ctx, url, platform, dbprops, model, scenario, version):
 @click.option("--config", help="Path to reporting configuration file.")
 @click.argument("key")
 @click.pass_obj
-def report(context, config, key):
+def report(
+    context: dict[str, Any], config: Optional[Union[str, Path]], key: Optional[str]
+) -> None:
     """Run reporting for KEY."""
     # Import here to avoid importing reporting dependencies when running other commands
     from ixmp import Reporter
@@ -101,11 +140,12 @@ def report(context, config, key):
     r.configure(config)
 
     # Print the target
-    print(r.get(key).to_series().sort_index())
+    # TODO Remove once genno adds annotation
+    print(r.get(key).to_series().sort_index())  # type: ignore[no-untyped-call]
 
 
 @main.command("show-versions")
-def show_versions_cmd():
+def show_versions_cmd() -> None:
     """Print versions of ixmp and its dependencies."""
     ixmp.show_versions()
 
@@ -118,7 +158,7 @@ def show_versions_cmd():
     help="Remove any existing model solution data.",
 )
 @click.pass_context
-def solve(context, remove_solution):
+def solve(context: click.Context, remove_solution: bool) -> None:
     """Solve a Scenario and store results on the Platform.
 
     The scenario indicated by --url or --platform/--model/--scenario/--version is
@@ -131,7 +171,7 @@ def solve(context, remove_solution):
 
     print("Load scenario")
 
-    scen = context.obj.get("scen")
+    scen: ixmp.Scenario = context.obj.get("scen")
 
     if scen is None:
         context.fail("not found")
@@ -151,20 +191,22 @@ def solve(context, remove_solution):
 
 
 @main.group("config")
-def config_group():
+def config_group() -> None:
     """Get and set configuration keys."""
 
 
 @config_group.command()
 @click.argument("key", metavar="KEY")
-def get(key):
+def get(key: str) -> None:
     """Get configuration KEY."""
     print(ixmp.config.get(key))
 
 
 @config_group.command()
-def show():
+def show() -> None:
     """Show all configuration."""
+    # NOTE We could avoid this by not setting None as default
+    assert ixmp.config.path
     print(
         f"Configuration path: {ixmp.config.path}",
         ixmp.config.path.read_text(),
@@ -175,7 +217,7 @@ def show():
 @config_group.command()
 @click.argument("key", metavar="KEY")
 @click.argument("value", nargs=-1)
-def set(key, value):
+def set(key: str, value: Any) -> None:
     """Set configuration KEY to VALUE."""
     try:
         ixmp.config.set(key, value[0])
@@ -192,7 +234,9 @@ def set(key, value):
 @click.argument("path", type=click.Path(writable=True))
 @click.argument("filter_args", metavar="[--] FILTERS", nargs=-1)
 @click.pass_obj
-def export(context, path, filter_args, max_row):
+def export(
+    context: dict[str, Any], path: Path, filter_args: Iterable[str], max_row: int
+) -> None:
     """Export scenario data to PATH.
 
     To export only part of the parameter data, e.g. for inspection, provide FILTERS in
@@ -219,7 +263,7 @@ def export(context, path, filter_args, max_row):
 
 @main.group("import")
 @click.pass_obj
-def import_group(context):
+def import_group(context: dict[str, Any]) -> None:
     """Import time series or scenario data.
 
     DATA is the path to a file containing input data in CSV (time series only) or Excel
@@ -236,7 +280,12 @@ def import_group(context):
 @click.option("--lastyear", type=int, help="Final year of data to include.")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.pass_obj
-def import_timeseries(context, file, firstyear, lastyear):
+def import_timeseries(
+    context: dict[str, Any],
+    file: Path,
+    firstyear: Optional[int],
+    lastyear: Optional[int],
+) -> None:
     """Import time series data."""
     context["scen"].read_file(Path(file), firstyear, lastyear)
 
@@ -251,8 +300,13 @@ def import_timeseries(context, file, firstyear, lastyear):
 @click.argument("file", type=click.Path(exists=True, dir_okay=False))
 @click.pass_obj
 def import_scenario(
-    context, file, discard_solution, add_units, init_items, commit_steps
-):
+    context: dict[str, Any],
+    file: Path,
+    discard_solution: Optional[bool],
+    add_units: Optional[bool],
+    init_items: Optional[bool],
+    commit_steps: Optional[bool],
+) -> None:
     """Import scenario data."""
     scenario = context["scen"]
 
@@ -281,13 +335,13 @@ def import_scenario(
 
 
 @main.group("platform")
-def platform_group():
+def platform_group() -> None:
     """Configure platforms and storage backends."""
 
 
 @platform_group.command()
 @click.argument("name", metavar="PLATFORM")
-def remove(name):
+def remove(name: str) -> None:
     """Remove existing PLATFORM."""
     ixmp.config.remove_platform(name)
     print(f"Removed platform config for {repr(name)}")
@@ -296,7 +350,7 @@ def remove(name):
 @platform_group.command()
 @click.argument("platform_name", metavar="PLATFORM")
 @click.argument("args", nargs=-1)
-def add(platform_name, args):
+def add(platform_name: str, args: Union[str, Iterable[str]]) -> None:
     """Add PLATFORM, configured with ARGS.
 
     If PLATFORM is 'default', ARGS must be the name of another platform.
@@ -338,7 +392,7 @@ def add(platform_name, args):
 
 
 @platform_group.command("list")
-def list_platforms():
+def list_platforms() -> None:
     """List configured platforms."""
     for key, info in ixmp.config.values["platform"].items():
         print(f"{key}: {info}")
@@ -348,7 +402,7 @@ def list_platforms():
 @click.option("--go", is_flag=True, help="Actually manipulate files.")
 @click.argument("name_source", metavar="SRC")
 @click.argument("name_dest", metavar="DEST")
-def copy_platform(go, name_source, name_dest):
+def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
     """Create the local JDBCBackend/HyperSQL platform DEST as a copy of SRC.
 
     Any existing data at DEST are overwritten. Without --go, no action occurs.
@@ -356,7 +410,7 @@ def copy_platform(go, name_source, name_dest):
     import shutil
     from copy import deepcopy
 
-    def _check(name):
+    def _check(name: str) -> "PlatformInitKwargs":
         """Retrieve platform configuration and check."""
         _, cfg = ixmp.config.get_platform_info(name)
 
@@ -370,6 +424,7 @@ def copy_platform(go, name_source, name_dest):
 
     # Retrieve configuration for the source platform
     cfg_source = _check(name_source)
+    assert cfg_source["path"]
 
     try:
         # Retrieve configuration for the destination platform
@@ -378,8 +433,10 @@ def copy_platform(go, name_source, name_dest):
     except ValueError:
         # Target platform does not exist; construct its configuration
         cfg_dest = deepcopy(cfg_source)
-        cfg_dest["path"] = Path(cfg_dest["path"]).parent.joinpath(name_dest)
+        cfg_dest["path"] = Path(cfg_source["path"]).parent.joinpath(name_dest)
         add_platform = True
+
+    assert cfg_dest["path"]
 
     # Base paths for file operations
     path_source = Path(cfg_source["path"])
@@ -421,7 +478,12 @@ def copy_platform(go, name_source, name_dest):
 )
 @click.option("--as-url", is_flag=True, help="Display outputs as ixmp URLs.")
 @click.pass_obj
-def list_scenarios(context, **kwargs):
+def list_scenarios(
+    context: dict[str, Any],
+    match: Optional[Pattern[str]],
+    default_only: bool,
+    as_url: bool,
+) -> None:
     """List scenarios on the --platform."""
     from ixmp.util import format_scenario_list
 
@@ -436,7 +498,9 @@ def list_scenarios(context, **kwargs):
                 platform=context["mp"],
                 model=context.get("model name", None),
                 scenario=context.get("scenario name", None),
-                **kwargs,
+                match=match,
+                default_only=default_only,
+                as_url=as_url,
             )
         )
     )

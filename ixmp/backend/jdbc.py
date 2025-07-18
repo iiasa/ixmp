@@ -4,24 +4,59 @@ import os
 import platform
 import re
 from collections import ChainMap
-from collections.abc import Generator, Iterable, Mapping, Sequence
+from collections.abc import (
+    Callable,
+    Generator,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
-from typing import Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Union,
+    cast,
+    overload,
+)
 from weakref import WeakKeyDictionary
 
 import jpype
 import numpy as np
 import pandas as pd
 
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack, override
+
+from ixmp.core.item import CLASS as ITEM_CLASS
+from ixmp.core.item import Item, Set
+from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
+from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list, filtered
 
 from .base import CachingBackend
 from .common import FIELDS, ItemType
+
+if TYPE_CHECKING:
+    from ixmp.types import (
+        Filters,
+        JDBCBackendInitKwargs,
+        ParData,
+        ReadKwargs,
+        SetData,
+        SolutionData,
+        VersionType,
+        WriteKwargs,
+    )
+
 
 log = logging.getLogger(__name__)
 
@@ -76,13 +111,20 @@ DRIVER_CLASS = {
 }
 
 
-def _create_properties(driver=None, path=None, url=None, user=None, password=None):
+def _create_properties(
+    driver: Optional[str] = None,
+    path: Optional[Union[str, Path]] = None,
+    url: Optional[str] = None,
+    user: Optional[str] = None,
+    password: Optional[str] = None,
+) -> Any:
     """Create a database Properties from arguments."""
     properties = java.Properties()
 
     # Handle arguments
     try:
-        properties.setProperty("jdbc.driver", DRIVER_CLASS[driver])
+        # FIXME Improve handling of None driver value
+        properties.setProperty("jdbc.driver", DRIVER_CLASS[driver])  # type:ignore[index]
     except KeyError:
         raise ValueError(f"unrecognized/unsupported JDBC driver {repr(driver)}")
 
@@ -101,6 +143,8 @@ def _create_properties(driver=None, path=None, url=None, user=None, password=Non
             else:
                 raise ValueError(url)
         else:
+            # path can not also be None due to the check above, convince type checker
+            assert path is not None
             # Convert Windows paths to use forward slashes per HyperSQL JDBC URL spec
             url_path = str(PurePosixPath(Path(path).resolve())).replace("\\", "")
             full_url = f"jdbc:hsqldb:file:{url_path}"
@@ -114,7 +158,7 @@ def _create_properties(driver=None, path=None, url=None, user=None, password=Non
     return properties
 
 
-def _read_properties(file):
+def _read_properties(file: Path) -> dict[str, str]:
     """Read database properties from *file*, returning :class:`dict`."""
     properties = dict()
     for line in file.read_text().split("\n"):
@@ -124,7 +168,7 @@ def _read_properties(file):
     return properties
 
 
-def _raise_jexception(exc, msg="unhandled Java exception: "):
+def _raise_jexception(exc: Any, msg: str = "unhandled Java exception: ") -> None:
     """Convert Java/JPype exceptions to ordinary Python RuntimeError."""
     # Try to re-raise as a ValueError for bad model or scenario name
     arg = exc.args[0] if isinstance(exc.args[0], str) else ""
@@ -143,7 +187,7 @@ def _raise_jexception(exc, msg="unhandled Java exception: "):
 
 
 @contextmanager
-def _handle_jexception():
+def _handle_jexception() -> Generator[None, Any, None]:
     """Context manager form of :func:`_raise_jexception`."""
     try:
         yield
@@ -164,34 +208,50 @@ def _fixed_index_sets(scheme: str) -> Mapping[str, list[str]]:
         return {}
 
 
-def _domain_enum(domain):
+def _domain_enum(domain: str) -> str:
     domain_enum = java.DocumentationKey.DocumentationDomain
     try:
-        return domain_enum.valueOf(domain.upper())
+        # NOTE in truth, _domain seems to only be a compatible Java type
+        _domain: str = domain_enum.valueOf(domain.upper())
+        return _domain
     except java.IllegalArgumentException:
         domains = ", ".join([d.name().lower() for d in domain_enum.values()])
         raise ValueError(f"No such domain: {domain}, existing domains: {domains}")
 
 
-def _unwrap(v):
+@overload
+def _unwrap(v: list[Union[bool, float, str]]) -> list[Union[bool, float, str]]: ...
+
+
+@overload
+def _unwrap(v: Union[bool, float, str]) -> Union[bool, float, str]: ...
+
+
+def _unwrap(v: Any) -> Union[bool, float, str, list[Union[bool, float, str]]]:
     """Unwrap meta numeric value or list of values (BigDecimal -> Double)."""
     if isinstance(v, java.BigDecimal):
-        return v.doubleValue()
+        _v: float = v.doubleValue()
+        return _v
     elif isinstance(v, java.ArrayList):
         return [_unwrap(elt) for elt in v]
     else:
-        return v
+        # NOTE In truth, this value might only be a compatible Java type
+        else_v: Union[bool, str] = v
+        return else_v
 
 
-def _wrap(value):
+def _wrap(value: Any) -> Union[bool, float, int, str, list[Union[bool, float, str]]]:
     if isinstance(value, (str, bool)):
         return value
     elif isinstance(value, (int, float)):
-        return java.BigDecimal(value)
+        # NOTE In truth, BigDecimal seems to return a Java type compatible with both
+        # float and int
+        _value: Union[float, int] = java.BigDecimal(value)
+        return _value
     elif isinstance(value, (Sequence, Iterable)):
         jlist = java.ArrayList()
         jlist.addAll([_wrap(elt) for elt in value])
-        return jlist
+        return cast(list[Union[bool, float, str]], jlist)
     else:
         raise ValueError(f"Cannot use value {value} as metadata")
 
@@ -240,36 +300,45 @@ class JDBCBackend(CachingBackend):
     #    - s_clone() is only supported when target_backend is JDBCBackend.
 
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object.
-    jobj: jpype.JObject = None
+    jobj: jpype.JObject = None  # type: ignore[no-any-unimported]
 
     #: Mapping from ixmp.TimeSeries object to the underlying at.ac.iiasa.ixmp.Scenario
     #: object (or subclasses of either).
-    jindex: Mapping[object, jpype.JObject] = WeakKeyDictionary()
+    jindex: MutableMapping[Union[TimeSeries, Scenario], jpype.JObject] = (  # type: ignore[no-any-unimported]
+        WeakKeyDictionary()
+    )
 
-    def __init__(self, jvmargs=None, **kwargs):
-        properties = None
+    def __init__(
+        self,
+        jvmargs: Optional[Union[str, list[str]]] = None,
+        dbprops: Optional[os.PathLike[str]] = None,
+        cache: bool = True,
+        log_level: Optional[Union[int, str]] = None,
+        **kwargs: Unpack["JDBCBackendInitKwargs"],
+    ) -> None:
+        properties: Optional[Any] = None
 
         # Handle arguments
-        if "dbprops" in kwargs:
+        if dbprops:
             # Use an existing file
-            dbprops = Path(kwargs.pop("dbprops"))
-            if dbprops.exists() and dbprops.is_file():
+            _dbprops = Path(dbprops)
+            if _dbprops.exists() and _dbprops.is_file():
                 # Existing properties file
-                properties = _read_properties(dbprops)
+                properties = _read_properties(_dbprops)
                 if "jdbc.url" not in properties:
                     raise ValueError("Config file contains no database URL")
             else:
-                raise FileNotFoundError(dbprops)
+                raise FileNotFoundError(_dbprops)
 
         start_jvm(jvmargs)
 
         # Invoke the parent constructor to initialize the cache
-        super().__init__(cache_enabled=kwargs.pop("cache", True))
+        super().__init__(cache_enabled=cache)
 
         # Extract a log_level keyword argument before _create_properties(). By default,
         # use the same level as the 'ixmp' logger, whatever that has been set to.
         ixmp_logger = logging.getLogger("ixmp")
-        log_level = kwargs.pop("log_level", ixmp_logger.getEffectiveLevel())
+        log_level = log_level or ixmp_logger.getEffectiveLevel()
 
         # Create a database properties object
         if properties:
@@ -284,6 +353,9 @@ class JDBCBackend(CachingBackend):
             except TypeError as e:
                 msg = e.args[0].replace("_create_properties", "JDBCBackend")
                 raise TypeError(msg)
+
+        # We seem to assume this
+        assert properties is not None
 
         log.info(
             "launching ixmp.Platform connected to {}".format(
@@ -306,7 +378,9 @@ class JDBCBackend(CachingBackend):
             jclass = e.__class__.__name__
             if jclass.endswith("HikariPool.PoolInitializationException"):
                 redacted = copy(kwargs)
-                redacted.update(user="(HIDDEN)", password="(HIDDEN)")
+                # See https://github.com/python/mypy/issues/6019 for why we need a dict
+                # here
+                redacted.update({"user": "(HIDDEN)", "password": "(HIDDEN)"})
                 msg = f"unable to connect to database:\n{repr(redacted)}"
             elif jclass.endswith("FlywayException"):
                 msg = "when initializing database:"
@@ -323,11 +397,11 @@ class JDBCBackend(CachingBackend):
         # Set the log level
         self.set_log_level(log_level)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close_db()
 
     @classmethod
-    def gc(cls):
+    def gc(cls) -> None:
         """Collect garbage."""
         if _GC_AGGRESSIVE:
             # log.debug('Collect garbage')
@@ -341,7 +415,9 @@ class JDBCBackend(CachingBackend):
 
     # Platform methods
     @classmethod
-    def handle_config(cls, args, kwargs):
+    def handle_config(
+        cls, args: Sequence[Any], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle platform/backend config arguments.
 
         `args` will overwrite any `kwargs`, and may be one of:
@@ -397,7 +473,7 @@ class JDBCBackend(CachingBackend):
 
         return info
 
-    def set_log_level(self, level):
+    def set_log_level(self, level: Union[int, str]) -> None:
         # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled by the
         # 'ixmp' logger; see ixmp/__init__.py.
         log.setLevel(level)
@@ -407,11 +483,13 @@ class JDBCBackend(CachingBackend):
             level = logging.getLevelName(level)
         self.jobj.setLogLevel(LOG_LEVELS[level])
 
-    def get_log_level(self):
+    def get_log_level(self) -> str:
         levels = {v: k for k, v in LOG_LEVELS.items()}
         return levels.get(self.jobj.getLogLevel(), "UNKNOWN")
 
-    def set_doc(self, domain, docs):
+    def set_doc(
+        self, domain: str, docs: Union[dict[str, str], Iterable[tuple[str, str]]]
+    ) -> None:
         dd = _domain_enum(domain)
         jdata = java.LinkedHashMap()
         if isinstance(docs, dict):
@@ -420,19 +498,23 @@ class JDBCBackend(CachingBackend):
             jdata.put(str(k), str(v))
         self.jobj.setDoc(dd, jdata)
 
-    def get_doc(self, domain, name=None):
+    def get_doc(
+        self, domain: str, name: Optional[str] = None
+    ) -> Union[str, dict[str, str]]:
         dd = _domain_enum(domain)
         if name is None:
             doc = self.jobj.getDoc(dd)
             return {entry.getKey(): entry.getValue() for entry in doc.entrySet()}
         else:
-            return self.jobj.getDoc(dd, str(name))
+            doc = self.jobj.getDoc(dd, str(name))
+            assert isinstance(doc, str)
+            return doc
 
-    def open_db(self):
+    def open_db(self) -> None:
         """(Re-)open the database connection."""
         self.jobj.openDB()
 
-    def close_db(self):
+    def close_db(self) -> None:
         """Close the database connection.
 
         A HyperSQL database can only be used by one :class:`Backend` instance at a time.
@@ -447,33 +529,43 @@ class JDBCBackend(CachingBackend):
             # - JVM has already shut down, e.g. on program exit
             pass
 
-    def get_auth(self, user, models, kind):
-        return self.jobj.checkModelAccess(user, kind, to_jlist(models))
+    def get_auth(self, user: str, models: Iterable[str], kind: str) -> dict[str, bool]:
+        model_access = self.jobj.checkModelAccess(user, kind, to_jlist(models))
+        # NOTE Can't isinstance()-check parametrized generic yet; java HasMap is
+        # returned in truth, but unusable as return type (becomes Any)
+        assert isinstance(model_access, Mapping)
+        return cast(dict[str, bool], model_access)
 
-    def set_node(self, name, parent=None, hierarchy=None, synonym=None):
+    def set_node(
+        self,
+        name: str,
+        parent: Optional[str] = None,
+        hierarchy: Optional[str] = None,
+        synonym: Optional[str] = None,
+    ) -> None:
         if parent and hierarchy and not synonym:
             self.jobj.addNode(name, parent, hierarchy)
         elif synonym and not (parent or hierarchy):
             self.jobj.addNodeSynonym(synonym, name)
 
-    def get_nodes(self):
+    def get_nodes(self) -> Generator[tuple[str, Optional[str], str, str]]:
         for r in self.jobj.listNodes("%"):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
 
-    def get_timeslices(self):
+    def get_timeslices(self) -> Generator[tuple[str, str, float], Any, None]:
         for r in self.jobj.getTimeslices():
             name, category, duration = (r.getName(), r.getCategory(), r.getDuration())
             yield name, category, duration
 
-    def set_timeslice(self, name, category, duration):
+    def set_timeslice(self, name: str, category: str, duration: float) -> None:
         self.jobj.addTimeslice(name, category, java.Double(duration))
 
-    def add_model_name(self, name):
+    def add_model_name(self, name: str) -> None:
         self.jobj.addModel(str(name))
 
-    def add_scenario_name(self, name):
+    def add_scenario_name(self, name: str) -> None:
         self.jobj.addScenario(str(name))
 
     def get_model_names(self) -> Generator[str, None, None]:
@@ -484,7 +576,9 @@ class JDBCBackend(CachingBackend):
         for scenario in self.jobj.listScenarios():
             yield str(scenario)
 
-    def get_scenarios(self, default, model, scenario):
+    def get_scenarios(
+        self, default: bool, model: Optional[str], scenario: Optional[str]
+    ) -> Generator[list[Union[bool, int, str]], Any, None]:
         # List<Map<String, Object>>
         with _handle_jexception():
             scenarios = self.jobj.getScenarioList(default, model, scenario)
@@ -495,7 +589,7 @@ class JDBCBackend(CachingBackend):
                 data.append(int(s[field]) if field == "version" else s[field])
             yield data
 
-    def set_unit(self, name, comment):
+    def set_unit(self, name: str, comment: str) -> None:
         try:
             self.jobj.addUnitToDB(name, comment)
         except Exception as e:  # pragma: no cover
@@ -505,10 +599,16 @@ class JDBCBackend(CachingBackend):
             else:
                 _raise_jexception(e)
 
-    def get_units(self):
+    def get_units(self) -> list[str]:
         return to_pylist(self.jobj.getUnitList())
 
-    def read_file(self, path, item_type: ItemType, **kwargs):
+    @override
+    def read_file(
+        self,
+        path: Path,  # type: ignore[override]
+        item_type: ItemType,
+        **kwargs: Unpack["ReadKwargs"],
+    ) -> None:
         """Read Platform, TimeSeries, or Scenario data from file.
 
         JDBCBackend supports reading from:
@@ -573,7 +673,13 @@ class JDBCBackend(CachingBackend):
         else:
             raise NotImplementedError(path, item_type)
 
-    def write_file(self, path, item_type: ItemType, **kwargs):
+    @override
+    def write_file(
+        self,
+        path: os.PathLike[str],
+        item_type: ItemType,
+        **kwargs: Unpack["WriteKwargs"],
+    ) -> None:
         """Write Platform, TimeSeries, or Scenario data to file.
 
         JDBCBackend supports writing to:
@@ -605,16 +711,18 @@ class JDBCBackend(CachingBackend):
         else:
             return
 
+        _path = Path(path)
+
         ts, filters = self._handle_rw_filters(kwargs.pop("filters", {}))
-        if path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
+        if _path.suffix == ".gdx" and item_type is ItemType.SET | ItemType.PAR:
             if len(filters) > 1:  # pragma: no cover
                 raise NotImplementedError("write to GDX with filters")
             elif not isinstance(ts, Scenario):  # pragma: no cover
                 raise ValueError("write to GDX requires a Scenario object")
 
             # include_var_equ=False -> do not include variables/equations in GDX
-            self.jindex[ts].toGDX(str(path.parent), path.name, False)
-        elif path.suffix == ".csv" and item_type is ItemType.TS:
+            self.jindex[ts].toGDX(str(_path.parent), _path.name, False)
+        elif _path.suffix == ".csv" and item_type is ItemType.TS:
             models = set(filters.pop("model"))
             # NOTE this is what we get for not differentiating e.g. scenario vs
             # scenarios in filters...
@@ -638,7 +746,7 @@ class JDBCBackend(CachingBackend):
                 to_jlist(variables),
                 to_jlist(units),
                 to_jlist(regions),
-                str(path),
+                str(_path),
                 export_all_runs,
             )
         else:
@@ -646,7 +754,7 @@ class JDBCBackend(CachingBackend):
 
     # Timeseries methods
 
-    def _index_and_set_attrs(self, jobj, ts):
+    def _index_and_set_attrs(self, jobj: jpype.JObject, ts: TimeSeries) -> None:  # type: ignore[no-any-unimported]
         """Add *jobj* to index and update attributes of *ts*.
 
         Helper for init and get.
@@ -673,7 +781,12 @@ class JDBCBackend(CachingBackend):
 
             ts.scheme = s
 
-    def _validate_meta_args(self, model, scenario, version):
+    def _validate_meta_args(
+        self,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[Union[int, str]],
+    ) -> None:
         """Validate arguments for getting/setting/deleting meta"""
         valid = False
         if model and not scenario and version is None:
@@ -690,7 +803,7 @@ class JDBCBackend(CachingBackend):
                 "(model, scenario), (model, scenario, version)"
             )
 
-    def init(self, ts, annotation):
+    def init(self, ts: TimeSeries, annotation: str) -> None:
         klass = ts.__class__.__name__
 
         # Final arguments: scheme only for Scenarios
@@ -703,8 +816,8 @@ class JDBCBackend(CachingBackend):
 
         self._index_and_set_attrs(jobj, ts)
 
-    def get(self, ts):
-        args = [ts.model, ts.scenario]
+    def get(self, ts: TimeSeries) -> None:
+        args: list[Union[int, str]] = [ts.model, ts.scenario]
         if ts.version is not None:
             # Load a TimeSeries of specific version
             args.append(ts.version)
@@ -727,18 +840,18 @@ class JDBCBackend(CachingBackend):
 
         self._index_and_set_attrs(jobj, ts)
 
-    def del_ts(self, ts):
+    def del_ts(self, ts: TimeSeries) -> None:
         super().del_ts(ts)
 
         # Aggressively free memory
         self.gc()
         self.jindex.pop(ts, None)
 
-    def check_out(self, ts, timeseries_only):
+    def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
         with _handle_jexception():
             self.jindex[ts].checkOut(timeseries_only)
 
-    def commit(self, ts, comment):
+    def commit(self, ts: TimeSeries, comment: str) -> None:
         try:
             self.jindex[ts].commit(comment)
         except java.Exception as e:
@@ -750,29 +863,38 @@ class JDBCBackend(CachingBackend):
         if ts.version == 0:
             ts.version = self.jindex[ts].getVersion()
 
-    def discard_changes(self, ts):
+    def discard_changes(self, ts: TimeSeries) -> None:
         self.jindex[ts].discardChanges()
 
-    def set_as_default(self, ts):
+    def set_as_default(self, ts: TimeSeries) -> None:
         self.jindex[ts].setAsDefaultVersion()
 
-    def is_default(self, ts):
+    def is_default(self, ts: TimeSeries) -> bool:
         return bool(self.jindex[ts].isDefault())
 
-    def last_update(self, ts):
+    def last_update(self, ts: TimeSeries) -> Optional[str]:
         timestamp = self.jindex[ts].getLastUpdateTimestamp()
         if timestamp is not None:
-            return timestamp.toString()
+            return cast(str, timestamp.toString())
         else:
             return timestamp  # None
 
-    def run_id(self, ts):
-        return self.jindex[ts].getRunId()
+    def run_id(self, ts: TimeSeries) -> int:
+        id = self.jindex[ts].getRunId()
+        assert isinstance(id, int)
+        return id
 
-    def preload(self, ts):
+    def preload(self, ts: TimeSeries) -> None:
         self.jindex[ts].preloadAllTimeseries()
 
-    def get_data(self, ts, region, variable, unit, year):
+    def get_data(
+        self,
+        ts: TimeSeries,
+        region: Sequence[str],
+        variable: Sequence[str],
+        unit: Sequence[str],
+        year: Union[Sequence[int], Sequence[str]],
+    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         # Convert the selectors to Java lists
         r = to_jlist(region)
         v = to_jlist(variable)
@@ -793,12 +915,14 @@ class JDBCBackend(CachingBackend):
                 for f in FIELDS["ts_get"]
             )
 
-    def get_geo(self, ts):
+    def get_geo(
+        self, ts: TimeSeries
+    ) -> Generator[tuple[str, str, int, str, str, str, bool], Any, None]:
         # NB the return type of getGeoData() requires more processing than
         #    getTimeseries. It also accepts no selectors.
 
         # Field types
-        ftype = {
+        ftype: dict[str, Callable[..., Any]] = {
             "meta": int,
             "year": lambda obj: obj,  # Pass through; handled later
         }
@@ -837,7 +961,16 @@ class JDBCBackend(CachingBackend):
                 # Construct a row with a single value
                 yield tuple(cm[f] for f in FIELDS["ts_get_geo"])
 
-    def set_data(self, ts, region, variable, data, unit, subannual, meta):
+    def set_data(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        data: dict[int, float],
+        unit: str,
+        subannual: str,
+        meta: bool,
+    ) -> None:
         # Oracle is unable to handle ±∞ (issue #442)
         if self._properties["jdbc.driver"] == DRIVER_CLASS["oracle"] and any(
             map(np.isinf, data.values())
@@ -862,16 +995,42 @@ class JDBCBackend(CachingBackend):
             else:
                 raise
 
-    def set_geo(self, ts, region, variable, subannual, year, value, unit, meta):
+    def set_geo(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        year: int,
+        value: str,
+        unit: str,
+        meta: bool,
+    ) -> None:
         self.jindex[ts].addGeoData(
             region, variable, subannual, java.Integer(year), value, unit, meta
         )
 
-    def delete(self, ts, region, variable, subannual, years, unit):
+    def delete(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        years: Iterable[int],
+        unit: str,
+    ) -> None:
         years = to_jlist(years, java.Integer)
         self.jindex[ts].removeTimeseries(region, variable, subannual, years, unit)
 
-    def delete_geo(self, ts, region, variable, subannual, years, unit):
+    def delete_geo(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        years: Iterable[int],
+        unit: str,
+    ) -> None:
         years = to_jlist(years, java.Integer)
         self.jindex[ts].removeGeoData(region, variable, subannual, years, unit)
 
@@ -879,14 +1038,14 @@ class JDBCBackend(CachingBackend):
 
     def clone(
         self,
-        s,
-        platform_dest,
-        model,
-        scenario,
-        annotation,
-        keep_solution,
-        first_model_year=None,
-    ):
+        s: Scenario,
+        platform_dest: Platform,
+        model: str,
+        scenario: str,
+        annotation: Optional[str],
+        keep_solution: bool,
+        first_model_year: Optional[int] = None,
+    ) -> Scenario:
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
             raise NotImplementedError(  # pragma: no cover
@@ -917,13 +1076,22 @@ class JDBCBackend(CachingBackend):
             scheme=jclone.getScheme(),
         )
 
-    def has_solution(self, s):
-        return self.jindex[s].hasSolution()
+    def has_solution(self, s: Scenario) -> bool:
+        result = self.jindex[s].hasSolution()
+        assert isinstance(result, bool)
+        return result
 
-    def list_items(self, s, type):
+    def list_items(self, s: Scenario, type: str) -> list[str]:
         return to_pylist(getattr(self.jindex[s], f"get{type.title()}List")())
 
-    def init_item(self, s, type, name, idx_sets, idx_names):
+    def init_item(
+        self,
+        s: Scenario,
+        type: str,
+        name: str,
+        idx_sets: Sequence[str],
+        idx_names: Optional[Sequence[str]],
+    ) -> None:
         # Check `idx_sets` against values hard-coded in ixmp_source
         try:
             sets = _fixed_index_sets(s.scheme)[name]
@@ -940,8 +1108,8 @@ class JDBCBackend(CachingBackend):
                 )
 
         # Convert to Java data structures
-        idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
-        idx_names = to_jlist(idx_names) if idx_names else idx_sets
+        java_idx_sets = to_jlist(idx_sets) if len(idx_sets) else None
+        java_idx_names = to_jlist(idx_names) if idx_names else java_idx_sets
 
         # Retrieve the method that initializes the Item, something like "initializePar"
         func = getattr(self.jindex[s], f"initialize{type.title()}")
@@ -949,14 +1117,16 @@ class JDBCBackend(CachingBackend):
         # The constructor returns a reference to the Java Item, but these aren't exposed
         # by Backend, so don't return here
         try:
-            func(name, idx_sets, idx_names)
+            func(name, java_idx_sets, java_idx_names)
         except java.Exception as e:
             if "already exists" in e.args[0]:
                 raise ValueError(f"{repr(name)} already exists")
             else:
                 _raise_jexception(e)
 
-    def delete_item(self, s, type, name):
+    def delete_item(
+        self, s: Scenario, type: Literal["set", "par", "equ"], name: str
+    ) -> None:
         try:
             getattr(self.jindex[s], f"remove{type.title()}")(name)
         except jpype.JException as e:
@@ -966,35 +1136,68 @@ class JDBCBackend(CachingBackend):
                 _raise_jexception(e)
         self.cache_invalidate(s, type, name)
 
-    def item_index(self, s, name, sets_or_names):
-        jitem = self._get_item(s, "item", name, load=False)
+    def item_index(
+        self, s: Scenario, name: str, sets_or_names: Literal["sets", "names"]
+    ) -> list[str]:
+        jitem = self._get_item(s, Item(name), load=False)
         return list(getattr(jitem, f"getIdx{sets_or_names.title()}")())
 
+    @overload
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: Literal["set"],
+        name: str,
+        filters: "Filters" = None,
+    ) -> "SetData": ...
+
+    @overload
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: Literal["par"],
+        name: str,
+        filters: "Filters" = None,
+    ) -> "ParData": ...
+
+    @overload
+    def item_get_elements(
+        self,
+        s: Scenario,
+        ix_type: Literal["equ", "var"],
+        name: str,
+        filters: "Filters" = None,
+    ) -> "SolutionData": ...
+
     # FIXME reduce complexity 18 → ≤13
-    def item_get_elements(self, s, type, name, filters=None):  # noqa: C901
+    def item_get_elements(  # noqa: C901
+        self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
+    ) -> Union["SetData", "ParData", "SolutionData"]:
         if filters:
             # Convert filter elements to strings
             filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
 
         try:
             # Retrieve the cached value with this exact set of filters
-            return self.cache_get(s, type, name, filters)
+            return self.cache_get(s, ix_type, name, filters)
         except KeyError:
             pass  # Cache miss
 
         try:
             # Retrieve a cached, unfiltered value of the same item
-            unfiltered = self.cache_get(s, type, name, None)
+            unfiltered = self.cache_get(s, ix_type, name, None)
         except KeyError:
             pass  # Cache miss
         else:
             # Success; filter and return
+            # We seem to rely on this
+            assert isinstance(unfiltered, pd.DataFrame)
             return filtered(unfiltered, filters)
 
         # Failed to load item from cache
 
         # Retrieve the item
-        item = self._get_item(s, type, name, load=True)
+        item = self._get_item(s, ITEM_CLASS[ix_type](name), load=True)
         idx_names = list(item.getIdxNames())
         idx_sets = list(item.getIdxSets())
 
@@ -1004,23 +1207,29 @@ class JDBCBackend(CachingBackend):
 
             for idx_name, values in filters.items():
                 # Retrieve the elements of the index set as a list
-                idx_set = idx_sets[idx_names.index(idx_name)]
-                elements = self.item_get_elements(s, "set", idx_set).tolist()
+                idx_set_name = idx_sets[idx_names.index(idx_name)]
+                idx_set = self.item_get_elements(s, "set", idx_set_name)
+                assert isinstance(idx_set, pd.Series)
+                elements = idx_set.tolist()
 
                 # Filter for only included values and store
-                filtered_elements = filter(lambda e: e in values, elements)
+                filtered_elements: Iterable[Union[float, int, str]] = filter(
+                    lambda e: e in values, elements
+                )
                 jFilter.put(idx_name, to_jlist(filtered_elements))
 
             jList = item.getElements(jFilter)
         else:
             jList = item.getElements()
 
+        result: Union["SetData", "ParData", "SolutionData"]
+
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
             columns = copy(idx_names)
 
             # Prepare dtypes for index columns
-            dtypes = {}
+            dtypes: dict[str, Union[type[float], type[int], type[str]]] = {}
             for idx_name, idx_set in zip(columns, idx_sets):
                 # NB using categoricals could be more memory-efficient, but requires
                 #    adjustment of tests/documentation. See
@@ -1030,19 +1239,19 @@ class JDBCBackend(CachingBackend):
                 dtypes[idx_name] = str
 
             # Prepare dtypes for additional columns
-            if type == "par":
+            if ix_type == "par":
                 columns.extend(["value", "unit"])
                 dtypes.update(value=float, unit=str)
                 # Same as above
                 # dtypes['unit'] = CategoricalDtype(self.jobj.getUnitList())
-            elif type in ("equ", "var"):
+            elif ix_type in ("equ", "var"):
                 columns.extend(["lvl", "mrg"])
                 dtypes.update(lvl=float, mrg=float)
 
             # Copy vectors from Java into pd.Series to form DataFrame columns
             columns = []
 
-            def _get(method, name, *args):
+            def _get(method: str, name: str, *args: Any) -> None:
                 columns.append(
                     pd.Series(
                         # NB [:] causes JPype to use a faster code path
@@ -1057,25 +1266,25 @@ class JDBCBackend(CachingBackend):
                 _get("Col", idx_name, i)
 
             # Data columns
-            if type == "par":
+            if ix_type == "par":
                 _get("Values", "value")
                 _get("Units", "unit")
-            elif type in ("equ", "var"):
+            elif ix_type in ("equ", "var"):
                 _get("Levels", "lvl")
                 _get("Marginals", "mrg")
 
             result = pd.concat(columns, axis=1, copy=False)
-        elif type == "set":
+        elif ix_type == "set":
             # Index sets
             # dtype=object is to silence a warning in pandas 1.0
             result = pd.Series(item.getCol(0, jList)[:], dtype=object)
-        elif type == "par":
+        elif ix_type == "par":
             # Scalar parameter
             result = dict(
                 value=float(item.getScalarValue().floatValue()),
                 unit=str(item.getScalarUnit()),
             )
-        elif type in ("equ", "var"):
+        elif ix_type in ("equ", "var"):
             # Scalar equation or variable
             result = dict(
                 lvl=float(item.getScalarLevel().floatValue()),
@@ -1083,12 +1292,18 @@ class JDBCBackend(CachingBackend):
             )
 
         # Store cache
-        self.cache(s, type, name, filters, result)
+        self.cache(s, ix_type, name, filters, result)
 
         return result
 
-    def item_set_elements(self, s, type, name, elements):
-        jobj = self._get_item(s, type, name)
+    def item_set_elements(
+        self,
+        s: Scenario,
+        type: Literal["par", "set"],
+        name: str,
+        elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
+    ) -> None:
+        jobj = self._get_item(s, ITEM_CLASS[type](name))
 
         try:
             for key, value, unit, comment in elements:
@@ -1117,24 +1332,31 @@ class JDBCBackend(CachingBackend):
 
         self.cache_invalidate(s, type, name)
 
-    def item_delete_elements(self, s, type, name, keys):
-        jitem = self._get_item(s, type, name, load=False)
+    def item_delete_elements(
+        self,
+        s: Scenario,
+        type: Literal["par", "set"],
+        name: str,
+        keys: Iterable[Iterable[str]],
+    ) -> None:
+        item = ITEM_CLASS[type](name)
+        jitem = self._get_item(s, item, load=False)
         for key in keys:
             jitem.removeElement(to_jlist(key))
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed
         # on the next call to item_get_elements.
-        args = (s,) if type == "set" else (s, type, name)
+        args = (s,) if isinstance(item, Set) else (s, type, name)
         self.cache_invalidate(*args)
 
     def get_meta(
         self,
         model: Optional[str] = None,
         scenario: Optional[str] = None,
-        version: Optional[int] = None,
+        version: "VersionType" = None,
         strict: bool = False,
-    ) -> dict:
+    ) -> dict[str, Any]:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
@@ -1146,7 +1368,7 @@ class JDBCBackend(CachingBackend):
 
     def set_meta(
         self,
-        meta: dict,
+        meta: dict[str, Union[bool, float, int, str]],
         model: Optional[str] = None,
         scenario: Optional[str] = None,
         version: Optional[int] = None,
@@ -1164,17 +1386,17 @@ class JDBCBackend(CachingBackend):
 
     def remove_meta(
         self,
-        names,
+        names: list[str],
         model: Optional[str] = None,
         scenario: Optional[str] = None,
         version: Optional[int] = None,
-    ):
+    ) -> None:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
-        return self.jobj.removeMeta(model, scenario, version, to_jlist(names))
+        self.jobj.removeMeta(model, scenario, version, to_jlist(names))
 
-    def clear_solution(self, s, from_year=None):
+    def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
         if from_year:
             if type(s) is not Scenario:
                 raise TypeError(
@@ -1189,18 +1411,25 @@ class JDBCBackend(CachingBackend):
 
     # MsgScenario methods
 
-    def cat_list(self, ms, name):
+    def cat_list(self, ms: Scenario, name: str) -> list[str]:
         return to_pylist(self.jindex[ms].getTypeList(name))
 
-    def cat_get_elements(self, ms, name, cat):
+    def cat_get_elements(self, ms: Scenario, name: str, cat: str) -> list[str]:
         return to_pylist(self.jindex[ms].getCatEle(name, cat))
 
-    def cat_set_elements(self, ms, name, cat, keys, is_unique):
+    def cat_set_elements(
+        self,
+        ms: Scenario,
+        name: str,
+        cat: str,
+        keys: Union[str, Sequence[str]],
+        is_unique: bool,
+    ) -> None:
         self.jindex[ms].addCatEle(name, cat, to_jlist(keys), is_unique)
 
     # Helpers; not part of the Backend interface
 
-    def _get_item(self, s, ix_type, name, load=True):
+    def _get_item(self, s: Scenario, item: Item, load: bool = True) -> Any:
         """Return the Java object for item `name` of `ix_type`.
 
         Parameters
@@ -1211,20 +1440,21 @@ class JDBCBackend(CachingBackend):
             elements can be loaded later using ``item.loadItemElementsfromDB()``.
         """
         # getItem is not overloaded to accept a second bool argument
-        args = [name] + ([load] if ix_type != "item" else [])
+        args = [item.name] + ([load] if item.ix_type != "item" else [])
         try:
-            return getattr(self.jindex[s], f"get{ix_type.title()}")(*args)
+            type_name = item.ix_type.title()
+            return getattr(self.jindex[s], f"get{type_name}")(*args)
         except java.IxException as e:
             # Regex for similar but not consistent messages from Java code
-            msg = f"No (item|{ix_type.title()}) '?{name}'? exists in this Scenario!"
+            msg = f"No (item|{type_name}) '?{item.name}'? exists in this Scenario!"
             if re.match(msg, e.args[0]):
                 # Re-raise as a Python KeyError
-                raise KeyError(name) from None
+                raise KeyError(item.name) from None
             else:  # pragma: no cover
                 _raise_jexception(e)
 
 
-def start_jvm(jvmargs=None):
+def start_jvm(jvmargs: Optional[Union[str, list[str]]] = None) -> None:
     """Start the Java Virtual Machine via JPype_.
 
     Parameters
@@ -1293,7 +1523,7 @@ def start_jvm(jvmargs=None):
 # Conversion methods
 
 
-def to_pylist(jlist) -> list:
+def to_pylist(jlist: Any) -> list[Any]:
     """Convert Java list types to :class:`list`."""
     try:
         return list(jlist[:])
@@ -1302,7 +1532,10 @@ def to_pylist(jlist) -> list:
         return list(jlist.toArray()[:])
 
 
-def to_jlist(arg, convert=None):
+def to_jlist(
+    arg: Union[str, Iterable[Union[float, int, str]]],
+    convert: Optional[Callable[..., Any]] = None,
+) -> Any:
     """Convert :class:`list` *arg* to java.LinkedList.
 
     Parameters

@@ -1,24 +1,25 @@
 import logging
 import re
 import sys
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Generator, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
+from itertools import chain, repeat
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from types import ModuleType
+from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
 from urllib.parse import urlparse
 from warnings import warn
 
 import numpy as np
 import pandas as pd
 
-from ixmp.backend.common import ItemType
-
 if TYPE_CHECKING:
-    from ixmp import TimeSeries
+    from ixmp import Platform, Scenario, TimeSeries
+    from ixmp.types import Filters, ParData, PlatformInfo, TimeSeriesIdentifiers
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ SHOW_VERSION_PACKAGES: tuple[str, ...] = (
 )
 
 
-def logger():
+def logger() -> logging.Logger:
     """Access global logger.
 
     .. deprecated:: 3.3
@@ -80,7 +81,10 @@ def logger():
     return logging.getLogger("ixmp")
 
 
-def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> list[str]:
+def as_str_list(
+    arg: Optional[Union[int, str, dict[str, Any], Iterable[object]]],
+    idx_names: Optional[Iterable[str]] = None,
+) -> list[str]:
     """Convert various `arg` to list of str.
 
     Several types of arguments are handled:
@@ -98,15 +102,17 @@ def as_str_list(arg, idx_names: Optional[Iterable[str]] = None) -> list[str]:
         # arg must be iterable
         # NB narrower ABC Sequence does not work here; e.g. test_excel_io() fails via
         #    Scenario.add_set().
-        if isinstance(arg, Iterable) and not isinstance(arg, str):
+        if isinstance(arg, Iterable) and not isinstance(arg, (int, str)):
             return list(map(str, arg))
         else:
             return [str(arg)]
     else:
+        # We assume that this is always true, tell mypy
+        assert isinstance(arg, (Mapping, pd.Series))
         return [str(arg[idx]) for idx in idx_names]
 
 
-def isscalar(x):
+def isscalar(x: object) -> bool:
     """Returns True if `x` is a scalar."""
     warn(
         "ixmp.util.isscalar() will be removed in ixmp >= 5.0. Use numpy.isscalar()",
@@ -115,95 +121,90 @@ def isscalar(x):
     return np.isscalar(x)
 
 
-def check_year(y, s):
+def check_year(
+    y: Optional[int], s: Optional[Union[int, str]]
+) -> Optional[Literal[True]]:
     """Returns True if y is an int, raises an error if y is not None"""
     if y is not None:
         if not isinstance(y, int):
             raise ValueError("arg `{}` must be an integer!".format(s))
         return True
+    return None
 
 
-def diff(a, b, filters=None) -> Iterator[tuple[str, pd.DataFrame]]:
+def diff(
+    a: "Scenario", b: "Scenario", filters: "Filters" = None
+) -> Iterator[tuple[str, pd.DataFrame]]:
     """Compute the difference between Scenarios `a` and `b`.
 
     :func:`diff` combines :func:`pandas.merge` and :meth:`.Scenario.items`. Only
     parameters are compared. :func:`~pandas.merge` is called with the arguments
-    ``how="outer", sort=True, suffixes=("_a", "_b"), indicator=True``; the merge is
+    :py:`how="outer", sort=True, suffixes=("_a", "_b"), indicator=True`; the merge is
     performed on all columns except 'value' or 'unit'.
+
+    Parameters
+    ----------
+    filters
+        if given, only parameters with the given dimensions and data with the respective
+        labels are included.
 
     Yields
     ------
     tuple of str, pandas.DataFrame
         tuples of item name and data.
     """
-    # Iterators; index 0 corresponds to `a`, 1 to `b`
-    items = [
-        a.items(filters=filters, type=ItemType.PAR, par_data=True),
-        b.items(filters=filters, type=ItemType.PAR, par_data=True),
-    ]
-    # State variables for loop
-    name = ["", ""]
-    data: list[pd.DataFrame] = [pd.DataFrame(), pd.DataFrame()]
+    # Common keyword arguments for DataFrame.merge()
+    merge_kw = dict(how="outer", sort=True, suffixes=("_a", "_b"), indicator=True)
 
-    # Elements for first iteration
-    name[0], data[0] = next(items[0])
-    name[1], data[1] = next(items[1])
-
-    while True:
+    def _diff_inner(x: "ParData", y: "ParData") -> pd.DataFrame:
         # Convert scalars to pd.DataFrame
-        data = list(map(maybe_convert_scalar, data))
+        x = maybe_convert_scalar(x)
+        y = maybe_convert_scalar(y)
 
-        # Compare the names from `a` and `b` to ensure matching items
-        if name[0] == name[1]:
-            # Matching items in `a` and `b`
-            current_name = name[0]
-            left, right = data
-        else:
-            # Mismatched; either `a` or `b` has no data for these filters
-            current_name = min(*name)
-            if name[0] > current_name:
-                # No data in `a` for `current_name`; create an empty DataFrame
-                left, right = pd.DataFrame(columns=data[1].columns), data[1]
-            else:
-                left, right = data[0], pd.DataFrame(columns=data[0].columns)
+        # No data from `x` → empty data frame with columns needed to merge
+        x = pd.DataFrame(columns=y.columns) if x.empty else x
+        y = pd.DataFrame(columns=x.columns) if y.empty else y
 
         # Either merge on remaining columns; or, for scalars, on the indices
-        on = sorted(set(left.columns) - {"value", "unit"})
-        on_arg: Mapping[str, Any] = (
-            dict(on=on) if on else dict(left_index=True, right_index=True)
-        )
+        if on := sorted(set(x.columns) - {"value", "unit"}):
+            kw: dict[str, Any] = merge_kw | dict(on=on)
+        else:
+            kw = merge_kw | dict(left_index=True, right_index=True)
 
         # Merge the data from each side
-        yield (
-            current_name,
-            pd.merge(
-                left,
-                right,
-                how="outer",
-                **on_arg,
-                sort=True,
-                suffixes=("_a", "_b"),
-                indicator=True,
-            ),
-        )
+        return pd.merge(x, y, **kw).astype({"value_a": float})
 
-        # Maybe advance each iterators
-        for i in (0, 1):
-            try:
-                if name[i] == current_name:
-                    # data was compared in this iteration; advance
-                    name[i], data[i] = next(items[i])
-            except StopIteration:
-                # No more data for this iterator.
-                # Use "~" because it sorts after all ASCII characters
-                name[i], data[i] = "~ end", pd.DataFrame()
+    # Iterator over parameter data from `b`, followed by name="~ end"/empty data frame
+    items_b = chain(b.iter_par_data(filters=filters), repeat(("~ end", pd.DataFrame())))
 
-        if name[0] == name[1] == "~ end":
-            break
+    # Retrieved from items_b but not yet compared
+    saved: dict[str, "ParData"] = {}
+
+    # Iterate over names and data from `a`
+    for name_a, data_a in a.iter_par_data(filters=filters):
+        # Use counterpart from `b` already retrieved during a previous iteration
+        if name_a in saved:
+            name_b, data_b = name_a, saved.pop(name_a)
+        else:
+            # Advance `items_b` until reaching an item with matching name or "~ end"
+            for name_b, data_b in items_b:
+                if name_b in (name_a, "~ end"):
+                    break
+
+                # Some other, non-matching item → store for later use
+                saved[name_b] = data_b
+
+        # Yield the diff between data_a and data_b
+        yield name_a, _diff_inner(data_a, data_b)
+
+    # Any remaining items in `saved` have no counterpart in `a`. Diff these against
+    # empty data.
+    for name_b, data_b in saved.items():
+        yield name_b, _diff_inner(pd.DataFrame(), data_b)
 
 
 @contextmanager
-def discard_on_error(ts: "TimeSeries"):
+def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
     """Context manager to discard changes to `ts` and close the DB on any exception.
 
     For :class:`.JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the
@@ -247,7 +248,7 @@ def discard_on_error(ts: "TimeSeries"):
         raise
 
 
-def maybe_check_out(timeseries, state=None):
+def maybe_check_out(timeseries: "TimeSeries", state: Optional[bool] = None) -> bool:
     """Check out `timeseries` depending on `state`.
 
     If `state` is :obj:`None`, then :meth:`.TimeSeries.check_out` is called.
@@ -287,7 +288,7 @@ def maybe_check_out(timeseries, state=None):
         return True
 
 
-def maybe_commit(timeseries, condition, message):
+def maybe_commit(timeseries: "TimeSeries", condition: bool, message: str) -> bool:
     """Commit `timeseries` with `message` if `condition` is :obj:`True`.
 
     Returns
@@ -314,7 +315,7 @@ def maybe_commit(timeseries, condition, message):
         return True
 
 
-def maybe_convert_scalar(obj) -> pd.DataFrame:
+def maybe_convert_scalar(obj: Union["ParData"]) -> pd.DataFrame:
     """Convert `obj` to :class:`pandas.DataFrame`.
 
     Parameters
@@ -334,7 +335,7 @@ def maybe_convert_scalar(obj) -> pd.DataFrame:
         return obj
 
 
-def parse_url(url):
+def parse_url(url: str) -> tuple["PlatformInfo", "TimeSeriesIdentifiers"]:
     """Parse *url* and return Platform and Scenario information.
 
     A URL (Uniform Resource Locator), as the name implies, uniquely identifies
@@ -369,11 +370,11 @@ def parse_url(url):
     if components.scheme not in ("ixmp", ""):
         raise ValueError("URL must begin with ixmp:// or //")
 
-    platform_info = dict()
+    platform_info: "PlatformInfo" = dict()
     if components.netloc:
         platform_info["name"] = components.netloc
 
-    scenario_info = dict()
+    scenario_info: "TimeSeriesIdentifiers" = dict(scenario="", model="")
 
     path = components.path.split("/")
     if len(path):
@@ -391,7 +392,7 @@ def parse_url(url):
 
     if len(components.fragment):
         try:
-            version = int(components.fragment)
+            version: Union[int, Literal["new"]] = int(components.fragment)
         except ValueError:
             if components.fragment != "new":
                 raise ValueError(
@@ -449,7 +450,7 @@ def to_iamc_layout(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def year_list(x):
+def year_list(x: Iterable[Any]) -> list[Any]:
     """Return the elements of x that can be cast to year (int)."""
     lst = []
     for i in x:
@@ -461,7 +462,15 @@ def year_list(x):
     return lst
 
 
-def filtered(df, filters):
+def filtered(
+    df: pd.DataFrame,
+    filters: Optional[
+        Mapping[
+            str,
+            Optional[Union[str, dict[str, Any], Iterable[object]]],
+        ]
+    ],
+) -> pd.DataFrame:
     """Returns a filtered dataframe based on a filters dictionary"""
     if filters is None:
         return df
@@ -474,8 +483,13 @@ def filtered(df, filters):
 
 
 def format_scenario_list(
-    platform, model=None, scenario=None, match=None, default_only=False, as_url=False
-):
+    platform: "Platform",
+    model: Optional[str] = None,
+    scenario: Optional[str] = None,
+    match: Optional[Union[str, re.Pattern[str]]] = None,
+    default_only: bool = False,
+    as_url: bool = False,
+) -> list[str]:
     """Return a formatted list of TimeSeries on *platform*.
 
     Parameters
@@ -500,21 +514,20 @@ def format_scenario_list(
         If *as_url* is :obj:`False`, also include summary information.
     """
 
-    try:
-        match = re.compile(".*" + match + ".*")
-    except TypeError:
-        pass
+    if match:
+        _match = match if isinstance(match, str) else match.pattern
+        match = re.compile(".*" + _match + ".*")
 
-    def describe(df):
+    def describe(df: pd.DataFrame) -> "pd.Series[Any]":
         N = len(df)
         min = df.version.min()
         max = df.version.max()
 
-        result = dict(N=N, range="")
+        result: dict[str, Union[int, str]] = dict(N=N, range="")
         if N > 1:
             result["range"] = "{}–{}".format(min, max)
             if N != max:
-                result["range"] += " ({} versions)".format(N)
+                result["range"] = str(result["range"]) + " ({} versions)".format(N)
 
         try:
             mask = df.is_default.astype(bool)
@@ -528,7 +541,7 @@ def format_scenario_list(
     info = (
         platform.scenario_list(model=model, scen=scenario, default=default_only)
         .groupby(["model", "scenario"], group_keys=True)
-        .apply(describe, include_groups=False)
+        .apply(describe)
     )
 
     # If we have no results; re-create a minimal empty data frame
@@ -541,23 +554,24 @@ def format_scenario_list(
     info["scenario"] = info["scenario"].str.cat(info["default"].astype(str), sep="#")
 
     if match:
-        info = info[info["model"].str.match(match) | info["scenario"].str.match(match)]
+        info = info[
+            info["model"].str.match(str(match)) | info["scenario"].str.match(str(match))
+        ]
 
     lines = []
 
     if as_url:
-        info["url"] = f"ixmp://{platform.name}"
-        urls = info["url"].str.cat([info["model"], info["scenario"]], sep="/")
-        lines = urls.tolist()
+        url_pre = f"ixmp://{platform.name}/"
+        lines.extend((url_pre + info["model"] + "/" + info["scenario"]).tolist())
     else:
         width = 0 if not len(info) else info["scenario"].str.len().max()
         info["scenario"] = info["scenario"].str.ljust(width + 2)
 
-        for model, m_info in info.groupby("model"):
+        for m, m_info in info.groupby("model"):
             lines.extend(
                 [
                     "",
-                    model + "/",
+                    str(m) + "/",
                     "  " + "\n  ".join(m_info["scenario"].str.cat(m_info["range"])),
                 ]
             )
@@ -579,7 +593,9 @@ def format_scenario_list(
     return lines
 
 
-def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) -> None:
+def show_versions(
+    file: IO[str] = sys.stdout, *, packages: Optional[Iterable[str]] = None
+) -> None:
     """Print information about ixmp and its dependencies to `file`.
 
     See also
@@ -588,13 +604,11 @@ def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) 
     """
     from importlib import import_module
     from importlib.metadata import PackageNotFoundError, version
-
-    try:
-        from importlib.metadata import packages_distributions
-    except ImportError:  # Python 3.9
-        from importlib_metadata import packages_distributions  # type: ignore [no-redef]
     from subprocess import DEVNULL, check_output
 
+    # Compatibility with Python 3.9
+    # TODO Use "from importlib.metadata import …" when dropping support for Python 3.9
+    from importlib_metadata import packages_distributions
     from xarray.util.print_versions import get_sys_info
 
     from ixmp.model.gams import gams_info
@@ -653,19 +667,24 @@ def show_versions(file=sys.stdout, *, packages: Optional[Iterable[str]] = None) 
 
     # Use xarray to get Python & system information
     info.append(("", ""))
-    info.extend(get_sys_info()[1:])  # Exclude the commit number
+    # Exclude the commit number
+    # NOTE xarray's function is not typed, unfortunately
+    info.extend(get_sys_info()[1:])  # type: ignore[no-untyped-call]
 
     # Format and write to `file`
     for k, stat in info:
         print("" if (k == stat == "") else f"{k + ':':18} {stat}", file=file)
 
 
-def update_par(scenario, name, data):
+def update_par(scenario: "Scenario", name: str, data: pd.DataFrame) -> None:
     """Update parameter *name* in *scenario* using *data*, without overwriting.
 
     Only values which do not already appear in the parameter data are added.
     """
-    tmp = pd.concat([scenario.par(name), data])
+    par_df = scenario.par(name)
+    # We seem to rely on this, even though `.par` could return a Scalar/dict
+    assert isinstance(par_df, pd.DataFrame)
+    tmp = pd.concat([par_df, data])
     columns = list(filter(lambda c: c != "value", tmp.columns))
     tmp = tmp.drop_duplicates(subset=columns, keep=False)
 
@@ -676,7 +695,7 @@ def update_par(scenario, name, data):
 class DeprecatedPathFinder(MetaPathFinder):
     """Handle imports from deprecated module locations."""
 
-    map: Mapping[re.Pattern, str]
+    map: Mapping[re.Pattern[str], str]
 
     def __init__(self, package: str, name_map: Mapping[str, str]):
         # Prepend the package name to the source and destination
@@ -686,7 +705,7 @@ class DeprecatedPathFinder(MetaPathFinder):
         }
 
     @lru_cache(maxsize=128)
-    def new_name(self, name):
+    def new_name(self, name: str) -> str:
         # Apply each pattern in self.map successively
         new_name = name
         for pattern, repl in self.map.items():
@@ -704,7 +723,12 @@ class DeprecatedPathFinder(MetaPathFinder):
 
         return new_name
 
-    def find_spec(self, name, path, target=None):
+    def find_spec(
+        self,
+        name: str,
+        path: Optional[Sequence[str]] = None,
+        target: Optional[ModuleType] = None,
+    ) -> Optional[ModuleSpec]:
         new_name = self.new_name(name)
         if new_name == name:
             return None  # No known transformation; let the importlib defaults handle.
@@ -713,6 +737,10 @@ class DeprecatedPathFinder(MetaPathFinder):
         spec = find_spec(new_name)
         if not spec:
             return None
+
+        # NOTE We seem to rely on this, otherwise, the SourceFileLoader below wouldn't
+        # work
+        assert spec.origin
 
         # Create a new spec that loads the module from its current location as if it
         # were `name`

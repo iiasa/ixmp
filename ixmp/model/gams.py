@@ -3,12 +3,15 @@ import os
 import re
 import shutil
 import tempfile
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Sequence
 from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+# TODO Import from typing when dropping support for Python 3.11
+from typing_extensions import Unpack
 
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
@@ -16,6 +19,9 @@ from ixmp.util import as_str_list
 from ixmp.util.ixmp4 import ContainerData
 
 from .base import Model, ModelError
+
+if TYPE_CHECKING:
+    from ixmp.types import GamsModelInitKwargs, RunKwargs
 
 log = logging.getLogger(__name__)
 
@@ -209,10 +215,10 @@ class GAMSModel(Model):
     """  # noqa: E501
 
     # Make attributes known to self
-    model_file: str
+    model_file: os.PathLike[str]
     case: str
-    in_file: os.PathLike
-    out_file: os.PathLike
+    in_file: os.PathLike[str]
+    out_file: os.PathLike[str]
     solve_args: list[str]
     gams_args: list[str]
     check_solution: bool
@@ -221,7 +227,7 @@ class GAMSModel(Model):
     var_list: Optional[list[str]]
     quiet: bool
     use_temp_dir: bool
-    record_version_packages: list[str]
+    record_version_packages: Sequence[str]
     container_data: list[ContainerData]
 
     #: Model name.
@@ -246,7 +252,8 @@ class GAMSModel(Model):
         "container_data": [],
     }
 
-    def __init__(self, name_=None, **model_options):
+    def __init__(self, **model_options: Unpack["GamsModelInitKwargs"]) -> None:
+        name_ = model_options.get("name_", None)
         self.model_name = self.clean_path(name_ or self.name)
 
         # Store options from `model_options`, otherwise from `defaults`
@@ -291,11 +298,11 @@ class GAMSModel(Model):
 
         return ModelError("\n".join(msg))
 
-    def format_option(self, name):
+    def format_option(self, name: str) -> Any:
         """Retrieve the option `name` and format it."""
         return self.format(getattr(self, name))
 
-    def format(self, value):
+    def format(self, value: Any) -> Any:
         """Helper for recursive formatting of model options.
 
         `value` is formatted with replacements from the attributes of `self`.
@@ -306,7 +313,7 @@ class GAMSModel(Model):
             # Something like a Path; don't format it
             return value
 
-    def record_versions(self):
+    def record_versions(self) -> None:
         """Store Python package versions as set elements to be written to GDX.
 
         The values are stored in a 2-dimensional set named ``ixmp_version``, where the
@@ -337,7 +344,7 @@ class GAMSModel(Model):
                 # Add to the set
                 self.scenario.add_set(name, (package, package_version))
 
-    def remove_temp_dir(self, msg="after run()"):
+    def remove_temp_dir(self, msg: str = "after run()") -> None:
         """Remove the temporary directory, if any."""
         try:
             if self.use_temp_dir and self.cwd.exists():
@@ -348,7 +355,7 @@ class GAMSModel(Model):
             log.debug(f"Could not delete {repr(self.cwd)} {msg}")
             log.debug(str(e))
 
-    def __del__(self):
+    def __del__(self) -> None:
         # Try once more to remove the temporary directory.
         # This appears to still fail on Windows.
         self.remove_temp_dir("at GAMSModel teardown")
@@ -411,7 +418,7 @@ class GAMSModel(Model):
         delattr(self, "scenario")
 
         # Common argument for write_file and read_file
-        s_arg: dict[str, object] = dict(filters=dict(scenario=scenario))
+        s_arg: "RunKwargs" = dict(filters=dict(scenario=scenario))
 
         # Instruct ixmp4 to record package versions
         if backend_type == "ixmp4":
@@ -439,7 +446,7 @@ class GAMSModel(Model):
                 # Remove ixmp_version set entirely
                 with scenario.transact():
                     scenario.remove_set("ixmp_version")
-            else:  # backend_type == "ixmp4"
+            elif backend_type == "ixmp4":
                 # Clean up s_arg for use in read_file()
                 s_arg.pop("record_version_packages")
                 s_arg.pop("container_data")
@@ -448,10 +455,13 @@ class GAMSModel(Model):
             run(command, shell=os.name == "nt", cwd=self.cwd, check=True)
 
             # Read model solution
+            # NOTE We get this error because we use s_arg for both backends and write()
+            # and read(). We could avoid this with dedicated "s_arg"s; but for the
+            # offending keys are only added for ixmp4, which also always removes them
             scenario.platform._backend.read_file(
                 self.out_file,
                 ItemType.MODEL,
-                **s_arg,
+                **s_arg,  # type: ignore[misc]
                 check_solution=self.check_solution,
                 comment=self.comment or "",
                 equ_list=as_str_list(self.equ_list) or [],
@@ -480,6 +490,6 @@ def gams_info() -> GAMSInfo:
     return _GAMS_INFO
 
 
-def gams_version() -> Optional[str]:
+def gams_version() -> str:
     """Return :attr:`.GAMSInfo.version`."""
     return gams_info().version

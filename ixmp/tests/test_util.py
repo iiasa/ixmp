@@ -16,7 +16,7 @@ from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
-    from ixmp.types import ScenarioIdentifiers
+    from ixmp.types import TimeSeriesIdentifiers
 
 
 class TestDeprecatedPathFinder:
@@ -238,9 +238,9 @@ def test_logger_deprecated() -> None:
         util.logger()
 
 
-m_s: "ScenarioIdentifiers" = dict(model="m", scenario="s")
+m_s: "TimeSeriesIdentifiers" = dict(model="m", scenario="s")
 
-URLS: list[tuple[str, Optional[dict[str, str]], Optional["ScenarioIdentifiers"]]] = [
+URLS: list[tuple[str, Optional[dict[str, str]], Optional["TimeSeriesIdentifiers"]]] = [
     ("ixmp://example/m/s", dict(name="example"), m_s),
     (
         "ixmp://example/m/s#42",
@@ -281,7 +281,7 @@ URLS: list[tuple[str, Optional[dict[str, str]], Optional["ScenarioIdentifiers"]]
 
 @pytest.mark.parametrize("url, p, s", URLS)
 def test_parse_url(
-    url: str, p: Optional[dict[str, str]], s: Optional["ScenarioIdentifiers"]
+    url: str, p: Optional[dict[str, str]], s: Optional["TimeSeriesIdentifiers"]
 ) -> None:
     platform_info, scenario_info = util.parse_url(url)
 

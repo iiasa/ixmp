@@ -1,4 +1,7 @@
-"""Types for type hinting and checking of :mod:`ixmp` and downstream code."""
+"""Types for type hinting and checking of :mod:`ixmp` and downstream code.
+
+Imports from this module **should** only occur within a :py:`if TYPE_CHECKING:` block.
+"""
 
 import os
 from collections.abc import Mapping, Sequence
@@ -59,16 +62,20 @@ class ScalarSolutionData(TypedDict):
 #: Return type of :meth:`.Scenario.equ` and :meth:`.Scenario.var`.
 SolutionData: TypeAlias = Union[ScalarSolutionData, pandas.DataFrame]
 
+#: Valid values of the :py:`version=...` keyword argument to :class:`.TimeSeries` and
+#: :class:`.Scenario`.
 VersionType: TypeAlias = Optional[Union[int, Literal["new"]]]
 
 
-# NOTE Use this form to enable the key 'class'
+#: Backend-related arguments to :class:`.Platform`.
 BackendInitKwargs = TypedDict(
     "BackendInitKwargs", {"class": NotRequired[Union[Literal["jdbc", "ixmp4"], str]]}
 )
 
 
 class JDBCBackendInitKwargs(TypedDict):
+    """Keyword arguments to :class:`.JDBCBackend`."""
+
     driver: NotRequired[Optional[str]]
     path: NotRequired[Optional[Union[str, Path]]]
     url: NotRequired[Optional[str]]
@@ -77,14 +84,20 @@ class JDBCBackendInitKwargs(TypedDict):
 
 
 class IXMP4BackendInitKwargs(TypedDict):
+    """Keyword arguments to :class:`.IXMP4Backend`."""
+
     ixmp4_name: str
     dsn: NotRequired[str]
     jdbc_compat: NotRequired[Union[bool, str]]
 
 
-# NOTE This would ideally inherit from IXMP4BackendInitKwargs, but ixmp4_name cannot be
-# required here since it's not required for JDBC.__init__()
 class PlatformInitKwargs(BackendInitKwargs, JDBCBackendInitKwargs):
+    """Keyword arguments to :class:`.Platform`.
+
+    Note that :attr:`ixmp4_name` here is optional, in constrast to
+    :class:`IXMP4BackendInitKwargs`.
+    """
+
     jvmargs: NotRequired[Optional[Union[str, list[str]]]]
     dbprops: NotRequired[Optional[os.PathLike[str]]]
     cache: NotRequired[bool]
@@ -103,6 +116,8 @@ class InitializeItemsKwargs(TypedDict):
 
 
 class GamsModelInitKwargs(TypedDict, total=False):
+    """Keyword arguments to :class:`.GAMSModel`."""
+
     model_file: os.PathLike[str]
     case: str
     in_file: os.PathLike[str]
@@ -121,28 +136,38 @@ class GamsModelInitKwargs(TypedDict, total=False):
 
 
 class ScenarioInitKwargs(TypedDict, total=False):
+    """Keyword arguments to :class:`.ScenarioInitKwargs`."""
+
     cache: bool
     with_data: bool
 
 
 class ModelScenario(TypedDict):
-    """Partial identifiers of a :class:`.Scenario`."""
+    """Partial identifiers of a :class:`.TimeSeries` or subclass.
+
+    Note that these are not sufficient to uniquely identify a particular TimeSeries or
+    subclass; see :class:`TimeSeriesIdentifiers`.
+    """
 
     model: str
     scenario: str
 
 
-class ScenarioIdentifiers(ModelScenario):
-    """Identifiers of a :class:`.Scenario`."""
+class TimeSeriesIdentifiers(ModelScenario):
+    """Complete identifiers of a :class:`.TimeSeries` or subclass."""
 
     version: NotRequired[VersionType]
 
 
 class PlatformInfo(TypedDict):
+    """Identifier of a :class:`.Platform`."""
+
     name: NotRequired[str]
 
 
-class WriteFiltersKwargs(TypedDict, total=False):
+class WriteFilters(TypedDict, total=False):
+    """:py:`filter=...` argument to :meth:`.Backend.write_excel`."""
+
     scenario: "Scenario | TimeSeries | list[str]"
     model: list[str]
     variable: list[str]
@@ -153,20 +178,26 @@ class WriteFiltersKwargs(TypedDict, total=False):
 
 
 class RunKwargs(TypedDict):
-    filters: WriteFiltersKwargs
+    """Keyword arguments to :meth:`.GAMSModel.run`."""
+
+    filters: WriteFilters
     record_version_packages: NotRequired[Sequence[str]]
     container_data: NotRequired[list["ContainerData"]]
 
 
 class WriteKwargs(TypedDict, total=False):
-    filters: WriteFiltersKwargs
+    """Keyword arguments to :meth:`.Backend.write_file`."""
+
+    filters: WriteFilters
     record_version_packages: Sequence[str]
     container_data: list["ContainerData"]
     max_row: Optional[int]
 
 
 class ReadKwargs(TypedDict, total=False):
-    filters: WriteFiltersKwargs
+    """Keyword arguments to :meth:`.Backend.read_file`."""
+
+    filters: WriteFilters
     firstyear: Optional[int]
     lastyear: Optional[int]
     add_units: bool
@@ -176,14 +207,3 @@ class ReadKwargs(TypedDict, total=False):
     comment: str
     equ_list: list[str]
     var_list: list[str]
-
-
-class TSReadFileKwargs(TypedDict, total=False):
-    firstyear: Optional[int]
-    lastyear: Optional[int]
-
-
-class SReadFileKwargs(TypedDict, total=False):
-    add_units: bool
-    init_items: bool
-    commit_steps: bool

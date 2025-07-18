@@ -19,7 +19,7 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
-    from ixmp.types import Filters, ParData, PlatformInfo, ScenarioIdentifiers
+    from ixmp.types import Filters, ParData, PlatformInfo, TimeSeriesIdentifiers
 
 log = logging.getLogger(__name__)
 
@@ -335,7 +335,7 @@ def maybe_convert_scalar(obj: Union["ParData"]) -> pd.DataFrame:
         return obj
 
 
-def parse_url(url: str) -> tuple["PlatformInfo", "ScenarioIdentifiers"]:
+def parse_url(url: str) -> tuple["PlatformInfo", "TimeSeriesIdentifiers"]:
     """Parse *url* and return Platform and Scenario information.
 
     A URL (Uniform Resource Locator), as the name implies, uniquely identifies
@@ -374,7 +374,7 @@ def parse_url(url: str) -> tuple["PlatformInfo", "ScenarioIdentifiers"]:
     if components.netloc:
         platform_info["name"] = components.netloc
 
-    scenario_info: "ScenarioIdentifiers" = dict(scenario="", model="")
+    scenario_info: "TimeSeriesIdentifiers" = dict(scenario="", model="")
 
     path = components.path.split("/")
     if len(path):

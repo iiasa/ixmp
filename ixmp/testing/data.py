@@ -13,9 +13,9 @@ import pytest
 from ixmp import IAMC_IDX, Platform, Scenario, TimeSeries
 
 if TYPE_CHECKING:
-    from ixmp.types import ModelScenario, ScenarioIdentifiers
+    from ixmp.types import ModelScenario, TimeSeriesIdentifiers
 
-    class ScenarioKwargs(ScenarioIdentifiers, total=False):
+    class ScenarioKwargs(TimeSeriesIdentifiers, total=False):
         """Keyword arguments to Scenario.__init__()."""
 
         scheme: str

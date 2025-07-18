@@ -34,7 +34,7 @@ if TYPE_CHECKING:
         ReadKwargs,
         SetData,
         SolutionData,
-        WriteFiltersKwargs,
+        WriteFilters,
         WriteKwargs,
     )
 
@@ -451,7 +451,7 @@ class Backend(ABC):
         --------
         write_file
         """
-        filters: "WriteFiltersKwargs" = kwargs["filters"] if "filters" in kwargs else {}
+        filters: "WriteFilters" = kwargs["filters"] if "filters" in kwargs else {}
         s, _ = self._handle_rw_filters(filters=filters)
 
         path = Path(path)
@@ -513,7 +513,7 @@ class Backend(ABC):
         """
         # Use the "scenario" filter to retrieve the Scenario `s` to be written; reappend
         # any other filters
-        filters: "WriteFiltersKwargs" = kwargs["filters"] if "filters" in kwargs else {}
+        filters: "WriteFilters" = kwargs["filters"] if "filters" in kwargs else {}
         s, kwargs["filters"] = self._handle_rw_filters(filters=filters)
 
         xlsx_types = (ItemType.SET | ItemType.PAR, ItemType.MODEL)
@@ -646,8 +646,8 @@ class Backend(ABC):
 
     @staticmethod
     def _handle_rw_filters(
-        filters: "WriteFiltersKwargs",
-    ) -> tuple[Optional[TimeSeries], "WriteFiltersKwargs"]:
+        filters: "WriteFilters",
+    ) -> tuple[Optional[TimeSeries], "WriteFilters"]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single

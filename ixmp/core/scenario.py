@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         ScenarioInitKwargs,
         SolutionData,
         VersionType,
-        WriteFiltersKwargs,
+        WriteFilters,
     )
 
 log = logging.getLogger(__name__)
@@ -1002,7 +1002,7 @@ class Scenario(TimeSeries):
         self,
         path: PathLike[str],
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Optional["WriteFiltersKwargs"] = None,
+        filters: Optional["WriteFilters"] = None,
         max_row: Optional[int] = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.

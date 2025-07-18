@@ -424,6 +424,7 @@ def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
 
     # Retrieve configuration for the source platform
     cfg_source = _check(name_source)
+    assert cfg_source["path"]
 
     try:
         # Retrieve configuration for the destination platform
@@ -432,17 +433,12 @@ def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
     except ValueError:
         # Target platform does not exist; construct its configuration
         cfg_dest = deepcopy(cfg_source)
-        # NOTE We seem to rely on this
-        assert cfg_dest["path"]
-        cfg_dest["path"] = Path(cfg_dest["path"]).parent.joinpath(name_dest)
+        cfg_dest["path"] = Path(cfg_source["path"]).parent.joinpath(name_dest)
         add_platform = True
 
-    # Base paths for file operations
-    # NOTE We seem to rely on 'path' being not-None and populated. This seems to
-    # indicate the function is only supposed to handle local/hsqldb platforms, which is
-    # tricky to explain to mypy.
-    assert cfg_source["path"]
     assert cfg_dest["path"]
+
+    # Base paths for file operations
     path_source = Path(cfg_source["path"])
     dir_dest = Path(cfg_dest["path"]).parent
 

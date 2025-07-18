@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from ixmp.backend.base import Backend
     from ixmp.core.scenario import Scenario
     from ixmp.core.timeseries import TimeSeries
-    from ixmp.types import WriteFiltersKwargs
+    from ixmp.types import WriteFilters
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def s_write_excel(
     s: "Scenario",
     path: Path,
     item_type: ItemType,
-    filters: Optional["WriteFiltersKwargs"] = None,
+    filters: Optional["WriteFilters"] = None,
     max_row: Optional[int] = None,
 ) -> None:
     """Write *s* to a Microsoft Excel file at *path*.

@@ -14,7 +14,7 @@ from ixmp.testing import DATA, models
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
-    from ixmp.types import ScenarioIdentifiers
+    from ixmp.types import TimeSeriesIdentifiers
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]
@@ -295,7 +295,7 @@ class TestTimeSeries:
         ts: TimeSeries,
         cls: Union[type[TimeSeries], type[Scenario]],
     ) -> None:
-        info: "ScenarioIdentifiers" = dict(model=ts.model, scenario=ts.scenario)
+        info: "TimeSeriesIdentifiers" = dict(model=ts.model, scenario=ts.scenario)
 
         mp.add_region_synonym("Hell", "World")
 

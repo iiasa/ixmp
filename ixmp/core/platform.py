@@ -23,7 +23,7 @@ from ixmp.util import as_str_list
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
     from ixmp.backend.jdbc import JDBCBackend
-    from ixmp.types import PlatformInitKwargs, WriteFiltersKwargs
+    from ixmp.types import PlatformInitKwargs, WriteFilters
 
 
 log = logging.getLogger(__name__)
@@ -253,7 +253,7 @@ class Platform:
                 "Invalid arguments: export_all_runs cannot be used when providing a "
                 "model or scenario."
             )
-        filters: "WriteFiltersKwargs" = dict(
+        filters: "WriteFilters" = dict(
             scenario=as_str_list(scenario),
             model=as_str_list(model),
             variable=as_str_list(variable),

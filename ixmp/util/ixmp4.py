@@ -75,7 +75,17 @@ def configure_logging_and_warnings() -> None:
 
 
 def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
-    """Type guard to ensure that `obj` is an IXMP4Backend."""
+    """Type guard to ensure that `obj` is an IXMP4Backend.
+
+    Example
+    -------
+    >>> import message_ix
+    >>> from ixmp import Platform
+    >>> mp = Platform(...)
+    >>> s = message_ix.Scenario(mp, ...)
+    >>> assert is_ixmp4backend(mp._backend)
+    >>> assert is_ixmp4backend(s.platform._backend)
+    """
     import ixmp.backend
 
     if "ixmp4" not in ixmp.backend.available():

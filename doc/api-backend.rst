@@ -111,6 +111,9 @@ IXMP4Backend
 
    IXMP4Backend supports storage in local, SQLite databases.
 
+.. automodule:: ixmp.util.ixmp4
+   :members:
+
 .. currentmodule:: ixmp.backend
 
 Backend API

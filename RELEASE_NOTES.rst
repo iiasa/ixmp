@@ -39,7 +39,7 @@ All changes
 
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.
-- Improve type hinting in :mod:`ixmp` (:pull:`581`).
+- Improve type hinting in :mod:`ixmp` (:pull:`581`, :pull:`587`).
   This supports more precise and complete type checking of downstream code that uses :mod:`ixmp`.
 
   - New module :mod:`ixmp.types` containing types for annotating code that uses :mod:`ixmp`.

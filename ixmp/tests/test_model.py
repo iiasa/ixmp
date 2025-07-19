@@ -151,9 +151,6 @@ class TestGAMSModel:
     ) -> Generator[Scenario, Any, None]:
         yield make_dantzig(test_mp, request=request)
 
-    # FIXME The name_ seems to be handled correctly, but IXMP4Backend struggles with
-    # make_dantzig().clone().solve() somehow.
-    @pytest.mark.jdbc
     @pytest.mark.parametrize("char", r'<>"/\|?*')
     def test_filename_invalid_char(self, dantzig: Scenario, char: str) -> None:
         """Model can be solved with invalid character names."""

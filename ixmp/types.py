@@ -130,7 +130,6 @@ class GamsModelInitKwargs(TypedDict, total=False):
     var_list: Optional[list[str]]
     quiet: bool
     use_temp_dir: bool
-    name_: Optional[str]
     record_version_packages: Sequence[str]
     container_data: list["ContainerData"]
 

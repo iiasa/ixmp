@@ -26,7 +26,6 @@ from ixmp.util import as_str_list, check_year
 if TYPE_CHECKING:
     from ixmp.types import (
         Filters,
-        GamsModelInitKwargs,
         ModelItemType,
         ParData,
         ScalarParData,
@@ -899,7 +898,7 @@ class Scenario(TimeSeries):
         model: Optional[str] = None,
         callback: Optional[Callable[["Scenario"], bool]] = None,
         cb_kwargs: dict[str, Any] = {},
-        **model_options: Unpack["GamsModelInitKwargs"],
+        **model_options: Any,
     ) -> None:
         """Solve the model and store output.
 

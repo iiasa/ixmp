@@ -5,16 +5,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-# Compatibility with Python 3.11 and earlier
-# TODO Use "from typing import Unpack" when dropping support for Python 3.11
-from typing_extensions import Unpack
-
 from ixmp.backend.common import ItemType
 from ixmp.util import maybe_check_out, maybe_commit
 
 if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
-    from ixmp.types import GamsModelInitKwargs, InitializeItemsKwargs
+    from ixmp.types import InitializeItemsKwargs
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +24,7 @@ class Model(ABC):
     name: str = "base"
 
     @abstractmethod
-    def __init__(self, **kwargs: Unpack["GamsModelInitKwargs"]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Constructor.
 
         **Required.**
@@ -156,11 +152,11 @@ class Model(ABC):
 
                 # If the item exists; check its index sets/names
                 if exists:
-                    existing = tuple(method(name))
-                    if existing != init_kw.get(key, ()):
+                    existing, arg = tuple(method(name)), init_kw.get(key, ())
+                    if existing != arg and not (key == "idx_names" and arg == ()):
                         log.warning(
                             f"Existing index {key.split('_')[-1]} of {name!r} "
-                            f"{existing!r} do not match {init_kw.get(key, ())!r}"
+                            f"{existing!r} do not match {arg!r}"
                         )
 
             # Can't do anything to existing items

@@ -152,11 +152,11 @@ class Model(ABC):
 
                 # If the item exists; check its index sets/names
                 if exists:
-                    existing = tuple(method(name))
-                    if existing != init_kw.get(key, ()):
+                    existing, arg = tuple(method(name)), init_kw.get(key, ())
+                    if existing != arg and not (key == "idx_names" and arg == ()):
                         log.warning(
                             f"Existing index {key.split('_')[-1]} of {name!r} "
-                            f"{existing!r} do not match {init_kw.get(key, ())!r}"
+                            f"{existing!r} do not match {arg!r}"
                         )
 
             # Can't do anything to existing items

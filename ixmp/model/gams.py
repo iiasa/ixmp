@@ -252,8 +252,11 @@ class GAMSModel(Model):
         "container_data": [],
     }
 
-    def __init__(self, **model_options: Unpack["GamsModelInitKwargs"]) -> None:
-        name_ = model_options.get("name_", None)
+    def __init__(
+        self,
+        name_: Optional[str] = None,
+        **model_options: Unpack["GamsModelInitKwargs"],
+    ) -> None:
         self.model_name = self.clean_path(name_ or self.name)
 
         # Store options from `model_options`, otherwise from `defaults`

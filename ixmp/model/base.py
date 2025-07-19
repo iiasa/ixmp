@@ -5,16 +5,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-# Compatibility with Python 3.11 and earlier
-# TODO Use "from typing import Unpack" when dropping support for Python 3.11
-from typing_extensions import Unpack
-
 from ixmp.backend.common import ItemType
 from ixmp.util import maybe_check_out, maybe_commit
 
 if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
-    from ixmp.types import GamsModelInitKwargs, InitializeItemsKwargs
+    from ixmp.types import InitializeItemsKwargs
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +24,7 @@ class Model(ABC):
     name: str = "base"
 
     @abstractmethod
-    def __init__(self, **kwargs: Unpack["GamsModelInitKwargs"]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Constructor.
 
         **Required.**

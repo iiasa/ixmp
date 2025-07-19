@@ -1,29 +1,21 @@
-from typing import TYPE_CHECKING, Optional, Union
-
-# TODO Import from typing when dropping support for Python 3.11
-from typing_extensions import Unpack
+from typing import TYPE_CHECKING, Any, Optional
 
 from .dantzig import DantzigModel
 from .gams import GAMSModel
 
 if TYPE_CHECKING:
-    from ixmp.types import GamsModelInitKwargs
-
+    from .base import Model
 
 #: Mapping from names to available models. To register additional models, add elements
 #: to this variable.
-MODELS: dict[
-    str, Union[type[GAMSModel], type[DantzigModel]]
-] = {  # type["ixmp.model.base.Model"]
+MODELS: dict[str, type["Model"]] = {
     "default": GAMSModel,
     "gams": GAMSModel,
     "dantzig": DantzigModel,
 }
 
 
-def get_model(
-    name: Optional[str], **model_options: Unpack["GamsModelInitKwargs"]
-) -> Union[GAMSModel, DantzigModel]:
+def get_model(name: Optional[str], **model_options: Any) -> "Model":
     """Return a model instance for `name` (or the default) with `model_options`.
 
     Note that unlike :func:`.backend.get_class`, this function creates a new instance.

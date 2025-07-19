@@ -2,15 +2,18 @@ import logging
 import re
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import pandas as pd
 import pytest
 
+# TODO Use "from typing import Unpack" when dropping support for Python 3.11
+from typing_extensions import Unpack
+
 from ixmp import Scenario
 from ixmp.model.base import Model, ModelError
 from ixmp.model.dantzig import DantzigModel
-from ixmp.model.gams import GAMSInfo, gams_version
+from ixmp.model.gams import GAMSInfo, GAMSModel, gams_version
 from ixmp.testing import assert_logs, make_dantzig
 
 if TYPE_CHECKING:
@@ -206,3 +209,16 @@ Log file  : {}
 Input data: {}""".format(*paths),
         ):
             s.solve(model_file=test_data_path / "_abort.gms", use_temp_dir=False)
+
+    def test_subclass_init(self) -> None:
+        """Subclasses can call :py:`super().__init__()`, as in :mod:`message_ix`."""
+
+        class Foo(GAMSModel):
+            def __init__(
+                self,
+                name: Optional[str] = None,
+                **model_options: Unpack["GamsModelInitKwargs"],
+            ) -> None:
+                super().__init__(name, **model_options)
+
+        Foo()

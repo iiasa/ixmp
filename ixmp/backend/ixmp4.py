@@ -364,7 +364,7 @@ class IXMP4Backend(CachingBackend):
                 # TODO Should Runs get .docs?
                 "Some docs",
                 # TODO Check if types.Mapped is still the way to go in ixmp4
-                run.version,  # type: ignore[list-item]
+                run.version,
             ]
 
     def set_unit(self, name: str, comment: str) -> None:
@@ -412,8 +412,7 @@ class IXMP4Backend(CachingBackend):
         v = run.version
         if ts.version is None:
             # The default version was requested; update the attribute
-            # NOTE Seems like an error for mypy to not recognize v as int
-            ts.version = v  # type: ignore[assignment]
+            ts.version = v
         elif v != ts.version:  # pragma: no cover
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
@@ -456,12 +455,7 @@ class IXMP4Backend(CachingBackend):
         )
         # Instantiate same class as the original object
         cloned_s = s.__class__(
-            platform_dest,
-            model,
-            scenario,
-            # NOTE Seems like an error for mypy to not recognize version as int
-            version=cloned_run.version,  # type: ignore[arg-type]
-            scheme=s.scheme,
+            platform_dest, model, scenario, version=cloned_run.version, scheme=s.scheme
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
         return cloned_s
@@ -509,8 +503,7 @@ class IXMP4Backend(CachingBackend):
 
     def run_id(self, ts: TimeSeries) -> int:
         # TODO is the Run.version really what this function is after?
-        # NOTE Seems like an error for mypy to not recognize version as int
-        return self.index[ts].version  # type: ignore[return-value]
+        return self.index[ts].version
 
     def is_default(self, ts: TimeSeries) -> bool:
         return self.index[ts].is_default
@@ -905,8 +898,7 @@ class IXMP4Backend(CachingBackend):
             assert not isinstance(item, IndexSet)
 
             if isinstance(item, Scalar):
-                # NB item.unit.name is sqlalchemy.orm.Mapped[str]
-                return {"value": item.value, "unit": cast(str, item.unit.name)}
+                return {"value": item.value, "unit": item.unit.name}
 
             # Columns/dict keys expected in result
             columns = item.column_names or item.indexset_names or []

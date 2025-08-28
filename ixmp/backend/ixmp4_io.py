@@ -322,9 +322,9 @@ def _set_columns_to_read_from_records(
     columns = ["levels", "marginals"]
     item_columns = item.column_names or item.indexset_names
     if item_columns:
-        item_columns.extend(columns)  # type: ignore[attr-defined]
+        item_columns.extend(columns)
 
-    return item_columns if item_columns else columns  # type: ignore[return-value]
+    return item_columns if item_columns else columns
 
 
 # NOTE not sure we only need equations and variables; if we need others, abstracting one
@@ -355,8 +355,7 @@ def _read_variables_to_run(  # type: ignore[no-any-unimported]
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.variables.add_data(
-                id=variable.id,  # type: ignore[arg-type]
-                data=records[columns_of_interest],
+                id=variable.id, data=records[columns_of_interest]
             )
 
 
@@ -383,8 +382,7 @@ def _read_equations_to_run(  # type: ignore[no-any-unimported]
                 columns_of_interest + ["lower", "upper", "scale"]
             )
             run.backend.optimization.equations.add_data(
-                id=equation.id,  # type: ignore[arg-type]
-                data=records[columns_of_interest],
+                id=equation.id, data=records[columns_of_interest]
             )
 
 

@@ -19,6 +19,12 @@ from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
+from ixmp4.data.abstract.optimization.indexset import (
+    IndexSetRepository as BEIndexSetRepository,
+)
+from ixmp4.data.abstract.optimization.scalar import (
+    ScalarRepository as BEScalarRepository,
+)
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 # TODO Import this from typing when dropping Python 3.11
@@ -38,6 +44,18 @@ if TYPE_CHECKING:
     from ixmp4.core.optimization.parameter import ParameterRepository
     from ixmp4.core.optimization.table import TableRepository
     from ixmp4.core.optimization.variable import VariableRepository
+    from ixmp4.data.abstract.optimization.equation import (
+        EquationRepository as BEEquationRepository,
+    )
+    from ixmp4.data.abstract.optimization.parameter import (
+        ParameterRepository as BEParameterRepository,
+    )
+    from ixmp4.data.abstract.optimization.table import (
+        TableRepository as BETableRepository,
+    )
+    from ixmp4.data.abstract.optimization.variable import (
+        VariableRepository as BEVariableRepository,
+    )
 
     from ixmp.types import (
         Filters,
@@ -494,7 +512,8 @@ class IXMP4Backend(CachingBackend):
                     "s_clear_solution(from_year=...) only valid for ixmp.Scenario; not "
                     "subclasses"
                 )
-        self.index[s].optimization.remove_solution()
+        with self.index[s].transact("Clear solution for ixmp.Scenario"):
+            self.index[s].optimization.remove_solution()
 
     def set_as_default(self, ts: TimeSeries) -> None:
         self.index[ts].set_as_default()
@@ -558,6 +577,61 @@ class IXMP4Backend(CachingBackend):
         else:  # variable
             return self.index[s].optimization.variables
 
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[Scalar]
+    ) -> "BEScalarRepository": ...
+
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[IndexSet]
+    ) -> "BEIndexSetRepository": ...
+
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[Table]
+    ) -> "BETableRepository": ...
+
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[Parameter]
+    ) -> "BEParameterRepository": ...
+
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[Equation]
+    ) -> "BEEquationRepository": ...
+
+    @overload
+    def _get_backend_repo(
+        self, s: Scenario, type: type[Variable]
+    ) -> "BEVariableRepository": ...
+
+    # NOTE Type hints here ensure the function body is checked
+    def _get_backend_repo(
+        self, s: Scenario, type: type
+    ) -> Union[
+        "BEEquationRepository",
+        "BEIndexSetRepository",
+        "BEParameterRepository",
+        "BEScalarRepository",
+        "BETableRepository",
+        "BEVariableRepository",
+    ]:
+        """Return the repository of items of `type` belonging to `s`."""
+        if type is Scalar:
+            return self.index[s].backend.optimization.scalars
+        elif type is IndexSet:
+            return self.index[s].backend.optimization.indexsets
+        elif type is Table:
+            return self.index[s].backend.optimization.tables
+        elif type is Parameter:
+            return self.index[s].backend.optimization.parameters
+        elif type is Equation:
+            return self.index[s].backend.optimization.equations
+        else:  # variable
+            return self.index[s].backend.optimization.variables
+
     def init_item(
         self,
         s: Scenario,
@@ -572,20 +646,28 @@ class IXMP4Backend(CachingBackend):
         idx = -1 if idx_sets else 0
         ixmp4_type = CLASS_FOR_IX_TYPE[type][idx]
 
-        # Retrieve the repository of such items
-        repo = self._get_repo(s=s, type=ixmp4_type)
+        # TODO Rename 'type' parameters!
 
-        if isinstance(repo, IndexSetRepository):
-            repo.create(name=name)
-        elif isinstance(repo, ScalarRepository):
+        # Retrieve the repository of such items
+        repo = self._get_backend_repo(s=s, type=ixmp4_type)
+        run = self.index[s]
+
+        # NOTE We can't do
+        # if isinstance(repo, BEIndexSetRepository):
+        # because mypy says this needs "@runtime_checkable protocols"
+        if idx == 0 and type == "set":
+            repo.create(run_id=run.id, name=name)  # type: ignore[call-arg]
+        # elif isinstance(repo, BEScalarRepository):
+        elif idx == 0 and type == "par":
             # ixmp4 v0.10 requires that a value and unit be supplied on creation
-            repo.create(name=name, value=np.nan, unit="_NOTSET")
+            repo.create(run_id=run.id, name=name, value=np.nan, unit_name="_NOTSET")  # type: ignore[call-arg]
         else:
             repo.create(
+                run_id=run.id,
                 name=name,
                 constrained_to_indexsets=list(idx_sets),
                 column_names=list(idx_names) if idx_names else None,
-            )
+            )  # type: ignore[call-arg]
 
     def list_items(self, s: Scenario, type: str) -> list[str]:
         types = CLASS_FOR_IX_TYPE[type]
@@ -704,6 +786,9 @@ class IXMP4Backend(CachingBackend):
             log.warning(
                 "`comment` currently unused with ixmp4 when adding data to Tables."
             )
+
+        run = self.index[s]
+
         # Assumption: if key is just one value, we're dealing with an IndexSet
         # NOTE E.g. westeros_addon_technologies in message_ix calls
         # `scenario.add_set("addon", "po_turbine")` for a 1-D Table called "addon". This
@@ -714,11 +799,11 @@ class IXMP4Backend(CachingBackend):
             # NOTE ixmp_source silently ignores duplicate data; replicate here
             # This could be improved by adding data without loading the indexset first,
             # but this requires users to ensure their data are valid
-            indexset = self.index[s].optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get(name=name)
             if key not in indexset.data:
-                indexset.add(key)
+                self._backend.optimization.indexsets.add_data(id=indexset.id, data=key)
         else:
-            table = self.index[s].optimization.tables.get(name=name)
+            table = run.optimization.tables.get(name=name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
             keys = table.column_names or table.indexset_names
@@ -727,7 +812,7 @@ class IXMP4Backend(CachingBackend):
             # Silently ignore duplicate data, see NOTE above
             data_to_add = data_to_add[~data_to_add.isin(values=table.data).all(axis=1)]
 
-            table.add(data=data_to_add)
+            self._backend.optimization.tables.add_data(id=table.id, data=data_to_add)
 
     def _create_scalar(
         self,
@@ -752,11 +837,17 @@ class IXMP4Backend(CachingBackend):
         comment: str, optional
             A message to explain what this Scalar means.
         """
-        scalar = self.index[s].optimization.scalars.create(
-            name=name, value=value, unit=unit
+        if unit is None:
+            log.info("Setting Scalar as dimensionless")
+            unit = self._backend.units.get_or_create("").name
+
+        scalar = self._backend.optimization.scalars.create(
+            run_id=self.index[s].id, name=name, value=value, unit_name=unit
         )
         if comment:
-            scalar.docs = comment
+            self._backend.optimization.scalars.docs.set(
+                dimension_id=scalar.id, description=comment
+            )
 
     def _add_data_to_parameter(
         self,
@@ -800,7 +891,9 @@ class IXMP4Backend(CachingBackend):
         data_to_add["values"] = [value]
         data_to_add["units"] = [unit]
 
-        parameter.add(data=data_to_add)
+        self._backend.optimization.parameters.add_data(
+            id=parameter.id, data=data_to_add
+        )
 
     def item_set_elements(
         self,
@@ -817,8 +910,13 @@ class IXMP4Backend(CachingBackend):
                     assert isinstance(value, float), (
                         "Creating a Scalar requires a value!"
                     )
-                    item = self._get_repo(s, type=Scalar).get(name=name)
-                    item.value, item.unit, item.docs = value, str(unit), comment
+                    repo = self._get_backend_repo(s, type=Scalar)
+                    scalar = repo.get(run_id=self.index[s].id, name=name)
+                    # TODO Does this handle 'None'-unit correctly?
+                    _unit = self._backend.units.get(str(unit))
+                    repo.update(id=scalar.id, value=value, unit_id=_unit.id)
+                    if comment is not None:
+                        repo.docs.set(dimension_id=scalar.id, description=comment)
                 else:
                     assert isinstance(value, float), (
                         "Adding data to a Parameter requires a value!"
@@ -946,17 +1044,21 @@ class IXMP4Backend(CachingBackend):
             if isinstance(item, IndexSet):
                 # NOTE We might have to expose IndexSet._data_type to cast correctly
                 data = pd.DataFrame(keys, columns=[item.name])
-                item.remove(data=cast(list[str], data[item.name].to_list()))
+                self._backend.optimization.indexsets.remove_data(
+                    id=item.id, data=data[item.name].astype(str).to_list()
+                )
             else:
                 # TODO can we assume that keys follow same order as indexsets/columns?
                 columns = item.column_names or item.indexset_names
                 data = pd.DataFrame(keys, columns=columns)
-                item.remove(data=data)
+                self._backend.optimization.tables.remove_data(id=item.id, data=data)
         else:
             parameter = self._get_repo(s=s, type=Parameter).get(name=name)
             columns = parameter.column_names or parameter.indexset_names
             data = pd.DataFrame(keys, columns=columns)
-            parameter.remove(data=data)
+            self._backend.optimization.parameters.remove_data(
+                id=parameter.id, data=data
+            )
 
     def delete_item(
         self, s: Scenario, type: Literal["set", "par", "equ"], name: str
@@ -964,7 +1066,7 @@ class IXMP4Backend(CachingBackend):
         # Locate the item. If `type` maps to >1 IXMP4 model data type, try each repo.
         item = self._find_item(s=s, name=name, types=CLASS_FOR_IX_TYPE[type])
         # Access the repository containing objects of `item`s type; delete
-        self._get_repo(s=s, type=item.__class__).delete(item=name)
+        self._get_backend_repo(s=s, type=item.__class__).delete(id=item.id)
 
     # NOTE The name 'cat_`name`' is used for backward compatibility with the JDBC, where
     # such names are hardcoded. 'cat' means 'category' and should be expanded for
@@ -1001,14 +1103,16 @@ class IXMP4Backend(CachingBackend):
         """
         column_name: Optional[str] = None
 
+        run = self.index[ms]
+
         # Categories can be based on IndexSets directly or on 1-d Tables
         try:
             # Most should be based on IndexSets, try that first
-            indexset = self.index[ms].optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get(name=name)
             indexset_name = indexset.name
         except IndexSet.NotFound:
             # We're dealing with a Table
-            table = self.index[ms].optimization.tables.get(name=name)
+            table = run.optimization.tables.get(name=name)
 
             # Ensure the Table's dimensions are correct before setting variables
             assert len(table.indexset_names) == 1
@@ -1028,23 +1132,30 @@ class IXMP4Backend(CachingBackend):
 
         # Get or create the 'type_name' indexset and 'cat_name' table
         try:
-            category_indexset = self.index[ms].optimization.indexsets.get(
-                name=f"type_{name}"
-            )
+            category_indexset = run.optimization.indexsets.get(name=f"type_{name}")
         except IndexSet.NotFound:
-            category_indexset = self.index[ms].optimization.indexsets.create(
-                name=f"type_{name}"
+            category_indexset = IndexSet(
+                _backend=self._backend,
+                _model=self._backend.optimization.indexsets.create(
+                    run_id=run.id, name=f"type_{name}"
+                ),
+                _run=run,
             )
 
         try:
-            category_table = self.index[ms].optimization.tables.get(name=f"cat_{name}")
+            category_table = run.optimization.tables.get(name=f"cat_{name}")
         except Table.NotFound:
-            category_table = self.index[ms].optimization.tables.create(
-                name=f"cat_{name}",
-                constrained_to_indexsets=[indexset_name, category_indexset.name],
-                column_names=[column_name, category_indexset.name]
-                if column_name
-                else None,
+            category_table = Table(
+                _backend=self._backend,
+                _model=self._backend.optimization.tables.create(
+                    run_id=run.id,
+                    name=f"cat_{name}",
+                    constrained_to_indexsets=[indexset_name, category_indexset.name],
+                    column_names=[column_name, category_indexset.name]
+                    if column_name
+                    else None,
+                ),
+                _run=run,
             )
 
         # Convert for convenience
@@ -1062,15 +1173,19 @@ class IXMP4Backend(CachingBackend):
             if category_indexset.data:
                 # Remove all existing data so that only the single provided element will
                 # be stored in the indexset
-                category_indexset.remove(category_indexset.data)
+                self._backend.optimization.indexsets.remove_data(
+                    id=category_indexset.id, data=category_indexset.data
+                )
 
         # Add data to both objects
         if cat not in category_indexset.data:
-            category_indexset.add(data=cat)
+            self._backend.optimization.indexsets.add_data(
+                id=category_indexset.id, data=cat
+            )
         data = {column_name: keys} if column_name else {indexset_name: keys}
         data[category_indexset.name] = [cat] * len(keys)
 
-        category_table.add(data=data)
+        self._backend.optimization.tables.add_data(id=category_table.id, data=data)
 
     # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
     # same here or do we expect user code to call this with name == "tec" if they're

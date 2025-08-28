@@ -260,13 +260,14 @@ class TestIxmp4Functions:
         # Prepare some data
         run = ixmp4_backend.index[scenario]
         indexset_data = "foo"
-        indexset = run.optimization.indexsets.create("Indexset")
-        indexset.add(data=indexset_data)
-        table_data = {indexset.name: [indexset_data]}
-        table = run.optimization.tables.create(
-            "Table", constrained_to_indexsets=[indexset.name]
-        )
-        table.add(data=table_data)
+        table_data = {"Indexset": [indexset_data]}
+        with run.transact("Test item_delete_elements"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            indexset.add(data=indexset_data)
+            table = run.optimization.tables.create(
+                "Table", constrained_to_indexsets=[indexset.name]
+            )
+            table.add(data=table_data)
 
         # Assert data is stored in scenario
         set_data = scenario.set(name=table.name)
@@ -284,7 +285,8 @@ class TestIxmp4Functions:
     def test_delete_item(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Create a 'set' to delete
         run = ixmp4_backend.index[scenario]
-        indexset = run.optimization.indexsets.create("Indexset")
+        with run.transact("Test delete_item"):
+            indexset = run.optimization.indexsets.create("Indexset")
         ixmp4_backend.delete_item(s=scenario, type="set", name=indexset.name)
 
         # Test there are no 'sets' on scenario anymore

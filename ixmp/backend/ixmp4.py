@@ -249,7 +249,7 @@ class IXMP4Backend(CachingBackend):
         dsn: str = Options.dsn,
         jdbc_compat: Union[bool, str] = Options.jdbc_compat,
     ) -> None:
-        from ixmp4.data.backend.db import SqliteTestBackend
+        from ixmp4.data.backend.test import SqliteTestBackend
 
         # Handle arguments
         self._options = opts = Options(

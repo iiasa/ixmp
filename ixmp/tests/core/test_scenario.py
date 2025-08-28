@@ -817,9 +817,7 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     assert expected == cast("pd.Series[str]", s.tolist())
 
     # Parameter defined over 's'
-    p = pd.DataFrame.from_records(
-        zip(elements, [1.0, 2.0, 3.0]), columns=["s", "value"]
-    )
+    p = pd.DataFrame.from_records({"s": elements, "value": [1.0, 2.0, 3.0]})
 
     # Expected return dtypes of index and value columns
     dtypes = {"s": str, "value": float}

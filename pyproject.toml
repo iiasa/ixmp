@@ -74,7 +74,8 @@ tests = [
   "pytest-benchmark",
   "pytest-cov",
   "pytest-httpserver",
-  "pytest-rerunfailures",
+  # TODO Remove pin after https://github.com/pytest-dev/pytest-rerunfailures/issues/302
+  "pytest-rerunfailures<16.0",
   "pytest-xdist",
 ]
 

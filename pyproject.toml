@@ -61,7 +61,7 @@ docs = [
   "sphinxcontrib-bibtex",
 ]
 ixmp4 = [
-  "ixmp4 >= 0.10, < 0.11; python_version > '3.9'",
+  "ixmp4 >= 0.10, < 0.13; python_version > '3.9'",
   "gamsapi[core,transfer] >= 45.7.0",
 ]
 report = ["genno[compat,graphviz]"]
@@ -74,7 +74,8 @@ tests = [
   "pytest-benchmark",
   "pytest-cov",
   "pytest-httpserver",
-  "pytest-rerunfailures",
+  # TODO Remove pin after https://github.com/pytest-dev/pytest-rerunfailures/issues/302
+  "pytest-rerunfailures<16.0",
   "pytest-xdist",
 ]
 

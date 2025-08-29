@@ -558,11 +558,15 @@ def format_scenario_list(
             info["model"].str.match(str(match)) | info["scenario"].str.match(str(match))
         ]
 
-    lines = []
+    lines: list[str] = []
 
     if as_url:
         url_pre = f"ixmp://{platform.name}/"
-        lines.extend((url_pre + info["model"] + "/" + info["scenario"]).tolist())
+        lines.extend(
+            (
+                url_pre + info["model"].astype(str) + "/" + info["scenario"].astype(str)
+            ).tolist()
+        )
     else:
         width = 0 if not len(info) else info["scenario"].str.len().max()
         info["scenario"] = info["scenario"].str.ljust(width + 2)

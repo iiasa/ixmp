@@ -106,10 +106,11 @@ class TestIxmp4IOFunctions:
     def test__domain(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _domain
 
-        indexset = run.optimization.indexsets.create("Indexset")
-        table = run.optimization.tables.create(
-            "Table", constrained_to_indexsets=[indexset.name]
-        )
+        with run.transact("Test _domain"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            table = run.optimization.tables.create(
+                "Table", constrained_to_indexsets=[indexset.name]
+            )
 
         assert _domain(indexset) is None
         assert _domain(table) == [indexset.name]
@@ -120,27 +121,31 @@ class TestIxmp4IOFunctions:
         run.backend.units.create("unit")
 
         # Test records of a Scalar
-        scalar = run.optimization.scalars.create("Scalar", 3.14, "unit")
+        with run.transact("Test _records for Scalar"):
+            scalar = run.optimization.scalars.create("Scalar", 3.14, "unit")
         assert _records(scalar) == scalar.value
 
         # Test records of an empty Table
-        indexset = run.optimization.indexsets.create("Indexset")
-        table = run.optimization.tables.create(
-            "Table", constrained_to_indexsets=[indexset.name]
-        )
+        with run.transact("Test _records for Table"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            table = run.optimization.tables.create(
+                "Table", constrained_to_indexsets=[indexset.name]
+            )
         assert _records(table) is None
 
         # Test records of an IndexSet
-        indexset.add(["foo", "bar"])
+        with run.transact("Test _records for IndexSet"):
+            indexset.add(["foo", "bar"])
         assert _records(indexset) == indexset.data
 
         # Test records of a Parameter
-        parameter = run.optimization.parameters.create(
-            "Parameter", constrained_to_indexsets=[indexset.name]
-        )
-        parameter.add(
-            {indexset.name: ["foo", "bar"], "values": [1, 2], "units": ["unit"] * 2}
-        )
+        with run.transact("Test _records for Parameter"):
+            parameter = run.optimization.parameters.create(
+                "Parameter", constrained_to_indexsets=[indexset.name]
+            )
+            parameter.add(
+                {indexset.name: ["foo", "bar"], "values": [1, 2], "units": ["unit"] * 2}
+            )
         expected = parameter.data.copy()
         expected.pop("units")
         assert _records(parameter) == expected
@@ -148,10 +153,11 @@ class TestIxmp4IOFunctions:
     def test__ensure_correct_item_order(self, run: Any) -> None:
         from ixmp.backend.ixmp4_io import _ensure_correct_item_order
 
-        years = run.optimization.indexsets.create("years")
-        nodes = run.optimization.indexsets.create("nodes")
-        type_years = run.optimization.indexsets.create("type_years")
-        type_nodes = run.optimization.indexsets.create("type_nodes")
+        with run.transact("Test _ensure_correct_item_order"):
+            years = run.optimization.indexsets.create("years")
+            nodes = run.optimization.indexsets.create("nodes")
+            type_years = run.optimization.indexsets.create("type_years")
+            type_nodes = run.optimization.indexsets.create("type_nodes")
 
         assert _ensure_correct_item_order(
             items=[type_years, years, type_nodes, nodes],
@@ -162,18 +168,20 @@ class TestIxmp4IOFunctions:
         from ixmp.backend.ixmp4_io import _align_records_and_domain
 
         # Test item without domain order
-        equation = run.optimization.equations.create("Equation")
+        with run.transact("Test _align_records_and_domain without order"):
+            equation = run.optimization.equations.create("Equation")
         expected: dict[str, Union[list[float], list[int], list[str]]] = {
             "foo": [1, 2, 3]
         }
         assert _align_records_and_domain(item=equation, records=expected) == expected
 
         # Test sorting of records
-        indexset_1 = run.optimization.indexsets.create("Indexset 1")
-        indexset_2 = run.optimization.indexsets.create("Indexset 2")
-        parameter = run.optimization.parameters.create(
-            "Parameter", constrained_to_indexsets=[indexset_1.name, indexset_2.name]
-        )
+        with run.transact("Test _align_records_and_domain with order"):
+            indexset_1 = run.optimization.indexsets.create("Indexset 1")
+            indexset_2 = run.optimization.indexsets.create("Indexset 2")
+            parameter = run.optimization.parameters.create(
+                "Parameter", constrained_to_indexsets=[indexset_1.name, indexset_2.name]
+            )
         records: dict[str, Union[list[float], list[int], list[str]]] = {
             indexset_2.name: [1, 2, 3],
             "values": [1.0, 2.0, 3.0],
@@ -195,8 +203,9 @@ class TestIxmp4IOFunctions:
         assert len(empty_list) == 0
 
         # Test adding an Indexset (covers no new cases, but we need to index a Table)
-        indexset = run.optimization.indexsets.create("Indexset")
-        indexset.add(data=["foo", "bar", "baz"])
+        with run.transact("Test _convert_ixmp4_items_to_containerdata with IndexSet"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            indexset.add(data=["foo", "bar", "baz"])
         container_list = _convert_ixmp4_items_to_containerdata(items=[indexset])
         assert len(container_list) == 1
         indexset_data = container_list[0]
@@ -204,10 +213,11 @@ class TestIxmp4IOFunctions:
         assert indexset.data == indexset_data.records
 
         # Test adding an item where records are a dict
-        table = run.optimization.tables.create(
-            "Table", constrained_to_indexsets=[indexset.name]
-        )
-        table.add(data={indexset.name: ["baz", "foo", "bar"]})
+        with run.transact("Test _convert_ixmp4_items_to_containerdata with Table"):
+            table = run.optimization.tables.create(
+                "Table", constrained_to_indexsets=[indexset.name]
+            )
+            table.add(data={indexset.name: ["baz", "foo", "bar"]})
         container_list = _convert_ixmp4_items_to_containerdata(items=[table])
         table_data = container_list[0]
         assert table.name == table_data.name
@@ -242,27 +252,30 @@ class TestIxmp4IOFunctions:
         default_columns = ["levels", "marginals"]
 
         # Test an Equation without dimensions
-        equation = run.backend.optimization.equations.create(
-            run_id=run.id, name="Equation"
-        )
+        with run.transact("Test _set_columns_to_read_from_records Equ w/o dims"):
+            equation = run.backend.optimization.equations.create(
+                run_id=run.id, name="Equation"
+            )
         columns = _set_columns_to_read_from_records(item=equation)
         assert columns == default_columns
 
         # Test an indexed Variable
-        indexset = run.optimization.indexsets.create("Indexset")
-        variable = run.backend.optimization.variables.create(
-            run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
-        )
+        with run.transact("Test _set_columns_to_read_from_records Var w/ dims"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            variable = run.backend.optimization.variables.create(
+                run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
+            )
         columns = _set_columns_to_read_from_records(item=variable)
         assert columns == [indexset.name] + default_columns
 
         # Test an Equation with dimension names
-        equation_2 = run.backend.optimization.equations.create(
-            run_id=run.id,
-            name="Equation 2",
-            constrained_to_indexsets=[indexset.name],
-            column_names=["Column"],
-        )
+        with run.transact("Test _set_columns_to_read_from_records Equ w/ column_names"):
+            equation_2 = run.backend.optimization.equations.create(
+                run_id=run.id,
+                name="Equation 2",
+                constrained_to_indexsets=[indexset.name],
+                column_names=["Column"],
+            )
         columns = _set_columns_to_read_from_records(item=equation_2)
         assert columns == ["Column"] + default_columns
 
@@ -272,11 +285,12 @@ class TestIxmp4IOFunctions:
     def test__read_variables_to_run(self, run: Any, container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_variables_to_run
 
-        indexset = run.optimization.indexsets.create("Indexset")
-        indexset.add(data=["foo", "bar", "baz"])
-        variable = run.backend.optimization.variables.create(
-            run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
-        )
+        with run.transact("Test _read_variables_to_run"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            indexset.add(data=["foo", "bar", "baz"])
+            variable = run.backend.optimization.variables.create(
+                run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
+            )
 
         # NOTE A read GDX always contains 'level', 'marginal', 'lower', 'upper', 'scale'
         # The first two will be changed to plural, the latter three ignored
@@ -304,11 +318,12 @@ class TestIxmp4IOFunctions:
     def test__read_equations_to_run(self, run: Any, container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_equations_to_run
 
-        indexset = run.optimization.indexsets.create("Indexset")
-        indexset.add(data=["foo", "bar", "baz"])
-        equation = run.backend.optimization.equations.create(
-            run_id=run.id, name="Equation", constrained_to_indexsets=[indexset.name]
-        )
+        with run.transact("Test _read_equations_to_run"):
+            indexset = run.optimization.indexsets.create("Indexset")
+            indexset.add(data=["foo", "bar", "baz"])
+            equation = run.backend.optimization.equations.create(
+                run_id=run.id, name="Equation", constrained_to_indexsets=[indexset.name]
+            )
 
         # NOTE A read GDX always contains 'level', 'marginal', 'lower', 'upper', 'scale'
         # The first two will be changed to plural, the latter three ignored

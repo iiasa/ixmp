@@ -22,6 +22,8 @@ FLAKY = pytest.mark.flaky(
     reason="Flaky; see iiasa/ixmp#543",
 )
 
+LONG_MACOS = sys.version_info[:2] in {(3, 11), (3, 12)}
+
 
 class DefaultKwargs(TypedDict, total=False):
     timeout: int
@@ -37,6 +39,7 @@ def default_args() -> DefaultKwargs:
 @FLAKY
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
 @pytest.mark.parametrize("ixmp_backend", available())
+@pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport(
     tmp_path: Path,
     tmp_env: os._Environ[str],
@@ -61,6 +64,7 @@ def test_py_transport(
 
 
 @pytest.mark.xdist_group(name=f"{group_base_name}-0")
+@pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport_scenario(
     tutorial_path: Path,
     tmp_path: Path,

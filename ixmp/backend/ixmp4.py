@@ -47,9 +47,11 @@ if TYPE_CHECKING:
     from ixmp4.data.abstract.optimization.equation import (
         EquationRepository as BEEquationRepository,
     )
+    from ixmp4.data.abstract.optimization.indexset import IndexSet as BEIndexSet
     from ixmp4.data.abstract.optimization.parameter import (
         ParameterRepository as BEParameterRepository,
     )
+    from ixmp4.data.abstract.optimization.table import Table as BETable
     from ixmp4.data.abstract.optimization.table import (
         TableRepository as BETableRepository,
     )
@@ -1131,31 +1133,27 @@ class IXMP4Backend(CachingBackend):
             column_name = "technology_addon"
 
         # Get or create the 'type_name' indexset and 'cat_name' table
+        # NOTE _backend functions allow avoiding the run.lock requirement, but return a
+        # slightly different model type, but the differences are irrelevant here
+        category_indexset: Union[IndexSet, "BEIndexSet"]
         try:
             category_indexset = run.optimization.indexsets.get(name=f"type_{name}")
         except IndexSet.NotFound:
-            category_indexset = IndexSet(
-                _backend=self._backend,
-                _model=self._backend.optimization.indexsets.create(
-                    run_id=run.id, name=f"type_{name}"
-                ),
-                _run=run,
+            category_indexset = self._backend.optimization.indexsets.create(
+                run_id=run.id, name=f"type_{name}"
             )
 
+        category_table: Union[Table, "BETable"]
         try:
             category_table = run.optimization.tables.get(name=f"cat_{name}")
         except Table.NotFound:
-            category_table = Table(
-                _backend=self._backend,
-                _model=self._backend.optimization.tables.create(
-                    run_id=run.id,
-                    name=f"cat_{name}",
-                    constrained_to_indexsets=[indexset_name, category_indexset.name],
-                    column_names=[column_name, category_indexset.name]
-                    if column_name
-                    else None,
-                ),
-                _run=run,
+            category_table = self._backend.optimization.tables.create(
+                run_id=run.id,
+                name=f"cat_{name}",
+                constrained_to_indexsets=[indexset_name, category_indexset.name],
+                column_names=[column_name, category_indexset.name]
+                if column_name
+                else None,
             )
 
         # Convert for convenience

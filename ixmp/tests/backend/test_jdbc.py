@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional, TypedDict, Union
 import jpype
 import numpy as np
 import pandas as pd
+import pandas.testing as pdt
 import pytest
 from pytest import raises
 
@@ -17,6 +18,7 @@ import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
 from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 log = logging.getLogger(__name__)
 
@@ -777,3 +779,82 @@ def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> Non
     df = scen.par("d")
     assert isinstance(df, pd.DataFrame)
     assert df.shape[0] < d0.shape[0]
+
+
+def test_cat_set_elements(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
+    scenario = ixmp.Scenario(
+        test_mp,
+        model="test_cat_set_elements",
+        scenario=request.node.name,
+        version="new",
+    )
+
+    # Test if cat is an IndexSet
+    name = "technology"
+    scenario.init_set(name)
+    scenario.add_set(name=name, key=["test_tec", "all"])
+
+    backend = test_mp._backend
+
+    # NOTE On JDBC, cat_set_elements is restricted to MESSAGE scenarios
+    if not is_ixmp4backend(backend):
+        with pytest.raises(
+            TypeError,
+            match="No matching overloads found for at.ac.iiasa.ixmp.objects.Scenario.addCatEle",  # noqa: E501
+        ):
+            backend.cat_set_elements(
+                ms=scenario, name=name, cat=name, keys="test_tec", is_unique=False
+            )
+        return
+
+    backend.cat_set_elements(
+        ms=scenario, name=name, cat=name, keys="test_tec", is_unique=False
+    )
+
+    type_tec = scenario.set("type_tec")
+    cat_tec = scenario.set("cat_tec")
+    assert isinstance(type_tec, pd.Series)
+    assert isinstance(cat_tec, pd.DataFrame)
+
+    pdt.assert_series_equal(type_tec, pd.Series([name]))
+    pdt.assert_frame_equal(
+        cat_tec, pd.DataFrame({name: ["test_tec"], "type_tec": [name]})
+    )
+
+    # Test is_unique with many items raises
+    with pytest.raises(ValueError, match="can only add one element"):
+        backend.cat_set_elements(
+            ms=scenario,
+            name=name,
+            cat=name,
+            keys=["test_tec_2", "all"],
+            is_unique=True,
+        )
+
+    # Test is_unique with one item
+    backend.cat_set_elements(
+        ms=scenario, name=name, cat="all", keys=["all"], is_unique=True
+    )
+    type_tec = scenario.set("type_tec")
+    assert isinstance(type_tec, pd.Series)
+
+    pdt.assert_series_equal(type_tec, pd.Series(["all"]))
+
+    # Test if cat is special "addon"/Table
+    name = "addon"
+    scenario.init_set(f"{name}_indexset")
+    scenario.add_set(f"{name}_indexset", key="all")
+    scenario.init_set(name, idx_sets=[f"{name}_indexset"])
+
+    backend.cat_set_elements(
+        ms=scenario, name=name, cat=name, keys=["all"], is_unique=False
+    )
+
+    # The only logic difference exists for cat_addon
+    cat_addon = scenario.set("cat_addon")
+    assert isinstance(cat_addon, pd.DataFrame)
+
+    assert cat_addon.columns.to_list() == ["technology_addon", "type_addon"]
+    pdt.assert_frame_equal(
+        cat_addon, pd.DataFrame({"technology_addon": ["all"], "type_addon": [name]})
+    )

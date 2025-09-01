@@ -292,62 +292,6 @@ class TestIxmp4Functions:
         # Test there are no 'sets' on scenario anymore
         assert ixmp4_backend.list_items(s=scenario, type="set") == []
 
-    def test_cat_set_elements(self, ixmp4_backend: Any, scenario: Scenario) -> None:
-        run = ixmp4_backend.index[scenario]
-
-        # Test if cat is an IndexSet
-        name = "technology"
-        tecs = run.backend.optimization.indexsets.create(run_id=run.id, name=name)
-        run.backend.optimization.indexsets.add_data(
-            id=tecs.id, data=["test_tec", "all"]
-        )
-        ixmp4_backend.cat_set_elements(
-            ms=scenario, name=name, cat=name, keys="test_tec", is_unique=False
-        )
-
-        type_tec = run.optimization.indexsets.get("type_tec")
-        cat_tec = run.optimization.tables.get("cat_tec")
-
-        assert type_tec.data == [name]
-        assert cat_tec.data == {name: ["test_tec"], "type_tec": [name]}
-
-        # Test is_unique with many items raises
-        with pytest.raises(ValueError, match="can only add one element"):
-            ixmp4_backend.cat_set_elements(
-                ms=scenario,
-                name=name,
-                cat=name,
-                keys=["test_tec_2", "all"],
-                is_unique=True,
-            )
-
-        # Test is_unique with one item
-        ixmp4_backend.cat_set_elements(
-            ms=scenario, name=name, cat="all", keys=["all"], is_unique=True
-        )
-        type_tec = run.optimization.indexsets.get("type_tec")
-
-        assert type_tec.data == ["all"]
-
-        # Test if cat is special "addon"/Table
-        name = "addon"
-        addon_indexset = run.backend.optimization.indexsets.create(
-            run_id=run.id, name=f"{name}_indexset"
-        )
-        run.backend.optimization.indexsets.add_data(id=addon_indexset.id, data="all")
-        _ = run.backend.optimization.tables.create(
-            run_id=run.id, name=name, constrained_to_indexsets=[addon_indexset.name]
-        )
-        ixmp4_backend.cat_set_elements(
-            ms=scenario, name=name, cat=name, keys=["all"], is_unique=False
-        )
-
-        # The only logic difference exists for cat_addon
-        cat_addon = run.optimization.tables.get("cat_addon")
-
-        assert cat_addon.column_names == ["technology_addon", "type_addon"]
-        assert cat_addon.data == {"technology_addon": ["all"], "type_addon": [name]}
-
     def test_write_file(self, ixmp4_backend: Any) -> None:
         # Test raising an error for unknown file extension
         with pytest.raises(NotImplementedError):

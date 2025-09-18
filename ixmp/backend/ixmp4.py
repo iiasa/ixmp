@@ -27,6 +27,7 @@ from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
+from ixmp4.data.abstract.meta import RunMetaEntry
 from ixmp4.data.abstract.optimization.indexset import (
     IndexSetRepository as BEIndexSetRepository,
 )
@@ -483,11 +484,13 @@ class IXMP4Backend(CachingBackend):
         run = self._platform.runs.get(model=ts.model, scenario=ts.scenario, version=v)
         self._index_and_set_attrs(run, ts)
 
+    # TODO
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
         log.log(
             self._log_level, "ixmp4 backed Scenarios/Runs don't need to be checked out!"
         )
 
+    # TODO
     def discard_changes(self, ts: TimeSeries) -> None:
         log.log(
             self._log_level,
@@ -495,6 +498,7 @@ class IXMP4Backend(CachingBackend):
             "changes. To avoid the need, be sure to start work on fresh clones.",
         )
 
+    # TODO
     def commit(self, ts: TimeSeries, comment: str) -> None:
         log.log(
             self._log_level,
@@ -529,6 +533,106 @@ class IXMP4Backend(CachingBackend):
 
     def has_solution(self, s: Scenario) -> bool:
         return self.index[s].optimization.has_solution()
+
+    def last_update(self, ts: TimeSeries) -> Optional[str]:
+        last_update = self.index[ts]._model.updated_at
+
+        return (
+            last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
+            if last_update is not None
+            else last_update
+        )
+
+    def _validate_meta_args(
+        self,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> tuple[str, str, int]:
+        """Validate arguments for getting/setting/deleting meta"""
+        if model is not None and scenario is not None and version is not None:
+            return model, scenario, version
+        else:
+            raise ValueError(
+                "Invalid arguments. Valid combination: (model, scenario, version)"
+            )
+
+    def set_meta(
+        self,
+        meta: dict[str, Union[bool, float, int, str]],
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> None:
+        _model, _scenario, _version = self._validate_meta_args(
+            model=model, scenario=scenario, version=version
+        )
+        run = self._backend.runs.get(
+            model_name=_model, scenario_name=_scenario, version=_version
+        )
+
+        meta_df = pd.DataFrame.from_dict(
+            data=meta, orient="index", columns=["value"]
+        ).reset_index(names="key")
+        meta_df["run__id"] = run.id
+
+        try:
+            self._backend.meta.bulk_upsert(df=meta_df)
+        except KeyError as e:
+            if "<class" in str(e):
+                raise ValueError(
+                    "Cannot use values provided due to incompatible types! \n "
+                    f"Provided: {meta} \n Acceptable types: "
+                    f"{RunMetaEntry._type_map.keys()}"
+                ) from e
+            else:
+                raise e
+
+    def get_meta(
+        self,
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+        strict: bool = False,
+    ) -> dict[str, Any]:
+        _model, _scenario, _version = self._validate_meta_args(
+            model=model, scenario=scenario, version=version
+        )
+        run = self._backend.runs.get(
+            model_name=_model, scenario_name=_scenario, version=_version
+        )
+
+        # NOTE This doesn't currently return more keys as per the super() docstring/strict
+        meta_df = self._backend.meta.tabulate(
+            run_id=run.id,
+            run={
+                "model": {"name": _model},
+                "scenario": {"name": _scenario},
+                "version": _version,
+                "default_only": False,
+            },
+        )
+
+        return {str(row.key): row.value for row in meta_df.itertuples()}
+
+    def remove_meta(
+        self,
+        names: list[str],
+        model: Optional[str],
+        scenario: Optional[str],
+        version: Optional[int],
+    ) -> None:
+        _model, _scenario, _version = self._validate_meta_args(
+            model=model, scenario=scenario, version=version
+        )
+        run = self._backend.runs.get(
+            model_name=_model, scenario_name=_scenario, version=_version
+        )
+
+        meta_df = pd.DataFrame({"key": names})
+        meta_df["run__id"] = run.id
+
+        self._backend.meta.bulk_delete(df=meta_df)
 
     # Handle optimization items
 
@@ -1460,14 +1564,9 @@ class IXMP4Backend(CachingBackend):
 
     delete = _ni
     delete_geo = _ni
-    delete_meta = _ni
     get_doc = _ni
     get_geo = _ni
-    get_meta = _ni
     get_timeslices = _ni
-    last_update = _ni
-    remove_meta = _ni
     set_doc = _ni
     set_geo = _ni
-    set_meta = _ni
     set_timeslice = _ni

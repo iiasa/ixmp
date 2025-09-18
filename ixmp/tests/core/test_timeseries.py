@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Generator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, tzinfo
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -11,6 +11,7 @@ from pandas.testing import assert_frame_equal
 
 from ixmp import IAMC_IDX, Scenario, TimeSeries
 from ixmp.testing import DATA, models
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -163,19 +164,27 @@ class TestTimeSeries:
         ts.commit("")
         assert ts.run_id() > 0 and isinstance(ts.run_id(), int)
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_last_update(self, ts: TimeSeries) -> None:
-        # New, un-committed TimeSeries has no last update date
-        assert ts.last_update() is None
+        # ixmp4 uses a specific timezone, see below
+        tz: tzinfo | None = None
+
+        if is_ixmp4backend(ts.platform._backend):
+            # New ixmp4-backed TimeSeries immediately stores some meta data
+            assert ts.last_update() is not None
+            tz = timezone.utc
+        else:
+            # New, un-committed TimeSeries has no last update date
+            assert ts.last_update() is None
 
         ts.commit("")
 
         # After committing, last_update() returns a string
         last_update = ts.last_update()
         assert last_update is not None
-        actual = datetime.strptime(last_update, "%Y-%m-%d %H:%M:%S.%f")
-        assert abs(actual - datetime.now()) < timedelta(seconds=1)
+        actual = datetime.strptime(last_update, "%Y-%m-%d %H:%M:%S.%f").replace(
+            tzinfo=tz
+        )
+        assert abs(actual - datetime.now(tz=tz)) < timedelta(seconds=1)
 
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_add_timeseries(self, ts: TimeSeries, format: str) -> None:

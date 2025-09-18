@@ -11,6 +11,7 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import assert_logs, make_dantzig, models
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -601,8 +602,6 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -623,21 +622,22 @@ class TestScenario:
 
         scen.remove_meta(["test_int", "test_bool"])
         obs = scen.get_meta()
-        assert len(obs) == 4
-        assert set(obs.keys()) == {
+        expected_keys = {
             "test_string",
             "test_number",
             "test_number_negative",
             "test_bool_false",
         }
+        if is_ixmp4backend(mp._backend):
+            expected_keys |= {"_ixmp_annotation", "_ixmp_scheme"}
+        assert len(obs) == len(expected_keys)
+        assert set(obs.keys()) == expected_keys
 
-        # Setting with a type other than int, float, bool, str raises TypeError
+        # Setting with a type other than int, float, bool, str raises ValueError
         with pytest.raises(ValueError, match="Cannot use value"):
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_meta_bulk(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:

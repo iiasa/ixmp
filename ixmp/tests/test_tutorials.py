@@ -33,7 +33,7 @@ class DefaultKwargs(TypedDict, total=False):
 def default_args() -> DefaultKwargs:
     """Default arguments for :func:`.run_notebook."""
     # Use a longer timeout for GHA
-    return dict(timeout=30) if GHA else dict()
+    return dict(timeout=60) if GHA else dict()
 
 
 @FLAKY

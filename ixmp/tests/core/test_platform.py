@@ -22,44 +22,6 @@ if TYPE_CHECKING:
     from ixmp.types import PlatformInitKwargs
 
 
-@pytest.mark.usefixtures("tmp_env")
-class TestPlatform:
-    def test_init0(self) -> None:
-        with pytest.raises(
-            ValueError, match=re.escape("backend class 'foo' not among")
-        ):
-            # Testing the wrong type on purpose
-            ixmp.Platform(backend="foo")
-
-        # name="default" is used, referring to "local"
-        mp = ixmp.Platform()
-        assert ("ixmp4-local" if is_ixmp4backend(mp._backend) else "local") == mp.name
-
-    # NOTE Can't use 'backend' due to duplicate parametrization
-    @pytest.mark.parametrize(
-        "_backend, backend_args",
-        (
-            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            ("ixmp4", dict(ixmp4_name="ixmp4-local")),
-        ),
-    )
-    def test_init1(
-        self, _backend: Literal["jdbc", "ixmp4"], backend_args: "PlatformInitKwargs"
-    ) -> None:
-        # Platform can be instantiated
-        ixmp.Platform(backend=_backend, **backend_args)
-
-    def test_getattr(self, test_mp: ixmp.Platform) -> None:
-        """Test __getattr__."""
-        with pytest.raises(AttributeError):
-            test_mp.not_a_direct_backend_method
-
-    @pytest.mark.ixmp4_209
-    def test_scenario_list(self, mp: ixmp.Platform) -> None:
-        scenario = mp.scenario_list()
-        assert isinstance(scenario, pd.DataFrame)
-
-
 @pytest.fixture
 def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
     """A fixture that preserves the log level of *test_mp*."""
@@ -103,8 +65,6 @@ def test_scenario_list(mp: ixmp.Platform) -> None:
     assert scenario[0] == "Hitchhiker"
 
 
-# TODO Not sure why this fails on IXMP4Backend
-@pytest.mark.jdbc
 @pytest.mark.ixmp4_209
 def test_export_timeseries_data(mp: ixmp.Platform, tmp_path: Path) -> None:
     path = tmp_path / "export.csv"
@@ -134,8 +94,6 @@ def test_export_ts_wrong_params(test_mp: ixmp.Platform, tmp_path: Path) -> None:
         )
 
 
-# TODO Not sure why this fails on IXMP4Backend
-@pytest.mark.jdbc
 def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Export timeseries of all runs."""
     path = tmp_path / "export.csv"
@@ -244,7 +202,8 @@ def test_add_region_synonym(test_mp: ixmp.Platform) -> None:
     assert_frame_equal(obs, exp)
 
 
-# TODO Not yet implemented on IXMP4Backend
+# NOTE I can't parametrize 'backend' here to mark ixmp4 as xfail, so just run on jdbc
+# NOTE This test fails on ixmp4 because ixmp4 doesn't define any data on all platforms
 @pytest.mark.jdbc
 def test_timeslices(test_mp: ixmp.Platform) -> None:
     timeslices = test_mp.timeslices()
@@ -255,7 +214,7 @@ def test_timeslices(test_mp: ixmp.Platform) -> None:
     assert all([list(obs.iloc[0]) == ["Year", "Common", 1.0]])
 
 
-# TODO Not yet implemented on IXMP4Backend
+# NOTE This test fails because there's no way to explicitly add timeslices in ixmp4
 @pytest.mark.jdbc
 def test_add_timeslice(test_mp: ixmp.Platform) -> None:
     test_mp.add_timeslice("January, 1st", "Days", 1.0 / 366)
@@ -267,7 +226,9 @@ def test_add_timeslice(test_mp: ixmp.Platform) -> None:
     assert all([list(obs.iloc[0]) == ["January, 1st", "Days", 1.0 / 366]])
 
 
-# TODO Not yet implemented on IXMP4Backend
+# NOTE This test fails because there's no way to explicitly add timeslices in ixmp4;
+# and because of ixmp4's automatic handling of 'timeslices', there's no special handling
+# of duplicate values: if a timeslice is new, it's added, otherwise, it's ignored
 @pytest.mark.jdbc
 def test_add_timeslice_duplicate(
     caplog: pytest.LogCaptureFixture, test_mp: ixmp.Platform
@@ -337,3 +298,41 @@ def test_add_model_name(test_mp: ixmp.Platform) -> None:
 def test_add_scenario_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_scenario_name("new_scenario_name")
     assert "new_scenario_name" in test_mp.get_scenario_names()
+
+
+@pytest.mark.usefixtures("tmp_env")
+class TestPlatform:
+    def test_init0(self) -> None:
+        with pytest.raises(
+            ValueError, match=re.escape("backend class 'foo' not among")
+        ):
+            # Testing the wrong type on purpose
+            ixmp.Platform(backend="foo")
+
+        # name="default" is used, referring to "local"
+        mp = ixmp.Platform()
+        assert ("ixmp4-local" if is_ixmp4backend(mp._backend) else "local") == mp.name
+
+    # NOTE Can't use 'backend' due to duplicate parametrization
+    @pytest.mark.parametrize(
+        "_backend, backend_args",
+        (
+            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
+            pytest.param("ixmp4", dict(ixmp4_name="ixmp4-local")),
+        ),
+    )
+    def test_init1(
+        self, _backend: Literal["jdbc", "ixmp4"], backend_args: "PlatformInitKwargs"
+    ) -> None:
+        # Platform can be instantiated
+        ixmp.Platform(backend=_backend, **backend_args)
+
+    def test_getattr(self, test_mp: ixmp.Platform) -> None:
+        """Test __getattr__."""
+        with pytest.raises(AttributeError):
+            test_mp.not_a_direct_backend_method
+
+    @pytest.mark.ixmp4_209
+    def test_scenario_list(self, mp: ixmp.Platform) -> None:
+        scenario = mp.scenario_list()
+        assert isinstance(scenario, pd.DataFrame)

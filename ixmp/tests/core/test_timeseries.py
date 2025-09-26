@@ -521,8 +521,6 @@ class TestTimeSeries:
         # column `unit` is missing
         pytest.raises(ValueError, scen.add_timeseries, df)
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_new_subannual_timeseries_as_iamc(self, mp: "Platform") -> None:
         mp.add_timeslice("Summer", "Season", 1.0 / 4)
         scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")

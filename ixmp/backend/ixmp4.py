@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator, Iterable, Mapping, MutableMapping, Sequence
+from copy import copy
 from dataclasses import asdict, dataclass
 from itertools import chain
 from os import PathLike
@@ -27,6 +28,7 @@ from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
+from ixmp4.data.abstract.iamc.datapoint import EnumerateKwargs as IamcEnumerateKwargs
 from ixmp4.data.abstract.meta import RunMetaEntry
 from ixmp4.data.abstract.optimization.indexset import (
     IndexSetRepository as BEIndexSetRepository,
@@ -602,7 +604,7 @@ class IXMP4Backend(CachingBackend):
             model_name=_model, scenario_name=_scenario, version=_version
         )
 
-        # NOTE This doesn't currently return more keys as per the super() docstring/strict
+        # NOTE This doesn't currently return more keys as per the base docstring/strict
         meta_df = self._backend.meta.tabulate(
             run_id=run.id,
             run={
@@ -1317,7 +1319,6 @@ class IXMP4Backend(CachingBackend):
         meta: bool,
     ) -> None:
         log.warning("Parameter `meta` for set_data() currently unused by ixmp4!")
-        log.warning("Parameter `subannual` for set_data() currently unused by ixmp4!")
 
         # Construct dataframe as ixmp4 expects it
         years = data.keys()
@@ -1326,18 +1327,26 @@ class IXMP4Backend(CachingBackend):
         regions = [region] * number_of_years
         variables = [variable] * number_of_years
         units = [unit] * number_of_years
-        _data = list(zip(years, values, regions, variables, units))
+
+        iterables = [years, values, regions, variables, units]
+        columns = ["step_year", "value", "region", "variable", "unit"]
+
+        # NOTE We don't handle DataPoint.Type.DATETIME yet
+        # NOTE subannual == "Year" per default and some string otherwise
+        if subannual != "Year":
+            categories = [subannual] * number_of_years
+            iterables.append(categories)
+            columns.append("step_category")
+
+        _data = list(zip(*iterables))
+        _data_type = (
+            DataPoint.Type.ANNUAL if subannual == "Year" else DataPoint.Type.CATEGORICAL
+        )
 
         # Add timeseries dataframe
-        # TODO Is this really the only type we're interested in?
         run = self.index[ts]
         with run.transact(f"set_data() for Run {run.id}"):
-            run.iamc.add(
-                pd.DataFrame(
-                    _data, columns=["step_year", "value", "region", "variable", "unit"]
-                ),
-                type=DataPoint.Type.ANNUAL,
-            )
+            run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
 
     def get_data(
         self,
@@ -1355,47 +1364,21 @@ class IXMP4Backend(CachingBackend):
 
         # Protect against empty data
         if not data.empty:
-            # TODO depending on data["type"], a different column name will contain the
-            # "year" values:
-            # step_year if type is ANNUAL or CATEGORICAL
-            # step_category if type is CATEGORICAL
-            # step_datetime if type is DATETIME
-            # Assuming that just one of these is present, identify it here:
-            year_columns = {
-                "year",
-                "step_year",
-                "step_category",
-                "step_datetime",
-            } & set(data.columns)
-            assert len(year_columns) == 1, (
-                f"Unexpected number of year columns found: {year_columns}"
-            )
-            year_column = list(year_columns)[0]
-
             # Guard against empty year filter
             if len(year):
-                data = data.loc[data[year_column].isin(year)]
+                data = data.loc[data["year"].isin(year)]
 
-            # We seem to only deal with "Year" for now (maybe until supporting
-            # timeslices)
-            subannual = "Year" if year_column in {"year", "step_year"} else "subannual"
-            data = data.assign(subannual=subannual)
+            if "subannual" not in data.columns:
+                data = data.assign(subannual="Year")
+            else:
+                data = data.replace({"subannual": {None: "Year"}})
 
             # Select only the columns we're interested in
-            # TODO the ixmp4 docstrings sounds like region, variable, and unit are not
-            # part of the df?
-            data = data[
-                ["region", "variable", "unit", "subannual", year_column, "value"]
-            ]
+            data = data[["region", "variable", "unit", "subannual", "year", "value"]]
 
         # TODO Why would we iterate and yield tuples instead of returning the whole df?
         for row in data.itertuples(index=False, name=None):
             yield row
-
-    # Handle timeslices
-
-    # def set_timeslice(self, name: str, category: str, duration: float) -> None:
-    #     return super().set_timeslice(name, category, duration)
 
     # Handle I/O
 
@@ -1459,28 +1442,87 @@ class IXMP4Backend(CachingBackend):
                 container_data=kwargs["container_data"],
             )
         elif _path.suffix == ".csv" and item_type is ItemType.TS:
-            models = filters.pop("model")
-            # NOTE this is what we get for not differentiating e.g. scenario vs
-            # scenarios in filters...
-            scenarios = set(cast(list[str], filters.pop("scenario")))
-            variables = filters.pop("variable")
-            units = filters.pop("unit")
-            regions = filters.pop("region")
             default = filters.pop("default")
             # TODO (How) Should we include this?
             # export_all_runs = filters.pop("export_all_runs")
 
-            data = self._backend.runs.tabulate(
-                model={"name__in": models},
-                scenario={"name__in": scenarios},
-                iamc={
-                    "region": {"name__in": regions},
-                    "variable": {"name__in": variables},
-                    "unit": {"name__in": units},
-                },
-                default_only=default,
+            _kwargs = IamcEnumerateKwargs(run={"default_only": default})
+
+            filter_names: set[
+                Literal["model", "scenario", "variable", "unit", "region"]
+            ] = {
+                "model",
+                "scenario",
+                "variable",
+                "unit",
+                "region",
+            }
+
+            for filter_name in filter_names:
+                # NOTE this is what we get for not differentiating e.g. scenario vs
+                # scenarios in filters...
+                filter = (
+                    filters.pop(filter_name)
+                    if filter_name != "scenario"
+                    else set(cast(list[str], filters.pop(filter_name)))
+                )
+
+                # ixmp4's "name__in" with an empty list will exclude all data
+                if bool(filter):
+                    _kwargs[filter_name] = {"name__in": filter}
+
+            data = self._backend.iamc.datapoints.tabulate(
+                join_parameters=True, join_runs=True, **_kwargs
+            ).rename(  # Adhere to ixmp_source expectations...
+                columns={"step_year": "YEAR"}
             )
-            data.to_csv(path_or_buf=_path)
+
+            data = data.rename(columns={name: name.upper() for name in data.columns})
+
+            expected_columns = [
+                "MODEL",
+                "SCENARIO",
+                "VERSION",
+                "VARIABLE",
+                "UNIT",
+                "REGION",
+                "META",
+                "SUBANNUAL",
+                "YEAR",
+                "VALUE",
+            ]
+
+            # Guard against entirely empty data selection
+            if data.empty:
+                columns = copy(expected_columns)
+                columns.extend(["ID", "TIME_SERIES__ID", "TYPE"])
+                data = pd.DataFrame(columns=columns)
+
+            data = data.drop(columns=["ID", "TIME_SERIES__ID"])
+
+            # NOTE We don't handle step_datetime here
+
+            # Handle 'subannual' values
+            if "STEP_CATEGORY" not in data.columns:
+                data["STEP_CATEGORY"] = None
+
+            data["SUBANNUAL"] = (
+                data["STEP_CATEGORY"]
+                .combine_first(data["TYPE"])
+                .replace({"ANNUAL": "Year"})
+            )
+            data = data.drop(columns={"STEP_CATEGORY", "TYPE"})
+
+            # Handle 'meta' values
+            # NOTE In ixmp4, meta data is only stored in relation to Runs, not
+            # individual datapoints
+            data["META"] = 0
+
+            # Sort columns according to ixmp_source expectations
+            # NOTE Alternatively, check_like=True might work in test/assert_frame_equal
+            data = data[expected_columns]
+
+            data.to_csv(path_or_buf=_path, index=False)
 
         else:
             raise NotImplementedError
@@ -1563,10 +1605,52 @@ class IXMP4Backend(CachingBackend):
         raise NotImplementedError
 
     delete = _ni
-    delete_geo = _ni
     get_doc = _ni
-    get_geo = _ni
-    get_timeslices = _ni
     set_doc = _ni
+
+    # Handle geo data
+    # NOTE While these functions are defined in the JDBC, they are not called by user
+    # code or in our test suite. ixmp4 doesn't support them due to this lack of use.
+
+    delete_geo = _ni
+    get_geo = _ni
     set_geo = _ni
-    set_timeslice = _ni
+
+    # Handle timeslices
+    # NOTE On JDBC, timeslices were defined on a Platform, whereas in ixmp4, timeslices
+    # are defined when adding timeseries data to a Run that includes some. Thus,
+    # set_timeslice() can't work in its true form, while get_timeslices() *can* return
+    # timeslices defined for all Runs on this platform -- though these timeslices are
+    # not necessarily used in the Run one is studying, they can be used within needing
+    # to register them first.
+    # NOTE Also that this is defined on a DB level for every instance in ixmp_source:
+    # {"name": "Year", "category": "Common", "duration": 1.0}. Due to the requirement of
+    # linking to a Run, we can't do the same in ixmp4.
+
+    def set_timeslice(self, name: str, category: str, duration: float) -> None:
+        # NOTE timeslices are called "Categorical Datapoints" in ixmp4. New ones are
+        # registered automatically when added in iamc-datapoints, but this is also the
+        # only way to register them.
+        log.info(
+            "Timeslices are added automatically as Categorical Datapoints in ixmp4!"
+        )
+        pass
+
+    def get_timeslices(self) -> Generator[tuple[str, str, float], Any, None]:
+        # NOTE meksor suggests running something like
+        # # SELECT DISTINCT step_category FROM datapoints WHERE step_category != NULL
+        # in ixmp4 to retrieve the data wanted here. This only returns the 'name',
+        # though, so I'm using this query which returns all data.
+        # However, ixmp4 doesn't store 'category' as intended, and 'step_year' is marked
+        # as Integer in the DB, so this information is only correct when
+        # 'name' == 'category' and type(duration) == int
+
+        datapoint_df = self._platform.iamc.tabulate(run={"default_only": False})
+
+        for row in datapoint_df.itertuples():
+            name = getattr(row, "step_category", None)
+            category = name
+            duration = getattr(row, "step_year", None)
+            if name is not None and duration is not None:
+                # These conversions should be noops except for duration, see above
+                yield (str(name), str(category), float(duration))

@@ -305,7 +305,7 @@ class Platform:
 
         If :obj:`True`, log a warning and return True. Otherwise, return False.
         """
-        for _, r in self.regions().iterrows():
+        for r in self.regions().itertuples(index=False):
             if r.region != name:
                 continue
 

@@ -57,6 +57,7 @@ All changes
 - The :meth:`.TimeSeries._backend` shorthand method is deprecated (:pull:`581`).
   Calling this method emits :class:`DeprecationWarning`,
   and the method will be removed in a future version of :mod:`ixmp`.
+- Improve performance of :meth:`.Scenario.remove_par` and :meth:`.Scenario.remove_set` (:pull:`598`).
 
 .. _v3.11.1:
 

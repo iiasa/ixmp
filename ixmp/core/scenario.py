@@ -182,7 +182,10 @@ class Scenario(TimeSeries):
             if isinstance(key_or_keys, dict):
                 key_or_keys = pd.DataFrame.from_dict(key_or_keys, orient="columns")
             idx_names = self.idx_names(name)
-            return [as_str_list(row, idx_names) for _, row in key_or_keys.iterrows()]
+            return [
+                as_str_list(row, idx_names)
+                for row in key_or_keys.itertuples(index=False)
+            ]
         else:
             return [str(key_or_keys)]
 

@@ -1,7 +1,7 @@
 import logging
 import re
 import sys
-from collections.abc import Generator, Iterable, Iterator, Mapping
+from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
@@ -10,7 +10,7 @@ from importlib.util import find_spec
 from itertools import chain, repeat
 from pathlib import Path
 from types import ModuleType
-from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
+from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Union
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -82,7 +82,9 @@ def logger() -> logging.Logger:
 
 
 def as_str_list(
-    arg: Optional[Union[int, str, dict[str, Any], Iterable[object]]],
+    arg: Optional[
+        Union[int, str, tuple[object, ...], Mapping[str, Any], Iterable[object]]
+    ],
     idx_names: Optional[Iterable[str]] = None,
 ) -> list[str]:
     """Convert various `arg` to list of str.
@@ -98,18 +100,14 @@ def as_str_list(
     """
     if arg is None:
         return []
-    elif idx_names is None:
-        # arg must be iterable
-        # NB narrower ABC Sequence does not work here; e.g. test_excel_io() fails via
-        #    Scenario.add_set().
-        if isinstance(arg, Iterable) and not isinstance(arg, (int, str)):
-            return list(map(str, arg))
-        else:
-            return [str(arg)]
-    else:
-        # We assume that this is always true, tell mypy
-        assert isinstance(arg, (Mapping, pd.Series))
+    elif isinstance(arg, (int, str)):
+        return [str(arg)]
+    elif isinstance(arg, tuple) and idx_names is not None:
+        return [str(getattr(arg, idx)) for idx in idx_names]
+    elif isinstance(arg, Mapping) and idx_names is not None:
         return [str(arg[idx]) for idx in idx_names]
+    else:
+        return list(map(str, arg))
 
 
 def isscalar(x: object) -> bool:

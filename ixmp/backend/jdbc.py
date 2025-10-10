@@ -1341,8 +1341,22 @@ class JDBCBackend(CachingBackend):
     ) -> None:
         item = ITEM_CLASS[type](name)
         jitem = self._get_item(s, item, load=False)
-        for key in keys:
-            jitem.removeElement(to_jlist(key))
+
+        # Convert keys to list to check if batch operation is beneficial
+        keys_list = list(keys)
+
+        # Use batch removal for multiple elements (more efficient than individual removals)
+        if len(keys_list) > 1:
+            # Convert to Java ArrayList for batch operation
+            # Access java classes through jpype module
+            ArrayList = jpype.JClass("java.util.ArrayList")
+            key_vectors = ArrayList()
+            for key in keys_list:
+                key_vectors.add(to_jlist(key))
+            jitem.removeElements(key_vectors)
+        elif len(keys_list) == 1:
+            # Single element removal
+            jitem.removeElement(to_jlist(keys_list[0]))
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed

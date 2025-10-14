@@ -22,6 +22,7 @@ from ixmp.backend.common import ItemType
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list, check_year
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.types import (
@@ -110,6 +111,14 @@ class Scenario(TimeSeries):
         # TODO How to convince type checker that if 'cache' is in model_init_args, it
         # is removed above?
         model_class.initialize(self, **model_init_args)  # type: ignore[misc]
+
+        # NOTE initialize() may call commit() or so which unlocks the underlying Run
+        if (
+            version == "new"
+            and is_ixmp4backend(self.platform._backend)
+            and not self.platform._backend.index[self].owns_lock
+        ):
+            self.platform._backend.index[self]._lock()
 
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.

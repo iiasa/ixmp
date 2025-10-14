@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
+import sqlalchemy
+import sqlalchemy.exc
 from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
@@ -317,8 +319,6 @@ class TestTimeSeries:
 
         assert_frame_equal(expected(DATA[2050], ts), ts.timeseries())
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     # TODO parametrize format as wide/long
     @pytest.mark.parametrize(
         "commit",
@@ -366,8 +366,6 @@ class TestTimeSeries:
         # Result is empty
         assert ts.timeseries().empty
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_transact_discard(
         self, caplog: pytest.LogCaptureFixture, mp: "Platform", ts: TimeSeries
     ) -> None:
@@ -390,17 +388,82 @@ class TestTimeSeries:
         # Reopen the database connection
         mp.open_db()
 
-        # Exception was caught and logged
-        assert caplog.messages[-4].startswith("Avoid locking ")
-        assert re.match("Discard (timeseries|scenario) changes", caplog.messages[-3])
-        assert "Close database connection" == caplog.messages[-2]
+        if not is_ixmp4backend(mp._backend):
+            # Exception was caught and logged
+            assert caplog.messages[0].startswith("Avoid locking ")
+            assert re.match("Discard (timeseries|scenario) changes", caplog.messages[1])
+            assert "Close database connection" == caplog.messages[2]
 
         # Data are unchanged
         assert_frame_equal(expected(DATA[2050], ts), ts.timeseries())
 
+    @pytest.mark.jdbc
+    @pytest.mark.parametrize("format", ["long", "wide"])
+    @pytest.mark.parametrize(
+        "N",
+        (
+            256,
+            # This fails at commit(), not at add_timeseries()
+            pytest.param(
+                257,
+                marks=pytest.mark.xfail(raises=RuntimeError),
+            ),
+        ),
+    )
+    def test_long_variable_name_jdbc(self, ts: TimeSeries, format: str, N: int) -> None:
+        """Variable names up to 256 characters can be added or removed."""
+        data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
+
+        # Use long variable name, max 256 characters
+        data.variable = "x" * N
+
+        ts.add_timeseries(data)
+        ts.commit("")
+
+        data = ts.timeseries()
+
+        with ts.transact():
+            ts.remove_timeseries(data)
+
+    @pytest.mark.ixmp4
+    @pytest.mark.parametrize("format", ["long", "wide"])
+    @pytest.mark.parametrize(
+        "N",
+        (
+            255,
+            # This fails at add_timeseries()
+            pytest.param(
+                256,
+                marks=pytest.mark.xfail(raises=sqlalchemy.exc.DataError),
+            ),
+        ),
+    )
+    def test_long_variable_name_ixmp4(
+        # NOTE Order is important here as the sessions needs to be rolled back before ts
+        # adds data
+        self,
+        _rollback_ixmp4_session: None,
+        ts: TimeSeries,
+        format: str,
+        N: int,
+    ) -> None:
+        """Variable names up to 255 characters can be added or removed."""
+        data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
+
+        # Use long variable name, max 255 characters
+        data.variable = "x" * N
+
+        ts.add_timeseries(data)
+        ts.commit("")
+
+        data = ts.timeseries()
+
+        with ts.transact():
+            ts.remove_timeseries(data)
+
     # Geodata
 
-    # NOTE Not yet implemented on IXMP4Backend
+    # NOTE geo-functions will not be implemented for IXMP4Backend
     @pytest.mark.jdbc
     def test_add_geodata(self, ts: TimeSeries) -> None:
         # Empty TimeSeries includes no geodata
@@ -414,7 +477,7 @@ class TestTimeSeries:
         obs = ts.get_geodata().sort_values("year").reset_index(drop=True)
         assert_frame_equal(DATA["geo"], obs)
 
-    # NOTE Not yet implemented on IXMP4Backend
+    # NOTE geo-functions will not be implemented for IXMP4Backend
     @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "rows",
@@ -431,35 +494,6 @@ class TestTimeSeries:
         exp = DATA["geo"].iloc[mask].reset_index(drop=True)
         obs = ts.get_geodata().sort_values("year").reset_index(drop=True)
         assert_frame_equal(exp, obs)
-
-    # NOTE remove_timeseries() not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
-    @pytest.mark.parametrize("format", ["long", "wide"])
-    @pytest.mark.parametrize(
-        "N",
-        (
-            256,
-            # This fails at commit(), not at add_timeseries()
-            pytest.param(
-                257,
-                marks=pytest.mark.xfail(raises=RuntimeError),
-            ),
-        ),
-    )
-    def test_long_variable_name(self, ts: TimeSeries, format: str, N: int) -> None:
-        """Variable names up to 256 characters can be added or removed."""
-        data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
-
-        # Use long variable name, max 256 characters
-        data.variable = "x" * N
-
-        ts.add_timeseries(data)
-        ts.commit("")
-
-        data = ts.timeseries()
-
-        with ts.transact():
-            ts.remove_timeseries(data)
 
     # Metadata
 

@@ -318,7 +318,7 @@ class TestPlatform:
         "_backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            pytest.param("ixmp4", dict(ixmp4_name="ixmp4-local")),
+            ("ixmp4", dict(ixmp4_name="ixmp4-test")),
         ),
     )
     def test_init1(

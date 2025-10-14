@@ -13,7 +13,7 @@ import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
-from ixmp4.core.exceptions import NotUnique, PlatformNotFound
+from ixmp4.core.exceptions import NotUnique, PlatformNotFound, RunIsLocked
 from ixmp4.core.optimization.equation import Equation
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter
@@ -272,7 +272,7 @@ class IXMP4Backend(CachingBackend):
         dsn: str = Options.dsn,
         jdbc_compat: Union[bool, str] = Options.jdbc_compat,
     ) -> None:
-        from ixmp4.data.backend.test import SqliteTestBackend
+        from ixmp4.data.backend.test import PostgresTestBackend
 
         # Handle arguments
         self._options = opts = Options(
@@ -284,13 +284,17 @@ class IXMP4Backend(CachingBackend):
             self._backend = self.backend_index[opts.ixmp4_name]
         except KeyError:
             # Object does not exist → instantiate using PlatformInfo from `opts`
-            self._backend = self.backend_index[opts.ixmp4_name] = SqliteTestBackend(
+            self._backend = self.backend_index[opts.ixmp4_name] = PostgresTestBackend(
                 opts.platform_info
             )
 
-            # Ensure database is set up.
-            # NOTE sqlalchemy catches existing tables to avoid superfluous CREATEs
-            self._backend.setup()
+            # NOTE Not running alembic.upgrade_database() here since for new DBs (such
+            # as for tests), this happens automatically
+        finally:
+            if isinstance(self._backend, PostgresTestBackend):
+                # Ensure database is set up.
+                # NOTE sqlalchemy catches existing tables to avoid superfluous CREATEs
+                self._backend.setup()
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
         self._platform = ixmp4_platform(_backend=self._backend)
@@ -488,26 +492,26 @@ class IXMP4Backend(CachingBackend):
         run = self._platform.runs.get(model=ts.model, scenario=ts.scenario, version=v)
         self._index_and_set_attrs(run, ts)
 
-    # TODO
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
-        log.log(
-            self._log_level, "ixmp4 backed Scenarios/Runs don't need to be checked out!"
-        )
+        if timeseries_only:
+            log.log(self._log_level, "ixmp4 only allows full or no access to Runs!")
+        try:
+            self.index[ts]._lock()
+        except RunIsLocked:
+            log.debug("Run is already locked!")
+            pass
 
-    # TODO
     def discard_changes(self, ts: TimeSeries) -> None:
-        log.log(
-            self._log_level,
-            "ixmp4 backed Scenarios/Runs are changed immediately, can't discard "
-            "changes. To avoid the need, be sure to start work on fresh clones.",
-        )
+        # TODO Should we assert that the Run is locked?
+        run = self.index[ts]
+        run._revert_changes(target_transaction=run._find_target_transaction())
+        run._meta.refetch_data()
+        run._unlock()
 
-    # TODO
     def commit(self, ts: TimeSeries, comment: str) -> None:
-        log.log(
-            self._log_level,
-            "ixmp4 backed Scenarios/Runs are changed immediately, no need for a commit",
-        )
+        run = self.index[ts]
+        run.checkpoints.create(message=comment)
+        run._unlock()
 
     def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
         if from_year:
@@ -520,8 +524,12 @@ class IXMP4Backend(CachingBackend):
                     "s_clear_solution(from_year=...) only valid for ixmp.Scenario; not "
                     "subclasses"
                 )
-        with self.index[s].transact("Clear solution for ixmp.Scenario"):
-            self.index[s].optimization.remove_solution()
+        run = self.index[s]
+        if run.owns_lock:
+            run.optimization.remove_solution()
+        else:
+            with self.index[s].transact("Clear solution for ixmp.Scenario"):
+                self.index[s].optimization.remove_solution()
 
     def set_as_default(self, ts: TimeSeries) -> None:
         self.index[ts].set_as_default()
@@ -1361,8 +1369,14 @@ class IXMP4Backend(CachingBackend):
 
         # Add timeseries dataframe
         run = self.index[ts]
-        with run.transact(f"set_data() for Run {run.id}"):
-            run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+        _owns_lock = run.owns_lock
+        if not _owns_lock:
+            run._lock()
+
+        run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+
+        if not _owns_lock:
+            run._unlock()
 
     def get_data(
         self,
@@ -1395,6 +1409,36 @@ class IXMP4Backend(CachingBackend):
         # TODO Why would we iterate and yield tuples instead of returning the whole df?
         for row in data.itertuples(index=False, name=None):
             yield row
+
+    def delete(
+        self,
+        ts: TimeSeries,
+        region: str,
+        variable: str,
+        subannual: str,
+        years: Iterable[int],
+        unit: str,
+    ) -> None:
+        run = self.index[ts]
+
+        data_to_delete = self._backend.iamc.datapoints.tabulate(
+            join_run_id=True,
+            run={"id": run.id, "default_only": False},
+            region={"name": region},
+            variable={"name": variable},
+            year__in=years,
+            unit={"name": unit},
+        )
+
+        if data_to_delete.empty:
+            log.debug("Found 0 datapoints matching filters to delete!")
+            data_to_delete = pd.DataFrame(columns=["time_series__id", "type"])
+
+        # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
+        _subannual = "ANNUAL" if subannual == "Year" else subannual
+        data_to_delete = data_to_delete[data_to_delete["type"] == _subannual]
+
+        self._backend.iamc.datapoints.bulk_delete(df=data_to_delete)
 
     # Handle I/O
 
@@ -1620,7 +1664,6 @@ class IXMP4Backend(CachingBackend):
     def _ni(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
 
-    delete = _ni
     get_doc = _ni
     set_doc = _ni
 

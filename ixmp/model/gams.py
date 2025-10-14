@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
 
-from gams.control import GamsWorkspace
+from gams.control import GamsModifier, GamsWorkspace
 
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
@@ -482,7 +482,9 @@ class GAMSModel(Model):
         # Finished: remove the temporary directory, if any
         self.remove_temp_dir()
 
-    def create_model_instance(self, scenario: Scenario):
+    def create_model_instance(
+        self, scenario: Scenario, modifiable_pars: Optional[list[str]] = None
+    ):
         """Create a persistent GAMS model instance for efficient resolving.
 
         This method creates a GAMS model instance that can be resolved multiple times
@@ -493,6 +495,11 @@ class GAMSModel(Model):
         ----------
         scenario : .Scenario
             Scenario containing the model data.
+        modifiable_pars : list of str, optional
+            List of parameter names that can be modified between solves.
+            These parameters will be made modifiable in the model instance,
+            allowing fast sensitivity analysis without rebuilding.
+            Note: Parameters used in conditional expressions ($) cannot be modifiable.
 
         Returns
         -------
@@ -503,9 +510,14 @@ class GAMSModel(Model):
         --------
         >>> from ixmp.model import get_model
         >>> model_obj = get_model("MESSAGE")
-        >>> mi, ws = model_obj.create_model_instance(scen)
+        >>> mi, ws = model_obj.create_model_instance(
+        ...     scen, modifiable_pars=["inv_cost", "fix_cost", "var_cost"]
+        ... )
         >>> mi.solve()
-        >>> obj_value = mi.sync_db["OBJ"].first_record().level
+        >>> # Modify inv_cost in sync_db
+        >>> inv_cost = mi.sync_db["inv_cost"]
+        >>> # Update records and resolve
+        >>> mi.solve()
         """
         from ixmp.backend.jdbc import JDBCBackend
 
@@ -577,16 +589,53 @@ class GAMSModel(Model):
         # Run job to create checkpoint
         job.run(gams_options=opt, checkpoint=cp)
 
+        # Load the input GDX into workspace database
+        input_db = ws.add_database_from_gdx(str(self.in_file))
+
         # Create model instance from checkpoint
         mi = cp.add_modelinstance()
+
+        # Set up modifiable parameters (BEFORE instantiate)
+        modifiers = []
+        if modifiable_pars:
+            from gams.control.workspace import GamsException
+
+            for par_name in modifiable_pars:
+                try:
+                    # Get parameter from input database for dimension info
+                    input_par = input_db[par_name]
+                    # Add EMPTY parameter to sync_db (populated after instantiate)
+                    sync_par = mi.sync_db.add_parameter(par_name, input_par.dimension)
+                    # Create modifier from the empty parameter
+                    modifier = GamsModifier(sync_par)
+                    modifiers.append(modifier)
+                except (KeyError, GamsException, AttributeError, TypeError):
+                    # Parameter not found in this model - skip silently
+                    pass
+
+        # Set up model instance options
         mi_opt = ws.add_options()
         mi_opt.all_model_types = "cplex"
 
         # Extract model name from file (e.g., "MESSAGE" from "MESSAGE_run.gms")
         model_name = model_file.stem.replace("_run", "")
 
-        # Instantiate the model
-        mi.instantiate(f"{model_name}_LP use lp min OBJ", [], mi_opt)
+        # Instantiate the model with modifiers
+        mi.instantiate(f"{model_name}_LP use lp min OBJ", modifiers, mi_opt)
+
+        # NOW populate the modifiable parameters (AFTER instantiate)
+        if modifiable_pars:
+            for par_name in modifiable_pars:
+                try:
+                    input_par = input_db[par_name]
+                    sync_par = mi.sync_db[par_name]
+                    # Copy all records from input to sync_db
+                    for rec in input_par:
+                        new_rec = sync_par.add_record(rec.keys)
+                        new_rec.value = rec.value
+                except (KeyError, GamsException, AttributeError, TypeError):
+                    # Parameter not found - skip silently
+                    pass
 
         return mi, ws
 

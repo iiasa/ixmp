@@ -1000,7 +1000,10 @@ class Scenario(TimeSeries):
                 break
 
     def create_model_instance(
-        self, model: Optional[str] = None, **model_options: Any
+        self,
+        model: Optional[str] = None,
+        modifiable_pars: Optional[list[str]] = None,
+        **model_options: Any,
     ):
         """Create a persistent GAMS model instance for efficient resolving.
 
@@ -1013,6 +1016,9 @@ class Scenario(TimeSeries):
         model : str, optional
             Model name (e.g., MESSAGE) or GAMS file name (excluding '.gms').
             If not provided, uses the scenario's scheme.
+        modifiable_pars : list of str, optional
+            List of parameter names that can be modified between solves.
+            Parameters used in conditional expressions ($) cannot be modifiable.
         model_options :
             Keyword arguments specific to the model. See :class:`.GAMSModel`.
 
@@ -1023,9 +1029,12 @@ class Scenario(TimeSeries):
 
         Examples
         --------
-        >>> mi, ws = scen.create_model_instance()
+        >>> mi, ws = scen.create_model_instance(
+        ...     modifiable_pars=["inv_cost", "var_cost"]
+        ... )
         >>> mi.solve()
-        >>> obj_value = mi.sync_db["OBJ"].first_record().level
+        >>> # Modify parameters in mi.sync_db and resolve
+        >>> mi.solve()
 
         See Also
         --------
@@ -1037,7 +1046,7 @@ class Scenario(TimeSeries):
         model_obj = get_model(model or self.scheme, **model_options)
 
         # Create and return the model instance
-        return model_obj.create_model_instance(self)
+        return model_obj.create_model_instance(self, modifiable_pars=modifiable_pars)
 
     # Input and output
     def to_excel(

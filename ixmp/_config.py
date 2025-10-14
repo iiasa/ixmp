@@ -87,10 +87,16 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
             "driver": "hsqldb",
             "path": next(_iter_config_paths())[1].joinpath("localdb", "default"),
         },
-        "ixmp4-local": {
+        "sqlite-local": {
             "class": "ixmp4",
             "dsn": f"sqlite:///{ixmp4_databases.joinpath('local.sqlite3')}",
             "ixmp4_name": "local",
+            "jdbc_compat": True,
+        },
+        "ixmp4-local": {
+            "class": "ixmp4",
+            "dsn": "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test",
+            "ixmp4_name": "ixmp-test",
             "jdbc_compat": True,
         },
     }

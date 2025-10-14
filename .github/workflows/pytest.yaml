@@ -23,28 +23,17 @@ jobs:
     strategy:
       matrix:
         os:
-        - macos-13
         - macos-latest
         - ubuntu-latest
         - windows-latest
         python-version:
-        - "3.9"  # Earliest version supported by ixmp
-        - "3.10"
+        - "3.10"  # Earliest version supported by ixmp
         - "3.11"
         - "3.12"
-        - "3.13"  # Latest supported by ixmp
+        - "3.13"
+        - "3.14"  # Latest supported by ixmp
         gams-version:
         - "45.7.0" # Oldest version of gamsapi allowed by pyproject.toml
-
-        exclude:
-        # Specific version combinations that are invalid / not to be used
-        # No arm64 distributions of JPype for these Pythons
-        - { os: macos-latest, python-version: "3.9" }
-        # Redundant with macos-latest
-        - { os: macos-13, python-version: "3.10" }
-        - { os: macos-13, python-version: "3.11" }
-        - { os: macos-13, python-version: "3.12" }
-        - { os: macos-13, python-version: "3.13" }
 
       fail-fast: false
 
@@ -65,8 +54,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - uses: ts-graphviz/setup-graphviz@v2
-      # Work around ts-graphviz/setup-graphviz#630
-      if: matrix.os != 'macos-13'
 
     - name: Set Java version on Windows
       if: startsWith(matrix.os, 'windows-')
@@ -138,7 +125,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - uses: astral-sh/setup-uv@v7
-      with: { enable-cache: true, python-version: "3.13" }
+      with: { enable-cache: true, python-version: "3.14" }
     - name: Clear and re-create the pre-commit environments
       run: uvx pre-commit clean
       if: github.event_name == 'schedule'  # Comment this line to force clear

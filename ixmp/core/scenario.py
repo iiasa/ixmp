@@ -999,6 +999,46 @@ class Scenario(TimeSeries):
                 # Callback indicates convergence is reached
                 break
 
+    def create_model_instance(
+        self, model: Optional[str] = None, **model_options: Any
+    ):
+        """Create a persistent GAMS model instance for efficient resolving.
+
+        This method creates a GAMS model instance that can be resolved multiple times
+        without rebuilding the model. The initial compilation is done without solving
+        to save time.
+
+        Parameters
+        ----------
+        model : str, optional
+            Model name (e.g., MESSAGE) or GAMS file name (excluding '.gms').
+            If not provided, uses the scenario's scheme.
+        model_options :
+            Keyword arguments specific to the model. See :class:`.GAMSModel`.
+
+        Returns
+        -------
+        tuple of (GamsModelInstance, GamsWorkspace)
+            The model instance and workspace that can be used for efficient resolving.
+
+        Examples
+        --------
+        >>> mi, ws = scen.create_model_instance()
+        >>> mi.solve()
+        >>> obj_value = mi.sync_db["OBJ"].first_record().level
+
+        See Also
+        --------
+        .GAMSModel.create_model_instance
+        """
+        from ixmp.model import get_model
+
+        # Instantiate a model
+        model_obj = get_model(model or self.scheme, **model_options)
+
+        # Create and return the model instance
+        return model_obj.create_model_instance(self)
+
     # Input and output
     def to_excel(
         self,

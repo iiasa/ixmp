@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
 
+from gams.control import GamsWorkspace
+
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
 from ixmp.util import as_str_list
@@ -479,6 +481,114 @@ class GAMSModel(Model):
 
         # Finished: remove the temporary directory, if any
         self.remove_temp_dir()
+
+    def create_model_instance(self, scenario: Scenario):
+        """Create a persistent GAMS model instance for efficient resolving.
+
+        This method creates a GAMS model instance that can be resolved multiple times
+        without rebuilding the model. The initial compilation is done without solving
+        to save time.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Scenario containing the model data.
+
+        Returns
+        -------
+        tuple of (GamsModelInstance, GamsWorkspace)
+            The model instance and workspace that can be used for efficient resolving.
+
+        Examples
+        --------
+        >>> from ixmp.model import get_model
+        >>> model_obj = get_model("MESSAGE")
+        >>> mi, ws = model_obj.create_model_instance(scen)
+        >>> mi.solve()
+        >>> obj_value = mi.sync_db["OBJ"].first_record().level
+        """
+        from ixmp.backend.jdbc import JDBCBackend
+
+        # Store the scenario so its attributes can be referenced by format()
+        self.scenario = scenario
+
+        backend_type = (
+            "jdbc"
+            if isinstance(self.scenario.platform._backend, JDBCBackend)
+            else "ixmp4"
+        )
+
+        # Note: We skip record_versions() here unlike in run() because:
+        # 1. create_model_instance() is typically called on already-solved scenarios
+        # 2. record_versions() requires checking out the scenario which fails if solved
+        # 3. Version info is already in the scenario from when it was originally solved
+
+        # Format or retrieve the model file option
+        model_file = Path(self.format_option("model_file"))
+
+        # Determine working directory - use model file parent if not using temp dir
+        self.cwd = Path(tempfile.mkdtemp()) if self.use_temp_dir else model_file.parent
+        # The "case" name
+        self.case = self.clean_path(self.format_option("case").replace(" ", "_"))
+        # Input and output file names
+        self.in_file = Path(self.format_option("in_file"))
+        self.out_file = Path(self.format_option("out_file"))
+
+        # Ensure output directory exists
+        self.out_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Remove stored reference to the Scenario to allow it to be GC'd later
+        delattr(self, "scenario")
+
+        # Common argument for write_file
+        s_arg: "RunKwargs" = dict(filters=dict(scenario=scenario))
+
+        # Instruct ixmp4 to record package versions
+        if backend_type == "ixmp4":
+            s_arg["record_version_packages"] = self.record_version_packages
+            s_arg["container_data"] = self.container_data
+
+        try:
+            # Write model data to file
+            scenario.platform._backend.write_file(
+                self.in_file, ItemType.SET | ItemType.PAR, **s_arg
+            )
+        except NotImplementedError:
+            # Remove the temporary directory, which should be empty
+            self.remove_temp_dir()
+            raise NotImplementedError(
+                "GAMSModel requires a Backend that can write to GDX files, e.g. "
+                "JDBCBackend"
+            )
+
+        # Create GAMS workspace and checkpoint
+        ws = GamsWorkspace(working_directory=str(self.cwd))
+        cp = ws.add_checkpoint()
+
+        # Create job from GAMS file
+        job = ws.add_job_from_file(str(model_file))
+
+        # Set up options with CompileOnly (no solve)
+        opt = ws.add_options()
+        opt.defines["in"] = str(self.in_file)
+        opt.defines["out"] = str(self.out_file)
+        opt.action = "C"  # CompileOnly
+
+        # Run job to create checkpoint
+        job.run(gams_options=opt, checkpoint=cp)
+
+        # Create model instance from checkpoint
+        mi = cp.add_modelinstance()
+        mi_opt = ws.add_options()
+        mi_opt.all_model_types = "cplex"
+
+        # Extract model name from file (e.g., "MESSAGE" from "MESSAGE_run.gms")
+        model_name = model_file.stem.replace("_run", "")
+
+        # Instantiate the model
+        mi.instantiate(f"{model_name}_LP use lp min OBJ", [], mi_opt)
+
+        return mi, ws
 
 
 def gams_info() -> GAMSInfo:

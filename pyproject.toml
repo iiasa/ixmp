@@ -20,16 +20,16 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: R",
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "click",
   "genno >= 1.20",
@@ -49,7 +49,6 @@ Documentation = "https://docs.messageix.org/ixmp"
 Repository = "https://github.com/iiasa/ixmp"
 "Issue tracker" = "https://github.com/iiasa/ixmp/issues"
 
-
 [project.optional-dependencies]
 docs = [
   "ixmp[tests]",
@@ -61,7 +60,7 @@ docs = [
   "sphinxcontrib-bibtex",
 ]
 ixmp4 = [
-  "ixmp4 >= 0.13, < 0.14; python_version > '3.9'",
+  "ixmp4 >= 0.13, < 0.14",
   "gamsapi[core,transfer] >= 45.7.0",
 ]
 report = ["genno[compat,graphviz]"]

@@ -81,6 +81,16 @@ jobs:
         version: ${{ matrix.gams-version }}
         license: ${{ secrets.GAMS_LICENSE }}
 
+    - uses: ikalnytskyi/action-setup-postgres@v8
+      with:
+        # username: postgres
+        # password: postgres
+        database: ixmp-test
+        # port: 5432
+        postgres-version: "16"
+        # ssl: true
+      id: setup-postgres
+
     - name: Set RETICULATE_PYTHON
       # Retrieve the Python executable set up above
       run: echo "RETICULATE_PYTHON=$(uv python find)" >> $GITHUB_ENV
@@ -103,6 +113,9 @@ jobs:
 
         IRkernel::installspec()
       shell: Rscript {0}
+
+    - name: Add Postgres DB to ixmp4 platforms
+      run: ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test" ixmp-test
 
     - name: Run tests
       run: |

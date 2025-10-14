@@ -53,6 +53,7 @@ from typing_extensions import override
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend.ixmp4 import IXMP4Backend
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 from .data import (
     DATA,
@@ -441,7 +442,11 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
 
 @pytest.fixture
 def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
-    return ixmp4_backend.index[scenario]
+    # NOTE New Scenario-backing Runs are locked per default, but our tests expect them
+    # to be lockable for `transact()`
+    _run = ixmp4_backend.index[scenario]
+    _run._unlock()
+    return _run
 
 
 # Assertions
@@ -592,8 +597,19 @@ def _platform_fixture(
     elif backend == "ixmp4":
         args = []
         kwargs = dict(
-            ixmp4_name=platform_name, dsn="sqlite:///:memory:", jdbc_compat=True
+            ixmp4_name="ixmp-test",
+            dsn="postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test",
+            jdbc_compat=True,
         )
+        if request.scope == "function":
+            # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
+            # TODO Does this work for Python 3.9?
+            from ixmp.backend.ixmp4 import IXMP4Backend
+
+            _backend = IXMP4Backend(**kwargs)
+            _backend._backend.close()
+            # TODO Properly isinstance check and remove these once we drop Python 3.9
+            _backend._backend.teardown()  # type: ignore[attr-defined]
 
     # Add platform to ixmp configuration
     ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
@@ -601,24 +617,32 @@ def _platform_fixture(
     # Launch Platform
     mp = Platform(name=platform_name)
 
+    if is_ixmp4backend(mp._backend):
+        mp._backend._backend.setup()  # type: ignore[attr-defined]
+
     yield mp
 
     # Teardown: don't show log messages when destroying the platform, even if the test
     # using the fixture modified the log level
     mp._backend.set_log_level(logging.CRITICAL)
 
+    # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup above,
+    #  mp._backend._backend is always of type PostgresTestBackend
+    if is_ixmp4backend(mp._backend):
+        mp._backend._backend.close()
+        mp._backend._backend.teardown()  # type: ignore[attr-defined]
+
     del mp
 
     # Remove from configuration
     ixmp_config.remove_platform(platform_name)
 
-    if backend == "ixmp4":
-        import ixmp4.conf
-        from ixmp4.core.exceptions import PlatformNotFound
 
-        try:
-            ixmp4.conf.settings.toml.remove_platform(key=platform_name)
-        except PlatformNotFound:
-            # This occurs e.g. if `mp` was not used in a way that triggered addition of
-            # the name & DSN to the ixmp4 configuration.
-            pass
+# NOTE This is a workaround for https://github.com/iiasa/ixmp4/issues/205
+@pytest.fixture(scope="function")
+def _rollback_ixmp4_session(mp: Platform) -> None:
+    if is_ixmp4backend(mp._backend):
+        from ixmp4.data.backend.test import PostgresTestBackend
+
+        assert isinstance(mp._backend._backend, PostgresTestBackend)
+        mp._backend._backend.session.rollback()

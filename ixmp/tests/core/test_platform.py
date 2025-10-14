@@ -309,7 +309,7 @@ class TestPlatform:
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
             pytest.param(
-                "ixmp4", dict(ixmp4_name="ixmp4-local"), marks=min_ixmp4_version
+                "ixmp4", dict(ixmp4_name="ixmp4-test"), marks=min_ixmp4_version
             ),
         ),
     )

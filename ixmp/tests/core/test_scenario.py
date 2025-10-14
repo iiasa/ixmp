@@ -251,10 +251,6 @@ class TestScenario:
     def test_scalar(self, scen: "Scenario") -> None:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
 
-    ### TODO
-    ###
-    ### Check that the parametrization is still working
-
     # Store data
     @pytest.mark.parametrize(
         "args, kwargs",
@@ -340,7 +336,8 @@ class TestScenario:
         assert isinstance(df, pd.DataFrame)
 
         # Data frame has the expected columns
-        assert ["i", "j", "value", "unit"] == list(df.columns)
+        # NOTE On ixmp4/postgres, the order of "value" and "unit" is swapped
+        assert set(["i", "j", "value", "unit"]) == set(list(df.columns))
 
         # The expected number of values are retrieved
         assert 3 == len(df)

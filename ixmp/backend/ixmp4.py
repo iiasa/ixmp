@@ -13,6 +13,14 @@ from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
 from ixmp4.core.exceptions import NotUnique, PlatformNotFound
+from ixmp4.core.optimization import (
+    equation,
+    indexset,
+    parameter,
+    scalar,
+    table,
+    variable,
+)
 from ixmp4.core.optimization.equation import Equation
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter
@@ -562,18 +570,21 @@ class IXMP4Backend(CachingBackend):
         " | ScalarRepository | TableRepository | VariableRepository"
     ):
         """Return the repository of items of `type` belonging to `s`."""
-        if type is Scalar:
-            return self.index[s].optimization.scalars
-        elif type is IndexSet:
-            return self.index[s].optimization.indexsets
-        elif type is Table:
-            return self.index[s].optimization.tables
-        elif type is Parameter:
-            return self.index[s].optimization.parameters
-        elif type is Equation:
-            return self.index[s].optimization.equations
-        else:  # variable
-            return self.index[s].optimization.variables
+        match type:
+            case scalar.Scalar:
+                return self.index[s].optimization.scalars
+            case indexset.IndexSet:
+                return self.index[s].optimization.indexsets
+            case table.Table:
+                return self.index[s].optimization.tables
+            case parameter.Parameter:
+                return self.index[s].optimization.parameters
+            case equation.Equation:
+                return self.index[s].optimization.equations
+            case variable.Variable:
+                return self.index[s].optimization.variables
+            case _:  # pragma: no cover
+                raise RuntimeError(type)
 
     @overload
     def _get_backend_repo(
@@ -613,18 +624,21 @@ class IXMP4Backend(CachingBackend):
         " | BEScalarRepository | BETableRepository | BEVariableRepository"
     ):
         """Return the repository of items of `type` belonging to `s`."""
-        if type is Scalar:
-            return self.index[s].backend.optimization.scalars
-        elif type is IndexSet:
-            return self.index[s].backend.optimization.indexsets
-        elif type is Table:
-            return self.index[s].backend.optimization.tables
-        elif type is Parameter:
-            return self.index[s].backend.optimization.parameters
-        elif type is Equation:
-            return self.index[s].backend.optimization.equations
-        else:  # variable
-            return self.index[s].backend.optimization.variables
+        match type:
+            case scalar.Scalar:
+                return self.index[s].backend.optimization.scalars
+            case indexset.IndexSet:
+                return self.index[s].backend.optimization.indexsets
+            case table.Table:
+                return self.index[s].backend.optimization.tables
+            case parameter.Parameter:
+                return self.index[s].backend.optimization.parameters
+            case equation.Equation:
+                return self.index[s].backend.optimization.equations
+            case variable.Variable:
+                return self.index[s].backend.optimization.variables
+            case _:  # pragma: no cover
+                raise RuntimeError(type)
 
     def init_item(
         self,

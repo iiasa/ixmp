@@ -6,9 +6,6 @@ import pytest
 
 from ixmp import Scenario
 from ixmp.backend.common import ItemType
-from ixmp.testing import min_ixmp4_version
-
-pytestmark = min_ixmp4_version
 
 
 def test__ensure_filters_values_are_lists() -> None:

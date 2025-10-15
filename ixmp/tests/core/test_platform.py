@@ -15,7 +15,7 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend.common import FIELDS
-from ixmp.testing import DATA, assert_logs, min_ixmp4_version, models
+from ixmp.testing import DATA, assert_logs, models
 
 if TYPE_CHECKING:
     from ixmp.types import PlatformInitKwargs
@@ -39,9 +39,7 @@ class TestPlatform:
         "_backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            pytest.param(
-                "ixmp4", dict(ixmp4_name="ixmp4-local"), marks=min_ixmp4_version
-            ),
+            ("ixmp4", dict(ixmp4_name="ixmp4-local")),
         ),
     )
     def test_init1(

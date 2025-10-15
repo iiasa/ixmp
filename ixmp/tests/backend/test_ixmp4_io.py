@@ -3,19 +3,14 @@ from typing import Any, Literal
 
 import pandas as pd
 import pytest
+from gams.transfer import Container
 
 from ixmp.model.gams import gams_info
-from ixmp.testing import min_ixmp4_version
 from ixmp.util.ixmp4 import ContainerData
 
-pytestmark = min_ixmp4_version
 
-
-# NOTE Generic return type for Python 3.9 compliance
 @pytest.fixture
-def container() -> Any:
-    from gams.transfer import Container
-
+def container() -> "Container":  # type: ignore [no-any-unimported]
     return Container(system_directory=str(gams_info().system_dir))
 
 
@@ -33,7 +28,7 @@ def test__record_versions(container: Any) -> None:
     # Test recording the package version of something that's never present
     _record_versions(container=container, packages=["not installed"])
     indexset = container.getSets()[0]
-    print(indexset.records)
+    # print(indexset.records)  # DEBUG
     pd.testing.assert_frame_equal(
         indexset.records[["uni_0", "uni_1"]],
         pd.DataFrame(

@@ -36,13 +36,12 @@ import logging
 import os
 import platform
 import shutil
-import sys
 from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 import pint
 import pytest
@@ -53,6 +52,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
+from ixmp.backend.ixmp4 import IXMP4Backend
 
 from .data import (
     DATA,
@@ -68,6 +68,9 @@ from .data import (
 )
 from .jupyter import get_cell_output, run_notebook
 from .resource import resource_limit
+
+if TYPE_CHECKING:
+    from ixmp4.core import Run
 
 log = logging.getLogger(__name__)
 
@@ -106,11 +109,6 @@ MARK = {
         reason="https://github.com/pytest-dev/pytest/issues/10843",
     )
 }
-
-# Provide a skip marker since ixmp4 is not published for Python 3.9
-min_ixmp4_version = pytest.mark.skipif(
-    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
-)
 
 # Pytest hooks
 
@@ -379,11 +377,8 @@ def test_mp_f(
     yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
-# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def ixmp4_backend(test_mp: Platform) -> Any:
-    from ixmp.backend.ixmp4 import IXMP4Backend
-
+def ixmp4_backend(test_mp: Platform) -> IXMP4Backend:
     assert isinstance(test_mp._backend, IXMP4Backend)
     return test_mp._backend
 
@@ -398,9 +393,8 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
     )
 
 
-# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def run(ixmp4_backend: Any, scenario: Scenario) -> Any:
+def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
     return ixmp4_backend.index[scenario]
 
 

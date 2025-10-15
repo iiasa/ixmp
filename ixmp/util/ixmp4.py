@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
-
-# Compatibility with Python 3.9
-# TODO Import this from typing when Python 3.10 is the minimum supported
-from typing_extensions import TypeGuard
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend

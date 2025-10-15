@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 
@@ -15,18 +15,17 @@ if TYPE_CHECKING:
 class ContainerData:
     name: str
     kind: Literal["IndexSet", "Table", "Scalar", "Parameter", "Equation", "Variable"]
-    records: Optional[
-        Union[
-            float,
-            list[int],
-            list[float],
-            list[str],
-            dict[str, Union[list[float], list[int], list[str]]],
-            pd.DataFrame,
-        ]
-    ]
-    domain: Optional[list[str]] = None
-    docs: Optional[str] = None
+    records: (
+        float
+        | list[int]
+        | list[float]
+        | list[str]
+        | dict[str, list[float] | list[int] | list[str]]
+        | pd.DataFrame
+        | None
+    )
+    domain: list[str] | None = None
+    docs: str | None = None
 
 
 def configure_logging_and_warnings() -> None:

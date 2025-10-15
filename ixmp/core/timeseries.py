@@ -3,7 +3,7 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -55,7 +55,7 @@ class TimeSeries:
     scenario: str
 
     #: Version of the TimeSeries. Immutable for a specific instance.
-    version: Optional[int] = None
+    version: int | None = None
 
     def __init__(
         self,
@@ -63,8 +63,8 @@ class TimeSeries:
         model: str,
         scenario: str,
         version: "VersionType" = None,
-        annotation: Optional[str] = None,
-        scheme: Optional[str] = None,
+        annotation: str | None = None,
+        scheme: str | None = None,
     ) -> None:
         # Check arguments
         if not isinstance(mp, Platform):
@@ -84,7 +84,7 @@ class TimeSeries:
             if self.__class__ is TimeSeries:
                 raise TypeError("'scheme' argument to TimeSeries()")
             else:
-                self.scheme: Optional[str] = scheme
+                self.scheme: str | None = scheme
 
         # Set attributes
         self.model = model
@@ -132,7 +132,7 @@ class TimeSeries:
     @classmethod
     def from_url(
         cls, url: str, errors: Literal["warn", "raise"] = "warn"
-    ) -> tuple[Optional["TimeSeries"], Platform]:
+    ) -> tuple["TimeSeries | None", Platform]:
         """Instantiate a TimeSeries (or Scenario) given an ``ixmp://`` URL.
 
         The following are equivalent::
@@ -275,7 +275,7 @@ class TimeSeries:
         """Return :obj:`True` if the :attr:`version` is the default version."""
         return self.platform._backend.is_default(self)
 
-    def last_update(self) -> Optional[str]:
+    def last_update(self) -> str | None:
         """Get the timestamp of the last update/edit of this TimeSeries."""
         return self.platform._backend.last_update(self)
 
@@ -319,7 +319,7 @@ class TimeSeries:
         self,
         df: pd.DataFrame,
         meta: bool = False,
-        year_lim: tuple[Optional[int], Optional[int]] = (None, None),
+        year_lim: tuple[int | None, int | None] = (None, None),
     ) -> None:
         """Add time series data.
 
@@ -398,12 +398,12 @@ class TimeSeries:
 
     def timeseries(
         self,
-        region: Optional[Union[str, Sequence[str]]] = None,
-        variable: Optional[Union[str, Sequence[str]]] = None,
-        unit: Optional[Union[str, Sequence[str]]] = None,
-        year: Optional[Union[int, Sequence[int]]] = None,
+        region: str | Sequence[str] | None = None,
+        variable: str | Sequence[str] | None = None,
+        unit: str | Sequence[str] | None = None,
+        year: int | Sequence[int] | None = None,
         iamc: bool = False,
-        subannual: Union[bool, str] = "auto",
+        subannual: bool | str = "auto",
     ) -> pd.DataFrame:
         """Retrieve time series data.
 
@@ -571,7 +571,7 @@ class TimeSeries:
     @overload
     def get_meta(self, name: None = None) -> dict[str, Any]: ...
 
-    def get_meta(self, name: Optional[str] = None) -> Any:
+    def get_meta(self, name: str | None = None) -> Any:
         """Get :ref:`data-meta` for this object.
 
         Metadata with the given `name`, attached to this (:attr:`model` name,
@@ -589,8 +589,8 @@ class TimeSeries:
 
     def set_meta(
         self,
-        name_or_dict: Union[str, dict[str, Any]],
-        value: Optional[Union[bool, float, int, str]] = None,
+        name_or_dict: str | dict[str, Any],
+        value: bool | float | int | str | None = None,
     ) -> None:
         """Set :ref:`data-meta` for this object.
 
@@ -627,7 +627,7 @@ class TimeSeries:
         warn("TimeSeries.delete_meta(); use remove_meta()", DeprecationWarning)
         self.remove_meta(*args, **kwargs)
 
-    def remove_meta(self, name: Union[str, Sequence[str]]) -> None:
+    def remove_meta(self, name: str | Sequence[str]) -> None:
         """Remove :ref:`data-meta` for this object.
 
         Parameters
@@ -644,8 +644,8 @@ class TimeSeries:
     def read_file(
         self,
         path: PathLike[str],
-        firstyear: Optional[int] = None,
-        lastyear: Optional[int] = None,
+        firstyear: int | None = None,
+        lastyear: int | None = None,
     ) -> None:
         """Read time series data from a CSV or Microsoft Excel file.
 

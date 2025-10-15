@@ -1,7 +1,7 @@
 """Common structures shared by all backends."""
 
 from enum import IntFlag, auto
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 # Compatibility with Python 3.9
 # TODO Use "from typing import …" when dropping support for Python 3.9
@@ -53,7 +53,7 @@ FIELDS = {
 #: Partial list of dimensions for the IAMC data structure, or “IAMC format”. This omits
 #: "year" and "subannual" which appear in some variants of the structure, but not in
 #: others.
-IAMC_IDX: list[Union[str, int]] = ["model", "scenario", "region", "variable", "unit"]
+IAMC_IDX: list[str | int] = ["model", "scenario", "region", "variable", "unit"]
 
 
 class ItemType(IntFlag):

@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -213,7 +213,7 @@ Input data: {}""".format(*paths),
         class Foo(GAMSModel):
             def __init__(
                 self,
-                name: Optional[str] = None,
+                name: str | None = None,
                 **model_options: Unpack["GamsModelInitKwargs"],
             ) -> None:
                 super().__init__(name, **model_options)

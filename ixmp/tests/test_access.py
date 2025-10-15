@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -71,8 +71,8 @@ M = ["test_model", "non_existing_model"]
 def test_check_access(
     test_props: Path,
     user: str,
-    models: Union[str, list[str]],
-    exp: Union[bool, dict[str, bool]],
+    models: str | list[str],
+    exp: bool | dict[str, bool],
 ) -> None:
     """:meth:`.check_access` correctly handles certain arguments and responses."""
     mp = ixmp.Platform(backend="jdbc", dbprops=test_props)

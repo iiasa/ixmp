@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Literal, Optional, TypeVar, Union, cast
+from typing import Any, Literal, TypeVar, cast
 
 import gams.transfer as gt
 import pandas as pd
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
 
 
-def _domain(item: Item4) -> Optional[list[str]]:
+def _domain(item: Item4) -> list[str] | None:
     """Return domain for `item`.
 
     For IndexSets and Scalars, this is :obj:`None`.
@@ -40,12 +40,14 @@ def _domain(item: Item4) -> Optional[list[str]]:
 
 def _records(
     item: Item4,
-) -> Union[
-    float,
-    Union[list[float], list[int], list[str]],
-    dict[str, Union[list[float], list[int], list[str]]],
-    None,
-]:
+) -> (
+    float
+    | list[float]
+    | list[int]
+    | list[str]
+    | dict[str, list[float] | list[int] | list[str]]
+    | None
+):
     """Return records for `item`.
 
     For Scalars, this is `item.value`.
@@ -102,8 +104,8 @@ def _ensure_correct_item_order(
 
 
 def _align_records_and_domain(
-    item: Item4, records: dict[str, Union[list[float], list[int], list[str]]]
-) -> dict[str, Union[list[float], list[int], list[str]]]:
+    item: Item4, records: dict[str, list[float] | list[int] | list[str]]
+) -> dict[str, list[float] | list[int] | list[str]]:
     """Align the order of `records.keys()` with domain of `item`."""
     # This function will only be called for these types
     assert isinstance(item, (Table, Parameter, Variable, Equation))
@@ -314,7 +316,7 @@ def write_run_to_gdx(
 # have proper attributes defined. Maybe we could define a TypeAlias that catches both
 # cases and avoids the need of type: ignores
 def _set_columns_to_read_from_records(
-    item: Union[AbstractVariable, AbstractEquation],
+    item: AbstractVariable | AbstractEquation,
 ) -> list[str]:
     """Gather all columns for `item` to read from GDX records."""
     # Prepare columns to select from container.data

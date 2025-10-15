@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal, Union, cast
+from typing import Any, Literal, cast
 
 import pandas as pd
 import pytest
@@ -176,7 +176,7 @@ class TestIxmp4Functions:
         # TODO But we could first figure out if we're dealing with indexset or table and
         # overload _get_set_data to eliminate the need for cast()
         pd.testing.assert_series_equal(
-            cast("pd.Series[Union[float, int, str]]", indexset_data), pd.Series([])
+            cast("pd.Series[float | int | str]", indexset_data), pd.Series([])
         )
         table_data = ixmp4_backend._get_set_data(s=scenario, name=table_name)
         # We can assume this return type for Tables

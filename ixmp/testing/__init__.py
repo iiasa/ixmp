@@ -42,7 +42,7 @@ from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import Any, Literal, Sequence
 
 import pint
 import pytest
@@ -410,8 +410,8 @@ def run(ixmp4_backend: Any, scenario: Scenario) -> Any:
 @contextmanager
 def assert_logs(
     caplog: pytest.LogCaptureFixture,
-    message_or_messages: Optional[Union[str, Iterable[str]]] = None,
-    at_level: Optional[int] = None,
+    message_or_messages: str | Iterable[str] | None = None,
+    at_level: int | None = None,
 ) -> Generator[None, Any, None]:
     """Assert that *message_or_messages* appear in logs.
 

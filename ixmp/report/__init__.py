@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import genno.config
 from genno import (
@@ -61,7 +61,7 @@ def units(c: Computer, info: dict[str, str]) -> None:
     genno.config.units(c, info)
 
 
-def __getattr__(name: str) -> Optional[dict[str, str]]:
+def __getattr__(name: str) -> dict[str, str] | None:
     if name == "RENAME_DIMS":
         return common.RENAME_DIMS
     else:

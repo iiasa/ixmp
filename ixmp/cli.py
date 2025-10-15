@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from pathlib import Path
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import click
 
@@ -23,24 +23,24 @@ class VersionType(click.ParamType):
     def convert(
         self,
         value: int,
-        param: Optional[click.Parameter],
-        ctx: Optional[click.Context],
+        param: click.Parameter | None,
+        ctx: click.Context | None,
     ) -> int: ...
 
     @overload
     def convert(
         self,
         value: str,
-        param: Optional[click.Parameter],
-        ctx: Optional[click.Context],
-    ) -> Union[int, Literal["new"]]: ...
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int | Literal["new"]: ...
 
     def convert(
         self,
-        value: Union[int, str],
-        param: Optional[click.Parameter],
-        ctx: Optional[click.Context],
-    ) -> Union[int, Literal["new"]]:
+        value: int | str,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int | Literal["new"]:
         """Fail if `value` is not :class:`int` or 'new'."""
         if value == "new":
             # FIXME Not sure why mypy doesn't recognize this as Literal["new"]
@@ -70,11 +70,11 @@ class VersionType(click.ParamType):
 @click.pass_context
 def main(
     ctx: click.Context,
-    url: Optional[str],
-    platform: Optional[str],
-    dbprops: Optional[Path],
-    model: Optional[str],
-    scenario: Optional[str],
+    url: str | None,
+    platform: str | None,
+    dbprops: Path | None,
+    model: str | None,
+    scenario: str | None,
     version: "VersionTypeAlias",
 ) -> None:
     ctx.obj = dict()
@@ -121,9 +121,7 @@ def main(
 @click.option("--config", help="Path to reporting configuration file.")
 @click.argument("key")
 @click.pass_obj
-def report(
-    context: dict[str, Any], config: Optional[Union[str, Path]], key: Optional[str]
-) -> None:
+def report(context: dict[str, Any], config: str | Path | None, key: str | None) -> None:
     """Run reporting for KEY."""
     # Import here to avoid importing reporting dependencies when running other commands
     from ixmp import Reporter
@@ -283,8 +281,8 @@ def import_group(context: dict[str, Any]) -> None:
 def import_timeseries(
     context: dict[str, Any],
     file: Path,
-    firstyear: Optional[int],
-    lastyear: Optional[int],
+    firstyear: int | None,
+    lastyear: int | None,
 ) -> None:
     """Import time series data."""
     context["scen"].read_file(Path(file), firstyear, lastyear)
@@ -302,10 +300,10 @@ def import_timeseries(
 def import_scenario(
     context: dict[str, Any],
     file: Path,
-    discard_solution: Optional[bool],
-    add_units: Optional[bool],
-    init_items: Optional[bool],
-    commit_steps: Optional[bool],
+    discard_solution: bool | None,
+    add_units: bool | None,
+    init_items: bool | None,
+    commit_steps: bool | None,
 ) -> None:
     """Import scenario data."""
     scenario = context["scen"]
@@ -350,7 +348,7 @@ def remove(name: str) -> None:
 @platform_group.command()
 @click.argument("platform_name", metavar="PLATFORM")
 @click.argument("args", nargs=-1)
-def add(platform_name: str, args: Union[str, Iterable[str]]) -> None:
+def add(platform_name: str, args: str | Iterable[str]) -> None:
     """Add PLATFORM, configured with ARGS.
 
     If PLATFORM is 'default', ARGS must be the name of another platform.
@@ -402,7 +400,7 @@ def list_platforms() -> None:
 @click.option("--go", is_flag=True, help="Actually manipulate files.")
 @click.argument("name_source", metavar="SRC")
 @click.argument("name_dest", metavar="DEST")
-def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
+def copy_platform(go: bool | None, name_source: str, name_dest: str) -> None:
     """Create the local JDBCBackend/HyperSQL platform DEST as a copy of SRC.
 
     Any existing data at DEST are overwritten. Without --go, no action occurs.
@@ -480,7 +478,7 @@ def copy_platform(go: Optional[bool], name_source: str, name_dest: str) -> None:
 @click.pass_obj
 def list_scenarios(
     context: dict[str, Any],
-    match: Optional[Pattern[str]],
+    match: Pattern[str] | None,
     default_only: bool,
     as_url: bool,
 ) -> None:

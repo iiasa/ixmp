@@ -1,5 +1,5 @@
 from itertools import chain, repeat
-from typing import Any, Literal, Union, cast
+from typing import Any, Literal, cast
 
 import dask
 import pandas as pd
@@ -52,7 +52,7 @@ class Reporter(Computer):
         rep.add("scenario", scenario)
 
         # List of top-level keys
-        all_keys: list[Union[str, Key]] = []
+        all_keys: list[str | Key] = []
 
         # List of parameters, equations, and variables
         quantities: chain[tuple[Literal["par", "equ", "var"], str]] = chain(
@@ -88,7 +88,7 @@ class Reporter(Computer):
                 # try to interpret its contents as further tasks
                 # NOTE Not annotated by dask; no PR or issue open to address this
                 elements = dask.core.quote(
-                    cast("pd.Series[Union[float, int, str]]", elements).tolist()
+                    cast("pd.Series[float | int | str]", elements).tolist()
                 )  # type: ignore[no-untyped-call]
             except AttributeError:  # pragma: no cover
                 # pd.DataFrame for a multidimensional set; store as-is

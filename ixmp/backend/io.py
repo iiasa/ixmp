@@ -1,7 +1,7 @@
 import logging
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 
@@ -25,8 +25,8 @@ EXCEL_MAX_ROWS = 1048576
 def ts_read_file(
     ts: "TimeSeries",
     path: Path,
-    firstyear: Optional[int] = None,
-    lastyear: Optional[int] = None,
+    firstyear: int | None = None,
+    lastyear: int | None = None,
 ) -> None:
     """Read data from a CSV or Microsoft Excel file at *path* into *ts*.
 
@@ -57,8 +57,8 @@ def s_write_excel(
     s: "Scenario",
     path: Path,
     item_type: ItemType,
-    filters: Optional["WriteFilters"] = None,
-    max_row: Optional[int] = None,
+    filters: "WriteFilters | None" = None,
+    max_row: int | None = None,
 ) -> None:
     """Write *s* to a Microsoft Excel file at *path*.
 
@@ -94,7 +94,7 @@ def s_write_excel(
     for name, ix_type in name_type.items():
         if ix_type == "par":
             # Use only the filters corresponding to dimensions of this item
-            item_filters: Optional[dict[str, list[str]]] = {
+            item_filters: dict[str, list[str]] | None = {
                 k: v
                 for k, v in filters.items()
                 if k in be.item_index(s, name, "names") and isinstance(v, list)
@@ -158,7 +158,7 @@ def maybe_init_item(
     scenario: "Scenario",
     ix_type: Literal["set", "par", "equ", "var"],
     name: str,
-    new_idx: Optional[list[str]],
+    new_idx: list[str] | None,
     path: Path,
 ) -> None:
     """Call :meth:`~.init_set`, :meth:`.init_par`, etc. if possible.
@@ -229,7 +229,7 @@ def s_read_excel(  # noqa: C901
     )["ix_type"]
 
     # Queue of (set name, data) to add
-    sets_to_add: deque[tuple[str, Optional[pd.DataFrame]]] = deque(
+    sets_to_add: deque[tuple[str, pd.DataFrame | None]] = deque(
         (str(n), None) for n in name_type.index[name_type == "set"]
     )
 
@@ -251,7 +251,7 @@ def s_read_excel(  # noqa: C901
     # 1. Index sets, required to initialize other sets.
     # 2. Sets indexed by others.
 
-    data: Optional[Union[pd.DataFrame, list[Union[str, list[str]]]]]
+    data: pd.DataFrame | list[str | list[str]] | None
 
     while True:
         try:
@@ -270,7 +270,7 @@ def s_read_excel(  # noqa: C901
         assert isinstance(data, pd.DataFrame)
 
         # Determine index set(s) for this set
-        idx_sets: Optional[list[str]] = data.columns.to_list()
+        idx_sets: list[str] | None = data.columns.to_list()
         if idx_sets and len(idx_sets) == 1:
             if idx_sets == [name]:
                 # Set's own name as column header -> an index set

@@ -1,14 +1,7 @@
 import logging
 from collections.abc import Callable, Sequence
 from os import PathLike
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    Optional,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -54,7 +47,7 @@ class Platform:
     """
 
     # Storage back end for the platform
-    _backend: Union["JDBCBackend", "IXMP4Backend"]
+    _backend: "JDBCBackend | IXMP4Backend"
 
     # List of method names which are handled directly by the backend
     _backend_direct = [
@@ -71,12 +64,12 @@ class Platform:
         "set_meta",
     ]
 
-    _units_to_warn_about: Optional[list[str]] = None
+    _units_to_warn_about: list[str] | None = None
 
     def __init__(
         self,
-        name: Optional[str] = None,
-        backend: Union[Literal["ixmp4", "jdbc"], str, None] = None,
+        name: str | None = None,
+        backend: Literal["ixmp4", "jdbc"] | str | None = None,
         **backend_args: Unpack["PlatformInitKwargs"],
     ) -> None:
         from ixmp.backend import get_class
@@ -118,7 +111,7 @@ class Platform:
         else:
             raise AttributeError(name)
 
-    def set_log_level(self, level: Union[str, int]) -> None:
+    def set_log_level(self, level: str | int) -> None:
         """Set log level for the Platform and its storage :class:`.Backend`.
 
         Parameters
@@ -162,8 +155,8 @@ class Platform:
     def scenario_list(
         self,
         default: bool = True,
-        model: Optional[str] = None,
-        scen: Optional[str] = None,
+        model: str | None = None,
+        scen: str | None = None,
     ) -> pd.DataFrame:
         """Return information about TimeSeries and Scenarios on the Platform.
 
@@ -204,11 +197,11 @@ class Platform:
         self,
         path: PathLike[str],
         default: bool = True,
-        model: Optional[str] = None,
-        scenario: Optional[str] = None,
-        variable: Optional[Union[str, list[str]]] = None,
-        unit: Optional[Union[str, list[str]]] = None,
-        region: Optional[Union[str, list[str]]] = None,
+        model: str | None = None,
+        scenario: str | None = None,
+        variable: str | list[str] | None = None,
+        unit: str | list[str] | None = None,
+        region: str | list[str] | None = None,
         export_all_runs: bool = False,
     ) -> None:
         """Export time series data to CSV file across multiple :class:`.TimeSeries`.
@@ -403,8 +396,8 @@ class Platform:
             self._backend.set_timeslice(name, category, duration)
 
     def check_access(
-        self, user: str, models: Union[str, Sequence[str]], access: str = "view"
-    ) -> Union[bool, dict[str, bool]]:
+        self, user: str, models: str | Sequence[str], access: str = "view"
+    ) -> bool | dict[str, bool]:
         """Check access to specific models.
 
         Parameters

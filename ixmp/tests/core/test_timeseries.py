@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import Generator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -54,8 +54,8 @@ def assert_geodata(obs: pd.DataFrame, exp: pd.DataFrame) -> None:
 def assert_timeseries(
     scen: TimeSeries,
     exp: pd.DataFrame = DATA["timeseries"],
-    cols: Optional[Union[str, list[str]]] = None,
-    subannual: Optional[Union[bool, str]] = None,
+    cols: str | list[str] | None = None,
+    subannual: bool | str | None = None,
 ) -> None:
     """Asserts scenario timeseries are similar to expected
 
@@ -96,7 +96,7 @@ class TestTimeSeries:
     @pytest.fixture(scope="function", params=[TimeSeries, Scenario])
     def ts(
         self, request: pytest.FixtureRequest, mp: "Platform"
-    ) -> Generator[Union[TimeSeries, Scenario], Any, None]:
+    ) -> Generator[TimeSeries | Scenario, Any, None]:
         """An empty TimeSeries with a temporary name on the :func:`mp`."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name
@@ -108,7 +108,7 @@ class TestTimeSeries:
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])
     def test_init(
-        self, test_mp: "Platform", cls: Union[type[TimeSeries], type[Scenario]]
+        self, test_mp: "Platform", cls: type[TimeSeries] | type[Scenario]
     ) -> None:
         # Something other than a Platform as mp argument
         with pytest.raises(TypeError):
@@ -236,7 +236,7 @@ class TestTimeSeries:
         ],
     )
     def test_get_year(
-        self, ts: TimeSeries, year_arg: Union[int, list[int], list[str]]
+        self, ts: TimeSeries, year_arg: int | list[int] | list[str]
     ) -> None:
         """`year` arg to :meth:`.TimeSeries.timeseries` accepts only :class:`int`."""
         ts.add_timeseries(DATA[0])
@@ -293,7 +293,7 @@ class TestTimeSeries:
         self,
         mp: "Platform",
         ts: TimeSeries,
-        cls: Union[type[TimeSeries], type[Scenario]],
+        cls: type[TimeSeries] | type[Scenario],
     ) -> None:
         info: "TimeSeriesIdentifiers" = dict(model=ts.model, scenario=ts.scenario)
 

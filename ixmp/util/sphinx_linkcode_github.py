@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import sphinx.config
 from sphinx.util import logging
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def find_remote_head_git(app: "sphinx.application.Sphinx") -> Optional[str]:
+def find_remote_head_git(app: "sphinx.application.Sphinx") -> str | None:
     """Use git to identify the name of the remote branch containing the code."""
     try:
         import git
@@ -75,7 +75,7 @@ def find_remote_head(app: "sphinx.application.Sphinx") -> str:
 
 @lru_cache()
 def package_base_path(
-    obj: Union[Callable[[Any], Any], FunctionType, ModuleType],
+    obj: Callable[[Any], Any] | FunctionType | ModuleType,
 ) -> Path:
     """Return the base path of the package containing `obj`."""
     # Module name: obj.__name__ if obj is a module
@@ -107,9 +107,7 @@ class GitHubLinker:
         app: "sphinx.application.Sphinx",
         what: str,
         name: str,
-        obj: Union[
-            property, FunctionType, "_lru_cache_wrapper[Any]", partial[Any], object
-        ],
+        obj: "property | FunctionType |_lru_cache_wrapper[Any] | partial[Any] | object",
         options: Any,
         lines: Sequence[str],
     ) -> None:
@@ -120,9 +118,9 @@ class GitHubLinker:
         # TODO Handle wrapper_descriptor, e.g.
         #      message_ix_models.tests.model.test_bare.TestConfig.__init__
 
-        _obj: Union[
-            Callable[[Any], Any], FunctionType, ModuleType, "_lru_cache_wrapper[Any]"
-        ]
+        _obj: (
+            Callable[[Any], Any] | FunctionType | ModuleType | "_lru_cache_wrapper[Any]"
+        )
 
         # Identify the object for which to locate code
         if isinstance(obj, property):
@@ -163,7 +161,7 @@ class GitHubLinker:
             # # Display information, for debugging
             # print(name, "→", self.line_numbers[name])
 
-    def linkcode_resolve(self, domain: str, info: dict[str, str]) -> Optional[str]:
+    def linkcode_resolve(self, domain: str, info: dict[str, str]) -> str | None:
         """Function for the :mod:`sphinx.ext.linkcode` setting of the same name.
 
         Returns URLs for code objects on GitHub, using information stored by

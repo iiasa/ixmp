@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import pandas as pd
 import pytest
@@ -170,9 +170,7 @@ class TestIxmp4IOFunctions:
         # Test item without domain order
         with run.transact("Test _align_records_and_domain without order"):
             equation = run.optimization.equations.create("Equation")
-        expected: dict[str, Union[list[float], list[int], list[str]]] = {
-            "foo": [1, 2, 3]
-        }
+        expected: dict[str, list[float] | list[int] | list[str]] = {"foo": [1, 2, 3]}
         assert _align_records_and_domain(item=equation, records=expected) == expected
 
         # Test sorting of records
@@ -182,7 +180,7 @@ class TestIxmp4IOFunctions:
             parameter = run.optimization.parameters.create(
                 "Parameter", constrained_to_indexsets=[indexset_1.name, indexset_2.name]
             )
-        records: dict[str, Union[list[float], list[int], list[str]]] = {
+        records: dict[str, list[float] | list[int] | list[str]] = {
             indexset_2.name: [1, 2, 3],
             "values": [1.0, 2.0, 3.0],
             indexset_1.name: ["1", "2", "3"],
@@ -363,7 +361,7 @@ class TestIxmp4IOFunctions:
         variable_3 = run.backend.optimization.variables.create(
             run_id=run.id, name="Variable3"
         )
-        records: dict[str, Union[list[float], list[int], list[str]]] = {
+        records: dict[str, list[float] | list[int] | list[str]] = {
             "level": [1.0],
             "marginal": [0],
             "lower": [0],

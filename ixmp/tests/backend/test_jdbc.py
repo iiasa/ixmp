@@ -4,7 +4,7 @@ import os
 import platform
 from collections.abc import Callable, Generator
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import jpype
 import numpy as np
@@ -166,7 +166,7 @@ class TestJDBCBackend:
         klass: type["JDBCBackend"],
         args: tuple[str, ...],
         kwargs: dict[str, str],
-        expected: Optional[dict[str, str]],
+        expected: dict[str, str] | None,
     ) -> None:
         """Test :meth:`JDBCBackend.handle_config`."""
         assert expected == klass.handle_config(args, kwargs)
@@ -337,8 +337,8 @@ INIT_PARAMS: tuple[
         list[str],
         "TestInitKwargs",
         Callable[..., Any],
-        Union[type[TypeError], type[ValueError]],
-        Optional[str],
+        type[TypeError] | type[ValueError],
+        str | None,
     ],
     ...,
 ] = (
@@ -388,8 +388,8 @@ def test_init(
     args: list[str],
     kwargs: "TestInitKwargs",
     action: Callable[..., Any],
-    kind: Union[type[TypeError], type[ValueError]],
-    match: Optional[str],
+    kind: type[TypeError] | type[ValueError],
+    match: str | None,
 ) -> None:
     """Semantics for JDBCBackend.__init__()."""
     # NOTE Triggering some errors on purpose
@@ -642,7 +642,7 @@ def test_reload_cycle(
         cache=cache,
         log_level="WARNING",
     )
-    mp: Optional["Platform"] = ixmp.Platform(backend="jdbc", **platform_args)
+    mp: "Platform" | None = ixmp.Platform(backend="jdbc", **platform_args)
     reload_cycle_scenario.clone(platform=mp)
 
     # Throw away the reference to mp

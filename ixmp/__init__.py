@@ -1,7 +1,7 @@
 import logging
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Optional
+from typing import Any
 
 from ixmp._config import config
 from ixmp.backend.common import IAMC_IDX, ItemType
@@ -53,7 +53,7 @@ log.setLevel(logging.WARNING)
 
 
 # TODO What's the proper type hint for a Module?
-def __getattr__(name: str) -> Optional[Any]:
+def __getattr__(name: str) -> Any | None:
     if name == "utils":
         # Import via the old name to trigger DeprecatedPathFinder
         import ixmp.utils as util

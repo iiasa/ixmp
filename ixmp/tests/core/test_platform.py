@@ -5,7 +5,7 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -84,7 +84,7 @@ def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
     ],
 )
 def test_log_level(
-    log_level_mp: ixmp.Platform, level: str, exc: Optional[type[ValueError]]
+    log_level_mp: ixmp.Platform, level: str, exc: type[ValueError] | None
 ) -> None:
     """Log level can be set and retrieved."""
     if exc is None:

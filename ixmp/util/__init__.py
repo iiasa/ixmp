@@ -596,12 +596,9 @@ def show_versions(
     SHOW_VERSION_PACKAGES
     """
     from importlib import import_module
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError, packages_distributions, version
     from subprocess import DEVNULL, check_output
 
-    # Compatibility with Python 3.9
-    # TODO Use "from importlib.metadata import …" when dropping support for Python 3.9
-    from importlib_metadata import packages_distributions
     from xarray.util.print_versions import get_sys_info
 
     from ixmp.model.gams import gams_info

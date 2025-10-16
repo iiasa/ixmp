@@ -590,10 +590,14 @@ class GAMSModel(Model):
         job.run(gams_options=opt, checkpoint=cp)
 
         # Load the input GDX into workspace database
+        import time as time_module
+        t_start = time_module.time()
         input_db = ws.add_database_from_gdx(str(self.in_file))
+        print(f"[{time_module.time()-t_start:.1f}s] Loaded input GDX", flush=True)
 
         # Create model instance from checkpoint
         mi = cp.add_modelinstance()
+        print(f"[{time_module.time()-t_start:.1f}s] Created model instance object", flush=True)
 
         # Set up modifiable parameters (BEFORE instantiate)
         modifiers = []
@@ -610,8 +614,21 @@ class GAMSModel(Model):
                     modifier = GamsModifier(sync_par)
                     modifiers.append(modifier)
                 except (KeyError, GamsException, AttributeError, TypeError):
-                    # Parameter not found in this model - skip silently
-                    pass
+                    # Parameter not found directly - check if it's created from another parameter
+                    # Special case: demand_fixed is created from demand in MESSAGE
+                    if par_name == "demand_fixed":
+                        try:
+                            # Get dimensions from the source parameter
+                            source_par = input_db["demand"]
+                            # Create sync_db parameter with target name
+                            sync_par = mi.sync_db.add_parameter(par_name, source_par.dimension)
+                            modifier = GamsModifier(sync_par)
+                            modifiers.append(modifier)
+                        except (KeyError, GamsException, AttributeError, TypeError):
+                            pass
+                    # Otherwise skip silently
+
+        print(f"[{time_module.time()-t_start:.1f}s] Set up {len(modifiers)} modifiers", flush=True)
 
         # Set up model instance options
         mi_opt = ws.add_options()
@@ -621,7 +638,9 @@ class GAMSModel(Model):
         model_name = model_file.stem.replace("_run", "")
 
         # Instantiate the model with modifiers
+        print(f"[{time_module.time()-t_start:.1f}s] Starting instantiate with {len(modifiers)} modifiers...", flush=True)
         mi.instantiate(f"{model_name}_LP use lp min OBJ", modifiers, mi_opt)
+        print(f"[{time_module.time()-t_start:.1f}s] Instantiate complete", flush=True)
 
         # NOW populate the modifiable parameters (AFTER instantiate)
         if modifiable_pars:
@@ -634,9 +653,21 @@ class GAMSModel(Model):
                         new_rec = sync_par.add_record(rec.keys)
                         new_rec.value = rec.value
                 except (KeyError, GamsException, AttributeError, TypeError):
-                    # Parameter not found - skip silently
-                    pass
+                    # Parameter not found directly - check for special cases
+                    if par_name == "demand_fixed":
+                        try:
+                            # Populate from source parameter
+                            source_par = input_db["demand"]
+                            sync_par = mi.sync_db[par_name]
+                            for rec in source_par:
+                                new_rec = sync_par.add_record(rec.keys)
+                                new_rec.value = rec.value
+                        except (KeyError, GamsException, AttributeError, TypeError):
+                            pass
+                    # Otherwise skip silently
 
+        print(f"[{time_module.time()-t_start:.1f}s] Populated parameters in sync_db", flush=True)
+        print(f"[{time_module.time()-t_start:.1f}s] Model instance creation complete", flush=True)
         return mi, ws
 
 

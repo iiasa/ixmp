@@ -1003,6 +1003,7 @@ class Scenario(TimeSeries):
         self,
         model: Optional[str] = None,
         modifiable_pars: Optional[list[str]] = None,
+        fixable_vars: Optional[list[str]] = None,
         **model_options: Any,
     ):
         """Create a persistent GAMS model instance for efficient resolving.
@@ -1019,6 +1020,9 @@ class Scenario(TimeSeries):
         modifiable_pars : list of str, optional
             List of parameter names that can be modified between solves.
             Parameters used in conditional expressions ($) cannot be modifiable.
+        fixable_vars : list of str, optional
+            List of variable names that can be fixed between solves using
+            UpdateAction.Fixed.
         model_options :
             Keyword arguments specific to the model. See :class:`.GAMSModel`.
 
@@ -1046,7 +1050,9 @@ class Scenario(TimeSeries):
         model_obj = get_model(model or self.scheme, **model_options)
 
         # Create and return the model instance
-        return model_obj.create_model_instance(self, modifiable_pars=modifiable_pars)
+        return model_obj.create_model_instance(
+            self, modifiable_pars=modifiable_pars, fixable_vars=fixable_vars
+        )
 
     # Input and output
     def to_excel(

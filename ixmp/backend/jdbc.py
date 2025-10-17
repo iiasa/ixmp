@@ -1345,7 +1345,7 @@ class JDBCBackend(CachingBackend):
         # Convert keys to list to check if batch operation is beneficial
         keys_list = list(keys)
 
-        # Use batch removal for multiple elements (more efficient than individual removals)
+        # Use batch removal for multiple elements
         if len(keys_list) > 1:
             # Convert to Java ArrayList for batch operation
             # Access java classes through jpype module

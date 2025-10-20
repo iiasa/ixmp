@@ -110,7 +110,11 @@ jobs:
 
     - name: Install the package and dependencies
       # [docs] → [tests] → [ixmp4,report,tutorial]
-      run: uv pip install .[docs]
+      run: |
+        uv pip install \
+            "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'" \
+            .[docs]
+      shell: bash
 
     - name: "Install libpng-dev"  # for R 'png', required by reticulate
       if: startsWith(matrix.os, 'ubuntu-')

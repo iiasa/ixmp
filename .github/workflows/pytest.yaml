@@ -85,7 +85,7 @@ jobs:
       with:
         # username: postgres
         # password: postgres
-        database: ixmp-test
+        # database: ixmp-test
         # port: 5432
         postgres-version: "16"
         # ssl: true
@@ -114,8 +114,10 @@ jobs:
         IRkernel::installspec()
       shell: Rscript {0}
 
-    - name: Add Postgres DB to ixmp4 platforms
-      run: ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test" ixmp-test
+    - name: Setup template Postgres schema
+      run: |
+        ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/template1" template1
+        IXMP4_MANAGED=false ixmp4 platforms upgrade
 
     - name: Run tests
       run: |

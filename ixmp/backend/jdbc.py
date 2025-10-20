@@ -1345,7 +1345,7 @@ class JDBCBackend(CachingBackend):
 
         # Process keys in batches to balance performance and memory usage
         # Batch size chosen to limit memory consumption while reducing method calls
-        BATCH_SIZE = 10000
+        BATCH_SIZE = 1000000
 
         # Use islice for memory-efficient iteration without materializing all keys
         ArrayList = jpype.JClass("java.util.ArrayList")

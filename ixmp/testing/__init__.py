@@ -287,13 +287,16 @@ def test_mp(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+    )
 
 
 @pytest.fixture(scope="session")
@@ -411,6 +414,7 @@ def test_mp_f(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
@@ -421,7 +425,9 @@ def test_mp_f(
     --------
     test_mp
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+    )
 
 
 @pytest.fixture
@@ -584,6 +590,7 @@ def _platform_fixture(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["jdbc", "ixmp4"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
@@ -597,8 +604,8 @@ def _platform_fixture(
     elif backend == "ixmp4":
         args = []
         kwargs = dict(
-            ixmp4_name="ixmp-test",
-            dsn="postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test",
+            ixmp4_name=f"ixmp-test-{worker_id}",
+            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test-{worker_id}",
             jdbc_compat=True,
         )
         if request.scope == "function":

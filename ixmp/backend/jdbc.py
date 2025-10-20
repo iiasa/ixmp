@@ -15,6 +15,7 @@ from collections.abc import (
 from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
+from itertools import islice
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import (
@@ -1342,21 +1343,26 @@ class JDBCBackend(CachingBackend):
         item = ITEM_CLASS[type](name)
         jitem = self._get_item(s, item, load=False)
 
-        # Convert keys to list to check if batch operation is beneficial
-        keys_list = list(keys)
+        # Process keys in batches to balance performance and memory usage
+        # Batch size chosen to limit memory consumption while reducing method calls
+        BATCH_SIZE = 10000
 
-        # Use batch removal for multiple elements
-        if len(keys_list) > 1:
-            # Convert to Java ArrayList for batch operation
-            # Access java classes through jpype module
-            ArrayList = jpype.JClass("java.util.ArrayList")
-            key_vectors = ArrayList()
-            for key in keys_list:
-                key_vectors.add(to_jlist(key))
-            jitem.removeElements(key_vectors)
-        elif len(keys_list) == 1:
-            # Single element removal
-            jitem.removeElement(to_jlist(keys_list[0]))
+        # Use islice for memory-efficient iteration without materializing all keys
+        ArrayList = jpype.JClass("java.util.ArrayList")
+
+        keys_iter = iter(keys)
+        while True:
+            batch = list(islice(keys_iter, BATCH_SIZE))
+            if not batch:
+                break
+
+            if len(batch) == 1:
+                jitem.removeElement(to_jlist(batch[0]))
+            else:
+                key_vectors = ArrayList()
+                for key in batch:
+                    key_vectors.add(to_jlist(key))
+                jitem.removeElements(key_vectors)
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed

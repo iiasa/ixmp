@@ -31,6 +31,14 @@ if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
     from ixmp.types import PlatformInitKwargs
 
+    class TestInitKwargs(TypedDict, total=False):
+        name: str
+        dbtype: str
+        backend: str
+        driver: str
+        path: str
+        url: str
+
 
 @pytest.mark.flaky(
     reruns=5,
@@ -83,7 +91,7 @@ def test_close_increased_logging(
     test_mp_f: "Platform", capfd: pytest.CaptureFixture[str]
 ) -> None:
     """Platform.close_db() doesn't throw needless exceptions."""
-    # Use the session-scoped fixture to avoid affecting other tests in this file
+    # Use the function-scoped fixture to avoid affecting other tests in this file
     mp = test_mp_f
 
     # Close once
@@ -99,7 +107,7 @@ def test_close_increased_logging(
     captured = capfd.readouterr()
     msg = "Database connection could not be closed or was already closed"
     try:
-        assert msg in captured.out
+        assert msg in captured.out, captured
     finally:
         mp.set_log_level(level)
 
@@ -283,38 +291,24 @@ def test_connect_message(
     caplog: pytest.LogCaptureFixture,
     request: pytest.FixtureRequest,
 ) -> None:
-    msg = (
-        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}_0' "
-        "(user: ixmp)..."
-    )
+    url = f"jdbc:hsqldb:mem://{request.node.name}_"
 
-    ixmp.Platform(
-        backend="jdbc",
-        driver="hsqldb",
-        url=f"jdbc:hsqldb:mem://{request.node.name}_0",
-        log_level="INFO",
-    )
+    ixmp.Platform(backend="jdbc", driver="hsqldb", url=url + "0", log_level="INFO")
 
     # Java code via JPype does not log to the standard Python logger
+    msg = f"connected to database '{url}0' (user: ixmp)..."
     assert not any(msg in m for m in caplog.messages)
 
     # NB cannot inspect capfd here. Depending on the order in which the tests were run,
     #    a previous run may have left the Java log level higher than INFO, in which
     #    case the Java Platform object would not write to stderr before set_log_level()
     #    in the above call. Try again now that the level is INFO:
-    msg = (
-        f"connected to database 'jdbc:hsqldb:mem://{request.node.name}_1' "
-        "(user: ixmp)..."
-    )
-    ixmp.Platform(
-        backend="jdbc",
-        driver="hsqldb",
-        url=f"jdbc:hsqldb:mem://{request.node.name}_1",
-    )
+    msg = f"connected to database '{url}1' (user: ixmp)..."
+    ixmp.Platform(backend="jdbc", driver="hsqldb", url=url + "1")
 
     # Instead, log messages are printed to stdout
     captured = capfd.readouterr()
-    assert msg in captured.out
+    assert msg in captured.out, captured
 
 
 @pytest.mark.parametrize("arg", [True, False])
@@ -334,21 +328,12 @@ def test_cache_arg(arg: bool, request: pytest.FixtureRequest) -> None:
     assert len(mp._backend._cache) == (1 if arg else 0)
 
 
-class TestInitKwargs(TypedDict, total=False):
-    name: str
-    dbtype: str
-    backend: str
-    driver: str
-    path: str
-    url: str
-
-
 # This variable formerly had 'warns' as the third element in some tuples, to
 # test for deprecation warnings.
 INIT_PARAMS: tuple[
     tuple[
         list[str],
-        TestInitKwargs,
+        "TestInitKwargs",
         Callable[..., Any],
         Union[type[TypeError], type[ValueError]],
         Optional[str],
@@ -399,7 +384,7 @@ INIT_PARAMS: tuple[
 def test_init(
     tmp_env: os._Environ[str],
     args: list[str],
-    kwargs: TestInitKwargs,
+    kwargs: "TestInitKwargs",
     action: Callable[..., Any],
     kind: Union[type[TypeError], type[ValueError]],
     match: Optional[str],

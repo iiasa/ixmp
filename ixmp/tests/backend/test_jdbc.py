@@ -16,7 +16,7 @@ from pytest import raises
 import ixmp
 import ixmp.backend.jdbc
 from ixmp.backend.jdbc import DRIVER_CLASS, java
-from ixmp.testing import DATA, add_random_model_data, bool_param_id, make_dantzig
+from ixmp.testing import DATA, MARK, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 from ixmp.util.ixmp4 import is_ixmp4backend
 
@@ -87,6 +87,7 @@ def test_close_default_logging(
 
 # NOTE IXMP4Backend's close_db() is a noop
 @pytest.mark.jdbc
+@MARK["pytest#10843"]
 def test_close_increased_logging(
     test_mp_f: "Platform", capfd: pytest.CaptureFixture[str]
 ) -> None:
@@ -286,6 +287,7 @@ def test_invalid_properties_file(test_data_path: "Path") -> None:
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
+@MARK["pytest#10843"]
 def test_connect_message(
     capfd: pytest.CaptureFixture[str],
     caplog: pytest.LogCaptureFixture,

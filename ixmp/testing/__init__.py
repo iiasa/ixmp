@@ -34,6 +34,7 @@ These include:
 
 import logging
 import os
+import platform
 import shutil
 import sys
 from collections.abc import Callable, Generator, Iterable
@@ -91,7 +92,20 @@ __all__ = [
     "tmp_env",
 ]
 
+#: :any:`True` if testing is occurring on GitHub Actions runners/machines.
 GHA = "GITHUB_ACTIONS" in os.environ
+
+_uname = platform.uname()
+
+#: Pytest marks for use throughout the test suite.
+MARK = {
+    "pytest#10843": pytest.mark.xfail(
+        condition=GHA
+        and _uname.system == "Windows"
+        and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
+        reason="https://github.com/pytest-dev/pytest/issues/10843",
+    )
+}
 
 # Provide a skip marker since ixmp4 is not published for Python 3.9
 min_ixmp4_version = pytest.mark.skipif(

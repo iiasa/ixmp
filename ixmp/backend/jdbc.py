@@ -1360,7 +1360,7 @@ class JDBCBackend(CachingBackend):
         BATCH_SIZE = 1000000
 
         # Use islice for memory-efficient iteration without materializing all keys
-        # TODO: Replace islice with itertools.batched() once Python 3.12 is minimum version
+        # TODO: Replace islice with itertools.batched() once Python 3.12 is min vers
         # ArrayList + explicit loop performs best for large batches
         ArrayList = jpype.JClass("java.util.ArrayList")
 

@@ -174,7 +174,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     - :data:`.jdbc._GC_AGGRESSIVE` is set to :any:`False` to disable aggressive garbage
       collection, which can be slow.
     """
-    from ixmp.backend import jdbc
+    from ixmp.backend import available, jdbc
 
     if not session.config.option.ixmp_user_config:
         ixmp_config.clear()
@@ -183,6 +183,22 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         ixmp_config.values["platform"]["local"].pop("path")
 
     jdbc._GC_AGGRESSIVE = False
+
+    if "ixmp4" in available():
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.exc import ProgrammingError
+        from xdist import get_xdist_worker_id
+
+        db_name = f"ixmp-test-{get_xdist_worker_id(session)}"
+
+        try:
+            with create_engine(
+                "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
+                isolation_level="AUTOCOMMIT",
+            ).connect() as connection:
+                connection.execute(text(f"CREATE DATABASE {db_name}"))
+        except ProgrammingError:  # already exists, but can't provide match?
+            pass
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -602,6 +618,11 @@ def _platform_fixture(
         args = ["hsqldb"]
         kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
+        ### TODO
+        ###
+        ### Some tests may call the default DB: how would we communicate that this
+        # worker-specific DB is the default?
+
         args = []
         kwargs = dict(
             ixmp4_name=f"ixmp-test-{worker_id}",

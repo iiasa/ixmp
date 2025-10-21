@@ -95,8 +95,8 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
         },
         "ixmp4-local": {
             "class": "ixmp4",
-            "dsn": "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test",
-            "ixmp4_name": "ixmp-test",
+            "dsn": "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test",
+            "ixmp4_name": "ixmp_test",
             "jdbc_compat": True,
         },
     }

@@ -189,7 +189,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         from sqlalchemy.exc import ProgrammingError
         from xdist import get_xdist_worker_id
 
-        db_name = f"ixmp-test-{get_xdist_worker_id(session)}"
+        db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
 
         try:
             with create_engine(
@@ -625,8 +625,8 @@ def _platform_fixture(
 
         args = []
         kwargs = dict(
-            ixmp4_name=f"ixmp-test-{worker_id}",
-            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp-test-{worker_id}",
+            ixmp4_name=f"ixmp_test_{worker_id}",
+            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test_{worker_id}",
             jdbc_compat=True,
         )
         if request.scope == "function":

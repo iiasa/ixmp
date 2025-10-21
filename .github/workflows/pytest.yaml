@@ -120,6 +120,7 @@ jobs:
       shell: Rscript {0}
 
     - name: Setup template & default-ixmp4-local Postgres schema
+      if: matrix.python-version != '3.9'
       run: |
         ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/template1" template1
         ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test" ixmp_test

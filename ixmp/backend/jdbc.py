@@ -1360,18 +1360,20 @@ class JDBCBackend(CachingBackend):
         BATCH_SIZE = 1000000
 
         # Use islice for memory-efficient iteration without materializing all keys
+        # TODO: Replace islice with itertools.batched() once Python 3.12 is minimum version
+        # ArrayList + explicit loop performs best for large batches
         ArrayList = jpype.JClass("java.util.ArrayList")
 
         keys_iter = iter(keys)
-        while True:
-            batch = list(islice(keys_iter, BATCH_SIZE))
-            if not batch:
-                break
-
+        while batch := list(islice(keys_iter, BATCH_SIZE)):
             if len(batch) == 1:
+                # Extract single key from batch list: batch[0] is ["i1", "j1"]
+                # to_jlist(batch[0]) creates LinkedList("i1", "j1") as expected
+                # to_jlist(batch) would incorrectly create LinkedList([["i1", "j1"]])
                 jitem.removeElement(to_jlist(batch[0]))
             else:
-                key_vectors = ArrayList()
+                # Preallocate ArrayList capacity to avoid repeated memory allocations
+                key_vectors = ArrayList(len(batch))
                 for key in batch:
                     key_vectors.add(to_jlist(key))
                 jitem.removeElements(key_vectors)

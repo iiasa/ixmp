@@ -1259,20 +1259,10 @@ class JDBCBackend(CachingBackend):
                 # String types must iterate element-by-element (JPype limitation)
                 if dtypes[name] in (float, int):
                     columns.append(
-                        pd.Series(
-                            np.array(java_array),
-                            dtype=dtypes[name],
-                            name=name,
-                        )
+                        pd.Series(np.array(java_array), dtype=dtypes[name], name=name)
                     )
                 else:
-                    columns.append(
-                        pd.Series(
-                            java_array,
-                            dtype=dtypes[name],
-                            name=name,
-                        )
-                    )
+                    columns.append(pd.Series(java_array, dtype=dtypes[name], name=name))
 
             # Index columns
             for i, idx_name in enumerate(idx_names):

@@ -6,18 +6,20 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
-import sqlalchemy
-import sqlalchemy.exc
 from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
+import ixmp.backend
 from ixmp import IAMC_IDX, Scenario, TimeSeries
-from ixmp.testing import DATA, models
+from ixmp.testing import DATA, min_ixmp4_version, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
     from ixmp.types import TimeSeriesIdentifiers
+
+if "ixmp4" in ixmp.backend.available():
+    import sqlalchemy.exc
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]
@@ -425,6 +427,7 @@ class TestTimeSeries:
         with ts.transact():
             ts.remove_timeseries(data)
 
+    @min_ixmp4_version
     @pytest.mark.ixmp4
     @pytest.mark.parametrize("format", ["long", "wide"])
     @pytest.mark.parametrize(

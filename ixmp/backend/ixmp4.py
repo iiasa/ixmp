@@ -54,7 +54,11 @@ if TYPE_CHECKING:
     from ixmp4.core.optimization.equation import EquationRepository
     from ixmp4.core.optimization.parameter import ParameterRepository
     from ixmp4.core.optimization.table import TableRepository
-    from ixmp4.core.optimization.variable import VariableRepository
+    from ixmp4.core.optimization.variable import (
+        VariableRepository as OptimizationVariableRepository,
+    )
+    from ixmp4.data.abstract.iamc.variable import VariableRepository
+    from ixmp4.data.abstract.model import ModelRepository
     from ixmp4.data.abstract.optimization.equation import (
         EquationRepository as BEEquationRepository,
     )
@@ -69,6 +73,8 @@ if TYPE_CHECKING:
     from ixmp4.data.abstract.optimization.variable import (
         VariableRepository as BEVariableRepository,
     )
+    from ixmp4.data.abstract.region import RegionRepository
+    from ixmp4.data.abstract.scenario import ScenarioRepository
 
     from ixmp.types import (
         Filters,
@@ -311,6 +317,21 @@ class IXMP4Backend(CachingBackend):
                 # NB The exception class is actually UnitNotUnique, but this is created
                 #    dynamically and is not importable
                 pass
+
+        # NOTE ixmp4 can only store documentation for meta entries of particular Runs,
+        # but set_doc and get_doc expect to work Run-agnostic
+        self._doc_domain_map: dict[
+            str,
+            "ModelRepository"
+            | "RegionRepository"
+            | "ScenarioRepository"
+            | "VariableRepository",
+        ] = {
+            "model": self._backend.models,
+            "region": self._backend.regions,
+            "scenario": self._backend.scenarios,
+            "timeseries": self._backend.iamc.variables,
+        }
 
     @property
     def _log_level(self) -> int:
@@ -641,6 +662,53 @@ class IXMP4Backend(CachingBackend):
 
         self._backend.meta.bulk_delete(df=meta_df)
 
+    def _get_domain_repo(
+        self, domain: str
+    ) -> (
+        "ModelRepository"
+        | "RegionRepository"
+        | "ScenarioRepository"
+        | "VariableRepository"
+    ):
+        # TODO Limit domain annotation with Literal
+        try:
+            return self._doc_domain_map[domain]
+        except KeyError:
+            domains = ", ".join(self._doc_domain_map.keys())
+            raise ValueError(f"No such domain: {domain}, existing domains: {domains}")
+
+    def set_doc(
+        self, domain: str, docs: dict[str, str] | Iterable[tuple[str, str]]
+    ) -> None:
+        domain_repo = self._get_domain_repo(domain=domain)
+
+        if not isinstance(docs, dict):
+            docs = {name: docstring for (name, docstring) in docs}
+        existing_items = domain_repo.tabulate(name__in=list(docs.keys()))
+
+        # TODO Avoid this loop by adding bulk methods to ixmp4's DocsRepos
+        for name, description in docs.items():
+            id = int(existing_items[existing_items["name"] == name]["id"].values[0])
+            domain_repo.docs.set(dimension_id=id, description=description)
+
+    def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
+        domain_repo = self._get_domain_repo(domain=domain)
+
+        if name is None:
+            existing_items = domain_repo.tabulate()
+            return {
+                str(
+                    existing_items[existing_items["id"] == doc.dimension__id][
+                        "name"
+                    ].values[0]
+                ): str(doc.description)
+                for doc in domain_repo.docs.list(
+                    dimension_id__in=existing_items["id"].astype(int)
+                )
+            }
+        else:
+            return domain_repo.docs.get(domain_repo.get(name=name).id).description
+
     # Handle optimization items
 
     @overload
@@ -661,7 +729,9 @@ class IXMP4Backend(CachingBackend):
     def _get_repo(self, s: Scenario, type: type[Equation]) -> "EquationRepository": ...
 
     @overload
-    def _get_repo(self, s: Scenario, type: type[Variable]) -> "VariableRepository": ...
+    def _get_repo(
+        self, s: Scenario, type: type[Variable]
+    ) -> "OptimizationVariableRepository": ...
 
     # NOTE Type hints here ensure the function body is checked
     def _get_repo(self, s: Scenario, type: type) -> "IXMP4Repository":
@@ -1644,9 +1714,6 @@ class IXMP4Backend(CachingBackend):
     # The below methods of base.Backend are not yet implemented
     def _ni(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
-
-    get_doc = _ni
-    set_doc = _ni
 
     # Handle geo data
     # NOTE While these functions are defined in the JDBC, they are not called by user

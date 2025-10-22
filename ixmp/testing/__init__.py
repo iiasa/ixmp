@@ -52,6 +52,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
+from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
 from ixmp.util.ixmp4 import is_ixmp4backend
 
@@ -186,19 +187,37 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
     if "ixmp4" in available():
         from sqlalchemy import create_engine, text
-        from sqlalchemy.exc import ProgrammingError
         from xdist import get_xdist_worker_id
 
         db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
 
-        try:
-            with create_engine(
-                "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
-                isolation_level="AUTOCOMMIT",
-            ).connect() as connection:
-                connection.execute(text(f"CREATE DATABASE {db_name}"))
-        except ProgrammingError:  # already exists, but can't provide match?
-            pass
+        engine = create_engine(
+            "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
+            isolation_level="AUTOCOMMIT",
+        )
+        with engine.connect() as connection:
+            connection.execute(text(f"CREATE DATABASE {db_name}"))
+
+        engine.dispose()
+
+
+def pytest_sessionfinish(
+    session: pytest.Session, exitstatus: int | pytest.ExitCode
+) -> None:
+    if "ixmp4" in available():
+        from sqlalchemy import create_engine, text
+        from xdist import get_xdist_worker_id
+
+        db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
+
+        engine = create_engine(
+            "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
+            isolation_level="AUTOCOMMIT",
+        )
+        with engine.connect() as connection:
+            connection.execute(text(f"DROP DATABASE {db_name}"))
+
+        engine.dispose()
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -618,11 +637,6 @@ def _platform_fixture(
         args = ["hsqldb"]
         kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
-        ### TODO
-        ###
-        ### Some tests may call the default DB: how would we communicate that this
-        # worker-specific DB is the default?
-
         args = []
         kwargs = dict(
             ixmp4_name=f"ixmp_test_{worker_id}",

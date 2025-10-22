@@ -724,8 +724,6 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
-# TODO Not yet implemented by IXMP4Backend
-@pytest.mark.jdbc
 def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
     # test model docs
@@ -743,10 +741,13 @@ def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
 
     # test bad domain
     ex = raises(ValueError, test_mp.set_doc, "baddomain", {})
-    exp = (
-        "No such domain: baddomain, existing domains: "
-        "scenario, model, region, metadata, timeseries"
+    existing_domains = (
+        "model, region, scenario, timeseries"
+        if is_ixmp4backend(test_mp._backend)
+        else "scenario, model, region, metadata, timeseries"
     )
+    exp = f"No such domain: baddomain, existing domains: {existing_domains}"
+
     assert ex.value.args[0] == exp
 
 

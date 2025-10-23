@@ -33,6 +33,8 @@ Migration notes
 All changes
 -----------
 
+- :mod:`ixmp` is tested and compatible with `Python 3.14 <https://www.python.org/downloads/release/python-3140/>`__ (:pull:`602`).
+- Support for Python 3.9 is dropped (:pull:`602`), as it has reached end-of-life.
 - Improve :class:`.IXMP4Backend` (:pull:`581`):
 
   - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).

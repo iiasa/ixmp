@@ -101,13 +101,23 @@ GHA = "GITHUB_ACTIONS" in os.environ
 _uname = platform.uname()
 
 #: Pytest marks for use throughout the test suite.
+#:
+#: - ``ixmp4#209``: https://github.com/iiasa/ixmp4/pull/209,
+#:   https://github.com/unionai-oss/pandera/pull/2158.
 MARK = {
+    "IXMP4Backend NI": pytest.mark.xfail(
+        reason="Not implemented on IXMP4Backend",
+    ),
+    "ixmp4#209": pytest.mark.xfail(
+        condition=platform.python_version_tuple() >= ("3", "14", "0"),
+        reason="ixmp4/pandera do not yet support Python 3.14",
+    ),
     "pytest#10843": pytest.mark.xfail(
         condition=GHA
         and _uname.system == "Windows"
         and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
         reason="https://github.com/pytest-dev/pytest/issues/10843",
-    )
+    ),
 }
 
 # Pytest hooks
@@ -180,10 +190,27 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "backend" in metafunc.fixturenames:
         import ixmp.backend
 
-        ba = ixmp.backend.available()
-        markers = set(m.name for m in metafunc.definition.iter_markers())
+        # All available backends
+        argvalues: list[Any] = sorted(ixmp.backend.available())
 
-        metafunc.parametrize("backend", sorted(set(ba) & markers) or ba, indirect=True)
+        # Names of markers applied to the test function
+        marker_names = set(m.name for m in metafunc.definition.iter_markers())
+
+        if "ixmp4" in argvalues:
+            if "ixmp4" in marker_names:
+                # This marker means "even though a parametrized fixture is used, this
+                # test should run only for IXMP4Backend"
+                argvalues.remove("jdbc")
+            elif "jdbc" in marker_names:
+                # This marker means "not (yet) implemented/supported on IXMP4"
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend NI"])
+
+            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
+
+        metafunc.parametrize("backend", argvalues, indirect=True)
 
 
 # Session-scoped fixtures

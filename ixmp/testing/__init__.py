@@ -248,6 +248,12 @@ def mp(test_mp: Platform) -> Generator[Platform, Any, None]:
 
 
 @pytest.fixture(scope="session")
+def refcount_offset() -> int:
+    """Offset for :func:`sys.getrefcount` return values, changed in Python 3.14."""
+    return 1 if platform.python_version_tuple() < ("3", "14") else 0
+
+
+@pytest.fixture(scope="session")
 def test_data_path() -> Path:
     """Path to the directory containing test data."""
     return Path(__file__).parents[1].joinpath("tests", "data")

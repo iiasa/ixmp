@@ -284,7 +284,7 @@ def test_add_timeslice_duplicate(
         test_mp.add_timeslice("foo_slice", "bar_category", 0.2)
 
 
-def test_weakref() -> None:
+def test_weakref(refcount_offset: int) -> None:
     """Weak references allow Platforms to be del'd while Scenarios live."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -293,14 +293,14 @@ def test_weakref() -> None:
     )
 
     # There is one reference to the Platform, and zero weak references
-    assert getrefcount(mp) - 1 == 1
+    assert getrefcount(mp) - refcount_offset == 1
     assert getweakrefcount(mp) == 0
 
     # Create a single Scenario
     s = ixmp.Scenario(mp, "foo", "bar", version="new")
 
     # Still one reference to the Platform
-    assert getrefcount(mp) - 1 == 1
+    assert getrefcount(mp) - refcount_offset == 1
     # …but additionally one weak reference
     assert getweakrefcount(mp) == 1
 
@@ -317,7 +317,7 @@ def test_weakref() -> None:
 
     # There is only one remaining reference to the backend: the *backend* name in the
     # local scope
-    assert getrefcount(backend) - 1 == 1
+    assert getrefcount(backend) - refcount_offset == 1
 
     # The backend is garbage-collected at this point
 

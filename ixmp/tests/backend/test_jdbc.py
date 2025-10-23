@@ -436,7 +436,7 @@ def test_verbose_exception(test_mp: "Platform", exception_verbose_true: None) ->
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-def test_del_ts(request: pytest.FixtureRequest) -> None:
+def test_del_ts(request: pytest.FixtureRequest, refcount_offset: int) -> None:
     mp = ixmp.Platform(
         backend="jdbc", driver="hsqldb", url=f"jdbc:hsqldb:mem:{request.node.name}"
     )
@@ -494,7 +494,7 @@ def test_del_ts(request: pytest.FixtureRequest) -> None:
         assert s_id not in map(id, backend.jindex)
 
         # s_jobj is the only remaining reference to the Java object
-        assert getrefcount(s_jobj) - 1 == 1
+        assert getrefcount(s_jobj) - refcount_offset == 1
         del s_jobj
 
     # Backend is again empty

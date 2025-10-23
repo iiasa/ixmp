@@ -20,9 +20,6 @@ from ixmp.testing import DATA, MARK, add_random_model_data, bool_param_id, make_
 from ixmp.testing.resource import memory_usage
 from ixmp.util.ixmp4 import is_ixmp4backend
 
-log = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -38,6 +35,9 @@ if TYPE_CHECKING:
         driver: str
         path: str
         url: str
+
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.flaky(
@@ -397,6 +397,7 @@ def test_init(
         ixmp.Platform(*args, **kwargs)  # type: ignore[misc]
 
 
+@pytest.mark.ixmp4_209
 def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
 
@@ -749,6 +750,7 @@ def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     assert ex.value.args[0] == exp
 
 
+@pytest.mark.ixmp4_209
 def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Removing set elements causes the cache to be cleared entirely."""
     scen = make_dantzig(test_mp, request=request)
@@ -768,6 +770,7 @@ def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> Non
     assert df.shape[0] < d0.shape[0]
 
 
+@pytest.mark.ixmp4_209
 def test_cat_set_elements(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scenario = ixmp.Scenario(
         test_mp,

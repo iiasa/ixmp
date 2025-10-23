@@ -56,6 +56,7 @@ def test_dict() -> dict[str, bool | float | int | str]:
     }
 
 
+@pytest.mark.ixmp4_209
 class TestScenario:
     """Tests of :class:`ixmp.Scenario`."""
 
@@ -146,8 +147,6 @@ class TestScenario:
         obs = scen2.set("h")
         npt.assert_array_equal(obs, ["test"])
 
-    # FIXME IXMP4Backend needs to handle change_scalar correctly
-    @pytest.mark.jdbc
     def test_clone_edit(self, scen: "Scenario") -> None:
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
@@ -236,8 +235,6 @@ class TestScenario:
         scen2.commit("adding a scalar 'g'")
 
     # Existence checks
-    # TODO IXMP4Backend doesn't handle scalars correctly yet
-    @pytest.mark.jdbc
     def test_has_par(self, scen: "Scenario") -> None:
         assert scen.has_par("f")
         assert not scen.has_par("m")
@@ -303,8 +300,6 @@ class TestScenario:
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
-    # TODO IXMP4Backend should support this, I think
-    @pytest.mark.jdbc
     def test_add_par2(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -357,8 +352,6 @@ class TestScenario:
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])
 
-    # FIXME IXMP4Backend is missing an item, likely the scalar f again
-    @pytest.mark.jdbc
     def test_iter_par_data(self, scen: "Scenario") -> None:
         # Iterator returns the expected parameter names
         exp = ["a", "b", "d", "f"]
@@ -382,15 +375,17 @@ class TestScenario:
 
         assert i == 1
 
-    # FIXME For test case 3, IXMP4Backend somehow also lists 'foo' (likely defined in
-    # the fixture); in test case 2 it's missing f (the scalar)
-    @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "item_type, indexed_by, exp",
         (
             (ixmp.ItemType.EQU, None, ["cost", "demand", "supply"]),
             (ixmp.ItemType.PAR, None, ["a", "b", "d", "f"]),
-            (ixmp.ItemType.SET, None, ["i", "j"]),
+            pytest.param(
+                ixmp.ItemType.SET,
+                None,
+                ["i", "j"],
+                marks=pytest.mark.xfail(reason="XFAIL for IXMP4Backend only"),
+            ),
             (ixmp.ItemType.VAR, None, ["x", "z"]),
             # With indexed_by=
             (ixmp.ItemType.EQU, "i", ["supply"]),
@@ -660,6 +655,7 @@ class TestScenario:
         assert scen.get_meta("new_attr") == "new_attr"
 
 
+@pytest.mark.ixmp4_209
 def test_range(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
@@ -675,6 +671,7 @@ def test_range(scen_empty: "Scenario") -> None:
     scen.add_par("new_par", ii, [1.2] * len(ii))
 
 
+@pytest.mark.ixmp4_209
 def test_gh_210(scen_empty: "Scenario") -> None:
     scen = scen_empty
     i = ["i0", "i1", "i2"]
@@ -798,6 +795,7 @@ def test_set(scen_empty: "Scenario") -> None:
     assert "h" not in scen.set_list()
 
 
+@pytest.mark.ixmp4_209
 def test_filter_str(scen_empty: "Scenario") -> None:
     scen = scen_empty
 

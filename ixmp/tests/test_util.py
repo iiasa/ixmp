@@ -63,6 +63,7 @@ def test_check_year() -> None:
     assert util.check_year(y3, s3) is True
 
 
+@pytest.mark.ixmp4_209
 def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() of identical Scenarios."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -79,6 +80,7 @@ def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> 
         assert exp_name == name and len(df) == N
 
 
+@pytest.mark.ixmp4_209
 def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the same items, but different data."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -141,6 +143,7 @@ def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
             pdt.assert_frame_equal(exp_d.iloc[[0, 3], :].reset_index(drop=True), df)
 
 
+@pytest.mark.ixmp4_209
 def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the different items."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -171,6 +174,7 @@ def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None
     assert {"b", "d"} == names
 
 
+@pytest.mark.ixmp4_209
 def test_discard_on_error(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -290,6 +294,7 @@ def test_parse_url(
     assert scenario_info == s
 
 
+@pytest.mark.ixmp4_209
 def test_format_scenario_list(test_mp_f: "Platform") -> None:
     # Use the function-scoped fixture for precise version numbers
     mp = test_mp_f

@@ -50,6 +50,7 @@ class TestIxmp4Functions:
         with pytest.raises(NotImplementedError):
             ixmp4_backend._ni()
 
+    @pytest.mark.ixmp4_209
     def test__get_repo(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         from ixmp4.core.optimization.equation import Equation, EquationRepository
         from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
@@ -72,6 +73,7 @@ class TestIxmp4Functions:
             repo = ixmp4_backend._get_repo(s=scenario, type=type)
             assert isinstance(repo, expected_repo)
 
+    @pytest.mark.ixmp4_209
     def test__find_item(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         from ixmp4.core.optimization.indexset import IndexSet
 
@@ -88,6 +90,7 @@ class TestIxmp4Functions:
         )
         assert (_type, name) == (type(return_item), return_item.name)
 
+    @pytest.mark.ixmp4_209
     def test__get_indexset_or_table(
         self, ixmp4_backend: Any, scenario: Scenario
     ) -> None:
@@ -100,6 +103,7 @@ class TestIxmp4Functions:
         table = ixmp4_backend._get_indexset_or_table(s=scenario, name=table_name)
         assert table.name == table_name
 
+    @pytest.mark.ixmp4_209
     def test__add_data_to_set(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Test adding to an Indexset and warning about `comment`
         indexset_name = "Indexset"
@@ -122,6 +126,7 @@ class TestIxmp4Functions:
             pd.DataFrame({indexset_name: [key]}),
         )
 
+    @pytest.mark.ixmp4_209
     def test__create_scalar(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Test creating a scalar with a comment
         name = "Scalar"
@@ -135,6 +140,7 @@ class TestIxmp4Functions:
         assert scalar.value == value
         assert scalar.docs == comment
 
+    @pytest.mark.ixmp4_209
     def test__add_data_to_parameter(
         self, ixmp4_backend: Any, scenario: Scenario
     ) -> None:
@@ -161,6 +167,7 @@ class TestIxmp4Functions:
             "units": [unit_name],
         }
 
+    @pytest.mark.ixmp4_209
     def test__get_set_data(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         indexset_name = "Indexset"
         scenario.init_set(name=indexset_name)
@@ -212,6 +219,7 @@ class TestIxmp4Functions:
         ]
         assert caplog.messages == expected
 
+    @pytest.mark.ixmp4_209
     def test_clone(
         self, ixmp4_backend: Any, caplog: pytest.LogCaptureFixture, scenario: Scenario
     ) -> None:
@@ -234,6 +242,7 @@ class TestIxmp4Functions:
         )
         assert expected in caplog.messages
 
+    @pytest.mark.ixmp4_209
     def test_clear_solution(
         self, ixmp4_backend: Any, caplog: pytest.LogCaptureFixture, scenario: Scenario
     ) -> None:
@@ -248,11 +257,13 @@ class TestIxmp4Functions:
         )
         assert expected in caplog.messages
 
+    @pytest.mark.ixmp4_209
     def test_run_id(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # NOTE Depending on what run_id() should actually fetch, this needs adapting
         # scenario sets up a new Run, which has version 1
         assert ixmp4_backend.run_id(ts=scenario) == 1
 
+    @pytest.mark.ixmp4_209
     def test_item_delete_elements(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Prepare some data
         run = ixmp4_backend.index[scenario]
@@ -279,6 +290,7 @@ class TestIxmp4Functions:
         assert isinstance(new_data, pd.DataFrame)
         assert new_data.empty
 
+    @pytest.mark.ixmp4_209
     def test_delete_item(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Create a 'set' to delete
         run = ixmp4_backend.index[scenario]
@@ -302,6 +314,7 @@ class TestIxmp4Functions:
                 path=Path("none.gdx"), item_type=ItemType.EQU, filters={}
             )
 
+    @pytest.mark.ixmp4_209
     def test_read_file(self, ixmp4_backend: Any, scenario: Scenario) -> None:
         # Test raising an error for unknown file extension
         with pytest.raises(NotImplementedError):

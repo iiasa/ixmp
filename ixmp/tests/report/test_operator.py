@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
 
 
+@pytest.mark.ixmp4_209
 def test_from_url(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     ts = make_dantzig(test_mp, request=request)
 

@@ -84,6 +84,7 @@ def assert_timeseries(
 # Fixtures
 
 
+@pytest.mark.ixmp4_209
 class TestTimeSeries:
     """Tests of :class:`.TimeSeries`.
 
@@ -202,9 +203,6 @@ class TestTimeSeries:
 
         assert 0 == len(ts.timeseries())
 
-    # FIXME IXMP4Backend seems to handle timeseries() incorrectly; the last call returns
-    # 0 rows
-    @pytest.mark.jdbc
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_get(self, ts: TimeSeries, format: str) -> None:
         data = DATA[0] if format == "long" else wide(DATA[0])
@@ -246,9 +244,6 @@ class TestTimeSeries:
         # NOTE Triggering this error on purpose
         ts.timeseries(year=year_arg)  # type: ignore[arg-type]
 
-    # FIXME IXMP4Backend seems to handle timeseries() incorrectly; the last call returns
-    # 0 rows
-    @pytest.mark.jdbc
     @pytest.mark.parametrize("format", ["long", "wide"])
     def test_edit(self, mp: "Platform", ts: TimeSeries, format: str) -> None:
         """Tests that data can be overwritten."""
@@ -483,8 +478,6 @@ class TestTimeSeries:
         ts.commit("")
         assert "Dropped extra column(s) ['climate_model'] from data" in caplog.messages
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_new_timeseries_as_iamc(self, test_mp: "Platform") -> None:
         # TODO rescue use of subannual= here
 

@@ -17,7 +17,10 @@ if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
     from ixmp.testing import Runner
 
-pytestmark = pytest.mark.usefixtures("parametrize_quantity_class")
+pytestmark = [
+    pytest.mark.ixmp4_209,
+    pytest.mark.usefixtures("parametrize_quantity_class"),
+]
 
 test_args = ("Douglas Adams", "Hitchhiker")
 

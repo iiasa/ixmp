@@ -95,6 +95,7 @@ def backend() -> Literal["ixmp4"]:
 # NOTE This marker usually parametrizes test creation, but with overriding `backend`,
 # this might not be necessary. Keeping it for clarity.
 @pytest.mark.ixmp4
+@pytest.mark.ixmp4_209
 class TestIxmp4IOFunctions:
     """Test group for all IO functions touching ixmp4 directly."""
 

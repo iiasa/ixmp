@@ -1253,16 +1253,15 @@ class JDBCBackend(CachingBackend):
             columns = []
 
             def _get(method: str, name: str, *args: Any) -> None:
-                java_array = getattr(item, f"get{method}")(*args, jList)
+                # NB [:] causes JPype to use a faster code path
+                java_array = getattr(item, f"get{method}")(*args, jList)[:]
 
                 # Use numpy buffer protocol for numeric types (much faster)
                 # String types must iterate element-by-element (JPype limitation)
                 if dtypes[name] in (float, int):
-                    columns.append(
-                        pd.Series(np.array(java_array), dtype=dtypes[name], name=name)
-                    )
-                else:
-                    columns.append(pd.Series(java_array, dtype=dtypes[name], name=name))
+                    java_array = np.array(java_array)
+
+                columns.append(pd.Series(java_array, dtype=dtypes[name], name=name))
 
             # Index columns
             for i, idx_name in enumerate(idx_names):

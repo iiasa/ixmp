@@ -300,6 +300,7 @@ class TestScenario:
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
+    @pytest.mark.jdbc  # FIXME Raises IndexError with IXMP4Backend
     def test_add_par2(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()

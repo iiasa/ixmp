@@ -9,10 +9,36 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 import pandas
+from ixmp4.core.optimization.equation import Equation, EquationRepository
+from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
+from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
+from ixmp4.core.optimization.table import Table, TableRepository
+from ixmp4.core.optimization.variable import Variable, VariableRepository
+from ixmp4.data.abstract.optimization.equation import (
+    EquationRepository as BEEquationRepository,
+)
+from ixmp4.data.abstract.optimization.indexset import (
+    IndexSetRepository as BEIndexSetRepository,
+)
+from ixmp4.data.abstract.optimization.parameter import (
+    ParameterRepository as BEParameterRepository,
+)
+from ixmp4.data.abstract.optimization.scalar import (
+    ScalarRepository as BEScalarRepository,
+)
+from ixmp4.data.abstract.optimization.table import (
+    TableRepository as BETableRepository,
+)
+from ixmp4.data.abstract.optimization.variable import (
+    VariableRepository as BEVariableRepository,
+)
 
 # Compatibility with Python 3.11 and earlier
 # TODO Use "from typing import NotRequired" when dropping support for Python 3.10
 # TODO Use "type x = ..." instead of TypeAlias when dropping support for Python 3.11
+# TODO Import this from typing when dropping Python 3.11
+# TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
 from typing_extensions import NotRequired, TypeAlias
 
 from ixmp.backend.common import ItemType
@@ -20,6 +46,37 @@ from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util.ixmp4 import ContainerData
 
+IXMP4BackendRepository = (
+    BEIndexSetRepository
+    | BEEquationRepository
+    | BEParameterRepository
+    | BEScalarRepository
+    | BETableRepository
+    | BEVariableRepository
+)
+
+IXMP4Repository = (
+    IndexSetRepository
+    | EquationRepository
+    | ParameterRepository
+    | ScalarRepository
+    | TableRepository
+    | VariableRepository
+)
+
+#: Instances of IXMP4 types that contain model/scenario data.
+IXMP4ModelData = Equation | IndexSet | Parameter | Scalar | Table | Variable
+
+#: Classes of `IXMP4ModelData`, i.e. references to the classes themselves and not
+#: particular instances.
+IXMP4ModelDataType = (
+    type[Equation]
+    | type[IndexSet]
+    | type[Parameter]
+    | type[Scalar]
+    | type[Table]
+    | type[Variable]
+)
 #: Filters arguments to many functions. Generally non-str elements are converted to
 #: str(). Since object.__str__() exists, any Python class has a string representation.
 Filters: TypeAlias = Mapping[str, Any | Sequence[Any]] | Mapping[str, Any] | None

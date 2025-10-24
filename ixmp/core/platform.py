@@ -153,10 +153,7 @@ class Platform:
         return self._backend.get_log_level()
 
     def scenario_list(
-        self,
-        default: bool = True,
-        model: str | None = None,
-        scen: str | None = None,
+        self, default: bool = True, model: str | None = None, scen: str | None = None
     ) -> pd.DataFrame:
         """Return information about TimeSeries and Scenarios on the Platform.
 

@@ -538,9 +538,7 @@ class Scenario(TimeSeries):
 
         # NOTE Convince type checker that all ItemType names are expected Literals
         assert item_type.name is not None
-        _type: Literal["set"] | Literal["par"] | Literal["equ"] | Literal["var"] = (
-            item_type.name.lower()  # type: ignore[assignment]
-        )
+        _type: Literal["set", "par", "equ", "var"] = item_type.name.lower()  # type: ignore [assignment]
         return self.platform._backend.init_item(self, _type, name, idx_sets, idx_names)
 
     #: Initialize a new equation. See :meth:`init_item`.

@@ -69,25 +69,15 @@ if TYPE_CHECKING:
 
     from ixmp.types import (
         Filters,
+        IXMP4BackendRepository,
+        IXMP4ModelData,
+        IXMP4ModelDataType,
+        IXMP4Repository,
         ParData,
         ReadKwargs,
         SetData,
         SolutionData,
         WriteKwargs,
-    )
-
-    #: Instances of IXMP4 types that contain model/scenario data.
-    IXMP4ModelData = Equation | IndexSet | Parameter | Scalar | Table | Variable
-
-    #: Classes of `IXMP4ModelData`, i.e. references to the classes themselves and not
-    #: particular instances.
-    IXMP4ModelDataType = (
-        type[Equation]
-        | type[IndexSet]
-        | type[Parameter]
-        | type[Scalar]
-        | type[Table]
-        | type[Variable]
     )
 
 
@@ -563,12 +553,7 @@ class IXMP4Backend(CachingBackend):
     def _get_repo(self, s: Scenario, type: type[Variable]) -> "VariableRepository": ...
 
     # NOTE Type hints here ensure the function body is checked
-    def _get_repo(
-        self, s: Scenario, type: type
-    ) -> (
-        "EquationRepository | IndexSetRepository | ParameterRepository"
-        " | ScalarRepository | TableRepository | VariableRepository"
-    ):
+    def _get_repo(self, s: Scenario, type: type) -> "IXMP4Repository":
         """Return the repository of items of `type` belonging to `s`."""
         match type:
             case scalar.Scalar:
@@ -617,12 +602,7 @@ class IXMP4Backend(CachingBackend):
     ) -> "BEVariableRepository": ...
 
     # NOTE Type hints here ensure the function body is checked
-    def _get_backend_repo(
-        self, s: Scenario, type: type
-    ) -> (
-        "BEEquationRepository | BEIndexSetRepository | BEParameterRepository"
-        " | BEScalarRepository | BETableRepository | BEVariableRepository"
-    ):
+    def _get_backend_repo(self, s: Scenario, type: type) -> "IXMP4BackendRepository":
         """Return the repository of items of `type` belonging to `s`."""
         match type:
             case scalar.Scalar:

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 import pytest
@@ -7,6 +7,9 @@ from gams.transfer import Container
 
 from ixmp.model.gams import gams_info
 from ixmp.util.ixmp4 import ContainerData
+
+if TYPE_CHECKING:
+    from ixmp4.core import Run
 
 
 @pytest.fixture
@@ -99,7 +102,7 @@ def backend() -> Literal["ixmp4"]:
 class TestIxmp4IOFunctions:
     """Test group for all IO functions touching ixmp4 directly."""
 
-    def test__domain(self, run: Any) -> None:
+    def test__domain(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _domain
 
         with run.transact("Test _domain"):
@@ -111,7 +114,7 @@ class TestIxmp4IOFunctions:
         assert _domain(indexset) is None
         assert _domain(table) == [indexset.name]
 
-    def test__records(self, run: Any) -> None:
+    def test__records(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _records
 
         run.backend.units.create("unit")
@@ -146,7 +149,7 @@ class TestIxmp4IOFunctions:
         expected.pop("units")
         assert _records(parameter) == expected
 
-    def test__ensure_correct_item_order(self, run: Any) -> None:
+    def test__ensure_correct_item_order(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _ensure_correct_item_order
 
         with run.transact("Test _ensure_correct_item_order"):
@@ -160,7 +163,7 @@ class TestIxmp4IOFunctions:
             repo=run.optimization.indexsets,
         ) == [years, nodes, type_years, type_nodes]
 
-    def test__align_records_and_domain(self, run: Any) -> None:
+    def test__align_records_and_domain(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _align_records_and_domain
 
         # Test item without domain order
@@ -189,7 +192,7 @@ class TestIxmp4IOFunctions:
 
         assert _align_records_and_domain(item=parameter, records=records) == expected
 
-    def test__convert_ixmp4_items_to_containerdata(self, run: Any) -> None:
+    def test__convert_ixmp4_items_to_containerdata(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _convert_ixmp4_items_to_containerdata
 
         # Test handling of empty list
@@ -217,7 +220,7 @@ class TestIxmp4IOFunctions:
         assert table.name == table_data.name
         assert table.data == table_data.records
 
-    def test_write_run_to_gdx(self, run: Any, tmp_path: Path) -> None:
+    def test_write_run_to_gdx(self, run: "Run", tmp_path: Path) -> None:
         from gams.transfer import Container
 
         from ixmp.backend.ixmp4_io import write_run_to_gdx
@@ -240,7 +243,7 @@ class TestIxmp4IOFunctions:
         assert len(container.data) == 1
         assert "ixmp_version" in container.data.keys()
 
-    def test__set_columns_to_read_from_records(self, run: Any) -> None:
+    def test__set_columns_to_read_from_records(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _set_columns_to_read_from_records
 
         default_columns = ["levels", "marginals"]
@@ -276,7 +279,7 @@ class TestIxmp4IOFunctions:
     # NOTE Keeping the read_equ()/read_var() tests separate because the read_*()
     # functions are separate
 
-    def test__read_variables_to_run(self, run: Any, container: Any) -> None:
+    def test__read_variables_to_run(self, run: "Run", container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_variables_to_run
 
         with run.transact("Test _read_variables_to_run"):
@@ -309,7 +312,7 @@ class TestIxmp4IOFunctions:
         )
         assert variable.data == expected
 
-    def test__read_equations_to_run(self, run: Any, container: Any) -> None:
+    def test__read_equations_to_run(self, run: "Run", container: Any) -> None:
         from ixmp.backend.ixmp4_io import _read_equations_to_run
 
         with run.transact("Test _read_equations_to_run"):
@@ -344,7 +347,7 @@ class TestIxmp4IOFunctions:
         )
         assert equation.data == expected
 
-    def test_read_gdx_to_run(self, run: Any, tmp_path: Path) -> None:
+    def test_read_gdx_to_run(self, run: "Run", tmp_path: Path) -> None:
         from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
         # NOTE Names without space to produce "valid GAMS names"

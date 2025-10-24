@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 from warnings import warn
 
 import pytest
@@ -15,9 +15,9 @@ nbformat = pytest.importorskip("nbformat")
 def run_notebook(
     nb_path: os.PathLike[str],
     tmp_path: Path,
-    env: Optional[os._Environ[str]] = None,
+    env: os._Environ[str] | None = None,
     *,
-    default_platform: Optional[str] = None,
+    default_platform: str | None = None,
     **kwargs: Any,
 ) -> tuple[NotebookNode, list[Any]]:
     """Execute a Jupyter notebook via :mod:`nbclient` and collect output.
@@ -120,7 +120,7 @@ def run_notebook(
 
 
 def get_cell_output(
-    nb: NotebookNode, name_or_index: Union[int, str], kind: str = "data"
+    nb: NotebookNode, name_or_index: int | str, kind: str = "data"
 ) -> Any:
     """Retrieve a cell from `nb` according to its metadata `name_or_index`:
 

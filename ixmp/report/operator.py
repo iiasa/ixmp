@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterable, Mapping
 from itertools import zip_longest
-from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 import genno
 import pandas as pd
@@ -29,7 +29,7 @@ def data_for_quantity(
     name: str,
     column: Literal["mrg", "lvl", "value"],
     scenario: "Scenario",
-    config: Mapping[str, Union[Mapping[str, Iterable[Any]], Iterable[str]]],
+    config: Mapping[str, Mapping[str, Iterable[Any]] | Iterable[str]],
 ) -> "AnyQuantity":
     """Retrieve data from `scenario`.
 
@@ -180,14 +180,11 @@ def from_url(url: str, cls: type["TimeSeries"] = TimeSeries) -> "TimeSeries":
 
 def get_ts(
     ts: "TimeSeries",
-    filters: Optional[
-        Union[
-            dict[str, Optional[Union[int, Sequence[int]]]],
-            dict[str, Optional[Union[str, Sequence[str]]]],
-        ]
-    ] = None,
+    filters: dict[str, int | Sequence[int] | None]
+    | dict[str, str | Sequence[str] | None]
+    | None = None,
     iamc: bool = False,
-    subannual: Union[bool, str] = "auto",
+    subannual: bool | str = "auto",
 ) -> pd.DataFrame:
     """Retrieve timeseries data from `ts`.
 
@@ -246,8 +243,8 @@ def map_as_qty(set_df: pd.DataFrame, full_set: Iterable[str]) -> "AnyQuantity":
 
 def remove_ts(
     ts: "TimeSeries",
-    data: Optional[pd.DataFrame] = None,
-    after: Optional[int] = None,
+    data: pd.DataFrame | None = None,
+    after: int | None = None,
 ) -> None:
     """Remove all time series data from `ts`.
 
@@ -289,7 +286,7 @@ def remove_ts(
 # NOTE Not sure why mypy can't import from pyam here
 def store_ts(  # type: ignore[no-any-unimported]
     scenario: "Scenario",
-    *data: Union[pd.DataFrame, "IamDataFrame"],
+    *data: "pd.DataFrame | IamDataFrame",
     strict: bool = False,
 ) -> None:
     """Store time series `data` on `scenario`.
@@ -336,7 +333,7 @@ def store_ts(  # type: ignore[no-any-unimported]
 
 def update_scenario(
     scenario: "Scenario",
-    *quantities: Union["Quantity", pd.DataFrame],
+    *quantities: "Quantity | pd.DataFrame",
     params: list[str] = [],
 ) -> None:
     """Update *scenario* with computed data from reporting *quantities*.

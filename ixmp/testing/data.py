@@ -2,7 +2,7 @@
 import sys
 from itertools import product
 from math import ceil
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import genno
 import numpy as np
@@ -182,7 +182,7 @@ def make_dantzig(
     mp: Platform,
     solve: bool = False,
     quiet: bool = False,
-    request: Optional["pytest.FixtureRequest"] = None,
+    request: "pytest.FixtureRequest | None" = None,
 ) -> Scenario:
     """Return :class:`ixmp.Scenario` of Dantzig's canning/transport problem.
 
@@ -319,7 +319,7 @@ def random_model_data(length: int) -> tuple[list[str], pd.DataFrame]:
     return set_data, par_data
 
 
-def random_ts_data(length: Union[float, int]) -> pd.DataFrame:
+def random_ts_data(length: float | int) -> pd.DataFrame:
     """A :class:`pandas.DataFrame` of time series data with `length` rows.
 
     Suitable for passage to :meth:`.TimeSeries.add_timeseries`.

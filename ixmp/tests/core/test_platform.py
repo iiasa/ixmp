@@ -5,7 +5,7 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -15,7 +15,8 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend.common import FIELDS
-from ixmp.testing import DATA, assert_logs, min_ixmp4_version, models
+from ixmp.testing import DATA, assert_logs, models
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.types import PlatformInitKwargs
@@ -32,16 +33,14 @@ class TestPlatform:
 
         # name="default" is used, referring to "local"
         mp = ixmp.Platform()
-        assert "local" == mp.name
+        assert ("ixmp4-local" if is_ixmp4backend(mp._backend) else "local") == mp.name
 
     # NOTE Can't use 'backend' due to duplicate parametrization
     @pytest.mark.parametrize(
         "_backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            pytest.param(
-                "ixmp4", dict(ixmp4_name="ixmp4-local"), marks=min_ixmp4_version
-            ),
+            ("ixmp4", dict(ixmp4_name="ixmp4-local")),
         ),
     )
     def test_init1(
@@ -55,6 +54,7 @@ class TestPlatform:
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
 
+    @pytest.mark.ixmp4_209
     def test_scenario_list(self, mp: ixmp.Platform) -> None:
         scenario = mp.scenario_list()
         assert isinstance(scenario, pd.DataFrame)
@@ -68,8 +68,6 @@ def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
     test_mp.set_log_level(tmp)
 
 
-# TODO Not sure why 'NOTSET' fails on IXMP4Backend
-@pytest.mark.jdbc
 @pytest.mark.parametrize(
     "level, exc",
     [
@@ -78,13 +76,17 @@ def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
         ("WARNING", None),
         ("INFO", None),
         ("DEBUG", None),
-        ("NOTSET", None),
+        pytest.param(
+            "NOTSET",
+            None,
+            marks=pytest.mark.xfail(reason="XFAIL for IXMP4Backend only"),
+        ),
         # An unknown string fails
         ("FOO", ValueError),
     ],
 )
 def test_log_level(
-    log_level_mp: ixmp.Platform, level: str, exc: Optional[type[ValueError]]
+    log_level_mp: ixmp.Platform, level: str, exc: type[ValueError] | None
 ) -> None:
     """Log level can be set and retrieved."""
     if exc is None:
@@ -95,6 +97,7 @@ def test_log_level(
             log_level_mp.set_log_level(level)
 
 
+@pytest.mark.ixmp4_209
 def test_scenario_list(mp: ixmp.Platform) -> None:
     scenario = mp.scenario_list(model="Douglas Adams")["scenario"]
     assert scenario[0] == "Hitchhiker"
@@ -102,6 +105,7 @@ def test_scenario_list(mp: ixmp.Platform) -> None:
 
 # TODO Not sure why this fails on IXMP4Backend
 @pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_export_timeseries_data(mp: ixmp.Platform, tmp_path: Path) -> None:
     path = tmp_path / "export.csv"
     mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
@@ -174,6 +178,7 @@ def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     assert expected == len(obs)
 
 
+@pytest.mark.ixmp4_209
 def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Dont export data if given models/scenarios do not have any runs."""
     path = tmp_path / "export.csv"
@@ -186,11 +191,13 @@ def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None
     assert 0 == len(pd.read_csv(path, index_col=False, header=0))
 
 
+@pytest.mark.ixmp4_209
 def test_unit_list(test_mp: ixmp.Platform) -> None:
     units = test_mp.units()
     assert ("cases" in units) is True
 
 
+@pytest.mark.ixmp4_209
 def test_add_unit(test_mp: ixmp.Platform) -> None:
     test_mp.add_unit("test", "just testing")
 
@@ -277,7 +284,7 @@ def test_add_timeslice_duplicate(
         test_mp.add_timeslice("foo_slice", "bar_category", 0.2)
 
 
-def test_weakref() -> None:
+def test_weakref(refcount_offset: int) -> None:
     """Weak references allow Platforms to be del'd while Scenarios live."""
     mp = ixmp.Platform(
         backend="jdbc",
@@ -286,14 +293,14 @@ def test_weakref() -> None:
     )
 
     # There is one reference to the Platform, and zero weak references
-    assert getrefcount(mp) - 1 == 1
+    assert getrefcount(mp) - refcount_offset == 1
     assert getweakrefcount(mp) == 0
 
     # Create a single Scenario
     s = ixmp.Scenario(mp, "foo", "bar", version="new")
 
     # Still one reference to the Platform
-    assert getrefcount(mp) - 1 == 1
+    assert getrefcount(mp) - refcount_offset == 1
     # …but additionally one weak reference
     assert getweakrefcount(mp) == 1
 
@@ -310,7 +317,7 @@ def test_weakref() -> None:
 
     # There is only one remaining reference to the backend: the *backend* name in the
     # local scope
-    assert getrefcount(backend) - 1 == 1
+    assert getrefcount(backend) - refcount_offset == 1
 
     # The backend is garbage-collected at this point
 
@@ -320,11 +327,13 @@ def test_weakref() -> None:
     # *s* is garbage-collected at this point
 
 
+@pytest.mark.ixmp4_209
 def test_add_model_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_model_name("new_model_name")
     assert "new_model_name" in test_mp.get_model_names()
 
 
+@pytest.mark.ixmp4_209
 def test_add_scenario_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_scenario_name("new_scenario_name")
     assert "new_scenario_name" in test_mp.get_scenario_names()

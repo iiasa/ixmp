@@ -5,7 +5,7 @@ from collections.abc import Generator
 from copy import copy
 from dataclasses import Field, asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ixmp.types import PlatformInitKwargs
@@ -43,7 +43,7 @@ def _iter_config_paths() -> Generator[tuple[str, Path], Any, None]:
     yield "default", Path.home().joinpath(".local", "share", "ixmp")
 
 
-def _locate(filename: Optional[str] = None) -> Path:
+def _locate(filename: str | None = None) -> Path:
     """Locate an existing director or `filename` in the ixmp configuration directory.
 
     If `filename` is :obj:`None` (the default), only directories are located.
@@ -63,7 +63,7 @@ def _locate(filename: Optional[str] = None) -> Path:
     )
 
 
-def _platform_default() -> dict[str, Union[str, "PlatformInitKwargs"]]:
+def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
     """Default values for the `platform` setting on BaseValues."""
     try:
         from ixmp.util.ixmp4 import configure_logging_and_warnings
@@ -100,7 +100,7 @@ def _platform_default() -> dict[str, Union[str, "PlatformInitKwargs"]]:
 class BaseValues:
     """Base class for storing configuration values."""
 
-    platform: dict[str, Union[str, "PlatformInitKwargs"]] = field(
+    platform: dict[str, "str | PlatformInitKwargs"] = field(
         default_factory=_platform_default
     )
 
@@ -173,7 +173,7 @@ class BaseValues:
 
     # Utilities
 
-    def get_field(self, name: str) -> Optional[Field[Any]]:
+    def get_field(self, name: str) -> Field[Any] | None:
         """For `name` = "field name", retrieve a field "field_name", if any."""
         for f in fields(self):
             if f.name in (name, name.replace(" ", "_")):
@@ -239,7 +239,7 @@ class Config:
     """
 
     #: Fully-resolved path of the ``config.json`` file.
-    path: Optional[Path] = None
+    path: Path | None = None
 
     #: Configuration values. These can be accessed using Python item access syntax, e.g.
     #: ``ixmp.config.values["platform"]["platform name"]…``.
@@ -297,7 +297,7 @@ class Config:
         return self.values.keys()
 
     def register(
-        self, name: str, type_: type, default: Optional[Any] = None, **kwargs: Any
+        self, name: str, type_: type, default: Any | None = None, **kwargs: Any
     ) -> None:
         """Register a new configuration key.
 
@@ -365,7 +365,7 @@ class Config:
         # Update the path attribute to match the written file
         self.path = path
 
-    def add_platform(self, name: str, *args: Union[str, Path], **kwargs: Any) -> None:
+    def add_platform(self, name: str, *args: str | Path, **kwargs: Any) -> None:
         """Add or overwrite information about a platform.
 
         Parameters
@@ -387,7 +387,7 @@ class Config:
         """
         if name == "default":
             assert len(args) == 1
-            info: Union[str, Path, dict[str, Any]] = args[0]
+            info: str | Path | dict[str, Any] = args[0]
 
             if info not in self.values["platform"]:
                 raise ValueError(f"Cannot set unknown {repr(info)} as default platform")

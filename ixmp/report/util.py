@@ -1,5 +1,5 @@
 from functools import lru_cache, partial
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 from genno import Key
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
 
 
-def dims_for_qty(data: Union[list[str], pd.DataFrame]) -> list[str]:
+def dims_for_qty(data: list[str] | pd.DataFrame) -> list[str]:
     """Return the list of dimensions for *data*.
 
     If *data* is a :class:`pandas.DataFrame`, its columns are processed;

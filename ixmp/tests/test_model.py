@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -34,9 +34,7 @@ def test_base_model() -> None:
         M1(name_="test")  # type: ignore[abstract]
 
 
-# FIXME IXMP4Backend doesn't handle scenario.change_scalar() correctly:
-# We can't just create() it, it might already exist, so then we need update()
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_model_initialize(
     test_mp: "Platform",
     caplog: pytest.LogCaptureFixture,
@@ -152,6 +150,7 @@ class TestGAMSModel:
         yield make_dantzig(test_mp, request=request)
 
     @pytest.mark.parametrize("char", r'<>"/\|?*')
+    @pytest.mark.ixmp4_209
     def test_filename_invalid_char(self, dantzig: Scenario, char: str) -> None:
         """Model can be solved with invalid character names."""
         name = f"foo{char}bar"
@@ -183,6 +182,7 @@ class TestGAMSModel:
         kwargs["quiet"] = True
         dantzig.clone().solve(**kwargs)
 
+    @pytest.mark.ixmp4_209
     def test_error_message(self, test_data_path: Path, test_mp: "Platform") -> None:
         """GAMSModel.solve() displays a user-friendly message on error."""
         # Empty Scenario
@@ -213,7 +213,7 @@ Input data: {}""".format(*paths),
         class Foo(GAMSModel):
             def __init__(
                 self,
-                name: Optional[str] = None,
+                name: str | None = None,
                 **model_options: Unpack["GamsModelInitKwargs"],
             ) -> None:
                 super().__init__(name, **model_options)

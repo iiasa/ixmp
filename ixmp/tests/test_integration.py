@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -120,7 +120,7 @@ def assert_multi_db(mp1: "Platform", mp2: "Platform") -> None:
     assert_frame_equal(scenario_list(mp1), scenario_list(mp2))
 
 
-def get_distance(scen: "Scenario") -> "pd.Series[Union[float, int]]":
+def get_distance(scen: "Scenario") -> "pd.Series[float | int]":
     d = scen.par("d")
     assert isinstance(d, pd.DataFrame)
     return d.set_index(["i", "j"]).loc[("san-diego", "topeka"), :]["value"]

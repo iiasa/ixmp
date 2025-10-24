@@ -21,8 +21,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    Optional,
-    Union,
     cast,
     overload,
 )
@@ -112,11 +110,11 @@ DRIVER_CLASS = {
 
 
 def _create_properties(
-    driver: Optional[str] = None,
-    path: Optional[Union[str, Path]] = None,
-    url: Optional[str] = None,
-    user: Optional[str] = None,
-    password: Optional[str] = None,
+    driver: str | None = None,
+    path: str | Path | None = None,
+    url: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
 ) -> Any:
     """Create a database Properties from arguments."""
     properties = java.Properties()
@@ -220,14 +218,14 @@ def _domain_enum(domain: str) -> str:
 
 
 @overload
-def _unwrap(v: list[Union[bool, float, str]]) -> list[Union[bool, float, str]]: ...
+def _unwrap(v: list[bool | float | str]) -> list[bool | float | str]: ...
 
 
 @overload
-def _unwrap(v: Union[bool, float, str]) -> Union[bool, float, str]: ...
+def _unwrap(v: bool | float | str) -> bool | float | str: ...
 
 
-def _unwrap(v: Any) -> Union[bool, float, str, list[Union[bool, float, str]]]:
+def _unwrap(v: Any) -> bool | float | str | list[bool | float | str]:
     """Unwrap meta numeric value or list of values (BigDecimal -> Double)."""
     if isinstance(v, java.BigDecimal):
         _v: float = v.doubleValue()
@@ -236,22 +234,22 @@ def _unwrap(v: Any) -> Union[bool, float, str, list[Union[bool, float, str]]]:
         return [_unwrap(elt) for elt in v]
     else:
         # NOTE In truth, this value might only be a compatible Java type
-        else_v: Union[bool, str] = v
+        else_v: bool | str = v
         return else_v
 
 
-def _wrap(value: Any) -> Union[bool, float, int, str, list[Union[bool, float, str]]]:
+def _wrap(value: Any) -> bool | float | int | str | list[bool | float | str]:
     if isinstance(value, (str, bool)):
         return value
     elif isinstance(value, (int, float)):
         # NOTE In truth, BigDecimal seems to return a Java type compatible with both
         # float and int
-        _value: Union[float, int] = java.BigDecimal(value)
+        _value: float | int = java.BigDecimal(value)
         return _value
     elif isinstance(value, (Sequence, Iterable)):
         jlist = java.ArrayList()
         jlist.addAll([_wrap(elt) for elt in value])
-        return cast(list[Union[bool, float, str]], jlist)
+        return cast(list[bool | float | str], jlist)
     else:
         raise ValueError(f"Cannot use value {value} as metadata")
 
@@ -304,19 +302,19 @@ class JDBCBackend(CachingBackend):
 
     #: Mapping from ixmp.TimeSeries object to the underlying at.ac.iiasa.ixmp.Scenario
     #: object (or subclasses of either).
-    jindex: MutableMapping[Union[TimeSeries, Scenario], jpype.JObject] = (  # type: ignore[no-any-unimported]
+    jindex: MutableMapping[TimeSeries | Scenario, jpype.JObject] = (  # type: ignore[no-any-unimported]
         WeakKeyDictionary()
     )
 
     def __init__(
         self,
-        jvmargs: Optional[Union[str, list[str]]] = None,
-        dbprops: Optional[os.PathLike[str]] = None,
+        jvmargs: str | list[str] | None = None,
+        dbprops: os.PathLike[str] | None = None,
         cache: bool = True,
-        log_level: Optional[Union[int, str]] = None,
+        log_level: int | str | None = None,
         **kwargs: Unpack["JDBCBackendInitKwargs"],
     ) -> None:
-        properties: Optional[Any] = None
+        properties: Any | None = None
 
         # Handle arguments
         if dbprops:
@@ -473,7 +471,7 @@ class JDBCBackend(CachingBackend):
 
         return info
 
-    def set_log_level(self, level: Union[int, str]) -> None:
+    def set_log_level(self, level: int | str) -> None:
         # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled by the
         # 'ixmp' logger; see ixmp/__init__.py.
         log.setLevel(level)
@@ -488,7 +486,7 @@ class JDBCBackend(CachingBackend):
         return levels.get(self.jobj.getLogLevel(), "UNKNOWN")
 
     def set_doc(
-        self, domain: str, docs: Union[dict[str, str], Iterable[tuple[str, str]]]
+        self, domain: str, docs: dict[str, str] | Iterable[tuple[str, str]]
     ) -> None:
         dd = _domain_enum(domain)
         jdata = java.LinkedHashMap()
@@ -498,9 +496,7 @@ class JDBCBackend(CachingBackend):
             jdata.put(str(k), str(v))
         self.jobj.setDoc(dd, jdata)
 
-    def get_doc(
-        self, domain: str, name: Optional[str] = None
-    ) -> Union[str, dict[str, str]]:
+    def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
         dd = _domain_enum(domain)
         if name is None:
             doc = self.jobj.getDoc(dd)
@@ -539,16 +535,16 @@ class JDBCBackend(CachingBackend):
     def set_node(
         self,
         name: str,
-        parent: Optional[str] = None,
-        hierarchy: Optional[str] = None,
-        synonym: Optional[str] = None,
+        parent: str | None = None,
+        hierarchy: str | None = None,
+        synonym: str | None = None,
     ) -> None:
         if parent and hierarchy and not synonym:
             self.jobj.addNode(name, parent, hierarchy)
         elif synonym and not (parent or hierarchy):
             self.jobj.addNodeSynonym(synonym, name)
 
-    def get_nodes(self) -> Generator[tuple[str, Optional[str], str, str]]:
+    def get_nodes(self) -> Generator[tuple[str, str | None, str, str]]:
         for r in self.jobj.listNodes("%"):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()
             yield (n, None, p, h)
@@ -577,8 +573,8 @@ class JDBCBackend(CachingBackend):
             yield str(scenario)
 
     def get_scenarios(
-        self, default: bool, model: Optional[str], scenario: Optional[str]
-    ) -> Generator[list[Union[bool, int, str]], Any, None]:
+        self, default: bool, model: str | None, scenario: str | None
+    ) -> Generator[list[bool | int | str], Any, None]:
         # List<Map<String, Object>>
         with _handle_jexception():
             scenarios = self.jobj.getScenarioList(default, model, scenario)
@@ -783,9 +779,9 @@ class JDBCBackend(CachingBackend):
 
     def _validate_meta_args(
         self,
-        model: Optional[str],
-        scenario: Optional[str],
-        version: Optional[Union[int, str]],
+        model: str | None,
+        scenario: str | None,
+        version: int | str | None,
     ) -> None:
         """Validate arguments for getting/setting/deleting meta"""
         valid = False
@@ -817,7 +813,7 @@ class JDBCBackend(CachingBackend):
         self._index_and_set_attrs(jobj, ts)
 
     def get(self, ts: TimeSeries) -> None:
-        args: list[Union[int, str]] = [ts.model, ts.scenario]
+        args: list[int | str] = [ts.model, ts.scenario]
         if ts.version is not None:
             # Load a TimeSeries of specific version
             args.append(ts.version)
@@ -872,7 +868,7 @@ class JDBCBackend(CachingBackend):
     def is_default(self, ts: TimeSeries) -> bool:
         return bool(self.jindex[ts].isDefault())
 
-    def last_update(self, ts: TimeSeries) -> Optional[str]:
+    def last_update(self, ts: TimeSeries) -> str | None:
         timestamp = self.jindex[ts].getLastUpdateTimestamp()
         if timestamp is not None:
             return cast(str, timestamp.toString())
@@ -893,7 +889,7 @@ class JDBCBackend(CachingBackend):
         region: Sequence[str],
         variable: Sequence[str],
         unit: Sequence[str],
-        year: Union[Sequence[int], Sequence[str]],
+        year: Sequence[int] | Sequence[str],
     ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         # Convert the selectors to Java lists
         r = to_jlist(region)
@@ -1042,9 +1038,9 @@ class JDBCBackend(CachingBackend):
         platform_dest: Platform,
         model: str,
         scenario: str,
-        annotation: Optional[str],
+        annotation: str | None,
         keep_solution: bool,
-        first_model_year: Optional[int] = None,
+        first_model_year: int | None = None,
     ) -> Scenario:
         # Raise exceptions for limitations of JDBCBackend
         if not isinstance(platform_dest._backend, self.__class__):
@@ -1090,7 +1086,7 @@ class JDBCBackend(CachingBackend):
         type: str,
         name: str,
         idx_sets: Sequence[str],
-        idx_names: Optional[Sequence[str]],
+        idx_names: Sequence[str] | None,
     ) -> None:
         # Check `idx_sets` against values hard-coded in ixmp_source
         try:
@@ -1172,7 +1168,7 @@ class JDBCBackend(CachingBackend):
     # FIXME reduce complexity 18 → ≤13
     def item_get_elements(  # noqa: C901
         self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
-    ) -> Union["SetData", "ParData", "SolutionData"]:
+    ) -> "SetData | ParData | SolutionData":
         if filters:
             # Convert filter elements to strings
             filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
@@ -1213,7 +1209,7 @@ class JDBCBackend(CachingBackend):
                 elements = idx_set.tolist()
 
                 # Filter for only included values and store
-                filtered_elements: Iterable[Union[float, int, str]] = filter(
+                filtered_elements: Iterable[float | int | str] = filter(
                     lambda e: e in values, elements
                 )
                 jFilter.put(idx_name, to_jlist(filtered_elements))
@@ -1222,14 +1218,14 @@ class JDBCBackend(CachingBackend):
         else:
             jList = item.getElements()
 
-        result: Union["SetData", "ParData", "SolutionData"]
+        result: "SetData" | "ParData" | "SolutionData"
 
         if item.getDim() > 0:
             # Mapping set or multi-dimensional equation, parameter, or variable
             columns = copy(idx_names)
 
             # Prepare dtypes for index columns
-            dtypes: dict[str, Union[type[float], type[int], type[str]]] = {}
+            dtypes: dict[str, type[float] | type[int] | type[str]] = {}
             for idx_name, idx_set in zip(columns, idx_sets):
                 # NB using categoricals could be more memory-efficient, but requires
                 #    adjustment of tests/documentation. See
@@ -1301,7 +1297,7 @@ class JDBCBackend(CachingBackend):
         s: Scenario,
         type: Literal["par", "set"],
         name: str,
-        elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
+        elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
         jobj = self._get_item(s, ITEM_CLASS[type](name))
 
@@ -1352,8 +1348,8 @@ class JDBCBackend(CachingBackend):
 
     def get_meta(
         self,
-        model: Optional[str] = None,
-        scenario: Optional[str] = None,
+        model: str | None = None,
+        scenario: str | None = None,
         version: "VersionType" = None,
         strict: bool = False,
     ) -> dict[str, Any]:
@@ -1368,10 +1364,10 @@ class JDBCBackend(CachingBackend):
 
     def set_meta(
         self,
-        meta: dict[str, Union[bool, float, int, str]],
-        model: Optional[str] = None,
-        scenario: Optional[str] = None,
-        version: Optional[int] = None,
+        meta: dict[str, bool | float | int | str],
+        model: str | None = None,
+        scenario: str | None = None,
+        version: int | None = None,
     ) -> None:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
@@ -1387,16 +1383,16 @@ class JDBCBackend(CachingBackend):
     def remove_meta(
         self,
         names: list[str],
-        model: Optional[str] = None,
-        scenario: Optional[str] = None,
-        version: Optional[int] = None,
+        model: str | None = None,
+        scenario: str | None = None,
+        version: int | None = None,
     ) -> None:
         self._validate_meta_args(model, scenario, version)
         if version is not None:
             version = java.Long(version)
         self.jobj.removeMeta(model, scenario, version, to_jlist(names))
 
-    def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
+    def clear_solution(self, s: Scenario, from_year: int | None = None) -> None:
         if from_year:
             if type(s) is not Scenario:
                 raise TypeError(
@@ -1422,7 +1418,7 @@ class JDBCBackend(CachingBackend):
         ms: Scenario,
         name: str,
         cat: str,
-        keys: Union[str, Sequence[str]],
+        keys: str | Sequence[str],
         is_unique: bool,
     ) -> None:
         self.jindex[ms].addCatEle(name, cat, to_jlist(keys), is_unique)
@@ -1454,7 +1450,7 @@ class JDBCBackend(CachingBackend):
                 _raise_jexception(e)
 
 
-def start_jvm(jvmargs: Optional[Union[str, list[str]]] = None) -> None:
+def start_jvm(jvmargs: str | list[str] | None = None) -> None:
     """Start the Java Virtual Machine via JPype_.
 
     Parameters
@@ -1533,8 +1529,8 @@ def to_pylist(jlist: Any) -> list[Any]:
 
 
 def to_jlist(
-    arg: Union[str, Iterable[Union[float, int, str]]],
-    convert: Optional[Callable[..., Any]] = None,
+    arg: str | Iterable[float | int | str],
+    convert: Callable[..., Any] | None = None,
 ) -> Any:
     """Convert :class:`list` *arg* to java.LinkedList.
 

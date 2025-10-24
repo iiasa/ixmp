@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
-
-# Compatibility with Python 3.9
-# TODO Import this from typing when Python 3.10 is the minimum supported
-from typing_extensions import TypeGuard
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
@@ -15,18 +11,17 @@ if TYPE_CHECKING:
 class ContainerData:
     name: str
     kind: Literal["IndexSet", "Table", "Scalar", "Parameter", "Equation", "Variable"]
-    records: Optional[
-        Union[
-            float,
-            list[int],
-            list[float],
-            list[str],
-            dict[str, Union[list[float], list[int], list[str]]],
-            pd.DataFrame,
-        ]
-    ]
-    domain: Optional[list[str]] = None
-    docs: Optional[str] = None
+    records: (
+        float
+        | list[int]
+        | list[float]
+        | list[str]
+        | dict[str, list[float] | list[int] | list[str]]
+        | pd.DataFrame
+        | None
+    )
+    domain: list[str] | None = None
+    docs: str | None = None
 
 
 def configure_logging_and_warnings() -> None:

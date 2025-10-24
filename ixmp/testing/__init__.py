@@ -36,13 +36,12 @@ import logging
 import os
 import platform
 import shutil
-import sys
 from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 import pint
 import pytest
@@ -53,6 +52,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
+from ixmp.backend.ixmp4 import IXMP4Backend
 
 from .data import (
     DATA,
@@ -68,6 +68,9 @@ from .data import (
 )
 from .jupyter import get_cell_output, run_notebook
 from .resource import resource_limit
+
+if TYPE_CHECKING:
+    from ixmp4.core import Run
 
 log = logging.getLogger(__name__)
 
@@ -98,19 +101,24 @@ GHA = "GITHUB_ACTIONS" in os.environ
 _uname = platform.uname()
 
 #: Pytest marks for use throughout the test suite.
+#:
+#: - ``ixmp4#209``: https://github.com/iiasa/ixmp4/pull/209,
+#:   https://github.com/unionai-oss/pandera/pull/2158.
 MARK = {
+    "IXMP4Backend NI": pytest.mark.xfail(
+        reason="Not implemented on IXMP4Backend",
+    ),
+    "ixmp4#209": pytest.mark.xfail(
+        condition=platform.python_version_tuple() >= ("3", "14", "0"),
+        reason="ixmp4/pandera do not yet support Python 3.14",
+    ),
     "pytest#10843": pytest.mark.xfail(
         condition=GHA
         and _uname.system == "Windows"
         and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
         reason="https://github.com/pytest-dev/pytest/issues/10843",
-    )
+    ),
 }
-
-# Provide a skip marker since ixmp4 is not published for Python 3.9
-min_ixmp4_version = pytest.mark.skipif(
-    sys.version_info < (3, 10), reason="ixmp4 requires Python 3.10 or higher"
-)
 
 # Pytest hooks
 
@@ -182,10 +190,27 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "backend" in metafunc.fixturenames:
         import ixmp.backend
 
-        ba = ixmp.backend.available()
-        markers = set(m.name for m in metafunc.definition.iter_markers())
+        # All available backends
+        argvalues: list[Any] = sorted(ixmp.backend.available())
 
-        metafunc.parametrize("backend", sorted(set(ba) & markers) or ba, indirect=True)
+        # Names of markers applied to the test function
+        marker_names = set(m.name for m in metafunc.definition.iter_markers())
+
+        if "ixmp4" in argvalues:
+            if "ixmp4" in marker_names:
+                # This marker means "even though a parametrized fixture is used, this
+                # test should run only for IXMP4Backend"
+                argvalues.remove("jdbc")
+            elif "jdbc" in marker_names:
+                # This marker means "not (yet) implemented/supported on IXMP4"
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend NI"])
+
+            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
+
+        metafunc.parametrize("backend", argvalues, indirect=True)
 
 
 # Session-scoped fixtures
@@ -223,6 +248,12 @@ def mp(test_mp: Platform) -> Generator[Platform, Any, None]:
 
 
 @pytest.fixture(scope="session")
+def refcount_offset() -> int:
+    """Offset for :func:`sys.getrefcount` return values, changed in Python 3.14."""
+    return 1 if platform.python_version_tuple() < ("3", "14") else 0
+
+
+@pytest.fixture(scope="session")
 def test_data_path() -> Path:
     """Path to the directory containing test data."""
     return Path(__file__).parents[1].joinpath("tests", "data")
@@ -234,6 +265,12 @@ def test_data_path() -> Path:
 def backend(request: pytest.FixtureRequest) -> Literal["ixmp4", "jdbc"]:
     # pytest_generate_tests() applies these marks, pytest always only registers Any
     return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(scope="module")
+def default_platform_name(backend: str) -> str:
+    """Name of the default platform according to the `backend`."""
+    return {"ixmp4": "ixmp4-local", "jdbc": "local"}[backend]
 
 
 @pytest.fixture(scope="module")
@@ -379,11 +416,8 @@ def test_mp_f(
     yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
 
 
-# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def ixmp4_backend(test_mp: Platform) -> Any:
-    from ixmp.backend.ixmp4 import IXMP4Backend
-
+def ixmp4_backend(test_mp: Platform) -> IXMP4Backend:
     assert isinstance(test_mp._backend, IXMP4Backend)
     return test_mp._backend
 
@@ -398,9 +432,8 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
     )
 
 
-# NOTE Generic type hint for Python 3.9 compliance
 @pytest.fixture
-def run(ixmp4_backend: Any, scenario: Scenario) -> Any:
+def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
     return ixmp4_backend.index[scenario]
 
 
@@ -410,8 +443,8 @@ def run(ixmp4_backend: Any, scenario: Scenario) -> Any:
 @contextmanager
 def assert_logs(
     caplog: pytest.LogCaptureFixture,
-    message_or_messages: Optional[Union[str, Iterable[str]]] = None,
-    at_level: Optional[int] = None,
+    message_or_messages: str | Iterable[str] | None = None,
+    at_level: int | None = None,
 ) -> Generator[None, Any, None]:
     """Assert that *message_or_messages* appear in logs.
 

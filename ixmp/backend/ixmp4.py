@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import ixmp4.conf
 import numpy as np
@@ -13,6 +13,14 @@ from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
 from ixmp4.core.exceptions import NotUnique, PlatformNotFound
+from ixmp4.core.optimization import (
+    equation,
+    indexset,
+    parameter,
+    scalar,
+    table,
+    variable,
+)
 from ixmp4.core.optimization.equation import Equation
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter
@@ -61,26 +69,16 @@ if TYPE_CHECKING:
 
     from ixmp.types import (
         Filters,
+        IXMP4BackendRepository,
+        IXMP4ModelData,
+        IXMP4ModelDataType,
+        IXMP4Repository,
         ParData,
         ReadKwargs,
         SetData,
         SolutionData,
         WriteKwargs,
     )
-
-    #: Instances of IXMP4 types that contain model/scenario data.
-    IXMP4ModelData = Union[Equation, IndexSet, Parameter, Scalar, Table, Variable]
-
-    #: Classes of `IXMP4ModelData`, i.e. references to the classes themselves and not
-    #: particular instances.
-    IXMP4ModelDataType = Union[
-        type[Equation],
-        type[IndexSet],
-        type[Parameter],
-        type[Scalar],
-        type[Table],
-        type[Variable],
-    ]
 
 
 log = logging.getLogger(__name__)
@@ -103,7 +101,7 @@ UNITS_NOT_SET = "_NOTSET"
 
 # TODO Reconcile this with `as_str_list()`
 def _convert_filters_values_to_lists(
-    filters: Mapping[str, Union[Any, Sequence[Any]]],
+    filters: Mapping[str, Any | Sequence[Any]],
 ) -> dict[str, list[Any]]:
     """Convert singular values in `filters` to lists."""
     result: dict[str, list[Any]] = {}
@@ -176,7 +174,7 @@ class Options:
     #: - Units: "???", "GWa", "USD/km", "USD/kWa", "cases", "kg", "km". Of these, only
     #:   "cases" and "km" are used by the :mod:`message_ix` tutorials.
     #: - Regions: "World", in hierarchy "common".
-    jdbc_compat: Union[bool, str] = False
+    jdbc_compat: bool | str = False
 
     def __post_init__(self) -> None:
         if not self.dsn:
@@ -267,7 +265,7 @@ class IXMP4Backend(CachingBackend):
         *,
         ixmp4_name: str,
         dsn: str = Options.dsn,
-        jdbc_compat: Union[bool, str] = Options.jdbc_compat,
+        jdbc_compat: bool | str = Options.jdbc_compat,
     ) -> None:
         from ixmp4.data.backend.test import SqliteTestBackend
 
@@ -356,8 +354,8 @@ class IXMP4Backend(CachingBackend):
             yield model.name
 
     def get_scenarios(
-        self, default: bool, model: Optional[str], scenario: Optional[str]
-    ) -> Generator[list[Union[bool, int, str]], Any, None]:
+        self, default: bool, model: str | None, scenario: str | None
+    ) -> Generator[list[bool | int | str], Any, None]:
         runs = self._platform.runs.list(
             default_only=default,
             model={"name": model} if model else None,
@@ -396,9 +394,9 @@ class IXMP4Backend(CachingBackend):
     def set_node(
         self,
         name: str,
-        parent: Optional[str] = None,
-        hierarchy: Optional[str] = None,
-        synonym: Optional[str] = None,
+        parent: str | None = None,
+        hierarchy: str | None = None,
+        synonym: str | None = None,
     ) -> None:
         if parent:
             log.warning(f"Discarding parent parameter {parent}; unused in ixmp4.")
@@ -455,9 +453,9 @@ class IXMP4Backend(CachingBackend):
         platform_dest: Platform,
         model: str,
         scenario: str,
-        annotation: Optional[str],
+        annotation: str | None,
         keep_solution: bool,
-        first_model_year: Optional[int] = None,
+        first_model_year: int | None = None,
     ) -> Scenario:
         # TODO either do log.warning that annotation is unused or
         # run.docs = annotation
@@ -503,7 +501,7 @@ class IXMP4Backend(CachingBackend):
             "ixmp4 backed Scenarios/Runs are changed immediately, no need for a commit",
         )
 
-    def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
+    def clear_solution(self, s: Scenario, from_year: int | None = None) -> None:
         if from_year:
             log.warning(
                 "ixmp4 does not support removing the solution only after a certain year"
@@ -555,29 +553,23 @@ class IXMP4Backend(CachingBackend):
     def _get_repo(self, s: Scenario, type: type[Variable]) -> "VariableRepository": ...
 
     # NOTE Type hints here ensure the function body is checked
-    def _get_repo(
-        self, s: Scenario, type: type
-    ) -> Union[
-        "EquationRepository",
-        "IndexSetRepository",
-        "ParameterRepository",
-        "ScalarRepository",
-        "TableRepository",
-        "VariableRepository",
-    ]:
+    def _get_repo(self, s: Scenario, type: type) -> "IXMP4Repository":
         """Return the repository of items of `type` belonging to `s`."""
-        if type is Scalar:
-            return self.index[s].optimization.scalars
-        elif type is IndexSet:
-            return self.index[s].optimization.indexsets
-        elif type is Table:
-            return self.index[s].optimization.tables
-        elif type is Parameter:
-            return self.index[s].optimization.parameters
-        elif type is Equation:
-            return self.index[s].optimization.equations
-        else:  # variable
-            return self.index[s].optimization.variables
+        match type:
+            case scalar.Scalar:
+                return self.index[s].optimization.scalars
+            case indexset.IndexSet:
+                return self.index[s].optimization.indexsets
+            case table.Table:
+                return self.index[s].optimization.tables
+            case parameter.Parameter:
+                return self.index[s].optimization.parameters
+            case equation.Equation:
+                return self.index[s].optimization.equations
+            case variable.Variable:
+                return self.index[s].optimization.variables
+            case _:  # pragma: no cover
+                raise RuntimeError(type)
 
     @overload
     def _get_backend_repo(
@@ -610,29 +602,23 @@ class IXMP4Backend(CachingBackend):
     ) -> "BEVariableRepository": ...
 
     # NOTE Type hints here ensure the function body is checked
-    def _get_backend_repo(
-        self, s: Scenario, type: type
-    ) -> Union[
-        "BEEquationRepository",
-        "BEIndexSetRepository",
-        "BEParameterRepository",
-        "BEScalarRepository",
-        "BETableRepository",
-        "BEVariableRepository",
-    ]:
+    def _get_backend_repo(self, s: Scenario, type: type) -> "IXMP4BackendRepository":
         """Return the repository of items of `type` belonging to `s`."""
-        if type is Scalar:
-            return self.index[s].backend.optimization.scalars
-        elif type is IndexSet:
-            return self.index[s].backend.optimization.indexsets
-        elif type is Table:
-            return self.index[s].backend.optimization.tables
-        elif type is Parameter:
-            return self.index[s].backend.optimization.parameters
-        elif type is Equation:
-            return self.index[s].backend.optimization.equations
-        else:  # variable
-            return self.index[s].backend.optimization.variables
+        match type:
+            case scalar.Scalar:
+                return self.index[s].backend.optimization.scalars
+            case indexset.IndexSet:
+                return self.index[s].backend.optimization.indexsets
+            case table.Table:
+                return self.index[s].backend.optimization.tables
+            case parameter.Parameter:
+                return self.index[s].backend.optimization.parameters
+            case equation.Equation:
+                return self.index[s].backend.optimization.equations
+            case variable.Variable:
+                return self.index[s].backend.optimization.variables
+            case _:  # pragma: no cover
+                raise RuntimeError(type)
 
     def init_item(
         self,
@@ -640,7 +626,7 @@ class IXMP4Backend(CachingBackend):
         type: str,
         name: str,
         idx_sets: Sequence[str],
-        idx_names: Optional[Sequence[str]],
+        idx_names: Sequence[str] | None,
     ) -> None:
         # Identify an IXMP4 model data type. If the item has dimensions, the final (or
         # only) element of a CLASS_FOR_IX_TYPE entry. If dimensionless, then the first
@@ -720,9 +706,7 @@ class IXMP4Backend(CachingBackend):
 
         raise KeyError(f"No item named {name!r} in this Scenario")
 
-    def _get_indexset_or_table(
-        self, s: Scenario, name: str
-    ) -> Union["IndexSet", "Table"]:
+    def _get_indexset_or_table(self, s: Scenario, name: str) -> "IndexSet | Table":
         """Get `name` from Scenario `s`.
 
         Try first if `name` is an IndexSet. Get it as a Table if it isn't.
@@ -765,8 +749,8 @@ class IXMP4Backend(CachingBackend):
         self,
         s: Scenario,
         name: str,
-        key: Union[str, list[str]],
-        comment: Optional[str] = None,
+        key: str | list[str],
+        comment: str | None = None,
     ) -> None:
         """Add data `key` to `name` in Scenario `s`.
 
@@ -821,8 +805,8 @@ class IXMP4Backend(CachingBackend):
         s: Scenario,
         name: str,
         value: float,
-        unit: Optional[str],
-        comment: Optional[str] = None,
+        unit: str | None,
+        comment: str | None = None,
     ) -> None:
         """Create the Scalar `name` in Scenario `s`.
 
@@ -855,10 +839,10 @@ class IXMP4Backend(CachingBackend):
         self,
         s: Scenario,
         name: str,
-        key: Union[str, list[str]],
+        key: str | list[str],
         value: float,
         unit: str,
-        comment: Optional[str] = None,
+        comment: str | None = None,
     ) -> None:
         """Add data `key` to the Parameter `name` in Scenario `s`.
 
@@ -887,7 +871,7 @@ class IXMP4Backend(CachingBackend):
             key = [key]
 
         keys = parameter.column_names or parameter.indexset_names
-        data_to_add: dict[str, Union[list[float], list[str]]] = {
+        data_to_add: dict[str, list[float] | list[str]] = {
             keys[i]: [key[i]] for i in range(len(key))
         }
         data_to_add["values"] = [value]
@@ -902,7 +886,7 @@ class IXMP4Backend(CachingBackend):
         s: Scenario,
         type: Literal["par", "set"],
         name: str,
-        elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
+        elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
         for key, value, unit, comment in elements:
             if type == "set":
@@ -934,8 +918,8 @@ class IXMP4Backend(CachingBackend):
         self,
         s: Scenario,
         name: str,
-        filters: Optional[dict[str, list[Any]]] = None,
-    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]:
+        filters: dict[str, list[Any]] | None = None,
+    ) -> "pd.Series[float | int | str] | pd.DataFrame":
         """Get the data stored in `name` in `s`.
 
         Parameters
@@ -983,9 +967,9 @@ class IXMP4Backend(CachingBackend):
 
     def item_get_elements(
         self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
-    ) -> Union["SetData", "ParData", "SolutionData"]:
+    ) -> "SetData | ParData | SolutionData":
         if ix_type == "set":
-            clean_filters: Optional[dict[str, list[Any]]] = None
+            clean_filters: dict[str, list[Any]] | None = None
             if filters:
                 clean_filters = _convert_filters_values_to_lists(filters=filters)
             return self._get_set_data(s=s, name=name, filters=clean_filters)
@@ -1078,7 +1062,7 @@ class IXMP4Backend(CachingBackend):
         ms: Scenario,
         name: str,
         cat: str,
-        keys: Union[str, Sequence[str]],
+        keys: str | Sequence[str],
         is_unique: bool,
     ) -> None:
         """Add data to a category mapping.
@@ -1103,7 +1087,7 @@ class IXMP4Backend(CachingBackend):
             - The Backend **must** remove any existing member of `cat`, so that it has
               only one element.
         """
-        column_name: Optional[str] = None
+        column_name: str | None = None
 
         run = self.index[ms]
 
@@ -1135,7 +1119,7 @@ class IXMP4Backend(CachingBackend):
         # Get or create the 'type_name' indexset and 'cat_name' table
         # NOTE _backend functions allow avoiding the run.lock requirement, but return a
         # slightly different model type, but the differences are irrelevant here
-        category_indexset: Union[IndexSet, "BEIndexSet"]
+        category_indexset: IndexSet | "BEIndexSet"
         try:
             category_indexset = run.optimization.indexsets.get(name=f"type_{name}")
         except IndexSet.NotFound:
@@ -1143,7 +1127,7 @@ class IXMP4Backend(CachingBackend):
                 run_id=run.id, name=f"type_{name}"
             )
 
-        category_table: Union[Table, "BETable"]
+        category_table: Table | "BETable"
         try:
             category_table = run.optimization.tables.get(name=f"cat_{name}")
         except Table.NotFound:
@@ -1257,7 +1241,7 @@ class IXMP4Backend(CachingBackend):
         region: Sequence[str],
         variable: Sequence[str],
         unit: Sequence[str],
-        year: Union[Sequence[int], Sequence[str]],
+        year: Sequence[int] | Sequence[str],
     ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         data = self.index[ts].iamc.tabulate(
             region={"name__in": region} if len(region) else None,

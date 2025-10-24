@@ -2,7 +2,7 @@
 
 import logging
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -63,6 +63,7 @@ def test_check_year() -> None:
     assert util.check_year(y3, s3) is True
 
 
+@pytest.mark.ixmp4_209
 def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() of identical Scenarios."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -79,6 +80,7 @@ def test_diff_identical(test_mp: "Platform", request: pytest.FixtureRequest) -> 
         assert exp_name == name and len(df) == N
 
 
+@pytest.mark.ixmp4_209
 def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the same items, but different data."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -141,6 +143,7 @@ def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
             pdt.assert_frame_equal(exp_d.iloc[[0, 3], :].reset_index(drop=True), df)
 
 
+@pytest.mark.ixmp4_209
 def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """diff() when Scenarios contain the different items."""
     scen_a = make_dantzig(test_mp, request=request)
@@ -171,6 +174,7 @@ def test_diff_items(test_mp: "Platform", request: pytest.FixtureRequest) -> None
     assert {"b", "d"} == names
 
 
+@pytest.mark.ixmp4_209
 def test_discard_on_error(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -240,7 +244,7 @@ def test_logger_deprecated() -> None:
 
 m_s: "TimeSeriesIdentifiers" = dict(model="m", scenario="s")
 
-URLS: list[tuple[str, Optional[dict[str, str]], Optional["TimeSeriesIdentifiers"]]] = [
+URLS: list[tuple[str, dict[str, str] | None, "TimeSeriesIdentifiers | None"]] = [
     ("ixmp://example/m/s", dict(name="example"), m_s),
     (
         "ixmp://example/m/s#42",
@@ -281,7 +285,7 @@ URLS: list[tuple[str, Optional[dict[str, str]], Optional["TimeSeriesIdentifiers"
 
 @pytest.mark.parametrize("url, p, s", URLS)
 def test_parse_url(
-    url: str, p: Optional[dict[str, str]], s: Optional["TimeSeriesIdentifiers"]
+    url: str, p: dict[str, str] | None, s: "TimeSeriesIdentifiers | None"
 ) -> None:
     platform_info, scenario_info = util.parse_url(url)
 
@@ -290,6 +294,7 @@ def test_parse_url(
     assert scenario_info == s
 
 
+@pytest.mark.ixmp4_209
 def test_format_scenario_list(test_mp_f: "Platform") -> None:
     # Use the function-scoped fixture for precise version numbers
     mp = test_mp_f

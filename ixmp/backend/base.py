@@ -14,7 +14,7 @@ from collections.abc import (
 )
 from copy import copy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 # Compatibility with Python 3.11
 # TODO Use "from typing import Unpack" when dropping support for Python 3.11
@@ -126,7 +126,7 @@ class Backend(ABC):
 
     @abstractmethod
     def set_doc(
-        self, domain: str, docs: Union[dict[str, str], Iterable[tuple[str, str]]]
+        self, domain: str, docs: dict[str, str] | Iterable[tuple[str, str]]
     ) -> None:
         """Save documentation to database
 
@@ -140,9 +140,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_doc(
-        self, domain: str, name: Optional[str] = None
-    ) -> Union[str, dict[str, str]]:
+    def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
         """Read documentation from database
 
         Parameters
@@ -203,9 +201,9 @@ class Backend(ABC):
     def set_node(
         self,
         name: str,
-        parent: Optional[str] = None,
-        hierarchy: Optional[str] = None,
-        synonym: Optional[str] = None,
+        parent: str | None = None,
+        hierarchy: str | None = None,
+        synonym: str | None = None,
     ) -> None:
         """Add a node name to the Platform.
 
@@ -233,7 +231,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def get_nodes(self) -> Iterable[tuple[str, Optional[str], Optional[str], str]]:
+    def get_nodes(self) -> Iterable[tuple[str, str | None, str | None, str]]:
         """Iterate over all nodes stored on the Platform.
 
         Yields
@@ -338,8 +336,8 @@ class Backend(ABC):
 
     @abstractmethod
     def get_scenarios(
-        self, default: bool, model: Optional[str], scenario: Optional[str]
-    ) -> Generator[list[Union[bool, int, str]], Any, None]:
+        self, default: bool, model: str | None, scenario: str | None
+    ) -> Generator[list[bool | int | str], Any, None]:
         """Iterate over TimeSeries stored on the Platform.
 
         Scenarios, as subclasses of TimeSeries, are also included.
@@ -634,7 +632,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def last_update(self, ts: TimeSeries) -> Optional[str]:
+    def last_update(self, ts: TimeSeries) -> str | None:
         """Return the date of the last modification of the `ts`, if any."""
 
     @abstractmethod
@@ -647,14 +645,14 @@ class Backend(ABC):
     @staticmethod
     def _handle_rw_filters(
         filters: "WriteFilters",
-    ) -> tuple[Optional[TimeSeries], "WriteFilters"]:
+    ) -> tuple[TimeSeries | None, "WriteFilters"]:
         """Helper for :meth:`read_file` and :meth:`write_file`.
 
         The `filters` argument is unpacked if the 'scenarios' key is a single
         :class:`.TimeSeries` object. A 2-tuple is returned of the object (or
         :obj:`None`) and the remaining filters.
         """
-        ts: Optional[TimeSeries] = None
+        ts: TimeSeries | None = None
         filters = copy(filters)
         try:
             if isinstance(filters["scenario"], TimeSeries):
@@ -671,7 +669,7 @@ class Backend(ABC):
         region: Sequence[str],
         variable: Sequence[str],
         unit: Sequence[str],
-        year: Union[Sequence[int], Sequence[str]],
+        year: Sequence[int] | Sequence[str],
     ) -> Generator[tuple[str, str, str, int, float], Any, None]:
         """Retrieve time series data.
 
@@ -849,9 +847,9 @@ class Backend(ABC):
         platform_dest: Platform,
         model: str,
         scenario: str,
-        annotation: Optional[str],
+        annotation: str | None,
         keep_solution: bool,
-        first_model_year: Optional[int] = None,
+        first_model_year: int | None = None,
     ) -> Scenario:
         """Clone `s`.
 
@@ -902,7 +900,7 @@ class Backend(ABC):
         type: str,
         name: str,
         idx_sets: Sequence[str],
-        idx_names: Optional[Sequence[str]],
+        idx_names: Sequence[str] | None,
     ) -> None:
         """Initialize an item `name` of `type`.
 
@@ -976,7 +974,7 @@ class Backend(ABC):
     @abstractmethod
     def item_get_elements(
         self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
-    ) -> Union["SetData", "ParData", "SolutionData"]:
+    ) -> "SetData | ParData | SolutionData":
         """Return elements of item `name`.
 
         Parameters
@@ -1020,7 +1018,7 @@ class Backend(ABC):
         s: Scenario,
         type: Literal["par", "set"],
         name: str,
-        elements: Iterable[tuple[Any, Optional[float], Optional[str], Optional[str]]],
+        elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
         """Add keys or values to item `name`.
 
@@ -1088,9 +1086,9 @@ class Backend(ABC):
     @abstractmethod
     def get_meta(
         self,
-        model: Optional[str],
-        scenario: Optional[str],
-        version: Optional[int],
+        model: str | None,
+        scenario: str | None,
+        version: int | None,
         strict: bool = False,
     ) -> dict[str, Any]:
         """Retrieve all metadata attached to a specific target.
@@ -1133,10 +1131,10 @@ class Backend(ABC):
     @abstractmethod
     def set_meta(
         self,
-        meta: dict[str, Union[bool, float, int, str]],
-        model: Optional[str],
-        scenario: Optional[str],
-        version: Optional[int],
+        meta: dict[str, bool | float | int | str],
+        model: str | None,
+        scenario: str | None,
+        version: int | None,
     ) -> None:
         """Set metadata on a target.
 
@@ -1165,9 +1163,9 @@ class Backend(ABC):
     def remove_meta(
         self,
         names: list[str],
-        model: Optional[str],
-        scenario: Optional[str],
-        version: Optional[int],
+        model: str | None,
+        scenario: str | None,
+        version: int | None,
     ) -> None:
         """Remove metadata attached to a target.
 
@@ -1193,7 +1191,7 @@ class Backend(ABC):
         """
 
     @abstractmethod
-    def clear_solution(self, s: Scenario, from_year: Optional[int] = None) -> None:
+    def clear_solution(self, s: Scenario, from_year: int | None = None) -> None:
         """Remove data associated with a model solution.
 
         .. todo:: Document.
@@ -1239,7 +1237,7 @@ class Backend(ABC):
         ms: Scenario,
         name: str,
         cat: str,
-        keys: Union[str, Sequence[str]],
+        keys: str | Sequence[str],
         is_unique: bool,
     ) -> None:
         """Add elements to category mapping.
@@ -1270,7 +1268,7 @@ class CachingBackend(Backend):
     #: Cache of values. Keys are given by :meth:`_cache_key`; values depend on the
     #: subclass' usage of the cache.
     _cache: MutableMapping[
-        tuple[Hashable, ...], Union["SetData", "ParData", "SolutionData"]
+        tuple[Hashable, ...], "SetData | ParData | SolutionData"
     ] = {}
 
     #: Count of number of times a value was retrieved from cache successfully
@@ -1298,9 +1296,9 @@ class CachingBackend(Backend):
     def _cache_key(
         self,
         ts: TimeSeries,
-        ix_type: Optional[str],
-        name: Optional[str],
-        filters: Optional[Mapping[str, Iterable[Any]]] = None,
+        ix_type: str | None,
+        name: str | None,
+        filters: Mapping[str, Iterable[Any]] | None = None,
     ) -> tuple[Hashable, ...]:
         """Return a hashable cache key.
 
@@ -1321,7 +1319,7 @@ class CachingBackend(Backend):
 
     def cache_get(
         self, ts: TimeSeries, ix_type: str, name: str, filters: "Filters"
-    ) -> Union["SetData", "ParData", "SolutionData"]:
+    ) -> "SetData | ParData | SolutionData":
         """Retrieve value from cache.
 
         The value in :attr:`_cache` is copied to avoid cached values being modified by
@@ -1346,7 +1344,7 @@ class CachingBackend(Backend):
         ix_type: str,
         name: str,
         filters: "Filters",
-        value: Union["SetData", "ParData", "SolutionData"],
+        value: "SetData | ParData | SolutionData",
     ) -> bool:
         """Store `value` in cache.
 
@@ -1370,9 +1368,9 @@ class CachingBackend(Backend):
     def cache_invalidate(
         self,
         ts: TimeSeries,
-        ix_type: Optional[str] = None,
-        name: Optional[str] = None,
-        filters: Optional[Mapping[str, Iterable[Any]]] = None,
+        ix_type: str | None = None,
+        name: str | None = None,
+        filters: Mapping[str, Iterable[Any]] | None = None,
     ) -> None:
         """Invalidate cached values.
 

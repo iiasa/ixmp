@@ -10,7 +10,7 @@ from importlib.util import find_spec
 from itertools import chain, repeat
 from pathlib import Path
 from types import ModuleType
-from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import IO, TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -82,10 +82,8 @@ def logger() -> logging.Logger:
 
 
 def as_str_list(
-    arg: Optional[
-        Union[int, str, tuple[object, ...], Mapping[str, Any], Iterable[object]]
-    ],
-    idx_names: Optional[Iterable[str]] = None,
+    arg: int | str | tuple[object, ...] | Mapping[str, Any] | Iterable[object] | None,
+    idx_names: Iterable[str] | None = None,
 ) -> list[str]:
     """Convert various `arg` to list of str.
 
@@ -119,9 +117,7 @@ def isscalar(x: object) -> bool:
     return np.isscalar(x)
 
 
-def check_year(
-    y: Optional[int], s: Optional[Union[int, str]]
-) -> Optional[Literal[True]]:
+def check_year(y: int | None, s: int | str | None) -> Literal[True] | None:
     """Returns True if y is an int, raises an error if y is not None"""
     if y is not None:
         if not isinstance(y, int):
@@ -246,7 +242,7 @@ def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
         raise
 
 
-def maybe_check_out(timeseries: "TimeSeries", state: Optional[bool] = None) -> bool:
+def maybe_check_out(timeseries: "TimeSeries", state: bool | None = None) -> bool:
     """Check out `timeseries` depending on `state`.
 
     If `state` is :obj:`None`, then :meth:`.TimeSeries.check_out` is called.
@@ -313,7 +309,7 @@ def maybe_commit(timeseries: "TimeSeries", condition: bool, message: str) -> boo
         return True
 
 
-def maybe_convert_scalar(obj: Union["ParData"]) -> pd.DataFrame:
+def maybe_convert_scalar(obj: "ParData") -> pd.DataFrame:
     """Convert `obj` to :class:`pandas.DataFrame`.
 
     Parameters
@@ -390,7 +386,7 @@ def parse_url(url: str) -> tuple["PlatformInfo", "TimeSeriesIdentifiers"]:
 
     if len(components.fragment):
         try:
-            version: Union[int, Literal["new"]] = int(components.fragment)
+            version: int | Literal["new"] = int(components.fragment)
         except ValueError:
             if components.fragment != "new":
                 raise ValueError(
@@ -462,12 +458,7 @@ def year_list(x: Iterable[Any]) -> list[Any]:
 
 def filtered(
     df: pd.DataFrame,
-    filters: Optional[
-        Mapping[
-            str,
-            Optional[Union[str, dict[str, Any], Iterable[object]]],
-        ]
-    ],
+    filters: Mapping[str, str | dict[str, Any] | Iterable[object] | None] | None,
 ) -> pd.DataFrame:
     """Returns a filtered dataframe based on a filters dictionary"""
     if filters is None:
@@ -482,9 +473,9 @@ def filtered(
 
 def format_scenario_list(
     platform: "Platform",
-    model: Optional[str] = None,
-    scenario: Optional[str] = None,
-    match: Optional[Union[str, re.Pattern[str]]] = None,
+    model: str | None = None,
+    scenario: str | None = None,
+    match: str | re.Pattern[str] | None = None,
     default_only: bool = False,
     as_url: bool = False,
 ) -> list[str]:
@@ -521,7 +512,7 @@ def format_scenario_list(
         min = df.version.min()
         max = df.version.max()
 
-        result: dict[str, Union[int, str]] = dict(N=N, range="")
+        result: dict[str, int | str] = dict(N=N, range="")
         if N > 1:
             result["range"] = "{}–{}".format(min, max)
             if N != max:
@@ -596,7 +587,7 @@ def format_scenario_list(
 
 
 def show_versions(
-    file: IO[str] = sys.stdout, *, packages: Optional[Iterable[str]] = None
+    file: IO[str] = sys.stdout, *, packages: Iterable[str] | None = None
 ) -> None:
     """Print information about ixmp and its dependencies to `file`.
 
@@ -605,12 +596,9 @@ def show_versions(
     SHOW_VERSION_PACKAGES
     """
     from importlib import import_module
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError, packages_distributions, version
     from subprocess import DEVNULL, check_output
 
-    # Compatibility with Python 3.9
-    # TODO Use "from importlib.metadata import …" when dropping support for Python 3.9
-    from importlib_metadata import packages_distributions
     from xarray.util.print_versions import get_sys_info
 
     from ixmp.model.gams import gams_info
@@ -728,9 +716,9 @@ class DeprecatedPathFinder(MetaPathFinder):
     def find_spec(
         self,
         name: str,
-        path: Optional[Sequence[str]] = None,
-        target: Optional[ModuleType] = None,
-    ) -> Optional[ModuleSpec]:
+        path: Sequence[str] | None = None,
+        target: ModuleType | None = None,
+    ) -> ModuleSpec | None:
         new_name = self.new_name(name)
         if new_name == name:
             return None  # No known transformation; let the importlib defaults handle.

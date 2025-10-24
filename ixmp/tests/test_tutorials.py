@@ -7,13 +7,11 @@ from typing import TypedDict
 import numpy as np
 import pytest
 
-from ixmp.backend import available
 from ixmp.testing import get_cell_output, run_notebook
-
-group_base_name = platform.system() + platform.python_version()
 
 GHA = "GITHUB_ACTIONS" in os.environ
 
+GROUP_BASE_NAME = platform.system() + platform.python_version()
 
 FLAKY = pytest.mark.flaky(
     reruns=5,
@@ -24,46 +22,44 @@ FLAKY = pytest.mark.flaky(
 
 LONG_MACOS = sys.version_info[:2] in {(3, 11), (3, 12)}
 
+pytestmark = pytest.mark.ixmp4_209
+
 
 class DefaultKwargs(TypedDict, total=False):
+    default_platform: str
     timeout: int
 
 
-@pytest.fixture(scope="session")
-def default_args() -> DefaultKwargs:
-    """Default arguments for :func:`.run_notebook."""
-    # Use a longer timeout for GHA
-    return dict(timeout=60) if GHA else dict()
+@pytest.fixture
+def default_args(default_platform_name: str) -> DefaultKwargs:
+    """Default arguments for :func:`.run_notebook.
+
+    - Set the "default" platform to be either the platform named "local" or
+      "ixmp4-local", according to the `backend` fixture.
+    - Use a longer timeout on GitHub Actions.
+    """
+    return dict(default_platform=default_platform_name, timeout=60 if GHA else 0)
 
 
 @FLAKY
-@pytest.mark.xdist_group(name=f"{group_base_name}-0")
-@pytest.mark.parametrize("ixmp_backend", available())
+@pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-0")
 @pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport(
     tmp_path: Path,
     tmp_env: os._Environ[str],
     tutorial_path: Path,
     default_args: DefaultKwargs,
-    ixmp_backend: str,
 ) -> None:
     fname = tutorial_path.joinpath("transport", "py_transport.ipynb")
 
-    # Set the "default" platform to be either the platform named "local" or
-    # "ixmp4-local", according to the ixmp_backend parameter
-    p = {"jdbc": "local", "ixmp4": "ixmp4-local"}[ixmp_backend]
-
-    # Notebook runs without error
-    nb, errors = run_notebook(
-        fname, tmp_path, tmp_env, default_platform=p, **default_args
-    )
+    nb, errors = run_notebook(fname, tmp_path, tmp_env, **default_args)
     assert errors == []
 
     # FIXME use get_cell_by_name instead of assuming cell count/order is fixed
     assert np.isclose(get_cell_output(nb, -5)["lvl"], 153.6750030517578)
 
 
-@pytest.mark.xdist_group(name=f"{group_base_name}-0")
+@pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-0")
 @pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport_scenario(
     tutorial_path: Path,
@@ -80,7 +76,7 @@ def test_py_transport_scenario(
 
 
 @FLAKY
-@pytest.mark.xdist_group(name=f"{group_base_name}-1")
+@pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-1")
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")
@@ -97,7 +93,7 @@ def test_R_transport(
     assert errors == []
 
 
-@pytest.mark.xdist_group(name=f"{group_base_name}-1")
+@pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-1")
 @pytest.mark.rixmp
 # TODO investigate and resolve the cause of the time outs; remove this mark
 @pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")

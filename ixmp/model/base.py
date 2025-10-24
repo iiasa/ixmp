@@ -3,7 +3,7 @@ import os
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ixmp.backend.common import ItemType
 from ixmp.util import maybe_check_out, maybe_commit
@@ -147,7 +147,7 @@ class Model(ABC):
                 ("idx_names", scenario.idx_names),
             ):
                 # Copy the values from `info` to `init_kw`
-                if values := cast(Optional[Sequence[str]], info.get(key)):
+                if values := cast(Sequence[str] | None, info.get(key)):
                     init_kw[key] = tuple(values)
 
                 # If the item exists; check its index sets/names

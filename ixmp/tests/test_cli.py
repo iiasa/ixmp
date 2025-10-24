@@ -135,9 +135,9 @@ def test_platform(ixmp_cli: Runner, tmp_path: Path) -> None:
         assert not exit_0 or result.exit_code == 0, result.output
         return result
 
-    # The default platform is 'local'
+    # The default platform is "ixmp4-local" or "local"
     r = call("list")
-    assert "default: local\n" in r.output
+    assert re.match("^default: (ixmp4-)?local$", r.output, re.MULTILINE)
 
     # JBDC Oracle platform can be added
     r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
@@ -235,8 +235,7 @@ def test_platform_copy(
         call("copy", f"p1-{test_specific_name}", f"p3-{test_specific_name}")
 
 
-# TODO Version 1 for IXMP4Backend returns an empty DF for scen.timeseries()
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) -> None:
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
@@ -285,6 +284,7 @@ def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) 
     assert len(scen.timeseries(variable=["Testing"])) == 0
 
 
+@pytest.mark.ixmp4_209
 def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     populate_test_platform(test_mp)
     tmp_path /= "dantzig.xlsx"

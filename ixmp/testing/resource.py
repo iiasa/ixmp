@@ -3,7 +3,7 @@
 import logging
 from collections import namedtuple
 from collections.abc import Generator, Iterable
-from typing import Any, Optional
+from typing import Any
 
 try:
     import resource
@@ -33,7 +33,7 @@ def format_meminfo(arr: Iterable[Any], cls: type = float) -> MemInfo:
 # Variables for memory_usage
 _COUNT = 0
 _PREV: np.ndarray[tuple[int, ...], np.dtype[Any]] = np.zeros(6)
-_RT: Optional[Any] = None
+_RT: Any | None = None
 
 
 def memory_usage(message: str = "", reset: bool = False) -> MemInfo:

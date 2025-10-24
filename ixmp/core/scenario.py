@@ -10,7 +10,7 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal
 from warnings import warn
 
 import pandas as pd
@@ -60,7 +60,7 @@ class Scenario(TimeSeries):
     """
 
     #: Scheme of the Scenario.
-    scheme: Optional[str] = None
+    scheme: str | None = None
 
     def __init__(
         self,
@@ -68,8 +68,8 @@ class Scenario(TimeSeries):
         model: str,
         scenario: str,
         version: "VersionType" = None,
-        scheme: Optional[str] = None,
-        annotation: Optional[str] = None,
+        scheme: str | None = None,
+        annotation: str | None = None,
         **model_init_args: Unpack["ScenarioInitKwargs"],
     ) -> None:
         from ixmp.model import get_model
@@ -172,10 +172,8 @@ class Scenario(TimeSeries):
     def _keys(
         self,
         name: str,
-        key_or_keys: Optional[
-            Union[str, Sequence[str], dict[str, Any], pd.DataFrame, range]
-        ],
-    ) -> Union[list[str], list[list[str]]]:
+        key_or_keys: str | Sequence[str] | dict[str, Any] | pd.DataFrame | range | None,
+    ) -> list[str] | list[list[str]]:
         if isinstance(key_or_keys, (list, pd.Series)):
             return as_str_list(key_or_keys)
         elif isinstance(key_or_keys, (pd.DataFrame, dict)):
@@ -191,7 +189,7 @@ class Scenario(TimeSeries):
 
     def set(
         self, name: str, filters: "Filters" = None
-    ) -> Union["pd.Series[Union[float, int, str]]", pd.DataFrame]:
+    ) -> "pd.Series[float | int | str] | pd.DataFrame":
         """Return the (filtered) elements of a set.
 
         Parameters
@@ -213,14 +211,12 @@ class Scenario(TimeSeries):
     def add_set(  # noqa: C901
         self,
         name: str,
-        key: Union[
-            int,
-            str,
-            Iterable[object],
-            dict[str, Union[Sequence[int], Sequence[str]]],
-            pd.DataFrame,
-        ],
-        comment: Union[str, Sequence[str], None] = None,
+        key: int
+        | str
+        | Iterable[object]
+        | dict[str, Sequence[int] | Sequence[str]]
+        | pd.DataFrame,
+        comment: str | Sequence[str] | None = None,
     ) -> None:
         """Add elements to an existing set.
 
@@ -256,9 +252,9 @@ class Scenario(TimeSeries):
         idx_names = self.idx_names(name)
 
         # List of keys
-        keys: MutableSequence[Union[str, list[str]]] = []
+        keys: MutableSequence[str | list[str]] = []
         # List of comments for each key
-        comments: list[Optional[str]] = []
+        comments: list[str | None] = []
 
         # Check arguments and convert to two lists: keys and comments
         if len(idx_names) == 0:
@@ -318,7 +314,7 @@ class Scenario(TimeSeries):
             comments = comments * len(keys)
 
         # Elements to send to backend
-        elements: list[tuple[Any, Optional[float], Optional[str], Optional[str]]] = []
+        elements: list[tuple[Any, float | None, str | None, str | None]] = []
 
         # Combine iterators to tuples. If the lengths are mismatched, the sentinel
         # value 'False' is filled in
@@ -344,7 +340,7 @@ class Scenario(TimeSeries):
     def remove_set(
         self,
         name: str,
-        key: Optional[Union[str, Sequence[str], dict[str, Any], pd.DataFrame]] = None,
+        key: str | Sequence[str] | dict[str, Any] | pd.DataFrame | None = None,
     ) -> None:
         """Delete set elements or an entire set.
 
@@ -388,7 +384,7 @@ class Scenario(TimeSeries):
         self,
         type: ItemType = ItemType.PAR,
         *,
-        indexed_by: Optional[str] = None,
+        indexed_by: str | None = None,
         **kwargs: Any,
     ) -> Iterator[str]:
         """Iterate over model data items.
@@ -431,7 +427,7 @@ class Scenario(TimeSeries):
             yield name
 
     def iter_par_data(
-        self, filters: "Filters" = None, *, indexed_by: Optional[str] = None
+        self, filters: "Filters" = None, *, indexed_by: str | None = None
     ) -> Iterator[tuple[str, "ParData"]]:
         """Iterate over tuples of parameter names and data.
 
@@ -501,8 +497,8 @@ class Scenario(TimeSeries):
         self,
         item_type: "ModelItemType",
         name: str,
-        idx_sets: Optional[Sequence[str]] = None,
-        idx_names: Optional[Sequence[str]] = None,
+        idx_sets: Sequence[str] | None = None,
+        idx_names: Sequence[str] | None = None,
     ) -> None:
         """Initialize a new item `name` of type `item_type`.
 
@@ -542,9 +538,7 @@ class Scenario(TimeSeries):
 
         # NOTE Convince type checker that all ItemType names are expected Literals
         assert item_type.name is not None
-        _type: Union[Literal["set"], Literal["par"], Literal["equ"], Literal["var"]] = (
-            item_type.name.lower()  # type: ignore[assignment]
-        )
+        _type: Literal["set", "par", "equ", "var"] = item_type.name.lower()  # type: ignore [assignment]
         return self.platform._backend.init_item(self, _type, name, idx_sets, idx_names)
 
     #: Initialize a new equation. See :meth:`init_item`.
@@ -557,7 +551,7 @@ class Scenario(TimeSeries):
     init_var = partialmethod(init_item, ItemType.VAR)
 
     def list_items(
-        self, item_type: "ModelItemType", indexed_by: Optional[str] = None
+        self, item_type: "ModelItemType", indexed_by: str | None = None
     ) -> list[str]:
         """List all defined items of type `item_type`.
 
@@ -580,12 +574,15 @@ class Scenario(TimeSeries):
     def add_par(  # noqa: C901
         self,
         name: str,
-        key_or_data: Optional[
-            Union[str, Sequence[str], dict[str, Any], pd.DataFrame, range]
-        ] = None,
-        value: Optional[Union[float, Iterable[float]]] = None,
-        unit: Optional[Union[str, Iterable[str]]] = None,
-        comment: Optional[Union[str, Iterable[str]]] = None,
+        key_or_data: str
+        | Sequence[str]
+        | dict[str, Any]
+        | pd.DataFrame
+        | range
+        | None = None,
+        value: float | Iterable[float] | None = None,
+        unit: str | Iterable[str] | None = None,
+        comment: str | Iterable[str] | None = None,
     ) -> None:
         """Set the values of a parameter.
 
@@ -645,7 +642,7 @@ class Scenario(TimeSeries):
                 raise ValueError("Length mismatch between keys and values")
 
         # Column types
-        types: dict[str, Union[type[float], type[str], type[object]]] = {
+        types: dict[str, type[float] | type[str] | type[object]] = {
             "key": str if N_dim == 1 else object,
             "value": float,
             "unit": str,
@@ -694,9 +691,9 @@ class Scenario(TimeSeries):
     def init_scalar(
         self,
         name: str,
-        val: Union[float, int],
+        val: float | int,
         unit: str,
-        comment: Optional[str] = None,
+        comment: str | None = None,
     ) -> None:
         """Initialize a new scalar and set its value.
 
@@ -734,9 +731,9 @@ class Scenario(TimeSeries):
     def change_scalar(
         self,
         name: str,
-        val: Union[float, int],
+        val: float | int,
         unit: str,
-        comment: Optional[str] = None,
+        comment: str | None = None,
     ) -> None:
         """Set the value and unit of a scalar.
 
@@ -758,7 +755,7 @@ class Scenario(TimeSeries):
     def remove_par(
         self,
         name: str,
-        key: Optional[Union[pd.DataFrame, list[str], dict[str, list[str]]]] = None,
+        key: pd.DataFrame | list[str] | dict[str, list[str]] | None = None,
     ) -> None:
         """Remove parameter values or an entire parameter.
 
@@ -810,12 +807,12 @@ class Scenario(TimeSeries):
 
     def clone(
         self,
-        model: Optional[str] = None,
-        scenario: Optional[str] = None,
-        annotation: Optional[str] = None,
+        model: str | None = None,
+        scenario: str | None = None,
+        annotation: str | None = None,
         keep_solution: bool = True,
-        shift_first_model_year: Optional[int] = None,
-        platform: Optional[Platform] = None,
+        shift_first_model_year: int | None = None,
+        platform: Platform | None = None,
     ) -> "Scenario":
         """Clone the current scenario and return the clone.
 
@@ -873,7 +870,7 @@ class Scenario(TimeSeries):
         """Return :obj:`True` if the Scenario contains model solution data."""
         return self.platform._backend.has_solution(self)
 
-    def remove_solution(self, first_model_year: Optional[int] = None) -> None:
+    def remove_solution(self, first_model_year: int | None = None) -> None:
         """Remove the solution from the scenario.
 
         This function removes the solution (variables and equations) and timeseries
@@ -898,8 +895,8 @@ class Scenario(TimeSeries):
 
     def solve(
         self,
-        model: Optional[str] = None,
-        callback: Optional[Callable[["Scenario"], bool]] = None,
+        model: str | None = None,
+        callback: Callable[["Scenario"], bool] | None = None,
         cb_kwargs: dict[str, Any] = {},
         **model_options: Any,
     ) -> None:
@@ -1004,8 +1001,8 @@ class Scenario(TimeSeries):
         self,
         path: PathLike[str],
         items: ItemType = ItemType.SET | ItemType.PAR,
-        filters: Optional["WriteFilters"] = None,
-        max_row: Optional[int] = None,
+        filters: "WriteFilters | None" = None,
+        max_row: int | None = None,
     ) -> None:
         """Write Scenario to a Microsoft Excel file.
 

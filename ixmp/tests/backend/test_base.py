@@ -137,6 +137,7 @@ class TestCachingBackend:
             # NOTE Triggering the error on purpose
             CachingBackend._cache_key(object(), "par", "p", filters)  # type: ignore[arg-type]
 
+    @pytest.mark.ixmp4_209
     def test_cache_invalidate(self, test_mp: Platform) -> None:
         backend = test_mp._backend
 

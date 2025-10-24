@@ -4,7 +4,7 @@ import os
 import platform
 from collections.abc import Callable, Generator
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import jpype
 import numpy as np
@@ -19,9 +19,6 @@ from ixmp.backend.jdbc import DRIVER_CLASS, java
 from ixmp.testing import DATA, MARK, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 from ixmp.util.ixmp4 import is_ixmp4backend
-
-log = logging.getLogger(__name__)
-
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,6 +35,9 @@ if TYPE_CHECKING:
         driver: str
         path: str
         url: str
+
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.flaky(
@@ -166,7 +166,7 @@ class TestJDBCBackend:
         klass: type["JDBCBackend"],
         args: tuple[str, ...],
         kwargs: dict[str, str],
-        expected: Optional[dict[str, str]],
+        expected: dict[str, str] | None,
     ) -> None:
         """Test :meth:`JDBCBackend.handle_config`."""
         assert expected == klass.handle_config(args, kwargs)
@@ -337,8 +337,8 @@ INIT_PARAMS: tuple[
         list[str],
         "TestInitKwargs",
         Callable[..., Any],
-        Union[type[TypeError], type[ValueError]],
-        Optional[str],
+        type[TypeError] | type[ValueError],
+        str | None,
     ],
     ...,
 ] = (
@@ -388,8 +388,8 @@ def test_init(
     args: list[str],
     kwargs: "TestInitKwargs",
     action: Callable[..., Any],
-    kind: Union[type[TypeError], type[ValueError]],
-    match: Optional[str],
+    kind: type[TypeError] | type[ValueError],
+    match: str | None,
 ) -> None:
     """Semantics for JDBCBackend.__init__()."""
     # NOTE Triggering some errors on purpose
@@ -397,6 +397,7 @@ def test_init(
         ixmp.Platform(*args, **kwargs)  # type: ignore[misc]
 
 
+@pytest.mark.ixmp4_209
 def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
 
@@ -435,7 +436,7 @@ def test_verbose_exception(test_mp: "Platform", exception_verbose_true: None) ->
     assert "at.ac.iiasa.ixmp.Platform.getScenario" in exc_msg
 
 
-def test_del_ts(request: pytest.FixtureRequest) -> None:
+def test_del_ts(request: pytest.FixtureRequest, refcount_offset: int) -> None:
     mp = ixmp.Platform(
         backend="jdbc", driver="hsqldb", url=f"jdbc:hsqldb:mem:{request.node.name}"
     )
@@ -493,7 +494,7 @@ def test_del_ts(request: pytest.FixtureRequest) -> None:
         assert s_id not in map(id, backend.jindex)
 
         # s_jobj is the only remaining reference to the Java object
-        assert getrefcount(s_jobj) - 1 == 1
+        assert getrefcount(s_jobj) - refcount_offset == 1
         del s_jobj
 
     # Backend is again empty
@@ -642,7 +643,7 @@ def test_reload_cycle(
         cache=cache,
         log_level="WARNING",
     )
-    mp: Optional["Platform"] = ixmp.Platform(backend="jdbc", **platform_args)
+    mp: "Platform" | None = ixmp.Platform(backend="jdbc", **platform_args)
     reload_cycle_scenario.clone(platform=mp)
 
     # Throw away the reference to mp
@@ -749,6 +750,7 @@ def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     assert ex.value.args[0] == exp
 
 
+@pytest.mark.ixmp4_209
 def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Removing set elements causes the cache to be cleared entirely."""
     scen = make_dantzig(test_mp, request=request)
@@ -768,6 +770,7 @@ def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> Non
     assert df.shape[0] < d0.shape[0]
 
 
+@pytest.mark.ixmp4_209
 def test_cat_set_elements(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scenario = ixmp.Scenario(
         test_mp,

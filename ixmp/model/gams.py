@@ -8,7 +8,7 @@ from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 # Singleton instance of GAMSInfo.
-_GAMS_INFO: Optional["GAMSInfo"] = None
+_GAMS_INFO: "GAMSInfo | None" = None
 
 
 #: Return codes used by GAMS, from
@@ -222,9 +222,9 @@ class GAMSModel(Model):
     solve_args: list[str]
     gams_args: list[str]
     check_solution: bool
-    comment: Optional[str]
-    equ_list: Optional[list[str]]
-    var_list: Optional[list[str]]
+    comment: str | None
+    equ_list: list[str] | None
+    var_list: list[str] | None
     quiet: bool
     use_temp_dir: bool
     record_version_packages: Sequence[str]
@@ -254,7 +254,7 @@ class GAMSModel(Model):
 
     def __init__(
         self,
-        name_: Optional[str] = None,
+        name_: str | None = None,
         **model_options: Unpack["GamsModelInitKwargs"],
     ) -> None:
         self.model_name = self.clean_path(name_ or self.name)
@@ -407,7 +407,7 @@ class GAMSModel(Model):
 
         # Assemble the full command: executable, model file, model-specific arguments,
         # and general GAMS arguments
-        command: Union[str, list[str]] = (
+        command: str | list[str] = (
             ["gams", f'"{model_file}"']
             + [self.format(arg) for arg in self.solve_args]
             + self.gams_args

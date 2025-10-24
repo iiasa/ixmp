@@ -2,7 +2,7 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import numpy.testing as npt
 import pandas as pd
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class AddParKwargs(TypedDict, total=False):
-    value: Union[float, list[int]]
+    value: float | list[int]
     unit: str
     comment: str
 
@@ -45,7 +45,7 @@ def scen_empty(
 
 
 @pytest.fixture(scope="function")
-def test_dict() -> dict[str, Union[bool, float, int, str]]:
+def test_dict() -> dict[str, bool | float | int | str]:
     return {
         "test_string": "test12345",
         "test_number": 123.456,
@@ -56,6 +56,7 @@ def test_dict() -> dict[str, Union[bool, float, int, str]]:
     }
 
 
+@pytest.mark.ixmp4_209
 class TestScenario:
     """Tests of :class:`ixmp.Scenario`."""
 
@@ -146,8 +147,6 @@ class TestScenario:
         obs = scen2.set("h")
         npt.assert_array_equal(obs, ["test"])
 
-    # FIXME IXMP4Backend needs to handle change_scalar correctly
-    @pytest.mark.jdbc
     def test_clone_edit(self, scen: "Scenario") -> None:
         scen2 = scen.clone(keep_solution=False)
         scen2.check_out()
@@ -236,8 +235,6 @@ class TestScenario:
         scen2.commit("adding a scalar 'g'")
 
     # Existence checks
-    # TODO IXMP4Backend doesn't handle scalars correctly yet
-    @pytest.mark.jdbc
     def test_has_par(self, scen: "Scenario") -> None:
         assert scen.has_par("f")
         assert not scen.has_par("m")
@@ -296,15 +293,14 @@ class TestScenario:
     def test_add_par(
         self,
         scen: "Scenario",
-        args: tuple[str, Union[list[str], pd.DataFrame]],
+        args: tuple[str, list[str] | pd.DataFrame],
         kwargs: AddParKwargs,
     ) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
-    # TODO IXMP4Backend should support this, I think
-    @pytest.mark.jdbc
+    @pytest.mark.jdbc  # FIXME Raises IndexError with IXMP4Backend
     def test_add_par2(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -357,8 +353,6 @@ class TestScenario:
         with pytest.warns(DeprecationWarning, match="ignored kwargs"):
             scen.par("d", i=["seattle"])
 
-    # FIXME IXMP4Backend is missing an item, likely the scalar f again
-    @pytest.mark.jdbc
     def test_iter_par_data(self, scen: "Scenario") -> None:
         # Iterator returns the expected parameter names
         exp = ["a", "b", "d", "f"]
@@ -382,15 +376,17 @@ class TestScenario:
 
         assert i == 1
 
-    # FIXME For test case 3, IXMP4Backend somehow also lists 'foo' (likely defined in
-    # the fixture); in test case 2 it's missing f (the scalar)
-    @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "item_type, indexed_by, exp",
         (
             (ixmp.ItemType.EQU, None, ["cost", "demand", "supply"]),
             (ixmp.ItemType.PAR, None, ["a", "b", "d", "f"]),
-            (ixmp.ItemType.SET, None, ["i", "j"]),
+            pytest.param(
+                ixmp.ItemType.SET,
+                None,
+                ["i", "j"],
+                marks=pytest.mark.xfail(reason="XFAIL for IXMP4Backend only"),
+            ),
             (ixmp.ItemType.VAR, None, ["x", "z"]),
             # With indexed_by=
             (ixmp.ItemType.EQU, "i", ["supply"]),
@@ -405,7 +401,7 @@ class TestScenario:
         item_type: Literal[
             ixmp.ItemType.PAR, ixmp.ItemType.SET, ixmp.ItemType.VAR, ixmp.ItemType.EQU
         ],
-        indexed_by: Optional[str],
+        indexed_by: str | None,
         exp: list[str],
     ) -> None:
         # Function runs and yields the expected sequence of item names
@@ -608,7 +604,7 @@ class TestScenario:
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
     def test_meta(
-        self, mp: "Platform", test_dict: dict[str, Union[bool, float, int, str]]
+        self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         for k, v in test_dict.items():
@@ -643,7 +639,7 @@ class TestScenario:
     # NOTE Not yet implemented on IXMP4Backend
     @pytest.mark.jdbc
     def test_meta_bulk(
-        self, mp: "Platform", test_dict: dict[str, Union[bool, float, int, str]]
+        self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
         scen.set_meta(test_dict)
@@ -660,6 +656,7 @@ class TestScenario:
         assert scen.get_meta("new_attr") == "new_attr"
 
 
+@pytest.mark.ixmp4_209
 def test_range(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
@@ -675,6 +672,7 @@ def test_range(scen_empty: "Scenario") -> None:
     scen.add_par("new_par", ii, [1.2] * len(ii))
 
 
+@pytest.mark.ixmp4_209
 def test_gh_210(scen_empty: "Scenario") -> None:
     scen = scen_empty
     i = ["i0", "i1", "i2"]
@@ -798,6 +796,7 @@ def test_set(scen_empty: "Scenario") -> None:
     assert "h" not in scen.set_list()
 
 
+@pytest.mark.ixmp4_209
 def test_filter_str(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
@@ -871,7 +870,7 @@ def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> 
     # from the one stored as `expected`.
     set_d(scen, d[0])
 
-    def change_distance(scenario: "Scenario") -> Optional[bool]:
+    def change_distance(scenario: "Scenario") -> bool | None:
         """Callback for model solution."""
         # Check if the model has 'converged' on the correct solution
         result = scenario.var("x")

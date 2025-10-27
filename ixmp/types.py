@@ -14,7 +14,12 @@ from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
 from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
 from ixmp4.core.optimization.table import Table, TableRepository
-from ixmp4.core.optimization.variable import Variable, VariableRepository
+from ixmp4.core.optimization.variable import Variable
+from ixmp4.core.optimization.variable import (
+    VariableRepository as OptimizationVariableRepository,
+)
+from ixmp4.data.abstract.iamc.variable import VariableRepository
+from ixmp4.data.abstract.model import ModelRepository
 from ixmp4.data.abstract.optimization.equation import (
     EquationRepository as BEEquationRepository,
 )
@@ -33,6 +38,8 @@ from ixmp4.data.abstract.optimization.table import (
 from ixmp4.data.abstract.optimization.variable import (
     VariableRepository as BEVariableRepository,
 )
+from ixmp4.data.abstract.region import RegionRepository
+from ixmp4.data.abstract.scenario import ScenarioRepository
 
 # Compatibility with Python 3.11 and earlier
 # TODO Use "from typing import NotRequired" when dropping support for Python 3.10
@@ -61,7 +68,11 @@ IXMP4Repository = (
     | ParameterRepository
     | ScalarRepository
     | TableRepository
-    | VariableRepository
+    | OptimizationVariableRepository
+)
+
+IXMP4IamcDomainRepository = (
+    ModelRepository | RegionRepository | ScenarioRepository | VariableRepository
 )
 
 #: Instances of IXMP4 types that contain model/scenario data.

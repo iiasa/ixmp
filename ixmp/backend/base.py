@@ -592,7 +592,8 @@ class Backend(ABC):
         Parameters
         ----------
         timeseries_only : bool
-            ???
+            Flag to indicate whether all data can be edited (:obj:`False`) or time
+            series data only (:obj:`True`).
         """
 
     @abstractmethod

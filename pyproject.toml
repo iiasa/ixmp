@@ -150,7 +150,8 @@ filterwarnings = [
 markers = [
   "rixmp: test of the ixmp R interface.",
   "performance: ixmp performance test.",
-  "jdbc: tests exclusive to JDBCBackend.",
+  "jdbc: tests exclusive to JDBCBackend or not (yet) implemented on IXMP4Backend.",
+  "jdbc_only: tests exclusive to JDBCBackend.",
   "ixmp4: tests exclusive to IXMP4Backend.",
   "ixmp4_209: https://github.com/iiasa/ixmp4/pull/209",
 ]

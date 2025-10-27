@@ -57,8 +57,6 @@ if TYPE_CHECKING:
     from ixmp4.core.optimization.variable import (
         VariableRepository as OptimizationVariableRepository,
     )
-    from ixmp4.data.abstract.iamc.variable import VariableRepository
-    from ixmp4.data.abstract.model import ModelRepository
     from ixmp4.data.abstract.optimization.equation import (
         EquationRepository as BEEquationRepository,
     )
@@ -73,12 +71,11 @@ if TYPE_CHECKING:
     from ixmp4.data.abstract.optimization.variable import (
         VariableRepository as BEVariableRepository,
     )
-    from ixmp4.data.abstract.region import RegionRepository
-    from ixmp4.data.abstract.scenario import ScenarioRepository
 
     from ixmp.types import (
         Filters,
         IXMP4BackendRepository,
+        IXMP4IamcDomainRepository,
         IXMP4ModelData,
         IXMP4ModelDataType,
         IXMP4Repository,
@@ -320,13 +317,7 @@ class IXMP4Backend(CachingBackend):
 
         # NOTE ixmp4 can only store documentation for meta entries of particular Runs,
         # but set_doc and get_doc expect to work Run-agnostic
-        self._doc_domain_map: dict[
-            str,
-            "ModelRepository"
-            | "RegionRepository"
-            | "ScenarioRepository"
-            | "VariableRepository",
-        ] = {
+        self._doc_domain_map: dict[str, "IXMP4IamcDomainRepository"] = {
             "model": self._backend.models,
             "region": self._backend.regions,
             "scenario": self._backend.scenarios,
@@ -662,14 +653,7 @@ class IXMP4Backend(CachingBackend):
 
         self._backend.meta.bulk_delete(df=meta_df)
 
-    def _get_domain_repo(
-        self, domain: str
-    ) -> (
-        "ModelRepository"
-        | "RegionRepository"
-        | "ScenarioRepository"
-        | "VariableRepository"
-    ):
+    def _get_domain_repo(self, domain: str) -> "IXMP4IamcDomainRepository":
         # TODO Limit domain annotation with Literal
         try:
             return self._doc_domain_map[domain]

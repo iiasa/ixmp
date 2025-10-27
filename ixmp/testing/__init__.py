@@ -248,6 +248,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 # This marker means "not (yet) implemented/supported on IXMP4"
                 i = argvalues.index("ixmp4")
                 argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend NI"])
+            elif "jdbc_only" in marker_names:
+                # Same as "ixmp4" marker, but for JDBCBackend
+                argvalues.remove("ixmp4")
 
             if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
                 i = argvalues.index("ixmp4")
@@ -682,7 +685,9 @@ def _platform_fixture(
 
 # NOTE This is a workaround for https://github.com/iiasa/ixmp4/issues/205
 @pytest.fixture(scope="function")
-def _rollback_ixmp4_session(mp: Platform) -> None:
+def _rollback_ixmp4_session(mp: Platform) -> Generator[None, None, None]:
+    yield
+
     if is_ixmp4backend(mp._backend):
         from ixmp4.data.backend.test import PostgresTestBackend
 

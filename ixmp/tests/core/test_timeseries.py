@@ -399,7 +399,7 @@ class TestTimeSeries:
         # Data are unchanged
         assert_frame_equal(expected(DATA[2050], ts), ts.timeseries())
 
-    @pytest.mark.jdbc
+    @pytest.mark.jdbc_only
     @pytest.mark.parametrize("format", ["long", "wide"])
     @pytest.mark.parametrize(
         "N",
@@ -441,7 +441,7 @@ class TestTimeSeries:
         ),
     )
     def test_long_variable_name_ixmp4(
-        # NOTE Order is important here as the sessions needs to be rolled back before ts
+        # NOTE Order is important here as the session needs to be rolled back before ts
         # adds data
         self,
         _rollback_ixmp4_session: None,

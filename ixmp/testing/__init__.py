@@ -41,7 +41,7 @@ from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeAlias
 
 import pint
 import pytest
@@ -71,6 +71,13 @@ from .resource import resource_limit
 
 if TYPE_CHECKING:
     from ixmp4.core import Run
+
+    try:
+        # Pint 0.25.1 or later
+        UReg: TypeAlias = pint.UnitRegistry[float]
+    except TypeError:
+        # Python 3.10 / earlier pint version without parametrized generic
+        UReg: TypeAlias = pint.UnitRegistry  # type: ignore[no-redef,misc]
 
 log = logging.getLogger(__name__)
 
@@ -347,7 +354,7 @@ def tutorial_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def ureg() -> Generator[pint.UnitRegistry, Any, None]:
+def ureg() -> Generator["UReg", Any, None]:
     """Application-wide units registry."""
     # Pylance registers an ApplicationRegistry, so maybe try `follow-untyped-imports`?
     registry = pint.get_application_registry()  # type: ignore[no-untyped-call]

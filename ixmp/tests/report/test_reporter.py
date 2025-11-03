@@ -15,7 +15,7 @@ from ixmp.testing import add_test_data, assert_logs, make_dantzig
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
     from ixmp.core.scenario import Scenario
-    from ixmp.testing import Runner
+    from ixmp.testing import Runner, UReg
 
 pytestmark = [
     pytest.mark.ixmp4_209,
@@ -65,7 +65,7 @@ def test_reporter_from_scenario(scenario: "Scenario") -> None:
 
 
 def test_platform_units(
-    test_mp: "Platform", caplog: pytest.LogCaptureFixture, ureg: pint.UnitRegistry
+    test_mp: "Platform", caplog: pytest.LogCaptureFixture, ureg: "UReg"
 ) -> None:
     """Test handling of units from ixmp.Platform.
 

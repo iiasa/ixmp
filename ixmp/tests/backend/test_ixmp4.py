@@ -11,15 +11,6 @@ if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
 
-def test__ensure_filters_values_are_lists() -> None:
-    from ixmp.backend.ixmp4 import _convert_filters_values_to_lists
-
-    filters = {"foo": [1, 2], "bar": 3}
-    expected = {"foo": [1, 2], "bar": [3]}
-    clean_filters = _convert_filters_values_to_lists(filters=filters)
-    assert clean_filters == expected
-
-
 def test__align_dtypes_for_filters() -> None:
     from ixmp.backend.ixmp4 import _align_dtypes_for_filters
 
@@ -253,24 +244,6 @@ class TestIxmp4Functions:
 
         expected = (
             "ixmp4-backed Scenarios don't support cloning from `first_model_year` only!"
-        )
-        assert expected in caplog.messages
-
-    @pytest.mark.ixmp4_209
-    def test_clear_solution(
-        self,
-        ixmp4_backend: "IXMP4Backend",
-        caplog: pytest.LogCaptureFixture,
-        scenario: Scenario,
-    ) -> None:
-        from ixmp.backend.ixmp4 import log
-
-        # Test logging a warning for from_year
-        with caplog.at_level("WARNING", logger=log.name):
-            ixmp4_backend.clear_solution(s=scenario, from_year=1)
-
-        expected = (
-            "ixmp4 does not support removing the solution only after a certain year"
         )
         assert expected in caplog.messages
 

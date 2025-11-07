@@ -237,11 +237,26 @@ class TestIxmp4IOFunctions:
             include_variables_and_equations=True,
         )
         container = Container(
-            load_from=tmp_path / "test_write.gdx",
-            system_directory=str(gams_info().system_dir),
+            load_from=file_path, system_directory=str(gams_info().system_dir)
         )
         assert len(container.data) == 1
         assert "ixmp_version" in container.data.keys()
+
+        # Test writing to the same path again overwrites existing file
+        with run.transact("Test writing GDX to same path again"):
+            run.optimization.indexsets.create("foo")
+
+        write_run_to_gdx(
+            run=run,
+            file_name=file_path,
+            container_data=[],
+            record_version_packages=["ixmp"],
+        )
+        container = Container(
+            load_from=file_path, system_directory=str(gams_info().system_dir)
+        )
+        assert len(container.data) == 2
+        assert "foo" in container.data.keys()
 
     def test__set_columns_to_read_from_records(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _set_columns_to_read_from_records

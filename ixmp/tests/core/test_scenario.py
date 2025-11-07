@@ -698,6 +698,7 @@ def test_gh_210(scen_empty: "Scenario") -> None:
     assert all(foo_data.columns == columns)
 
 
+@pytest.mark.ixmp4_209
 def test_set(scen_empty: "Scenario") -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
@@ -839,6 +840,7 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
+@pytest.mark.ixmp4_209
 def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Test the callback argument to Scenario.solve().
 

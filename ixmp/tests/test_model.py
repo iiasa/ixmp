@@ -170,6 +170,7 @@ class TestGAMSModel:
         ],
         ids=["null-comment", "null-list", "empty-list"],
     )
+    @pytest.mark.ixmp4_209
     def test_GAMSModel_solve(
         self,
         test_data_path: Path,

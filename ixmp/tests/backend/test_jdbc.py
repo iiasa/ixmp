@@ -262,6 +262,7 @@ class TestJDBCBackend:
         be.gc()
 
 
+@pytest.mark.ixmp4_209
 def test_exceptions(test_mp: "Platform") -> None:
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
@@ -723,6 +724,7 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
+@pytest.mark.ixmp4_209
 def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
     # test model docs

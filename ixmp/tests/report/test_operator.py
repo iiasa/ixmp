@@ -53,6 +53,7 @@ def test_from_url(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
 # TODO For all genno-related type ignores, remove once genno adds annotations
 
 
+@pytest.mark.ixmp4_209
 def test_get_remove_ts(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -124,6 +125,7 @@ def test_map_as_qty() -> None:
     assert_qty_equal(exp, result)
 
 
+@pytest.mark.ixmp4_209
 def test_update_scenario(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -188,6 +190,7 @@ def test_update_scenario(
     assert_frame_equal(par_df, data, check_like=True)
 
 
+@pytest.mark.ixmp4_209
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     # Computer and target scenario
     c = Computer()  # type: ignore[no-untyped-call]

@@ -250,6 +250,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             elif "jdbc" in marker_names:
                 # Same as "ixmp4" marker, but for JDBCBackend
                 argvalues.remove("ixmp4")
+
+            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
             elif "ixmp4_not_yet" in marker_names:
                 # This marker means "not yet supported on IXMP4"
                 i = argvalues.index("ixmp4")
@@ -258,10 +262,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 # This marker means "won't ever be implemented/supported on IXMP4"
                 i = argvalues.index("ixmp4")
                 argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Never"])
-
-            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
-                i = argvalues.index("ixmp4")
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
 
         metafunc.parametrize("backend", argvalues, indirect=True)
 

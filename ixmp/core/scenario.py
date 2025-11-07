@@ -112,13 +112,17 @@ class Scenario(TimeSeries):
         # is removed above?
         model_class.initialize(self, **model_init_args)  # type: ignore[misc]
 
-        # NOTE initialize() may call commit() or so which unlocks the underlying Run
-        if (
-            version == "new"
-            and is_ixmp4backend(self.platform._backend)
-            and not self.platform._backend.index[self].owns_lock
-        ):
-            self.platform._backend.index[self]._lock()
+        if is_ixmp4backend(self.platform._backend) and version == "new":
+            run = self.platform._backend.index[self]
+
+            # NOTE initialize() may call commit() or so which unlocks the underlying Run
+            if not run.owns_lock:
+                run._lock()
+
+            # NOTE ixmp_source always defines some items for MESSAGE-scheme Scenarios
+            if self.platform._backend._options.jdbc_compat and self.scheme == "MESSAGE":
+                self.init_set("technology")
+                self.init_set("year")
 
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.

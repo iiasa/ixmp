@@ -332,10 +332,8 @@ def test_format_scenario_list(test_mp_f: "Platform") -> None:
     ) == util.format_scenario_list(mp, as_url=True)
 
 
-# IXMP4Backend doesn't have proper commits yet, so these never raise RuntimeErrors
-@pytest.mark.jdbc
-def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
-    s = Scenario(test_mp, "maybe_commit", "maybe_commit", version="new")
+def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp_f: "Platform") -> None:
+    s = Scenario(test_mp_f, "maybe_commit", "maybe_commit", version="new")
 
     # A new Scenario is not committed, so this works
     assert util.maybe_commit(s, True, message="foo") is True

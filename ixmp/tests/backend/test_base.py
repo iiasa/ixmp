@@ -145,8 +145,6 @@ class TestCachingBackend:
 
         backend.cache_invalidate(ts, "par", "baz", dict(x=["x1", "x2"], y=["y1", "y2"]))
 
-    # TODO IXMP4Backend needs to handle ._cache correctly
-    @pytest.mark.jdbc
     def test_del_ts(self, test_mp: Platform, request: pytest.FixtureRequest) -> None:
         """Test CachingBackend.del_ts()."""
         # Since CachingBackend is an abstract class, test it via JDBCBackend

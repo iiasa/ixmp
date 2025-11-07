@@ -161,8 +161,6 @@ class TestGAMSModel:
         # the GAMSModel.model_name attribute, and in turn the GDX file names used.
         s.solve(name_=name, quiet=True)
 
-    # FIXME IXMP4Backend should support this
-    @pytest.mark.jdbc
     @pytest.mark.parametrize(
         "kwargs",
         [

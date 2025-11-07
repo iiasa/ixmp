@@ -152,6 +152,7 @@ class IXMP4BackendInitKwargs(TypedDict):
     ixmp4_name: str
     dsn: NotRequired[str]
     jdbc_compat: NotRequired[bool | str]
+    cache: NotRequired[bool]
 
 
 class PlatformInitKwargs(BackendInitKwargs, JDBCBackendInitKwargs):

@@ -20,6 +20,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
+@pytest.mark.ixmp4_209
 def test_run_clone(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -79,6 +80,7 @@ def test_run_clone(
         )
 
 
+@pytest.mark.ixmp4_209
 def test_run_remove_solution(
     test_mp: "Platform", request: pytest.FixtureRequest
 ) -> None:

@@ -97,6 +97,7 @@ def test_export_ts_wrong_params(test_mp: ixmp.Platform, tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.ixmp4_209
 def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Export timeseries of all runs."""
     path = tmp_path / "export.csv"

@@ -347,6 +347,7 @@ def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None
     assert result.exit_code == 0, result.output
 
 
+@pytest.mark.ixmp4_209
 def test_excel_io_filters(
     ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path
 ) -> None:

@@ -332,6 +332,7 @@ def test_format_scenario_list(test_mp_f: "Platform") -> None:
     ) == util.format_scenario_list(mp, as_url=True)
 
 
+@pytest.mark.ixmp4_209
 def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp_f: "Platform") -> None:
     s = Scenario(test_mp_f, "maybe_commit", "maybe_commit", version="new")
 

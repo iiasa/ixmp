@@ -124,8 +124,6 @@ def test_map_as_qty() -> None:
     assert_qty_equal(exp, result)
 
 
-# FIXME IXMP4Backend seems to return d with unexpected ordering
-@pytest.mark.jdbc
 def test_update_scenario(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -185,11 +183,11 @@ def test_update_scenario(
     # scalars differently
     par_df = scen.par("d")
     assert isinstance(par_df, pd.DataFrame)
-    assert_frame_equal(par_df, data)
+    if is_ixmp4backend(test_mp._backend):
+        data = data.sort_values(by=["i", "j"], ignore_index=True)
+    assert_frame_equal(par_df, data, check_like=True)
 
 
-# FIXME Nots ure why this fails on IXMP4Backend
-@pytest.mark.jdbc
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     # Computer and target scenario
     c = Computer()  # type: ignore[no-untyped-call]
@@ -240,18 +238,26 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
 
     # A message is logged
     r = caplog.record_tuples[-1]
+    error = (
+        "RegionNotFound('Moon')"
+        if is_ixmp4backend(test_mp._backend)
+        else "ValueError('region = Moon')"
+    )
     assert (
         "ixmp.report.operator" == r[0]
         and logging.ERROR == r[1]
-        and r[2].startswith("Failed with ValueError('region = Moon')")
+        and r[2].startswith(f"Failed with {error}")
     ), caplog.record_tuples
 
     caplog.clear()
 
     # with strict=True, the computation fails
     c.add("test 2", partial(store_ts, strict=True), "target", "input 3")
+    error_match = (
+        "RegionNotFound: Moon" if is_ixmp4backend(test_mp._backend) else "region = Moon"
+    )
     with pytest.raises(
         ComputationError,
-        match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
+        match=re.compile(f"computing 'test 2' using:.*{error_match}", flags=re.DOTALL),
     ):
         c.get("test 2")  # type: ignore[no-untyped-call]

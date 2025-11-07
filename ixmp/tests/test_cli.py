@@ -34,8 +34,8 @@ def test_versiontype() -> None:
         vt.convert("xx", None, None)
 
 
-# FIXME This should work for IXMP4Backend, I think
-@pytest.mark.jdbc
+# FIXME The URL needs to be different for ixmp4; can you target model/scenario on pg?
+@pytest.mark.ixmp4_not_yet
 def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # Name of a temporary file that doesn't exist
     tmp_path /= "temp.properties"
@@ -69,7 +69,7 @@ def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # --url argument can be given
     cmd = [
         "--url",
-        "ixmp://{}/Douglas Adams/Hitchhiker".format(test_mp.name),
+        f"ixmp://{test_mp.name}/Douglas Adams/Hitchhiker",
         "platform",
         "list",
     ]
@@ -347,10 +347,6 @@ def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None
     assert result.exit_code == 0, result.output
 
 
-# FIXME IXMP4Backend requires a version to be specified when loading a Scenario
-# or a default to be set for the corresponding Run before
-# since Run doesn't store `version`
-@pytest.mark.jdbc
 def test_excel_io_filters(
     ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path
 ) -> None:
@@ -409,8 +405,9 @@ def test_show_versions(ixmp_cli: Runner) -> None:
     assert result.exit_code == 0, result.output
 
 
-# FIXME This is again the parameter error for IXMP4Backend and the DantzigModel
-@pytest.mark.jdbc
+# FIXME This is again the parameter error for IXMP4Backend and the DantzigModel:
+# Unable to open input file (RC=2) default.gms
+@pytest.mark.ixmp4_not_yet
 def test_solve(ixmp_cli: Runner, test_mp: "Platform") -> None:
     populate_test_platform(test_mp)
     cmd = [

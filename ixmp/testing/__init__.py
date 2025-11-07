@@ -114,8 +114,11 @@ _uname = platform.uname()
 #: - ``ixmp4#209``: https://github.com/iiasa/ixmp4/pull/209,
 #:   https://github.com/unionai-oss/pandera/pull/2158.
 MARK = {
-    "IXMP4Backend NI": pytest.mark.xfail(
-        reason="Not implemented on IXMP4Backend",
+    "IXMP4Backend Never": pytest.mark.xfail(
+        reason="Not implemented on IXMP4Backend", raises=NotImplementedError
+    ),
+    "IXMP4Backend Not Yet": pytest.mark.xfail(
+        reason="Not yet supported by IXMP4Backend"
     ),
     "ixmp4#209": pytest.mark.xfail(
         condition=platform.python_version_tuple() >= ("3", "14", "0"),
@@ -245,12 +248,16 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 # test should run only for IXMP4Backend"
                 argvalues.remove("jdbc")
             elif "jdbc" in marker_names:
-                # This marker means "not (yet) implemented/supported on IXMP4"
-                i = argvalues.index("ixmp4")
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend NI"])
-            elif "jdbc_only" in marker_names:
                 # Same as "ixmp4" marker, but for JDBCBackend
                 argvalues.remove("ixmp4")
+            elif "ixmp4_not_yet" in marker_names:
+                # This marker means "not yet supported on IXMP4"
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Not Yet"])
+            elif "ixmp4_never" in marker_names:
+                # This marker means "won't ever be implemented/supported on IXMP4"
+                i = argvalues.index("ixmp4")
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Never"])
 
             if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
                 i = argvalues.index("ixmp4")
@@ -648,7 +655,6 @@ def _platform_fixture(
         )
         if request.scope == "function":
             # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
-            # TODO Does this work for Python 3.9?
             from ixmp.backend.ixmp4 import IXMP4Backend
 
             _backend = IXMP4Backend(**kwargs)

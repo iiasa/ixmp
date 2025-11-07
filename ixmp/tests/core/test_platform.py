@@ -71,9 +71,12 @@ def test_export_timeseries_data(mp: ixmp.Platform, tmp_path: Path) -> None:
     mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
 
     obs = pd.read_csv(path, index_col=False, header=0)
+    # NOTE JDBC returns meta as int64, while it's a boolean flag. ixmp4 returns it as
+    # such, which makes more sense to me.
+    meta = False if is_ixmp4backend(mp._backend) else 0
     exp = (
         DATA[0]
-        .assign(**models["h2g2"], version=1, subannual="Year", meta=0)
+        .assign(**models["h2g2"], version=1, subannual="Year", meta=meta)
         .rename(columns=lambda c: c.upper())
         .reindex(columns=FIELDS["write_file"])
     )
@@ -114,9 +117,14 @@ def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     )["version"].item()
 
     obs = pd.read_csv(path, index_col=False, header=0)
+    # NOTE JDBC returns meta as int64, while it's a boolean flag. ixmp4 returns it as
+    # such, which makes more sense to me.
+    meta = False if is_ixmp4backend(mp._backend) else 0
     exp = (
         DATA[0]
-        .assign(**models["h2g2"], version=exp_default_version, subannual="Year", meta=0)
+        .assign(
+            **models["h2g2"], version=exp_default_version, subannual="Year", meta=meta
+        )
         .rename(columns=lambda c: c.upper())
         .reindex(columns=FIELDS["write_file"])
     )
@@ -172,8 +180,6 @@ def test_regions(test_mp: ixmp.Platform) -> None:
     assert all([list(obs.loc[0]) == ["World", None, "World", "common"]])
 
 
-# NOTE IXMP4(Backend) doesn't store `Parent`; instead, it returns the region name itself
-@pytest.mark.jdbc
 def test_add_region(test_mp: ixmp.Platform) -> None:
     # Region can be added
     test_mp.add_region("foo", "bar", "World")
@@ -181,11 +187,18 @@ def test_add_region(test_mp: ixmp.Platform) -> None:
     # Region can be retrieved
     regions = test_mp.regions()
     obs = regions[regions["region"] == "foo"].reset_index(drop=True)
-    assert all([list(obs.loc[0]) == ["foo", None, "World", "bar"]])
+    # NOTE IXMP4(Backend) doesn't store `Parent`; instead, it returns the region name
+    # itself. We can't just fail when Parent is provided, to keep workflows running.
+    expected = (
+        ["foo", None, "foo", "bar"]
+        if is_ixmp4backend(test_mp._backend)
+        else ["foo", None, "World", "bar"]
+    )
+    assert all([list(obs.loc[0]) == expected])
 
 
 # NOTE IXMP4Backend doesn't handle synonyms, it might not ever
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_not_yet
 def test_add_region_synonym(test_mp: ixmp.Platform) -> None:
     test_mp.add_region("foo", "bar", "World")
     test_mp.add_region_synonym("foo2", "foo")
@@ -203,8 +216,11 @@ def test_add_region_synonym(test_mp: ixmp.Platform) -> None:
 
 
 # NOTE I can't parametrize 'backend' here to mark ixmp4 as xfail, so just run on jdbc
-# NOTE This test fails on ixmp4 because ixmp4 doesn't define any data on all platforms
-@pytest.mark.jdbc
+# NOTE This test fails on ixmp4 because ixmp4 doesn't define any data on all platforms,
+# I don't see a way to define ("Year", "Common", 1.0) without defining a timeseries
+# first (these are linked in ixmp4, but not JDBC). Also, with the current
+# get_timeslices() name == category always.
+@pytest.mark.ixmp4_not_yet
 def test_timeslices(test_mp: ixmp.Platform) -> None:
     timeslices = test_mp.timeslices()
     obs = timeslices[timeslices.category == "Common"]
@@ -215,7 +231,7 @@ def test_timeslices(test_mp: ixmp.Platform) -> None:
 
 
 # NOTE This test fails because there's no way to explicitly add timeslices in ixmp4
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_not_yet
 def test_add_timeslice(test_mp: ixmp.Platform) -> None:
     test_mp.add_timeslice("January, 1st", "Days", 1.0 / 366)
     timeslices = test_mp.timeslices()
@@ -229,7 +245,7 @@ def test_add_timeslice(test_mp: ixmp.Platform) -> None:
 # NOTE This test fails because there's no way to explicitly add timeslices in ixmp4;
 # and because of ixmp4's automatic handling of 'timeslices', there's no special handling
 # of duplicate values: if a timeslice is new, it's added, otherwise, it's ignored
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_not_yet
 def test_add_timeslice_duplicate(
     caplog: pytest.LogCaptureFixture, test_mp: ixmp.Platform
 ) -> None:

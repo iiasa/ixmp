@@ -85,8 +85,9 @@ def test_close_default_logging(
     assert captured.out == ""
 
 
-# NOTE IXMP4Backend's close_db() is a noop
-@pytest.mark.jdbc
+# NOTE sqlalchemy doesn't provide a clear way to check that a session/engine is closed,
+# and by themselves, they can be closed again without logging as expected here
+@pytest.mark.ixmp4_not_yet
 @MARK["pytest#10843"]
 def test_close_increased_logging(
     test_mp_f: "Platform", capfd: pytest.CaptureFixture[str]
@@ -261,8 +262,6 @@ class TestJDBCBackend:
         be.gc()
 
 
-# TODO IXMP4Backend needs to handle change_scalar() correctly
-@pytest.mark.jdbc
 def test_exceptions(test_mp: "Platform") -> None:
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
@@ -421,8 +420,8 @@ def exception_verbose_true() -> Generator[None, Any, None]:
     ixmp.backend.jdbc._EXCEPTION_VERBOSE = tmp  # Restore value
 
 
-# FIMXE This raises a RunNotFound on IXMP4Backend
-@pytest.mark.jdbc
+# FIXME This raises a RunNotFound on IXMP4Backend and without increased logging
+@pytest.mark.ixmp4_not_yet
 def test_verbose_exception(test_mp: "Platform", exception_verbose_true: None) -> None:
     # Exception stack trace is logged for debugging
     with pytest.raises(RuntimeError) as exc_info:

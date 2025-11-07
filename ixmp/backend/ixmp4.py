@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Generator, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from copy import copy
 from dataclasses import asdict, dataclass
 from itertools import chain
@@ -13,7 +13,13 @@ import pandas as pd
 from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
 from ixmp4.core import Run
-from ixmp4.core.exceptions import NotUnique, PlatformNotFound, RunIsLocked
+from ixmp4.core.exceptions import (
+    NotUnique,
+    OptimizationDataValidationError,
+    PlatformNotFound,
+    RunIsLocked,
+    RunLockRequired,
+)
 from ixmp4.core.optimization import (
     equation,
     indexset,
@@ -45,6 +51,7 @@ from typing_extensions import Unpack
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+from ixmp.util import as_str_list
 
 from .base import CachingBackend
 from .common import ItemType
@@ -103,24 +110,6 @@ CLASS_FOR_IX_TYPE: dict[str, tuple["IXMP4ModelDataType", ...]] = {
 RENAME_COLS = {"values": "value", "units": "unit", "levels": "lvl", "marginals": "mrg"}
 
 UNITS_NOT_SET = "_NOTSET"
-
-
-# TODO Reconcile this with `as_str_list()`
-def _convert_filters_values_to_lists(
-    filters: Mapping[str, Any | Sequence[Any]],
-) -> dict[str, list[Any]]:
-    """Convert singular values in `filters` to lists."""
-    result: dict[str, list[Any]] = {}
-
-    for k, v in filters.items():
-        if isinstance(v, dict):
-            result[k] = list(map(str, v))
-        elif not isinstance(v, list):
-            result[k] = [v]
-        else:
-            result[k] = v
-
-    return result
 
 
 def _align_dtypes_for_filters(
@@ -272,8 +261,11 @@ class IXMP4Backend(CachingBackend):
         ixmp4_name: str,
         dsn: str = Options.dsn,
         jdbc_compat: bool | str = Options.jdbc_compat,
+        cache: bool = True,
     ) -> None:
         from ixmp4.data.backend.test import PostgresTestBackend
+
+        super().__init__(cache_enabled=cache)
 
         # Handle arguments
         self._options = opts = Options(
@@ -352,15 +344,18 @@ class IXMP4Backend(CachingBackend):
         return Options.handle_config(args, kwargs)
 
     # def close_db(self) -> None:
-    #     self._backend.close()
+    #     self._backend.close()  # identical to self._platform.backend.close()
+
+    # def open_db(self) -> None:
+    #     ...
 
     # Modifying the Platform
 
     def add_scenario_name(self, name: str) -> None:
         self._platform.scenarios.create(name=name)
 
-    # TODO clarify: ixmp4.Run doesn't have a name, but is the new ixmp.Scenario
-    # should it have a name or are these scenario names okay?
+    # TODO clarify: ixmp4.Run doesn't have a name, but is the new ixmp.Scenario:
+    # Should it have a name or are these scenario names okay?
     def get_scenario_names(self) -> Generator[str, None, None]:
         for scenario in self._platform.scenarios.list():
             yield scenario.name
@@ -400,7 +395,6 @@ class IXMP4Backend(CachingBackend):
                 "Some date",
                 # TODO Should Runs get .docs?
                 "Some docs",
-                # TODO Check if types.Mapped is still the way to go in ixmp4
                 run.version,
             ]
 
@@ -478,7 +472,7 @@ class IXMP4Backend(CachingBackend):
     ) -> Scenario:
         # TODO either do log.warning that annotation is unused or
         # run.docs = annotation
-        # TODO Should this be supported?
+        # NOTE ixmp4 won't reproduce this stack-violation behaviour
         if first_model_year:
             log.warning(
                 "ixmp4-backed Scenarios don't support cloning from "
@@ -495,11 +489,14 @@ class IXMP4Backend(CachingBackend):
             platform_dest, model, scenario, version=cloned_run.version, scheme=s.scheme
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
+
         return cloned_s
 
     def get(self, ts: TimeSeries) -> None:
         v = int(ts.version) if ts.version else None
-        run = self._platform.runs.get(model=ts.model, scenario=ts.scenario, version=v)
+        run = self._platform.runs.get(
+            model=ts.model, scenario=ts.scenario, version=v, get_max_as_default=True
+        )
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
@@ -512,22 +509,22 @@ class IXMP4Backend(CachingBackend):
             pass
 
     def discard_changes(self, ts: TimeSeries) -> None:
-        # TODO Should we assert that the Run is locked?
         run = self.index[ts]
         run._revert_changes(target_transaction=run._find_target_transaction())
         run._meta.refetch_data()
-        run._unlock()
 
     def commit(self, ts: TimeSeries, comment: str) -> None:
         run = self.index[ts]
-        run.checkpoints.create(message=comment)
+        # Convert error for compatibility with JDBC (e.g. util.maybe_commit())
+        try:
+            run.checkpoints.create(message=comment)
+        except RunLockRequired as e:
+            raise RuntimeError from e
+
         run._unlock()
 
     def clear_solution(self, s: Scenario, from_year: int | None = None) -> None:
         if from_year:
-            log.warning(
-                "ixmp4 does not support removing the solution only after a certain year"
-            )
             # This is required for compatibility with JDBC
             if type(s) is not Scenario:
                 raise TypeError(
@@ -536,10 +533,13 @@ class IXMP4Backend(CachingBackend):
                 )
         run = self.index[s]
         if run.owns_lock:
-            run.optimization.remove_solution()
+            run.remove_solution(from_year=from_year)
         else:
-            with self.index[s].transact("Clear solution for ixmp.Scenario"):
-                self.index[s].optimization.remove_solution()
+            with run.transact("Clear solution for ixmp.Scenario"):
+                run.optimization.remove_solution()
+                run.iamc.remove_solution(from_year=from_year)
+
+        self.cache_invalidate(ts=s)
 
     def set_as_default(self, ts: TimeSeries) -> None:
         self.index[ts].set_as_default()
@@ -554,7 +554,7 @@ class IXMP4Backend(CachingBackend):
         return self.index[ts].is_default
 
     def has_solution(self, s: Scenario) -> bool:
-        return self.index[s].optimization.has_solution()
+        return self.index[s].has_solution()
 
     def last_update(self, ts: TimeSeries) -> str | None:
         last_update = self.index[ts]._model.updated_at
@@ -566,7 +566,10 @@ class IXMP4Backend(CachingBackend):
         )
 
     def _validate_meta_args(
-        self, model: str | None, scenario: str | None, version: int | None
+        self,
+        model: str | None = None,
+        scenario: str | None = None,
+        version: int | None = None,
     ) -> tuple[str, str, int]:
         """Validate arguments for getting/setting/deleting meta"""
         if model is not None and scenario is not None and version is not None:
@@ -579,9 +582,9 @@ class IXMP4Backend(CachingBackend):
     def set_meta(
         self,
         meta: dict[str, bool | float | int | str],
-        model: str | None,
-        scenario: str | None,
-        version: int | None,
+        model: str | None = None,
+        scenario: str | None = None,
+        version: int | None = None,
     ) -> None:
         _model, _scenario, _version = self._validate_meta_args(
             model=model, scenario=scenario, version=version
@@ -609,9 +612,9 @@ class IXMP4Backend(CachingBackend):
 
     def get_meta(
         self,
-        model: str | None,
-        scenario: str | None,
-        version: int | None,
+        model: str | None = None,
+        scenario: str | None = None,
+        version: int | None = None,
         strict: bool = False,
     ) -> dict[str, Any]:
         _model, _scenario, _version = self._validate_meta_args(
@@ -802,25 +805,30 @@ class IXMP4Backend(CachingBackend):
         # TODO Rename 'type' parameters!
 
         # Retrieve the repository of such items
-        repo = self._get_backend_repo(s=s, type=ixmp4_type)
-        run = self.index[s]
+        repo = self._get_repo(s=s, type=ixmp4_type)
 
-        # NOTE We can't do
-        # if isinstance(repo, BEIndexSetRepository):
-        # because mypy says this needs "@runtime_checkable protocols"
-        if idx == 0 and type == "set":
-            repo.create(run_id=run.id, name=name)  # type: ignore[call-arg]
-        # elif isinstance(repo, BEScalarRepository):
-        elif idx == 0 and type == "par":
-            # ixmp4 v0.10 requires that a value and unit be supplied on creation
-            repo.create(run_id=run.id, name=name, value=np.nan, unit_name="_NOTSET")  # type: ignore[call-arg]
-        else:
-            repo.create(
-                run_id=run.id,
-                name=name,
-                constrained_to_indexsets=list(idx_sets),
-                column_names=list(idx_names) if idx_names else None,
-            )  # type: ignore[call-arg]
+        try:
+            # NOTE We can't do
+            # if isinstance(repo, BEIndexSetRepository):
+            # because mypy says this needs "@runtime_checkable protocols"
+            if idx == 0 and type == "set":
+                # IndexSet
+                repo.create(name=name)  # type: ignore[call-arg]
+            # elif isinstance(repo, BEScalarRepository):
+            elif idx == 0 and type == "par":
+                # Scalar
+                # ixmp4 v0.10 requires that a value and unit be supplied on creation
+                repo.create(name=name, value=np.nan, unit="_NOTSET")  # type: ignore[call-arg]
+            else:
+                repo.create(
+                    name=name,
+                    constrained_to_indexsets=list(idx_sets),
+                    column_names=list(idx_names) if idx_names else None,
+                )  # type: ignore[call-arg]
+        except RunLockRequired:
+            raise RuntimeError("This Scenario cannot be edited, do a checkout first!")
+        except NotUnique:
+            raise ValueError(f"{repr(name)} already exists")
 
     def list_items(self, s: Scenario, type: str) -> list[str]:
         types = CLASS_FOR_IX_TYPE[type]
@@ -963,7 +971,17 @@ class IXMP4Backend(CachingBackend):
             # Silently ignore duplicate data, see NOTE above
             data_to_add = data_to_add[~data_to_add.isin(values=table.data).all(axis=1)]
 
-            self._backend.optimization.tables.add_data(id=table.id, data=data_to_add)
+            try:
+                self._backend.optimization.tables.add_data(
+                    id=table.id, data=data_to_add
+                )
+            except OptimizationDataValidationError as e:
+                # NOTE The ixmp4 error doesn't allow creating exactly the same error
+                # string, but we should switch to its dedicated error, anyway.
+                raise ValueError(
+                    f"The Table '{name}' is not allowed to have (at least one of) the "
+                    f"elements '{key}' based on its IndexSets!"
+                ) from e
 
     def _create_scalar(
         self,
@@ -1058,13 +1076,20 @@ class IXMP4Backend(CachingBackend):
                 self._add_data_to_set(s=s, name=name, key=key, comment=comment)
             else:
                 if key is None:
-                    assert isinstance(value, float), (
-                        "Creating a Scalar requires a value!"
-                    )
                     repo = self._get_backend_repo(s, type=Scalar)
-                    scalar = repo.get(run_id=self.index[s].id, name=name)
+                    run = self.index[s]
+                    scalar = repo.get(run_id=run.id, name=name)
                     # TODO Does this handle 'None'-unit correctly?
                     _unit = self._backend.units.get(str(unit))
+                    # NOTE We could implement a core-layer Scalar.update() in ixmp4 and
+                    # handle this there
+                    try:
+                        run.require_lock()
+                    except RunLockRequired:
+                        raise RuntimeError(
+                            "The Scalar cannot be edited, check out the Scenario first!"
+                        )
+
                     repo.update(id=scalar.id, value=value, unit_id=_unit.id)
                     if comment is not None:
                         repo.docs.set(dimension_id=scalar.id, description=comment)
@@ -1078,6 +1103,8 @@ class IXMP4Backend(CachingBackend):
                     self._add_data_to_parameter(
                         s=s, name=name, key=key, value=value, unit=unit, comment=comment
                     )
+
+        self.cache_invalidate(ts=s, ix_type=type, name=name)
 
     def _get_set_data(
         self,
@@ -1133,13 +1160,32 @@ class IXMP4Backend(CachingBackend):
     def item_get_elements(
         self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
     ) -> "SetData | ParData | SolutionData":
+        clean_filters: dict[str, list[str]] | None = None
+        clean_filters = (
+            {dim: as_str_list(ele) for dim, ele in filters.items()}
+            if filters is not None
+            else filters
+        )
+
+        # Try returning a cached value
+        cached_value = self.maybe_get_cache(
+            ts=s, ix_type=ix_type, name=name, filters=clean_filters
+        )
+        if cached_value is not None:
+            # NOTE ixmp4 might return a different order; enforce same for compatibility
+            if name == "type_tec":
+                print("returning cached value for type_tec")
+                print(cached_value)
+            return (
+                cached_value.reset_index(drop=True)
+                if isinstance(cached_value, pd.DataFrame)
+                else cached_value
+            )
+
+        data: "SetData | ParData | SolutionData"
+
         if ix_type == "set":
-            clean_filters: dict[str, list[Any]] | None = None
-            if filters:
-                clean_filters = _convert_filters_values_to_lists(filters=filters)
-            return self._get_set_data(s=s, name=name, filters=clean_filters)
-        # TODO this is not handling scalars at the moment, but maybe try with type,
-        # except NotFound, try scalar?
+            data = self._get_set_data(s=s, name=name, filters=clean_filters)
         else:
             # Retrieve the ixmp4 data object
             types = CLASS_FOR_IX_TYPE[ix_type]
@@ -1147,7 +1193,12 @@ class IXMP4Backend(CachingBackend):
             assert not isinstance(item, IndexSet)
 
             if isinstance(item, Scalar):
-                return {"value": item.value, "unit": item.unit.name}
+                # TODO DRY this; only call .cache() once below
+                data = {"value": item.value, "unit": item.unit.name}
+                self.cache(
+                    ts=s, ix_type=ix_type, name=name, filters=clean_filters, value=data
+                )
+                return data
 
             # Columns/dict keys expected in result
             columns = item.column_names or item.indexset_names or []
@@ -1164,23 +1215,31 @@ class IXMP4Backend(CachingBackend):
 
             # For scalar items, return dict for compatibility with JDBC
             if N_dim == 0 and set(types) & {Equation, Variable}:
-                return {"lvl": data["lvl"].values[0], "mrg": data["mrg"].values[0]}
+                # TODO DRY this; only call .cache() once below
+                data = (
+                    {"lvl": np.nan, "mrg": np.nan}
+                    if data.empty
+                    else {"lvl": data["lvl"].values[0], "mrg": data["mrg"].values[0]}
+                )
+                self.cache(
+                    ts=s, ix_type=ix_type, name=name, filters=clean_filters, value=data
+                )
+                return data
 
             # Apply filters if requested
-            if filters:
+            if clean_filters:
                 # isin() won't consider int(700) to be in ['700'], etc
-                clean_filters = _convert_filters_values_to_lists(filters=filters)
                 _align_dtypes_for_filters(filters=clean_filters, data=data)
                 clean_filters = _remove_empty_lists(filters=clean_filters)
 
-                if clean_filters:
-                    data = data[
-                        data.isin(values=clean_filters)[clean_filters.keys()].all(
-                            axis=1
-                        )
-                    ].reset_index(drop=True)
+                data = data[
+                    data.isin(values=clean_filters)[clean_filters.keys()].all(axis=1)
+                ].reset_index(drop=True)
 
-            return data
+        # Store cache
+        self.cache(ts=s, ix_type=ix_type, name=name, filters=clean_filters, value=data)
+
+        return data
 
     def item_delete_elements(
         self,
@@ -1189,6 +1248,7 @@ class IXMP4Backend(CachingBackend):
         name: str,
         keys: Iterable[Sequence[str]],
     ) -> None:
+        clear_whole_cache = False
         if type == "set":
             item = self._get_indexset_or_table(s=s, name=name)
 
@@ -1198,6 +1258,7 @@ class IXMP4Backend(CachingBackend):
                 self._backend.optimization.indexsets.remove_data(
                     id=item.id, data=data[item.name].astype(str).to_list()
                 )
+                clear_whole_cache = True
             else:
                 # TODO can we assume that keys follow same order as indexsets/columns?
                 columns = item.column_names or item.indexset_names
@@ -1211,6 +1272,12 @@ class IXMP4Backend(CachingBackend):
                 id=parameter.id, data=data
             )
 
+        # Since `name` may be an IndexSet, clear the cache entirely. This ensures that
+        # e.g. parameter elements for Parameters indexed by `name` are also refreshed
+        # on the next call to item_get_elements().
+        args = (s,) if clear_whole_cache else (s, type, name)
+        self.cache_invalidate(*args)
+
     def delete_item(
         self, s: Scenario, type: Literal["set", "par", "equ"], name: str
     ) -> None:
@@ -1218,6 +1285,7 @@ class IXMP4Backend(CachingBackend):
         item = self._find_item(s=s, name=name, types=CLASS_FOR_IX_TYPE[type])
         # Access the repository containing objects of `item`s type; delete
         self._get_backend_repo(s=s, type=item.__class__).delete(id=item.id)
+        self.cache_invalidate(ts=s, ix_type=type, name=name)
 
     # NOTE The name 'cat_`name`' is used for backward compatibility with the JDBC, where
     # such names are hardcoded. 'cat' means 'category' and should be expanded for
@@ -1334,6 +1402,10 @@ class IXMP4Backend(CachingBackend):
 
         self._backend.optimization.tables.add_data(id=category_table.id, data=data)
 
+        self.cache_invalidate(ts=ms, ix_type="set", name=name)
+        self.cache_invalidate(ts=ms, ix_type="set", name=f"type_{name}")
+        self.cache_invalidate(ts=ms, ix_type="set", name=f"cat_{name}")
+
     # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
     # same here or do we expect user code to call this with name == "tec" if they're
     # interested in "technology"?
@@ -1377,8 +1449,6 @@ class IXMP4Backend(CachingBackend):
         subannual: str,
         meta: bool,
     ) -> None:
-        log.warning("Parameter `meta` for set_data() currently unused by ixmp4!")
-
         # Construct dataframe as ixmp4 expects it
         years = data.keys()
         values = data.values()
@@ -1386,9 +1456,10 @@ class IXMP4Backend(CachingBackend):
         regions = [region] * number_of_years
         variables = [variable] * number_of_years
         units = [unit] * number_of_years
+        is_input = [meta] * number_of_years
 
-        iterables = [years, values, regions, variables, units]
-        columns = ["step_year", "value", "region", "variable", "unit"]
+        iterables = [years, values, regions, variables, units, is_input]
+        columns = ["step_year", "value", "region", "variable", "unit", "is_input"]
 
         # NOTE We don't handle DataPoint.Type.DATETIME yet
         # NOTE subannual == "Year" per default and some string otherwise
@@ -1573,7 +1644,7 @@ class IXMP4Backend(CachingBackend):
             )
 
             data = data.rename(columns={name: name.upper() for name in data.columns})
-
+            data = data.rename(columns={"IS_INPUT": "META"})
             expected_columns = [
                 "MODEL",
                 "SCENARIO",
@@ -1607,11 +1678,6 @@ class IXMP4Backend(CachingBackend):
                 .replace({"ANNUAL": "Year"})
             )
             data = data.drop(columns={"STEP_CATEGORY", "TYPE"})
-
-            # Handle 'meta' values
-            # NOTE In ixmp4, meta data is only stored in relation to Runs, not
-            # individual datapoints
-            data["META"] = 0
 
             # Sort columns according to ixmp_source expectations
             # NOTE Alternatively, check_like=True might work in test/assert_frame_equal
@@ -1692,6 +1758,7 @@ class IXMP4Backend(CachingBackend):
                 check_solution=check_solution,
             )
 
+            self.cache_invalidate(ts)
         else:
             raise NotImplementedError(path, item_type)
 

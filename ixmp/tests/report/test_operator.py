@@ -84,19 +84,14 @@ def test_get_remove_ts(
     with assert_logs(caplog, "Remove 5 of 5 (1964 <= year) rows of time series data"):
         c.get(key)  # type: ignore[no-untyped-call]
 
-    # NOTE JDBC removes only those ts where `meta=False`; ixmp4 removes all
-    expected = 0 if is_ixmp4backend(test_mp._backend) else 6 - 3
-
     # See comment above; only one row is removed
-    assert expected == len(ts.timeseries())
+    assert 6 - 3 == len(ts.timeseries())
 
     # remove_ts() can be used directly
     remove_ts(ts)
 
-    expected = 0 if is_ixmp4backend(test_mp._backend) else 6 - 3
-
     # All non-'meta' data were removed
-    assert expected == len(ts.timeseries())
+    assert 6 - 3 == len(ts.timeseries())
 
 
 def test_map_as_qty() -> None:

@@ -894,7 +894,7 @@ class Backend(ABC):
 
         Parameters
         ----------
-        type : 'set' or 'par' or 'equ' or 'var
+        type : 'set' or 'par' or 'equ' or 'var'
         """
 
     @abstractmethod

@@ -101,7 +101,7 @@ ModelItemType: TypeAlias = Literal[
 SimpleSetData: TypeAlias = "pandas.Series[float | int | str]"
 
 #: Return type of :meth:`.Scenario.set`.
-SetData: TypeAlias = SimpleSetData | pandas.DataFrame
+SetData: TypeAlias = "SimpleSetData | pandas.DataFrame"
 
 
 class ScalarParData(TypedDict):

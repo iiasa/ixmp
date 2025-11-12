@@ -251,16 +251,21 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 # Same as "ixmp4" marker, but for JDBCBackend
                 argvalues.remove("ixmp4")
 
-            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
-                i = argvalues.index("ixmp4")
+        if "ixmp4" in argvalues:
+            i = argvalues.index("ixmp4")
+            if "ixmp4_209" in marker_names and (
+                "ixmp4_not_yet" in marker_names or "ixmp4_never" in marker_names
+            ):
+                # Choose the broadest XFAIL possible
+                # NOTE This should only be necessary temporarily until #209 is resolved
+                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Not Yet"])
+            elif "ixmp4_209" in marker_names:
                 argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
             elif "ixmp4_not_yet" in marker_names:
                 # This marker means "not yet supported on IXMP4"
-                i = argvalues.index("ixmp4")
                 argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Not Yet"])
             elif "ixmp4_never" in marker_names:
                 # This marker means "won't ever be implemented/supported on IXMP4"
-                i = argvalues.index("ixmp4")
                 argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Never"])
 
         metafunc.parametrize("backend", argvalues, indirect=True)

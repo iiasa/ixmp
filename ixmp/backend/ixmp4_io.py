@@ -306,6 +306,10 @@ def write_run_to_gdx(
 
     _record_versions(container=container, packages=record_version_packages)
 
+    # Ensure the directory where we want to write the GDX exists (it can be missing due
+    # to GAMSModel's use_temp_dir handling)
+    file_name.parent.mkdir(parents=True, exist_ok=True)
+
     container.write(write_to=file_name)
 
 
@@ -388,6 +392,10 @@ def _read_equations_to_run(  # type: ignore[no-any-unimported]
             )
 
 
+# FIXME This assumes that all IndexSets of the to-be-read Equations and Variables are
+# present in the Run.
+# FIXME ixmp_source always adds the required IndexSets, Equations, Variables to the Run
+# if they don't already exist (only for MESSAGE scheme)
 def read_gdx_to_run(
     run: Run,
     result_file: Path,
@@ -413,13 +421,16 @@ def read_gdx_to_run(
         A comment to store when adding the data to `run`.
     check_solution : bool
         Unused by ixmp4.
-        A flag to indicate whether the solution should be checked
-        (for consistency, maybe?).
+        A flag to indicate whether the solution should be checked.
     """
     # Warn about unused parameters
     if comment:
         log.warning(f"Ignoring comment {comment} for now; unused by ixmp4!")
     if check_solution:
+        # TODO https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/java/at/ac/iiasa/ixmp/objects/MsgScenario.java#L1241-L1279
+        # ixmp_source tries to read the official GAMS solution status. If that is not a
+        # specific value, it either discards changes and raises (check_solution is True)
+        # or emits a warning (check_solution is False)
         log.warning(
             f"Ignoring check_solution={check_solution} for now; unused by ixmp4!"
         )

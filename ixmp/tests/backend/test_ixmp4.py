@@ -11,15 +11,6 @@ if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
 
-def test__ensure_filters_values_are_lists() -> None:
-    from ixmp.backend.ixmp4 import _convert_filters_values_to_lists
-
-    filters = {"foo": [1, 2], "bar": 3}
-    expected = {"foo": [1, 2], "bar": [3]}
-    clean_filters = _convert_filters_values_to_lists(filters=filters)
-    assert clean_filters == expected
-
-
 def test__align_dtypes_for_filters() -> None:
     from ixmp.backend.ixmp4 import _align_dtypes_for_filters
 
@@ -257,24 +248,6 @@ class TestIxmp4Functions:
         assert expected in caplog.messages
 
     @pytest.mark.ixmp4_209
-    def test_clear_solution(
-        self,
-        ixmp4_backend: "IXMP4Backend",
-        caplog: pytest.LogCaptureFixture,
-        scenario: Scenario,
-    ) -> None:
-        from ixmp.backend.ixmp4 import log
-
-        # Test logging a warning for from_year
-        with caplog.at_level("WARNING", logger=log.name):
-            ixmp4_backend.clear_solution(s=scenario, from_year=1)
-
-        expected = (
-            "ixmp4 does not support removing the solution only after a certain year"
-        )
-        assert expected in caplog.messages
-
-    @pytest.mark.ixmp4_209
     def test_run_id(self, ixmp4_backend: "IXMP4Backend", scenario: Scenario) -> None:
         # NOTE Depending on what run_id() should actually fetch, this needs adapting
         # scenario sets up a new Run, which has version 1
@@ -288,13 +261,13 @@ class TestIxmp4Functions:
         run = ixmp4_backend.index[scenario]
         indexset_data = "foo"
         table_data = {"Indexset": [indexset_data]}
-        with run.transact("Test item_delete_elements"):
-            indexset = run.optimization.indexsets.create("Indexset")
-            indexset.add(data=indexset_data)
-            table = run.optimization.tables.create(
-                "Table", constrained_to_indexsets=[indexset.name]
-            )
-            table.add(data=table_data)
+        # NOTE New Scenarios are locked and ready for changes by default
+        indexset = run.optimization.indexsets.create("Indexset")
+        indexset.add(data=indexset_data)
+        table = run.optimization.tables.create(
+            "Table", constrained_to_indexsets=[indexset.name]
+        )
+        table.add(data=table_data)
 
         # Assert data is stored in scenario
         set_data = scenario.set(name=table.name)
@@ -315,8 +288,8 @@ class TestIxmp4Functions:
     ) -> None:
         # Create a 'set' to delete
         run = ixmp4_backend.index[scenario]
-        with run.transact("Test delete_item"):
-            indexset = run.optimization.indexsets.create("Indexset")
+        # NOTE New Scenarios are locked and ready for changes by default
+        indexset = run.optimization.indexsets.create("Indexset")
         ixmp4_backend.delete_item(s=scenario, type="set", name=indexset.name)
 
         # Test there are no 'sets' on scenario anymore

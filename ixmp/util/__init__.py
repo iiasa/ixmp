@@ -674,7 +674,7 @@ def update_par(scenario: "Scenario", name: str, data: pd.DataFrame) -> None:
     par_df = scenario.par(name)
     # We seem to rely on this, even though `.par` could return a Scalar/dict
     assert isinstance(par_df, pd.DataFrame)
-    tmp = pd.concat([par_df, data])
+    tmp = data if par_df.empty else pd.concat([par_df, data])
     columns = list(filter(lambda c: c != "value", tmp.columns))
     tmp = tmp.drop_duplicates(subset=columns, keep=False)
 

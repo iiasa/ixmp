@@ -23,6 +23,7 @@ from ixmp.report.operator import (
 )
 from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -52,8 +53,7 @@ def test_from_url(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
 # TODO For all genno-related type ignores, remove once genno adds annotations
 
 
-# FIXME Not sure why introducing the Computer fails for IXMP4Backend
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_get_remove_ts(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -91,7 +91,7 @@ def test_get_remove_ts(
     remove_ts(ts)
 
     # All non-'meta' data were removed
-    assert 3 == len(ts.timeseries())
+    assert 6 - 3 == len(ts.timeseries())
 
 
 def test_map_as_qty() -> None:
@@ -120,8 +120,7 @@ def test_map_as_qty() -> None:
     assert_qty_equal(exp, result)
 
 
-# FIXME IXMP4Backend seems to return d with unexpected ordering
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_update_scenario(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -181,11 +180,12 @@ def test_update_scenario(
     # scalars differently
     par_df = scen.par("d")
     assert isinstance(par_df, pd.DataFrame)
-    assert_frame_equal(par_df, data)
+    if is_ixmp4backend(test_mp._backend):
+        data = data.sort_values(by=["i", "j"], ignore_index=True)
+    assert_frame_equal(par_df, data, check_like=True)
 
 
-# FIXME Nots ure why this fails on IXMP4Backend
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     # Computer and target scenario
     c = Computer()  # type: ignore[no-untyped-call]
@@ -236,18 +236,26 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
 
     # A message is logged
     r = caplog.record_tuples[-1]
+    error = (
+        "RegionNotFound('Moon')"
+        if is_ixmp4backend(test_mp._backend)
+        else "ValueError('region = Moon')"
+    )
     assert (
         "ixmp.report.operator" == r[0]
         and logging.ERROR == r[1]
-        and r[2].startswith("Failed with ValueError('region = Moon')")
+        and r[2].startswith(f"Failed with {error}")
     ), caplog.record_tuples
 
     caplog.clear()
 
     # with strict=True, the computation fails
     c.add("test 2", partial(store_ts, strict=True), "target", "input 3")
+    error_match = (
+        "RegionNotFound: Moon" if is_ixmp4backend(test_mp._backend) else "region = Moon"
+    )
     with pytest.raises(
         ComputationError,
-        match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
+        match=re.compile(f"computing 'test 2' using:.*{error_match}", flags=re.DOTALL),
     ):
         c.get("test 2")  # type: ignore[no-untyped-call]

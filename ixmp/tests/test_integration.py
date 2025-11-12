@@ -10,6 +10,7 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import HIST_DF, TS_DF, make_dantzig, models
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -19,8 +20,7 @@ TS_DF_CLEARED = TS_DF.copy()
 TS_DF_CLEARED.loc[0, 2005] = np.nan
 
 
-# FIXME IXMP4Backend seems to return columns with no/wrong names for scen.timeseries()
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_run_clone(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
@@ -66,25 +66,26 @@ def test_run_clone(
         scen3.timeseries(iamc=True), HIST_DF.assign(scenario=scen.scenario)
     )
 
-    # cloning with `keep_solution=False` and `first_model_year`
-    # drops the solution and removes all timeseries not marked `meta=True`
-    # in the model horizon (i.e, `year >= first_model_year`)
-    scen4 = scen.clone(keep_solution=False, shift_first_model_year=2005)
-    assert np.isnan(scen4.var("z")["lvl"])
-    assert_frame_equal(
-        scen4.timeseries(iamc=True),
-        TS_DF_CLEARED.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
-    )
+    # NOTE This works on JDBC, but is part of a stack violation; thus, ixmp4 is not
+    # going to reproduce this behaviour
+    if not is_ixmp4backend(test_mp._backend):
+        # cloning with `keep_solution=False` and `first_model_year`
+        # drops the solution and removes all timeseries not marked `meta=True`
+        # in the model horizon (i.e, `year >= first_model_year`)
+        scen4 = scen.clone(keep_solution=False, shift_first_model_year=2005)
+        assert np.isnan(scen4.var("z")["lvl"])
+        assert_frame_equal(
+            scen4.timeseries(iamc=True),
+            TS_DF_CLEARED.assign(scenario=pd.Series([scen.scenario, scen.scenario])),
+        )
 
 
-# FIXME Fix IXMP4Backend return value for s.var()["lvl"] so that np.isnan() accepts it
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_run_remove_solution(
     test_mp: "Platform", request: pytest.FixtureRequest
 ) -> None:
     # create a new instance of the transport problem and solve it
-    mp = test_mp
-    scen = make_dantzig(mp, solve=True, quiet=True, request=request)
+    scen = make_dantzig(test_mp, solve=True, quiet=True, request=request)
     assert np.isclose(scen.var("z")["lvl"], 153.675)
 
     # check that re-solving the model will raise an error if a solution exists

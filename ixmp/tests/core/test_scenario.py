@@ -11,6 +11,7 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import assert_logs, make_dantzig, models
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -24,11 +25,27 @@ class AddParKwargs(TypedDict, total=False):
     comment: str
 
 
+### TODO
+###
+### When tests error out at setup, the ixmp_test_master DB is not torn down
+### (Sometimes, the same happens on failures when running the same file again)
+
+
 # Fixtures
 @pytest.fixture(scope="class")
 def scen(mp: "Platform") -> Generator["Scenario", Any, None]:
     """The default version of the Dantzig on the mp."""
     yield ixmp.Scenario(mp, **models["dantzig"])
+
+
+@pytest.fixture(scope="function")
+def scen_f(mp: "Platform") -> Generator["Scenario", Any, None]:
+    """The default version of the Dantzig Scenario on the mp, function scoped."""
+    # TODO Can we validate that if with_data, scheme needs to be "dantzig"?
+    # Or make GamsModel accept/ignore that silently?
+    yield ixmp.Scenario(
+        mp, **models["dantzig"], version="new", with_data=True, scheme="dantzig"
+    )
 
 
 @pytest.fixture(scope="function")
@@ -61,11 +78,11 @@ class TestScenario:
     """Tests of :class:`ixmp.Scenario`."""
 
     # Initialize Scenario
-    # NOTE IXMP4-backed Scenarios start with version = 1
-    @pytest.mark.jdbc
     def test_init(self, test_mp: "Platform", scen_empty: "Scenario") -> None:
-        # Empty scenario has version == 0
-        assert scen_empty.version == 0
+        # Empty scenario has version == 0 on JDBC, but 1 on ixmp4 because the run.id
+        # column starts at 1
+        expected_version = 1 if is_ixmp4backend(test_mp._backend) else 0
+        assert scen_empty.version == expected_version
 
         # A scenario with scheme='MESSAGE' can only be created with a subclass
         class Scenario(ixmp.Scenario):
@@ -103,7 +120,7 @@ class TestScenario:
         assert scen.version == scenario_df["version"].item()
 
     # NOTE IXMP4(Backend) doesn't raise the same error/message as expected here
-    @pytest.mark.jdbc
+    @pytest.mark.ixmp4_not_yet
     def test_from_url(self, mp: "Platform", caplog: pytest.LogCaptureFixture) -> None:
         url = f"ixmp://{mp.name}/Douglas Adams/Hitchhiker"
 
@@ -190,9 +207,22 @@ class TestScenario:
         # Clone has same scheme as original scenario
         assert s1.scheme == s0.scheme == scheme
 
+    def test_clone_default_version(
+        self, request: pytest.FixtureRequest, test_mp: "Platform"
+    ) -> None:
+        scen = ixmp.Scenario(
+            mp=test_mp, model="Model", scenario="Scenario", version="new"
+        )
+
+        # TODO Is this an indicator of something still needing to change?
+        if not is_ixmp4backend(test_mp._backend):
+            scen.commit("")
+
+        unique_model_name = str(hash(request.node.nodeid))
+        clone = scen.clone(model=unique_model_name)
+        assert clone.is_default()
+
     # Initialize items
-    # NOTE IXMP4Backend doesn't handle commits yet
-    @pytest.mark.jdbc
     def test_init_set(self, scen: "Scenario") -> None:
         """Test ixmp.Scenario.init_set()."""
 
@@ -211,9 +241,6 @@ class TestScenario:
         with pytest.raises(ValueError, match="'foo' already exists"):
             scen.init_set("foo")
 
-    # FIXME IXMP4Backend recognized 'foo' as having no idx_sets, likely due to the
-    # assumption of all names of all items being unique. We should drop that, it seems.
-    @pytest.mark.jdbc
     def test_init_par(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -249,10 +276,6 @@ class TestScenario:
 
     def test_scalar(self, scen: "Scenario") -> None:
         assert scen.scalar("f") == {"unit": "USD/km", "value": 90}
-
-    ### TODO
-    ###
-    ### Check that the parametrization is still working
 
     # Store data
     @pytest.mark.parametrize(
@@ -300,7 +323,6 @@ class TestScenario:
         scen.check_out()
         scen.add_par(*args, **kwargs)
 
-    @pytest.mark.jdbc  # FIXME Raises IndexError with IXMP4Backend
     def test_add_par2(self, scen: "Scenario") -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()
@@ -339,7 +361,8 @@ class TestScenario:
         assert isinstance(df, pd.DataFrame)
 
         # Data frame has the expected columns
-        assert ["i", "j", "value", "unit"] == list(df.columns)
+        # NOTE On ixmp4/postgres, the order of "value" and "unit" is swapped
+        assert set(["i", "j", "value", "unit"]) == set(list(df.columns))
 
         # The expected number of values are retrieved
         assert 3 == len(df)
@@ -381,12 +404,7 @@ class TestScenario:
         (
             (ixmp.ItemType.EQU, None, ["cost", "demand", "supply"]),
             (ixmp.ItemType.PAR, None, ["a", "b", "d", "f"]),
-            pytest.param(
-                ixmp.ItemType.SET,
-                None,
-                ["i", "j"],
-                marks=pytest.mark.xfail(reason="XFAIL for IXMP4Backend only"),
-            ),
+            (ixmp.ItemType.SET, None, ["i", "j"]),
             (ixmp.ItemType.VAR, None, ["x", "z"]),
             # With indexed_by=
             (ixmp.ItemType.EQU, "i", ["supply"]),
@@ -429,8 +447,6 @@ class TestScenario:
         # Marginals
         npt.assert_array_almost_equal(df["mrg"], [0, 0, 0.036])
 
-    # TODO IXMP4Backend is not handling _cache correctly
-    @pytest.mark.jdbc
     def test_load_scenario_data(self, mp: "Platform") -> None:
         """load_scenario_data() caches all data."""
         scen = ixmp.Scenario(mp, **models["dantzig"])
@@ -468,45 +484,38 @@ class TestScenario:
             scen.load_scenario_data()
 
     # I/O
-    # TODO For IXMP4Backend, this somehow triggers a GAMS-related error, while this test
-    # should never touch GAMS
-    @pytest.mark.jdbc
     def test_excel_io(
         self,
-        scen: "Scenario",
+        scen_f: "Scenario",
         scen_empty: "Scenario",
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
+        request: pytest.FixtureRequest,
     ) -> None:
         tmp_path /= "output.xlsx"
 
-        # FIXME remove_solution, check_out, commit, solve, commit should not
-        #       be needed to make this small data addition.
-        scen.remove_solution()
-        scen.check_out()
-
         # A 1-D set indexed by another set
-        scen.init_set("foo", "j")
-        scen.add_set("foo", [["new-york"], ["topeka"]])
+        scen_f.init_set("foo", "j")
+        scen_f.add_set("foo", [["new-york"], ["topeka"]])
         # A scalar parameter with unusual units
-        scen.platform.add_unit("pounds")
-        scen.init_scalar("bar", 100, "pounds")
+        scen_f.platform.add_unit("pounds")
+        scen_f.init_scalar("bar", 100, "pounds")
         # A parameter with no values
-        scen.init_par("baz_1", ["i", "j"])
+        scen_f.init_par("baz_1", ["i", "j"])
         # A parameter with ambiguous index name
-        scen.init_par("baz_2", ["i"], ["i_dim"])
-        scen.add_par("baz_2", dict(value=[1.1], i_dim=["seattle"]))
+        scen_f.init_par("baz_2", ["i"], ["i_dim"])
+        scen_f.add_par("baz_2", dict(value=[1.1], i_dim=["seattle"]))
         # A 2-D set with ambiguous index names
-        scen.init_set("baz_3", ["i", "i"], ["i", "i_also"])
-        scen.add_set("baz_3", [["seattle", "seattle"]])
+        scen_f.init_set("baz_3", ["i", "i"], ["i", "i_also"])
+        scen_f.add_set("baz_3", [["seattle", "seattle"]])
         # A set with no elements
-        scen.init_set("foo_2", ["j"])
+        scen_f.init_set("foo_2", ["j"])
 
-        scen.commit("")
-        scen.solve()
+        scen_f.commit("")
+        scen_f.solve()
 
         # Solved Scenario can be written to file
-        scen.to_excel(tmp_path, items=ixmp.ItemType.MODEL)
+        scen_f.to_excel(tmp_path, items=ixmp.ItemType.MODEL)
 
         # With init_items=False, can't be read into an empty Scenario.
         # Exception raised is the first index set, alphabetically
@@ -517,10 +526,10 @@ class TestScenario:
         scen_empty.read_excel(tmp_path, init_items=True, commit_steps=True)
 
         # Contents of the Scenarios are the same, except for unreadable items
-        assert set(scen_empty.par_list()) | {"baz_1", "baz_2"} == set(scen.par_list())
-        assert set(scen_empty.set_list()) | {"baz_3"} == set(scen.set_list())
+        assert set(scen_empty.par_list()) | {"baz_1", "baz_2"} == set(scen_f.par_list())
+        assert set(scen_empty.set_list()) | {"baz_3"} == set(scen_f.set_list())
         empty_foo = scen_empty.set("foo")
-        foo = scen.set("foo")
+        foo = scen_f.set("foo")
         assert isinstance(empty_foo, pd.DataFrame)
         assert isinstance(foo, pd.DataFrame)
         assert_frame_equal(empty_foo, foo)
@@ -544,10 +553,13 @@ class TestScenario:
         with assert_logs(caplog, "Existing par 'd' has index names(s)"):
             scen_empty.read_excel(tmp_path, init_items=True)
 
+        # NOTE This is testing a hardcoded JDBC platform!
         # A new, empty Platform (different from the one under scen -> mp ->
         # test_mp) that lacks all units
         mp = ixmp.Platform(
-            backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem:excel_io"
+            backend="jdbc",
+            driver="hsqldb",
+            url=f"jdbc:hsqldb:mem:excel_io_{request.node.nodeid.replace('/', '_')}",
         )
         # A Scenario without the 'dantzig' scheme -> no contents at all
         s = ixmp.Scenario(
@@ -563,10 +575,7 @@ class TestScenario:
         # Succeeds with add_units=True
         s.read_excel(tmp_path, add_units=True, init_items=True)
 
-    # NOTE IXMP4-backed Scenarios should not call remove_solution() if they don't have
-    # one
-    @pytest.mark.jdbc
-    def test_solve(self, tmp_path: Path, scen: "Scenario") -> None:
+    def test_solve(self, tmp_path: Path, scen_f: "Scenario") -> None:
         from subprocess import run
 
         # Copy the dantzig model file into the `tmp_path`
@@ -575,10 +584,8 @@ class TestScenario:
             Path(ixmp.__file__).parent.joinpath("model", "dantzig.gms"), model_file
         )
 
-        scen.remove_solution()
-
         # Scenario solves successfully
-        scen.solve(
+        scen_f.solve(
             model_file=model_file,
             # When this is True, GAMSModel automatically cleans up the temporary
             # directory in which the model runs, including the I/O GDX files. Leave
@@ -601,8 +608,6 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -623,21 +628,22 @@ class TestScenario:
 
         scen.remove_meta(["test_int", "test_bool"])
         obs = scen.get_meta()
-        assert len(obs) == 4
-        assert set(obs.keys()) == {
+        expected_keys = {
             "test_string",
             "test_number",
             "test_number_negative",
             "test_bool_false",
         }
+        if is_ixmp4backend(mp._backend):
+            expected_keys |= {"_ixmp_annotation", "_ixmp_scheme"}
+        assert len(obs) == len(expected_keys)
+        assert set(obs.keys()) == expected_keys
 
-        # Setting with a type other than int, float, bool, str raises TypeError
+        # Setting with a type other than int, float, bool, str raises ValueError
         with pytest.raises(ValueError, match="Cannot use value"):
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
-    # NOTE Not yet implemented on IXMP4Backend
-    @pytest.mark.jdbc
     def test_meta_bulk(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -692,9 +698,7 @@ def test_gh_210(scen_empty: "Scenario") -> None:
     assert all(foo_data.columns == columns)
 
 
-# NOTE IXMP4(Backend) raises an OptimizationDataValidationError if 'bar' is missing from
-# index set 'i' instead of a ValueError
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_set(scen_empty: "Scenario") -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
@@ -758,9 +762,13 @@ def test_set(scen_empty: "Scenario") -> None:
     with pytest.raises(ValueError, match="Key 'extra' without matching comment"):
         scen.add_set("i", ["i9", "extra"], ["i9 comment"])
     # Missing element in the index set
-    with pytest.raises(
-        ValueError, match="The index set 'i' does not have an element 'bar'!"
-    ):
+    _match = (
+        "The Table 'foo' is not allowed to have (at least one of) the elements "
+        "'['bar']' based on its IndexSets!"
+        if is_ixmp4backend(scen.platform._backend)
+        else "The index set 'i' does not have an element 'bar'!"
+    )
+    with pytest.raises(ValueError, match=re.escape(_match)):
         scen.add_set("foo", "bar")
 
     # Retrieve set elements
@@ -832,9 +840,7 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
-# FIXME Calling scen.solve(change_distance, ...) triggers a bug in the GAMS code
-# IXMP4Backend might need to avoid similar calls (which properties exactly?)
-@pytest.mark.jdbc
+@pytest.mark.ixmp4_209
 def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Test the callback argument to Scenario.solve().
 

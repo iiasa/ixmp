@@ -127,20 +127,24 @@ def test_diff_data(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     ).astype({"_merge": merge_cat})
 
     # Compare different scenarios without filters
+    # NOTE JDBC returns columns with order [value, unit], ixmp4 has [unit, value]
+    # `check_like=True` tells pandas to ignore the order
     for name, df in util.diff(scen_a, scen_b):
         if name == "b":
-            pdt.assert_frame_equal(exp_b, df)
+            pdt.assert_frame_equal(exp_b, df, check_like=True)
         elif name == "d":
-            pdt.assert_frame_equal(exp_d, df)
+            pdt.assert_frame_equal(exp_d, df, check_like=True)
 
     # Compare different scenarios with filters
     iterator = util.diff(scen_a, scen_b, filters=dict(j=["chicago"]))
     for name, df in iterator:
         # Same as above, except only the filtered rows should appear
         if name == "b":
-            pdt.assert_frame_equal(exp_b.iloc[0:1, :], df)
+            pdt.assert_frame_equal(exp_b.iloc[0:1, :], df, check_like=True)
         elif name == "d":
-            pdt.assert_frame_equal(exp_d.iloc[[0, 3], :].reset_index(drop=True), df)
+            pdt.assert_frame_equal(
+                exp_d.iloc[[0, 3], :].reset_index(drop=True), df, check_like=True
+            )
 
 
 @pytest.mark.ixmp4_209
@@ -328,10 +332,9 @@ def test_format_scenario_list(test_mp_f: "Platform") -> None:
     ) == util.format_scenario_list(mp, as_url=True)
 
 
-# IXMP4Backend doesn't have proper commits yet, so these never raise RuntimeErrors
-@pytest.mark.jdbc
-def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
-    s = Scenario(test_mp, "maybe_commit", "maybe_commit", version="new")
+@pytest.mark.ixmp4_209
+def test_maybe_commit(caplog: pytest.LogCaptureFixture, test_mp_f: "Platform") -> None:
+    s = Scenario(test_mp_f, "maybe_commit", "maybe_commit", version="new")
 
     # A new Scenario is not committed, so this works
     assert util.maybe_commit(s, True, message="foo") is True

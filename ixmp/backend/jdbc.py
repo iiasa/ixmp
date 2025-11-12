@@ -38,7 +38,7 @@ from ixmp.core.item import Item, Set
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
-from ixmp.util import as_str_list, filtered
+from ixmp.util import as_str_list
 
 from .base import CachingBackend
 from .common import FIELDS, ItemType
@@ -1165,7 +1165,7 @@ class JDBCBackend(CachingBackend):
         filters: "Filters" = None,
     ) -> "SolutionData": ...
 
-    # FIXME reduce complexity 18 → ≤13
+    # FIXME reduce complexity 16 → ≤13
     def item_get_elements(  # noqa: C901
         self, s: Scenario, ix_type: str, name: str, filters: "Filters" = None
     ) -> "SetData | ParData | SolutionData":
@@ -1173,24 +1173,12 @@ class JDBCBackend(CachingBackend):
             # Convert filter elements to strings
             filters = {dim: as_str_list(ele) for dim, ele in filters.items()}
 
-        try:
-            # Retrieve the cached value with this exact set of filters
-            return self.cache_get(s, ix_type, name, filters)
-        except KeyError:
-            pass  # Cache miss
-
-        try:
-            # Retrieve a cached, unfiltered value of the same item
-            unfiltered = self.cache_get(s, ix_type, name, None)
-        except KeyError:
-            pass  # Cache miss
-        else:
-            # Success; filter and return
-            # We seem to rely on this
-            assert isinstance(unfiltered, pd.DataFrame)
-            return filtered(unfiltered, filters)
-
-        # Failed to load item from cache
+        # Try returning a cached value
+        cached_value = self.maybe_get_cache(
+            ts=s, ix_type=ix_type, name=name, filters=filters
+        )
+        if cached_value is not None:
+            return cached_value
 
         # Retrieve the item
         item = self._get_item(s, ITEM_CLASS[ix_type](name), load=True)

@@ -1173,9 +1173,6 @@ class IXMP4Backend(CachingBackend):
         )
         if cached_value is not None:
             # NOTE ixmp4 might return a different order; enforce same for compatibility
-            if name == "type_tec":
-                print("returning cached value for type_tec")
-                print(cached_value)
             return (
                 cached_value.reset_index(drop=True)
                 if isinstance(cached_value, pd.DataFrame)
@@ -1534,11 +1531,16 @@ class IXMP4Backend(CachingBackend):
             variable={"name": variable},
             year__in=years,
             unit={"name": unit},
+            is_input=False,
         )
 
         if data_to_delete.empty:
             log.debug("Found 0 datapoints matching filters to delete!")
-            data_to_delete = pd.DataFrame(columns=["time_series__id", "type"])
+            # ixmp4 doesn't handle an empty dataframe as you would expect (a noop),
+            # instead something in the pandera decorator makes it so that bulk_delete()
+            # below sees a dataframe of all existing datapoints. Thus, we need to stop
+            # here.
+            return
 
         # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
         _subannual = "ANNUAL" if subannual == "Year" else subannual

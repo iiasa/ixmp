@@ -107,7 +107,7 @@ class GitHubLinker:
         app: "sphinx.application.Sphinx",
         what: str,
         name: str,
-        obj: "property | FunctionType |_lru_cache_wrapper[Any] | partial[Any] | object",
+        obj: "property | FunctionType |_lru_cache_wrapper[Any] | partial[Any] | ModuleType",  # noqa: E501
         options: Any,
         lines: Sequence[str],
     ) -> None:
@@ -137,7 +137,9 @@ class GitHubLinker:
         elif type(obj).__name__ == "FixtureFunctionDefinition":
             # Pytest v8.4 and later. This class is not part of the public API, so check
             # via the class name only
-            _obj = obj._get_wrapped_function()  # type: ignore[attr-defined]
+            _obj = obj._get_wrapped_function()
+        else:
+            _obj = obj
 
         try:
             # Identify the source file and source lines

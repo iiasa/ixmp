@@ -10,7 +10,7 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, overload
 from warnings import warn
 
 import pandas as pd
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
         ParData,
         ScalarParData,
         ScenarioInitKwargs,
+        SetData,
         SolutionData,
         VersionType,
         WriteFilters,
@@ -195,9 +196,7 @@ class Scenario(TimeSeries):
         else:
             return [str(key_or_keys)]
 
-    def set(
-        self, name: str, filters: "Filters" = None
-    ) -> "pd.Series[float | int | str] | pd.DataFrame":
+    def set(self, name: str, filters: "Filters" = None) -> "SetData":
         """Return the (filtered) elements of a set.
 
         Parameters
@@ -471,6 +470,64 @@ class Scenario(TimeSeries):
 
             # Retrieve the data
             yield (name, self.par(name, filters=_filters))
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.SET],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "SetData"]]: ...
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.PAR],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "ParData"]]: ...
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.EQU, ItemType.VAR],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "SolutionData"]]: ...
+
+    def iter_item_data(
+        self,
+        item_type: "ModelItemType",
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "ParData | SetData | SolutionData"]]:
+        filters = filters or dict()
+
+        data_function_map: dict[
+            "ModelItemType",
+            Callable[[str, "Filters"], "ParData | SetData | SolutionData"],
+        ] = {
+            ItemType.SET: self.set,
+            ItemType.PAR: self.par,
+            ItemType.EQU: self.equ,
+            ItemType.VAR: self.var,
+        }
+
+        data_function = data_function_map[item_type]
+
+        for name in self.items(type=item_type, indexed_by=indexed_by):
+            idx_names = set(self.idx_names(name))
+
+            if filters and not set(filters) & idx_names:
+                continue
+
+            _filters = {k: v for k, v in filters.items() if k in idx_names}
+
+            yield (name, data_function(name, _filters))
 
     # NOTE Changing the default here since that seems to be unused/untested
     def has_item(self, name: str, item_type: "ModelItemType" = ItemType.PAR) -> bool:

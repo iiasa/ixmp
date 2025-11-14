@@ -1,16 +1,20 @@
+import os
 import re
 from collections.abc import Generator
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
+import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
 import ixmp
-from ixmp.testing import assert_logs, make_dantzig, models
+from ixmp import config as ixmp_config
+from ixmp.testing import _platform_fixture, assert_logs, make_dantzig, models
+from ixmp.testing.data import populate_test_platform
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -220,6 +224,94 @@ class TestScenario:
         unique_model_name = str(hash(request.node.nodeid))
         clone = scen.clone(model=unique_model_name)
         assert clone.is_default()
+
+    def test_clone_jdbc_to_ixmp4(
+        self,
+        request: pytest.FixtureRequest,
+        tmp_env: os._Environ[str],
+        test_data_path: Path,
+        worker_id: str,
+    ) -> None:
+        # Set up two platforms
+        jdbc_mp = next(
+            _platform_fixture(
+                request=request,
+                tmp_env=tmp_env,
+                test_data_path=test_data_path,
+                backend="jdbc",
+                worker_id=worker_id,
+            )
+        )
+        ixmp4_mp = next(
+            _platform_fixture(
+                request=request,
+                tmp_env=tmp_env,
+                test_data_path=test_data_path,
+                backend="ixmp4",
+                worker_id=worker_id,
+            )
+        )
+
+        try:
+            # Add Scenarios to jdbc platform and get one
+            populate_test_platform(platform=jdbc_mp)
+            scen = ixmp.Scenario(jdbc_mp, **models["dantzig"])
+
+            # NOTE: Without required regions and units, clone fails with RegionNotFound,
+            # but can't import that when ixmp4 is not present
+
+            # Add required regions and units to ixmp4 platform
+            ixmp4_mp.add_region(region="DantzigLand", hierarchy="country")
+            ixmp4_mp.add_unit(unit="USD")
+            ixmp4_mp.add_unit(unit="???")
+            ixmp4_mp.add_unit(unit="USD/km")
+
+            # Test cloning to ixmp4 platform
+            scen.clone(platform=ixmp4_mp)
+            clone = ixmp.Scenario(mp=ixmp4_mp, **models["dantzig"])
+
+            # TODO Expand these assertions
+            # Check an exemplary parameter
+            assert clone.has_par("d")
+            scen_d = scen.par("d")
+            clone_d = clone.par("d")
+            assert isinstance(scen_d, pd.DataFrame)
+            assert isinstance(clone_d, pd.DataFrame)
+            assert_frame_equal(scen_d, clone_d, check_like=True)
+
+            # Check IAMC data
+            assert_frame_equal(scen.timeseries(), clone.timeseries())
+
+            # Check optimization solution
+            npt.assert_almost_equal(
+                clone.var("z")["lvl"], np.float64(153.675), decimal=3
+            )
+
+            # Test cloning (again) without solution
+            # NOTE The first version of a Scenario is automatically set as default, but
+            # this is the second version
+            _clone = scen.clone(platform=ixmp4_mp, keep_solution=False)
+            _clone.set_as_default()
+            clone = ixmp.Scenario(mp=ixmp4_mp, **models["dantzig"])
+
+            assert clone.var("z") == {"lvl": np.nan, "mrg": np.nan}
+
+        finally:
+            # Ensure cleanup of _platform_fixture is run
+            from ixmp4.data.backend.db import SqlAlchemyBackend
+
+            assert is_ixmp4backend(ixmp4_mp._backend)
+            assert isinstance(ixmp4_mp._backend._backend, SqlAlchemyBackend)
+            ixmp4_mp._backend._backend.close()
+            ixmp4_mp._backend._backend.teardown()
+
+            del jdbc_mp
+            del ixmp4_mp
+
+            ixmp_config.remove_platform(f"{request.node.nodeid.replace('/', ' ')}_jdbc")
+            ixmp_config.remove_platform(
+                f"{request.node.nodeid.replace('/', ' ')}_ixmp4"
+            )
 
     # Initialize items
     def test_init_set(self, scen: "Scenario") -> None:

@@ -1130,7 +1130,7 @@ class IXMP4Backend(CachingBackend):
         s: Scenario,
         name: str,
         filters: dict[str, list[Any]] | None = None,
-    ) -> "pd.Series[float | int | str] | pd.DataFrame":
+    ) -> "pd.Series[float] | pd.Series[int] | pd.Series[str] | pd.DataFrame":
         """Get the data stored in `name` in `s`.
 
         Parameters

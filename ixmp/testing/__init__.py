@@ -685,7 +685,7 @@ def _platform_fixture(
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.
-    platform_name = request.node.nodeid.replace("/", " ")
+    platform_name = f"{request.node.nodeid.replace('/', ' ')}_{backend}"
 
     # Construct positional and keyword arguments to Config.add_platform()
     if backend == "jdbc":

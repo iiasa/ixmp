@@ -98,7 +98,9 @@ ModelItemType: TypeAlias = Literal[
 ]
 
 #: Return type of :meth:`.Scenario.set` for a simple/non-indexed set.
-SimpleSetData: TypeAlias = "pandas.Series[float | int | str]"
+SimpleSetData: TypeAlias = (
+    "pandas.Series[float] | pandas.Series[int] | pandas.Series[str]"
+)
 
 #: Return type of :meth:`.Scenario.set`.
 SetData: TypeAlias = "SimpleSetData | pandas.DataFrame"

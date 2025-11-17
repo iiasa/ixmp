@@ -80,7 +80,21 @@ IXMP4Backend
 ------------
 
 .. note::
-   As of version 0.10, `ixmp4 <https://github.com/iiasa/ixmp4/>`__ supports only Python 3.10 and above.
+   See :ref:`jdbc-vs-ixmp4`, below.
+
+   As of :mod:`ixmp` version 3.11,
+   IXMP4Backend uses :mod:`ixmp4` version 0.10.
+   This is a development release;
+   a 'stable' version 1.0 or later has not yet been released.
+   For this reason:
+
+   - The ixmp4 API is not yet finalized and may change at any time.
+   - Complete documentation of the ixmp4 API itself is not yet available.
+
+   The same holds for IXMP4Backend.
+   Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
+
+   As of version 0.10, :mod:`ixmp4` supports only Python 3.10 and above.
 
    - If you want to use IXMP4Backend,
      please ensure you are using a sufficiently recent Python version.
@@ -94,184 +108,230 @@ IXMP4Backend
 .. autoclass:: ixmp.backend.ixmp4.IXMP4Backend
    :members:
 
-   .. note::
-      As of ixmp version 3.11,
-      IXMP4Backend has only *partial* support for the APIs of :class:`ixmp.Platform`,
-      :class:`ixmp.TimeSeries`, :class:`ixmp.Scenario`, and :py:`message_ix.Scenario`,
-      and may not be as performant as JDBCBackend.
-      See `Support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_
-      and `issues labeled 'backend.ixmp4' <https://github.com/iiasa/ixmp/labels/backend.ixmp4>`_
-      for details of future work to expand support and improve performance.
-
-      Because IXMP4Backend uses ixmp4 version 0.10 (that is, prior to a 1.0 'stable' release):
-
-      - The ixmp4 API is not yet finalized and may change at any time.
-      - Complete documentation of the ixmp4 API itself is not yet available.
-
-      Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
-
-   IXMP4Backend supports storage in local, SQLite databases.
-
 .. automodule:: ixmp.util.ixmp4
    :members:
 
+.. _jdbc-vs-ixmp4:
+
 Differences between JDBCBackend and IXMP4Backend
-------------------------------------------------
+================================================
+
+The long-term goal is that :mod:`ixmp` used with IXMP4Backend
+has **feature and performance parity** with JDBCBackend.
+As of ixmp version 3.12, IXMP4Backend has support for *most* features.
+This section lists known differences in behaviour when using IXMP4Backend,
+compared to JDBCBackend.
+This includes cases where:
+
+1. Behaviour is the same, but performance is known to differ.
+2. IXMP4Backend currently has different behaviour,
+   but work is planned to address the difference.
+3. IXMP4Backend has different behaviour, and this difference is permanent.
+
+   This occurs where :mod:`ixmp4` intentionally omits certain functionality
+   or implements different behaviour,
+   IXMP4Backend does not cover the difference,
+   and no work is planned to change this.
+   In some cases, this is because inspection of publicly-visible :mod:`ixmp` user code
+   shows no usage of certain features.
+   The text “Not in visible use” is used.
+
+For (1) and (2),
+code that works with JDBCBackend will work or should work with IXMP4Backend.
+For (3), code may need to be tested and adapted.
+
+The differences are listed according to components of the :doc:`ixmp Python API <api>`,
+with individual items and class attributes and methods in alphabetical order.
+Behaviours that are identical are not mentioned.
+For planned future work see the `support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_
+and `issues labeled 'backend.ixmp4' <https://github.com/iiasa/ixmp/labels/backend.ixmp4>`_.
 
 .. NOTE What do we do about major difference such as Run being the new Scenario, IndexSet and Table vs Set, etc?
 .. Functionally, all things are equivalent, but these *are* changes we'd like people to adjust to eventually.
 
-While we strive to make IXMP4Backend as functionally compatible to JDBCBackend as possible,
-there are several differences remaining.
-Some of them are intentional,
-so are not expected to change,
-while others may still be addressed.
+.. contents::
+   :backlinks: none
+   :local:
 
-CLI integration
-^^^^^^^^^^^^^^^
+General behaviour
+-----------------
 
-Some CLI tests do not work on ixmp4 yet, but all are supposed to.
-Be careful when using ``ixmp platform list`` 
-and ``ixmp solve``
-on the command line.
+Command-line interface (CLI)
+   Some CLI tests do not pass yet with IXMP4Backend, but all should.
+   In the meantime, use care with CLI commands including
+   :program:`ixmp platform list` and :program:`ixmp solve`.
 
-Regions
-^^^^^^^
+Default contents
+   JDBCBackend pre-populates Platform and Scenario instances with certain contents.
+   On IXMP4Backend, the configuration option :attr:`.ixmp4.Options.jdbc_compat`
+   controls whether these default contents are created (:any:`True`) or not.
+   See the sections below for further details.
 
-On JDBCBackend, each region can have a "parent" and a "hierarchy"
-and may have a "synonym" defined for itself.
-Notably, when a region is part of a "hierarchy", a "parent" must be defined.
+   As of :mod:`ixmp` v3.12, these default contents only include items necessary
+   for the test suite and tutorials.
 
-On ixmp4, each region must be part of a "hierarchy", 
-but does not have either "parent" nor "synonym".
+Exceptions
+   JDBCBackend raises exceptions from the Python standard exception hierarchy
+   (:class:`RuntimeError`, :class:`ValueError`, :class:`KeyError`, etc.),
+   or occasionally a generic :class:`IxException`.
+   ixmp4 provides a large number of exception classes with specific meanings
+   such as :class:`.RunLockRequired`, :class:`.NoDefaultRunFound`, or
+   :class:`.OptimizationDataValidationError`
+   that are not subclasses of the same standard exceptions.
+   In cases covered by the ixmp test suite,
+   IXMP4Backend intercepts ixmp4-specific exceptions
+   and re-raises the same classes of exceptions as JDBCBackend.
+   However:
 
-For backward compatibility, IXMP4Backend accepts the same parameters for region-related function as JDBCBackend.
-However, "parent" and "synonym" are unused and will trigger logger warnings,
-and if "hierarchy" is missing, a meaningless default will be used.
+   - Exception messages may differ.
+   - In other cases, ixmp4 exceptions may be raised directly.
 
-Meta data
-^^^^^^^^^
+   Users **should** inspect code that uses Python :py:`try:` statements,
+   :func:`isinstance` calls, or similar, to ensure it has the same behaviour
+   when using IXMP4Backend.
+   Code **may** be adapted by replacing single except types with tuples of types:
 
-Meta data refers to two things (on JDBCBackend, at least): 
+   .. code-block::
 
-1. TimeSeries data can be "marked as meta", which means the data will not be cleared by :func:`ixmp.backend.base.Backend.clear_solution` 
-and will be kept during :func:`ixmp.Scenario.clone` regardless of the ``keep_solution`` parameter.
-2. Meta data can also refer to a key:value storage of additional information about an :class:`ixmp.Scenario` or :class:`ixmp4.Run`.
+      try:
+          ...
+      # except RuntimeError:        # Old code: single exception type
+      except (RuntimeError, ixmp4.exceptions.RunLockRequired):  # New
+          ...
 
-In regards to the first point, 
-the behaviour between ixmp and ixmp4 is almost identical:
+Platform class
+--------------
 
-- In ixmp4, the marker is called ``is_input`` instead of ``meta`` in order to distinguish the use cases.
-- On JDBCBackend, `meta <https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1__postgresql_base_version.sql#L219>`__ is stored as ``Integer``, whereas ixmp4 stores it as a ``Boolean``. 
+Default contents
+   If :attr:`.ixmp4.Options.jdbc_compat` is :any:`True`,
+   regions and units are populated.
+   See :issue:`608` for details.
 
-This is recognized correctly by pandas,
-and comparing dataframe types will yield differing types.
+:meth:`.Platform.add_region`
+   - ixmp4 and IXMP4Backend do not and will not support the :py:`parent`
+     argument.
+     If passed, the argument is not stored, and warnings are logged.
+   - IXMP4Backend supplies a default, meaningless :py:`hierarchy` value
+     if no argument is given.
 
-For the second point,
-the main behaviour is identical, too:
-users can store arbitrary single values (i.e., no lists or other collections) with string keys for :class:`ixmp4.Run`.
-However, JDBCBackend also allows storing such mappings for a single model name or scenario name, which is not possible with ixmp4's current database model,
-or when not providing a :class:`ixmp.Scenario` version, which ixmp4 requires.
-Thus, ixmp4 does not permit the same combinations of parameters and requires that all of ``model``, ``scenario``, and ``version`` are present when using :func:`ixmp.backend.ixmp4.IXMP4Backend.set_meta`. 
+:meth:`.Platform.add_region_synonym`
+   ixmp4 and IXMP4Backend do not and will not support 'synonyms' for region IDs.
 
-Documenting Meta data
-"""""""""""""""""""""
+:meth:`.Platform.add_timeslice`, :meth:`.Platform.timeslices`
+   Not in visible use.
+   ixmp4 does not and will not provide a dedicated way to handle :ref:`data-timeslice`
+   for :ref:`data-tsdata`, so these methods are not supported on IXMP4Backend.
 
-On JDBCBackend, documentation strings can be attached to Meta data (in the second sense above),
-but on ixmp4, the current database model does not allow this.
-As a workaround, one could add documentation to the :class:`ixmp4.Run` that the Meta data must be linked to.
+   When using ixmp4 directly,
+   the :class:`ixmp4.data.db.iamc.datapoint.DataPoint` class
+   and its :py:`type`, :py:`step_category`, :py:`step_year`, and
+   :py:`step_datetime` methods can be used to define time slices.
 
-Pre-defined Meta data
-"""""""""""""""""""""
+:meth:`Platform.close_db <.base.Backend.close_db>` called twice
+    JDBCBackend logs a warning if this method is called
+    after the database connection has already been closed.
+    IXMP4Backend does not;
+    if the connection was already closed, the call has no effect.
 
-JDBCBackend stores an annotation and a scheme with every :class:`ixmp.Scenario`, which ixmp4 does not.
-In order to keep the same information available, 
-ixmp4 uses the Meta data of a :class:`ixmp4.Run` to store they values under "_ixmp_annotation" and "_ixmp_scheme", respectively, 
-upon :class:`ixmp.Scenario` creation.
+    .. On IXMP4Backend there is no straightforward way to provide this:
+       sqlalchemy does not provide a way to check if a database session
+       or engine was closed.
 
-This also means that :func:`ixmp.TimeSeries.last_update` will never be :obj:`None` on IXMP4Backend.
+:meth:`.Platform.export_timeseries_data`
+   On JDBCBackend, the "meta" column (:py:`meta` parameter to :meth:`.TimeSeries.add_timeseries`)
+   is exported as :type:`int` 0 or 1.
+   On IXMP4Backend, it is exported as the string "False" or "True".
 
-Handling timeslices
-^^^^^^^^^^^^^^^^^^^
+   .. NB see https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1__postgresql_base_version.sql#L219
 
-In contrast to JDBCBackend, ixmp4 does not provide a dedicated way to handle timeslices.
-This should be fine in practice since according to a GitHub search of our most important repositories/branches, 
-no user code relies on these dedicated timeslice objects/methods.
-In ixmp4, if one wants to use different timeslices,
-one can use the ``type``, ``step_category``, ``step_year``, and ``step_datetime`` fields of the :class:`ixmp4.data.db.iamc.datapoint.DataPoint` model
-to register them correctly.
+:meth:`Platform.get_doc <.Backend.get_doc>`, :meth:`set_doc <.Backend.set_doc>`
+   On JDBCBackend, the argument :py:`domain="metadata"` is supported.
+   On IXMP4Backend, it is not and will not be supported.
 
-Tests expecting specific behaviour of the dedicated functions will likely be impossible to satisfy with ixmp4.
+   Code that will use only IXMP4Backend **may** set values on :attr:`ixmp4.core.run.Run.meta`.
 
-Pre-defined items
-^^^^^^^^^^^^^^^^^
+:meth:`Platform.get_meta <.Backend.get_meta>`, :meth:`remove_meta <.Backend.remove_meta>`, :meth:`set_meta <.Backend.set_meta>`
+   On JDBCBackend, the :py:`meta=...` parameter can be a mapping of :class:`str` keys to arbitrary Python values,
+   including :class:`list` and other collections.
+   On IXMP4Backend, collections are not supported.
 
-At two levels, JDBCBackend pre-defines several items: on :class:`ixmp.Platform` s and on :class:`ixmp.Scenario` s with "MESSAGE" scheme. 
-In contrast, ixmp4 consciously decides not to presuppose any kind of expected data, so it is left to users to define everything they desire themselves.
+   On JDBCBackend, any one or two of the :py:`model=...`, :py:`scenario=...`, or :py:`version=...` parameters
+   may be given.
+   On IXMP4Backend, this is not supported; all 3 parameters are required.
 
-Platform-level pre-defined data (such as regions and units, among others) are detailed `on GitHub <https://github.com/iiasa/ixmp/issues/608>`__. 
+:meth:`.Platform.set_log_level`
+    On JDBCBackend, this sets the log level of the Python logger named :py:`"ixmp.backend.jdbc"`
+    and the underlying Java code.
+    On IXMP4Backend, only the log level of the logger named :py:`"ixmp.backend.ixmp4"` is changed,
+    and not the log level of any underlying code.
+    User code **may** use standard :mod:`logger` methods to access and
+    change the level of loggers within :mod:`ixmp4` or its dependencies:
 
-Scenario-level data includes :class:`ixmp4.IndexSet` s like "technology" and "year".
+    .. code-block:: python
 
-Currently, both levels are only partially set up when using ixmp4 by providing the parameter ``jdbc_compat=True`` to :func:`ixmp.backend.ixmp4.IXMP4Backend.__init__`.
-All items are set up that are required for the test suite and the tutorials, but non beyond that.
+       import logging
 
-Raising errors
-^^^^^^^^^^^^^^
+       log = logging.getLogger("ixmp4")  # or other module
+       log.setLevel(logging.DEBUG)  # or other level
 
-In many cases if something goes awry, JDBCBackend raises a generic ``IxException`` (though with a speficic message).
-Often, these errors are intercepted here and reraised as their closest related Python exception, e.g. ``RuntimeError``, ``ValueError``, etc.
-On the other hand, ixmp4 provides lots of dedicated exceptions auch as ``RunLockRequired``, ``NoDefaultRunFound``, ``OptimizationDataValidationError``, and many others. 
-In order to make the test suite pass, IXMP4Backend intercepts some of them and replaces them with the expected generic errors,
-but in the end, I think our goal should be to make use of and rely on the dedicated ixmp4 exceptions.
+TimeSeries class
+----------------
 
-Warnings during :func:`ixmp.TimeSeries.transact`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:attr:`.TimeSeries.model`, :attr:`.TimeSeries.scenario`
+   On ixmp4 and IXMP4Backend these names may be up to 255 characters long
+   (see `here <https://github.com/iiasa/ixmp4/blob/main/ixmp4/db/migrations/versions/c71efc396d2b_initial_migration.py#L38>`__).
+   On JDBCBackend the maximum is 1000 characters.
 
-JDBCBackend expects to see certain logger warnigns when running into errors in the transact context manager.
-ixmp4 does not emit the same warnings right now.
+   .. NB see https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1.31__model_scenario_names.sql
 
-Handling log levels
-^^^^^^^^^^^^^^^^^^^
+:attr:`.TimeSeries.version`
+   On IXMP4Backend, a new, uncommitted Timeseries has :py:`version = 1`.
+   (ixmp4 sets a value of 0, but IXMP4Backend always stores certain metadata,
+   which increases the value to 1.)
+   On JDBCBackend, the value is -1.
 
-JDBCBackend allows setting and getting the log level of itself and the underlying Java code.
-ixmp4 does not (yet) allow the same.
+:meth:`.TimeSeries.add_geodata`, :meth:`.get_geodata`, and :meth:`.remove_geodata`
+   Not in visible use.
+   ixmp4 does not support storing and retrieving geodata,
+   so these methods are and will not be supported on IXMP4Backend.
 
-Handling Geodata
-^^^^^^^^^^^^^^^^
+:meth:`.TimeSeries.add_timeseries`
+   On IXMP4Backend, ‘variable’ column entries may be up to 255 characters long
+   (see `here <https://github.com/iiasa/ixmp4/blob/main/ixmp4/db/migrations/versions/c71efc396d2b_initial_migration.py#L24>`__).
+   On JDBCBackend, the maximum is 256 characters.
 
-In contrast to JDBCBackend, ixmp4 does not provide a way to handle Geodata.
-This should be fine in practice since according to a GitHub search of our most important repositories/branches, 
-no user code relies on Geodata objects/methods.
-There is no plan to support Geodata, so all tests relying on related functions are expected to fail.
+   .. NB see https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1__postgresql_base_version.sql#L184
 
-Sorting parameter data columns when reading from the database
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:meth:`.TimeSeries.last_update`
+   On IXMP4Backend, the return value is never :any:`None`.
+   For newly-created TimeSeries objects, it is the date-time of creation.
 
-After all columns linked to :class:`ixmp4.IndexSet` s (or their equivalent on JDBCBackend),
-JDBCBackend sorts "value" before "unit",
-whereas ixmp4 sorts "unit" before "value".
+:meth:`.TimeSeries.transact`
+   JDBCBackend logs certain warnings when exceptions occur within a :py:`with ts.transact(): ...` block.
+   ixmp4/IXMP4Backend does not yet emit the same warnings.
 
-The former choice seems more aligned to natural language,
-while the latter is more aligned with the IAMC data format.
-This should not make a difference since no user code should rely on a fixed order of these columns.
+Scenario class
+--------------
 
-Closing a database connection twice
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Default contents 
+   If :attr:`.ixmp4.Options.jdbc_compat` is :any:`True`,
+   the sets ``technology`` and ``year`` are created,
+   matching the behaviour of JDBCBackend.
 
-JDBCBackend is tested to log a warning that the database connection was already closed (and thus could not be closed again) if the logger settings are correct.
-On, IXMP4Backend, there is no straightforward way to provide this:
-sqlalchemy does not provide a way to check if a database session or engine was closed,
-and closing one again after it had been closed before is simply a no-op. 
+:attr:`Scenario.version <.TimeSeries.version>`
+   On IXMP4Backend, a new, empty Scenario has :py:`version = 1`.
+   On JDBCBackend, the value is 0.
 
-Miscellaneous database model differences
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:meth:`.Scenario.par`
+   On IXMP4Backend, data returned as :class:`pandas.DataFrame`
+   have "unit" and "value" as the last 2 columns, in that order.
+   On JDBCBackend, the columns are in the order "value", "unit".
 
-- JDBCBackend allows `model and scenario names of up to 1000 characters <https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1.31__model_scenario_names.sql>`__ in length, whereas ixmp4 only allows `255 characters <https://github.com/iiasa/ixmp4/blob/main/ixmp4/db/migrations/versions/c71efc396d2b_initial_migration.py#L38>`__ at maximum.
-- JDBCBackend allows `variable names of up to 256 characters <https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1__postgresql_base_version.sql#L184>`__, whereas ixmp4 only allows `255 characters <https://github.com/iiasa/ixmp4/blob/main/ixmp4/db/migrations/versions/c71efc396d2b_initial_migration.py#L24>`__.
-- JDBCBackend starts new, empty :class:`ixmp.Scenario` s at version 0, whereas ixmp4 uses version 1.
-- JDBCBackend starts new, uncommitted :class:`ixmp.TimeSeries` at version -1, whereas ixmp4 starts at version 0, but stores some Meta data upon creation, so effectively starts at 1.
+   .. The former aligns with the common order in the IAMC data format.
+      The latter “seems more aligned with natural language”.
 
+   To accommodate this difference,
+   user code **should** access the columns by name, rather than by index.
 
 .. currentmodule:: ixmp.backend
 

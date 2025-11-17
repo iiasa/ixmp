@@ -454,6 +454,12 @@ class IXMP4Backend(CachingBackend):
             ts.scheme = str(run.meta.get("_ixmp_scheme", "")) or ts.scheme
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
+        """Implementation of :meth:`.base.Backend.init`.
+
+        - The :py:`annotation=...` parameter to :py:`TimeSeries.__init__` is stored on
+          :attr:`ixmp4.core.run.Run.meta` with the key "_ixmp_annotation".
+        - :attr:`.Scenario.scheme` is stored on with the key "_ixmp_scheme".
+        """
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)
         with run.transact("Initialize ixmp.TimeSeries"):
             # Store ixmp.TimeSeries annotation
@@ -1459,6 +1465,10 @@ class IXMP4Backend(CachingBackend):
         subannual: str,
         meta: bool,
     ) -> None:
+        """Implementation of :meth:`.base.Backend.set_data`.
+
+        - `meta` is stored in a column labeled "is_input".
+        """
         # Construct dataframe as ixmp4 expects it
         years = data.keys()
         values = data.values()

@@ -104,9 +104,6 @@ class TimeSeries:
             # annotation will be "" if None is provided, convince type checker
             assert annotation is not None
             self.platform._backend.init(self, annotation)
-
-            if is_ixmp4backend(self.platform._backend):
-                self.platform._backend.index[self]._lock()
         else:
             # Retrieve an existing object
             self.version = version

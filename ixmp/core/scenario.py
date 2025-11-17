@@ -119,11 +119,6 @@ class Scenario(TimeSeries):
             if not run.owns_lock:
                 run._lock()
 
-            # NOTE ixmp_source always defines some items for MESSAGE-scheme Scenarios
-            if self.platform._backend._options.jdbc_compat and self.scheme == "MESSAGE":
-                self.init_set("technology")
-                self.init_set("year")
-
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.
 

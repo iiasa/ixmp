@@ -455,10 +455,22 @@ class IXMP4Backend(CachingBackend):
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
         run = self._platform.runs.create(model=ts.model, scenario=ts.scenario)
-        with run.transact("Store ixmp.TimeSeries annotation, ixmp.Scenario.scheme"):
+        with run.transact("Initialize ixmp.TimeSeries"):
+            # Store ixmp.TimeSeries annotation
             run.meta["_ixmp_annotation"] = annotation
+
+            # Store ixmp.Scenario.scheme
             if isinstance(ts, Scenario):
                 run.meta["_ixmp_scheme"] = ts.scheme
+
+                # NOTE ixmp_source always defines these for MESSAGE-scheme Scenarios
+                if self._options.jdbc_compat and ts.scheme == "MESSAGE":
+                    run.optimization.indexsets.create(name="technology")
+                    run.optimization.indexsets.create(name="year")
+
+        # Acquire lock to make ts/run editable
+        run._lock()
+
         self._index_and_set_attrs(run, ts)
 
     def clone(

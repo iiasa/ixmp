@@ -1345,6 +1345,12 @@ class CachingBackend(Backend):
     def maybe_get_cache(
         self, ts: TimeSeries, ix_type: str, name: str, filters: "Filters"
     ) -> "SetData | ParData | SolutionData | None":
+        """Retrieve values from cache safely.
+
+        First, attempts to return a value with this exact set of filters.
+        If none is found, attempts to return an unfiltered value.
+        If none is found again, :obj:`None` is returned.
+        """
         try:
             # Retrieve the cached value with this exact set of filters
             return self.cache_get(ts, ix_type, name, filters)

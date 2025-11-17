@@ -42,6 +42,7 @@ from ixmp4.data.abstract.optimization.indexset import (
 from ixmp4.data.abstract.optimization.scalar import (
     ScalarRepository as BEScalarRepository,
 )
+from ixmp4.data.abstract.region import Region
 from ixmp4.data.backend.base import Backend as ixmp4_backend
 
 # TODO Import this from typing when dropping Python 3.11
@@ -1476,7 +1477,10 @@ class IXMP4Backend(CachingBackend):
         if not _owns_lock:
             run._lock()
 
-        run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+        try:
+            run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+        except Region.NotFound:
+            raise ValueError(f"region = {region}")
 
         if not _owns_lock:
             run._unlock()

@@ -236,26 +236,18 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
 
     # A message is logged
     r = caplog.record_tuples[-1]
-    error = (
-        "RegionNotFound('Moon')"
-        if is_ixmp4backend(test_mp._backend)
-        else "ValueError('region = Moon')"
-    )
     assert (
         "ixmp.report.operator" == r[0]
         and logging.ERROR == r[1]
-        and r[2].startswith(f"Failed with {error}")
+        and r[2].startswith("Failed with ValueError('region = Moon')")
     ), caplog.record_tuples
 
     caplog.clear()
 
     # with strict=True, the computation fails
     c.add("test 2", partial(store_ts, strict=True), "target", "input 3")
-    error_match = (
-        "RegionNotFound: Moon" if is_ixmp4backend(test_mp._backend) else "region = Moon"
-    )
     with pytest.raises(
         ComputationError,
-        match=re.compile(f"computing 'test 2' using:.*{error_match}", flags=re.DOTALL),
+        match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
     ):
         c.get("test 2")  # type: ignore[no-untyped-call]

@@ -702,15 +702,3 @@ def _platform_fixture(
 
     # Remove from configuration
     ixmp_config.remove_platform(platform_name)
-
-
-# NOTE This is a workaround for https://github.com/iiasa/ixmp4/issues/205
-@pytest.fixture(scope="function")
-def _rollback_ixmp4_session(mp: Platform) -> Generator[None, None, None]:
-    yield
-
-    if is_ixmp4backend(mp._backend):
-        from ixmp4.data.backend.test import PostgresTestBackend
-
-        assert isinstance(mp._backend._backend, PostgresTestBackend)
-        mp._backend._backend.session.rollback()

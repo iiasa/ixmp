@@ -109,7 +109,15 @@ class TestTimeSeries:
         node = hash(request.node.nodeid.replace("/", " "))
         # Class of object to yield
         cls = request.param
-        yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
+        try:
+            yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
+        finally:
+            # Work around https://github.com/iiasa/ixmp4/issues/205
+            if is_ixmp4backend(mp._backend):
+                from ixmp4.data.backend.test import PostgresTestBackend
+
+                assert isinstance(mp._backend._backend, PostgresTestBackend)
+                mp._backend._backend.session.rollback()
 
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])
@@ -438,13 +446,7 @@ class TestTimeSeries:
         ),
     )
     def test_long_variable_name_ixmp4(
-        # NOTE Order is important here as the session needs to be rolled back before ts
-        # adds data
-        self,
-        _rollback_ixmp4_session: None,
-        ts: TimeSeries,
-        format: str,
-        N: int,
+        self, ts: TimeSeries, format: str, N: int
     ) -> None:
         """Variable names up to 255 characters can be added or removed."""
         data = (DATA[0] if format == "long" else wide(DATA[0])).copy()

@@ -72,6 +72,7 @@ from .jupyter import get_cell_output, run_notebook
 from .resource import resource_limit
 
 if TYPE_CHECKING:
+    from _pytest.mark import ParameterSet
     from ixmp4.core import Run
 
     try:
@@ -233,42 +234,44 @@ def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
 # following https://pytest-with-eric.com/introduction/pytest-generate-tests/
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Parametrize tests for the two backend options."""
-    if "backend" in metafunc.fixturenames:
-        import ixmp.backend
+    if "backend" not in metafunc.fixturenames:
+        return
 
-        # All available backends
-        argvalues: list[Any] = sorted(ixmp.backend.available())
+    import ixmp.backend
 
-        # Names of markers applied to the test function
-        marker_names = set(m.name for m in metafunc.definition.iter_markers())
+    # Subset of marker names applied to the test function
+    marker_names = sorted(
+        set(m.name for m in metafunc.definition.iter_markers())
+        & {"ixmp4", "ixmp4_209", "ixmp4_never", "ixmp4_not_yet", "jdbc"}
+    )
 
-        if "ixmp4" in argvalues:
-            if "ixmp4" in marker_names:
-                # This marker means "even though a parametrized fixture is used, this
-                # test should run only for IXMP4Backend"
-                argvalues.remove("jdbc")
-            elif "jdbc" in marker_names:
-                # Same as "ixmp4" marker, but for JDBCBackend
-                argvalues.remove("ixmp4")
+    # Argument values for pytest.parametrize()
+    argvalues: list["str | ParameterSet"] = []
 
-        if "ixmp4" in argvalues:
-            i = argvalues.index("ixmp4")
-            if "ixmp4_209" in marker_names and (
-                "ixmp4_not_yet" in marker_names or "ixmp4_never" in marker_names
-            ):
-                # Choose the broadest XFAIL possible
-                # NOTE This should only be necessary temporarily until #209 is resolved
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Not Yet"])
-            elif "ixmp4_209" in marker_names:
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
-            elif "ixmp4_not_yet" in marker_names:
-                # This marker means "not yet supported on IXMP4"
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Not Yet"])
-            elif "ixmp4_never" in marker_names:
-                # This marker means "won't ever be implemented/supported on IXMP4"
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend Never"])
+    # Iterate over all available backends
+    for backend_name in sorted(ixmp.backend.available()):
+        # Match on the backend name followed by 0 or more marker names
+        match [backend_name] + marker_names:
+            case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
+                # These markers mean "even though a parametrized fixture is used, this
+                # test should run only for {IXMP4,JDBC}Backend"
+                continue
+            case ["ixmp4", "ixmp4_never"]:  # "Won't ever be implemented on IXMP4"
+                mark: Any = MARK["IXMP4Backend Never"]
+            case ["ixmp4", "ixmp4_not_yet"]:  # "Not yet supported on IXMP4"
+                mark = MARK["IXMP4Backend Not Yet"]
+            # FIXME Remove the following 2 case blocks once iiasa/ixmp4#209 is resolved
+            case ["ixmp4", *_, "ixmp4_209"]:
+                mark = MARK["ixmp4#209"]
+            case ["ixmp4", "ixmp4_209", *_]:
+                # ixmp4_209 + other markers like _{never,not_yet} → use a broader XFAIL
+                mark = MARK["IXMP4Backend Not Yet"]
+            case _:
+                mark = []
 
-        metafunc.parametrize("backend", argvalues, indirect=True)
+        argvalues.append(pytest.param(backend_name, marks=mark))
+
+    metafunc.parametrize("backend", argvalues, indirect=True)
 
 
 # Session-scoped fixtures

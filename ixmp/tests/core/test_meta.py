@@ -42,8 +42,13 @@ def mp(test_mp_f: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
     yield test_mp_f
 
 
-# TODO IXMP4Backend needs to handle meta data
-@pytest.mark.jdbc
+# TODO
+# See e.g. https://github.com/iiasa/ixmp_source/blob/889b51f7731b3fdfed2e241c3d6596723e83202e/src/main/resources/db/migration/postgresql/V1.4__create_metadata.sql#L21-L26:
+# ixmp allows meta-entries to not be linked to Model or Scenario by allowing NULL in the
+# DB Model. ixmp4 can only store meta entries for a Run, which is always linked to Model
+# AND Scenario. So the tests here that call *_meta() without full arguments won't pass
+# on ixmp4.
+@pytest.mark.ixmp4_not_yet
 class TestMeta:
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_set_meta_missing_argument(

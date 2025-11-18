@@ -118,6 +118,7 @@ def local_inv(name: str, *parts: str) -> str | None:
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/stable/", None),
     "genno": ("https://genno.readthedocs.io/en/latest/", (local_inv("genno"), None)),
+    "ixmp4": ("https://docs.ece.iiasa.ac.at/projects/ixmp4/en/latest/", None),
     "jpype": ("https://jpype.readthedocs.io/en/stable", None),
     "message_ix": ("https://docs.messageix.org/en/latest/", None),
     "message-ix-models": (

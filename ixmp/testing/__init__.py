@@ -52,7 +52,9 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
+from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 from .data import (
     DATA,
@@ -70,7 +72,9 @@ from .jupyter import get_cell_output, run_notebook
 from .resource import resource_limit
 
 if TYPE_CHECKING:
+    from _pytest.mark import ParameterSet
     from ixmp4.core import Run
+    from sqlalchemy import Engine  # noqa: F401
 
     try:
         # Pint 0.25.1 or later
@@ -105,6 +109,10 @@ __all__ = [
 #: :any:`True` if testing is occurring on GitHub Actions runners/machines.
 GHA = "GITHUB_ACTIONS" in os.environ
 
+# Pytest stash keys
+KEY_ENGINE = pytest.StashKey["Engine"]()
+KEY_IXMP4_PG_NAME = pytest.StashKey[str]()
+
 _uname = platform.uname()
 
 #: Pytest marks for use throughout the test suite.
@@ -112,8 +120,11 @@ _uname = platform.uname()
 #: - ``ixmp4#209``: https://github.com/iiasa/ixmp4/pull/209,
 #:   https://github.com/unionai-oss/pandera/pull/2158.
 MARK = {
-    "IXMP4Backend NI": pytest.mark.xfail(
-        reason="Not implemented on IXMP4Backend",
+    "IXMP4Backend Never": pytest.mark.xfail(
+        reason="Not implemented on IXMP4Backend", raises=NotImplementedError
+    ),
+    "IXMP4Backend Not Yet": pytest.mark.xfail(
+        reason="Not yet supported by IXMP4Backend"
     ),
     "ixmp4#209": pytest.mark.xfail(
         condition=platform.python_version_tuple() >= ("3", "14", "0"),
@@ -183,6 +194,35 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
     jdbc._GC_AGGRESSIVE = False
 
+    if "ixmp4" in available():
+        from sqlalchemy import create_engine, text
+        from xdist import get_xdist_worker_id
+
+        db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
+        url = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+        engine = create_engine(url, isolation_level="AUTOCOMMIT")
+        with engine.connect() as connection:
+            connection.execute(text(f"CREATE DATABASE {db_name}"))
+
+        # Store for pytest_sessionfinish()
+        session.config.stash[KEY_ENGINE] = engine
+        session.config.stash[KEY_IXMP4_PG_NAME] = db_name
+
+
+def pytest_sessionfinish(
+    session: pytest.Session, exitstatus: int | pytest.ExitCode
+) -> None:
+    try:
+        from sqlalchemy import text
+
+        engine = session.config.stash[KEY_ENGINE]
+        db_name = session.config.stash[KEY_IXMP4_PG_NAME]
+
+        with engine.connect() as connection:
+            connection.execute(text(f"DROP DATABASE {db_name}"))
+    except (ImportError, KeyError):
+        pass
+
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
     """Add the ixmp configuration to the pytest report header."""
@@ -194,30 +234,44 @@ def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
 # following https://pytest-with-eric.com/introduction/pytest-generate-tests/
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Parametrize tests for the two backend options."""
-    if "backend" in metafunc.fixturenames:
-        import ixmp.backend
+    if "backend" not in metafunc.fixturenames:
+        return
 
-        # All available backends
-        argvalues: list[Any] = sorted(ixmp.backend.available())
+    import ixmp.backend
 
-        # Names of markers applied to the test function
-        marker_names = set(m.name for m in metafunc.definition.iter_markers())
+    # Subset of marker names applied to the test function
+    marker_names = sorted(
+        set(m.name for m in metafunc.definition.iter_markers())
+        & {"ixmp4", "ixmp4_209", "ixmp4_never", "ixmp4_not_yet", "jdbc"}
+    )
 
-        if "ixmp4" in argvalues:
-            if "ixmp4" in marker_names:
-                # This marker means "even though a parametrized fixture is used, this
-                # test should run only for IXMP4Backend"
-                argvalues.remove("jdbc")
-            elif "jdbc" in marker_names:
-                # This marker means "not (yet) implemented/supported on IXMP4"
-                i = argvalues.index("ixmp4")
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["IXMP4Backend NI"])
+    # Argument values for pytest.parametrize()
+    argvalues: list["str | ParameterSet"] = []
 
-            if "ixmp4" in argvalues and "ixmp4_209" in marker_names:
-                i = argvalues.index("ixmp4")
-                argvalues[i] = pytest.param("ixmp4", marks=MARK["ixmp4#209"])
+    # Iterate over all available backends
+    for backend_name in sorted(ixmp.backend.available()):
+        # Match on the backend name followed by 0 or more marker names
+        match [backend_name] + marker_names:
+            case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
+                # These markers mean "even though a parametrized fixture is used, this
+                # test should run only for {IXMP4,JDBC}Backend"
+                continue
+            case ["ixmp4", "ixmp4_never"]:  # "Won't ever be implemented on IXMP4"
+                mark: Any = MARK["IXMP4Backend Never"]
+            case ["ixmp4", "ixmp4_not_yet"]:  # "Not yet supported on IXMP4"
+                mark = MARK["IXMP4Backend Not Yet"]
+            # FIXME Remove the following 2 case blocks once iiasa/ixmp4#209 is resolved
+            case ["ixmp4", *_, "ixmp4_209"]:
+                mark = MARK["ixmp4#209"]
+            case ["ixmp4", "ixmp4_209", *_]:
+                # ixmp4_209 + other markers like _{never,not_yet} → use a broader XFAIL
+                mark = MARK["IXMP4Backend Not Yet"]
+            case _:
+                mark = []
 
-        metafunc.parametrize("backend", argvalues, indirect=True)
+        argvalues.append(pytest.param(backend_name, marks=mark))
+
+    metafunc.parametrize("backend", argvalues, indirect=True)
 
 
 # Session-scoped fixtures
@@ -286,13 +340,16 @@ def test_mp(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+    )
 
 
 @pytest.fixture(scope="session")
@@ -410,6 +467,7 @@ def test_mp_f(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
@@ -420,7 +478,9 @@ def test_mp_f(
     --------
     test_mp
     """
-    yield from _platform_fixture(request, tmp_env, test_data_path, backend=backend)
+    yield from _platform_fixture(
+        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+    )
 
 
 @pytest.fixture
@@ -441,7 +501,11 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
 
 @pytest.fixture
 def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
-    return ixmp4_backend.index[scenario]
+    # NOTE New Scenario-backing Runs are locked per default, but our tests expect them
+    # to be lockable for `transact()`
+    _run = ixmp4_backend.index[scenario]
+    _run._unlock()
+    return _run
 
 
 # Assertions
@@ -579,6 +643,7 @@ def _platform_fixture(
     tmp_env: os._Environ[str],
     test_data_path: Path,
     backend: Literal["jdbc", "ixmp4"],
+    worker_id: str,
 ) -> Generator[Platform, Any, None]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
@@ -592,8 +657,21 @@ def _platform_fixture(
     elif backend == "ixmp4":
         args = []
         kwargs = dict(
-            ixmp4_name=platform_name, dsn="sqlite:///:memory:", jdbc_compat=True
+            ixmp4_name=f"ixmp_test_{worker_id}",
+            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test_{worker_id}",
+            jdbc_compat=True,
         )
+        if request.scope == "function":
+            # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
+            from ixmp4.data.backend.db import SqlAlchemyBackend
+
+            from ixmp.backend.ixmp4 import IXMP4Backend
+
+            _backend = IXMP4Backend(**kwargs)
+            assert isinstance(_backend._backend, SqlAlchemyBackend)
+            _backend._backend.close()
+            # TODO Properly isinstance check and remove these once we drop Python 3.9
+            _backend._backend.teardown()
 
     # Add platform to ixmp configuration
     ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
@@ -601,24 +679,26 @@ def _platform_fixture(
     # Launch Platform
     mp = Platform(name=platform_name)
 
+    if is_ixmp4backend(mp._backend):
+        from ixmp4.data.backend.db import SqlAlchemyBackend
+
+        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+        mp._backend._backend.setup()
+
     yield mp
 
     # Teardown: don't show log messages when destroying the platform, even if the test
     # using the fixture modified the log level
     mp._backend.set_log_level(logging.CRITICAL)
 
+    # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup above,
+    # mp._backend._backend is always of type PostgresTestBackend
+    if is_ixmp4backend(mp._backend):
+        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+        mp._backend._backend.close()
+        mp._backend._backend.teardown()
+
     del mp
 
     # Remove from configuration
     ixmp_config.remove_platform(platform_name)
-
-    if backend == "ixmp4":
-        import ixmp4.conf
-        from ixmp4.core.exceptions import PlatformNotFound
-
-        try:
-            ixmp4.conf.settings.toml.remove_platform(key=platform_name)
-        except PlatformNotFound:
-            # This occurs e.g. if `mp` was not used in a way that triggered addition of
-            # the name & DSN to the ixmp4 configuration.
-            pass

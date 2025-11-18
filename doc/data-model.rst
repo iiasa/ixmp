@@ -195,6 +195,8 @@ Documentation
 Data associated with a TimeSeries object
 ========================================
 
+.. _data-tsdata:
+
 Time series data
 ----------------
 
@@ -210,6 +212,10 @@ Time series data
   - **unit**: a value from the “Unit” list (see :ref:`codelists`).
   - **subannual**: a value from the “Sub-annual time slices” list (see :ref:`codelists`).
   - **meta**: a boolean value.
+    If set, the time series data are handled specially in 2 ways:
+
+    1. The data are not removed by :meth:`.Scenario.remove_solution`.
+    2. The data are preserved by :meth:`.Scenario.clone` regardless of the :py:`keep_solution=...` parameter.
 
     .. note:: This is distinct from :ref:`data-meta`, above.
 

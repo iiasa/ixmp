@@ -18,11 +18,13 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 # Compatibility with Python 3.11
 # TODO Use "from typing import Unpack" when dropping support for Python 3.11
+import pandas as pd
 from typing_extensions import Unpack
 
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
+from ixmp.util import filtered
 
 from .common import ItemType
 from .io import s_read_excel, s_write_excel, ts_read_file
@@ -562,7 +564,8 @@ class Backend(ABC):
         - :attr:`~.TimeSeries.version`.
 
         If :attr:`.version` is :obj:`None`, the Backend **must** return the version
-        marked as default, and **must** set the attribute value.
+        marked as default, and **must** set the attribute value. If no version is marked
+        as default, the Backend **must** return the maximum version available.
 
         If `ts` is a Scenario, :meth:`get` **must** set the :attr:`~.Scenario.scheme`
         attribute with the value previously passed to :meth:`init`.
@@ -592,7 +595,8 @@ class Backend(ABC):
         Parameters
         ----------
         timeseries_only : bool
-            ???
+            Flag to indicate whether all data can be edited (:obj:`False`) or time
+            series data only (:obj:`True`).
         """
 
     @abstractmethod
@@ -890,7 +894,7 @@ class Backend(ABC):
 
         Parameters
         ----------
-        type : 'set' or 'par' or 'equ' or 'var
+        type : 'set' or 'par' or 'equ' or 'var'
         """
 
     @abstractmethod
@@ -1337,6 +1341,35 @@ class CachingBackend(Backend):
             return copy(self._cache[key])
         else:
             raise KeyError(ts, ix_type, name, filters)
+
+    def maybe_get_cache(
+        self, ts: TimeSeries, ix_type: str, name: str, filters: "Filters"
+    ) -> "SetData | ParData | SolutionData | None":
+        """Retrieve values from cache safely.
+
+        First, attempts to return a value with this exact set of filters.
+        If none is found, attempts to return an unfiltered value.
+        If none is found again, :obj:`None` is returned.
+        """
+        try:
+            # Retrieve the cached value with this exact set of filters
+            return self.cache_get(ts, ix_type, name, filters)
+        except KeyError:
+            pass  # Cache miss
+
+        try:
+            # Retrieve a cached, unfiltered value of the same item
+            unfiltered = self.cache_get(ts, ix_type, name, None)
+        except KeyError:
+            pass  # Cache miss
+        else:
+            # Success; filter and return
+            # We seem to rely on this
+            assert isinstance(unfiltered, pd.DataFrame)
+            return filtered(unfiltered, filters)
+
+        # Failed to load item from cache
+        return None
 
     def cache(
         self,

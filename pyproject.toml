@@ -126,6 +126,7 @@ module = [
   "jpype",
   "memory_profiler",
   "pyam",
+  "xdist",
 ]
 ignore_missing_imports = true
 

@@ -54,7 +54,7 @@ from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import format_url, is_ixmp4backend
+from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
 
 from .data import (
     DATA,
@@ -705,15 +705,13 @@ def _platform_fixture(
         )
         if request.scope == "function":
             # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
-            from ixmp4.data.backend.db import SqlAlchemyBackend
-
             from ixmp.backend.ixmp4 import IXMP4Backend
 
             _backend = IXMP4Backend(**kwargs)
-            assert isinstance(_backend._backend, SqlAlchemyBackend)
-            _backend._backend.close()
-            # TODO Properly isinstance check and remove these once we drop Python 3.9
-            _backend._backend.teardown()
+            if is_sqlalchemybackend(_backend._backend):
+                _backend._backend.close()
+                # TODO Properly isinstance check and remove when Python 3.9 is dropped
+                _backend._backend.teardown()
 
     # Add platform to ixmp configuration
     ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
@@ -721,10 +719,7 @@ def _platform_fixture(
     # Launch Platform
     mp = Platform(name=platform_name)
 
-    if is_ixmp4backend(mp._backend):
-        from ixmp4.data.backend.db import SqlAlchemyBackend
-
-        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
         mp._backend._backend.setup()
 
     yield mp
@@ -735,8 +730,7 @@ def _platform_fixture(
 
     # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup above,
     # mp._backend._backend is always of type PostgresTestBackend
-    if is_ixmp4backend(mp._backend):
-        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
         mp._backend._backend.close()
         mp._backend._backend.teardown()
 

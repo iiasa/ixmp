@@ -115,13 +115,6 @@ jobs:
         IRkernel::installspec()
       shell: Rscript {0}
 
-    - name: Setup template & default-ixmp4-local Postgres schema
-      if: matrix.python-version != '3.9'
-      run: |
-        ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/template1" template1
-        ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test" ixmp_test
-        IXMP4_MANAGED=false ixmp4 platforms upgrade
-
     - name: Run tests
       run: |
         pytest ixmp \

@@ -426,6 +426,15 @@ def tmp_env(
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
 
+        name = pytestconfig.stash[KEY_IXMP4_PG_NAME]
+        if not name.startswith(PG_NAME_NONE):
+            # Use the DSN for the database created for this session in
+            # pytest_sessionstart
+            ixmp_config.values["platform"]["ixmp4-local"].update(
+                dsn=format_url(pytestconfig.option.ixmp_postgres, database=name),
+                ixmp4_name=name,
+            )
+
     # Save for other processes
     ixmp_config.save()
 

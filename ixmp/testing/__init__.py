@@ -54,7 +54,7 @@ from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import is_ixmp4backend
+from ixmp.util.ixmp4 import format_url, is_ixmp4backend
 
 from .data import (
     DATA,
@@ -155,6 +155,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "ixmp JDBCBackend",
     )
     parser.addoption(
+        "--ixmp-postgres",
+        action="store",
+        default="postgresql://postgres:postgres@localhost:5432/postgres",
+        help="URL of a PostgreSQL server for testing",
+    )
+    parser.addoption(
         "--ixmp-resource-limit",
         action="store",
         default="DATA:-1",
@@ -166,7 +172,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--ixmp-user-config",
         action="store_true",
-        help="Use the user's existing ixmp config, including platforms.",
+        help="Use the user's existing ixmp config, including platforms",
     )
 
 
@@ -225,7 +231,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         from xdist import get_xdist_worker_id
 
         db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
-        url = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+        url = format_url(session.config.option.ixmp_postgres)
         engine = create_engine(url, isolation_level="AUTOCOMMIT")
 
         try:
@@ -691,9 +697,10 @@ def _platform_fixture(
         kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
         args = []
+        name = f"ixmp_test_{worker_id}"
         kwargs = dict(
-            ixmp4_name=f"ixmp_test_{worker_id}",
-            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test_{worker_id}",
+            ixmp4_name=name,
+            dsn=format_url(request.config.option.ixmp_postgres, database=name),
             jdbc_compat=True,
         )
         if request.scope == "function":

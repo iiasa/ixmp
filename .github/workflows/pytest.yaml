@@ -82,14 +82,10 @@ jobs:
         license: ${{ secrets.GAMS_LICENSE }}
 
     - uses: ikalnytskyi/action-setup-postgres@v8
-      with:
-        # username: postgres
-        # password: postgres
-        database: ixmp_test
-        # port: 5432
-        postgres-version: "16"
-        # ssl: true
       id: setup-postgres
+      with:
+        # NB Defaults include username=password=database="postgres", port=5432
+        postgres-version: "16"
 
     - name: Set RETICULATE_PYTHON
       # Retrieve the Python executable set up above
@@ -132,7 +128,8 @@ jobs:
           -m "not performance" \
           --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
-          --numprocesses=auto --dist=loadgroup
+          --numprocesses=auto --dist=loadgroup \
+          --ixmp-postgres=${{ steps.setup-postgres.outputs.connection-uri }}
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v5

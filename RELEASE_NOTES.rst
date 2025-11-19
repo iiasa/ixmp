@@ -38,7 +38,7 @@ All changes
 - Improve :class:`.IXMP4Backend` (:pull:`581`):
 
   - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).
-  - Streamline and fix various functions to enable more tests to pass (:pull:`601`).
+  - Streamline and fix various functions to enable more tests to pass (:pull:`601`, :pull:`611`).
 
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.

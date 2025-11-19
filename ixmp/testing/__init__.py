@@ -54,7 +54,7 @@ from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import is_ixmp4backend
+from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
 
 from .data import (
     DATA,
@@ -110,8 +110,12 @@ __all__ = [
 GHA = "GITHUB_ACTIONS" in os.environ
 
 # Pytest stash keys
+KEY_BACKENDS = pytest.StashKey[list[str]]()
 KEY_ENGINE = pytest.StashKey["Engine"]()
 KEY_IXMP4_PG_NAME = pytest.StashKey[str]()
+
+# Used for `KEY_IXMP4_PG_NAME` when no postgres database is available
+PG_NAME_NONE = "NONE"
 
 _uname = platform.uname()
 
@@ -151,6 +155,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "ixmp JDBCBackend",
     )
     parser.addoption(
+        "--ixmp-postgres",
+        action="store",
+        default="postgresql://postgres:postgres@localhost:5432/postgres",
+        help="URL of a PostgreSQL server for testing",
+    )
+    parser.addoption(
         "--ixmp-resource-limit",
         action="store",
         default="DATA:-1",
@@ -162,8 +172,25 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--ixmp-user-config",
         action="store_true",
-        help="Use the user's existing ixmp config, including platforms.",
+        help="Use the user's existing ixmp config, including platforms",
     )
+
+
+def pytest_report_collectionfinish(
+    config: pytest.Config, start_path: Path, items: Sequence[Any]
+) -> list[str]:
+    """Show messages if a database error means IXMP4Backend tests cannot be run."""
+    from ixmp.backend import available
+
+    db_name = config.stash[KEY_IXMP4_PG_NAME]
+
+    messages = []
+    if "ixmp4" in available() and db_name.startswith(PG_NAME_NONE):  # pragma: no cover
+        messages += [
+            "",
+            "No PostgreSQL database available → tests of IXMP4Backend will be skipped:",
+        ] + db_name.splitlines()[1:]
+    return messages
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -192,36 +219,49 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         # tmp_env below.
         ixmp_config.values["platform"]["local"].pop("path")
 
+    # Available backends: 0 or more of "jdbc", "ixmp4"
+    backends = session.config.stash[KEY_BACKENDS] = sorted(available())
+
     jdbc._GC_AGGRESSIVE = False
 
-    if "ixmp4" in available():
+    if "ixmp4" in backends:
+        # Connect to a PostgreSQL server and create a test database for this worker
         from sqlalchemy import create_engine, text
+        from sqlalchemy.exc import OperationalError
         from xdist import get_xdist_worker_id
 
         db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
-        url = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+        url = format_url(session.config.option.ixmp_postgres)
         engine = create_engine(url, isolation_level="AUTOCOMMIT")
-        with engine.connect() as connection:
-            connection.execute(text(f"CREATE DATABASE {db_name}"))
 
-        # Store for pytest_sessionfinish()
-        session.config.stash[KEY_ENGINE] = engine
+        try:
+            with engine.connect() as connection:
+                connection.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+                connection.execute(text(f"CREATE DATABASE {db_name}"))
+        except OperationalError as e:  # pragma: no cover
+            # Some error connecting to the database → store a message and text of `e`
+            db_name = f"{PG_NAME_NONE}\nException: {e!r}\nURL: {url}"
+            # Do not run tests for ixmp4
+            backends.remove("ixmp4")
+        else:
+            # Store for pytest_sessionfinish()
+            session.config.stash[KEY_ENGINE] = engine
+
         session.config.stash[KEY_IXMP4_PG_NAME] = db_name
 
 
 def pytest_sessionfinish(
     session: pytest.Session, exitstatus: int | pytest.ExitCode
 ) -> None:
-    try:
+    db_name = session.config.stash[KEY_IXMP4_PG_NAME]
+
+    if not db_name.startswith(PG_NAME_NONE):
+        # Remove the database created for this session
         from sqlalchemy import text
 
         engine = session.config.stash[KEY_ENGINE]
-        db_name = session.config.stash[KEY_IXMP4_PG_NAME]
-
         with engine.connect() as connection:
             connection.execute(text(f"DROP DATABASE {db_name}"))
-    except (ImportError, KeyError):
-        pass
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -237,7 +277,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "backend" not in metafunc.fixturenames:
         return
 
-    import ixmp.backend
+    # Available backends in this session
+    backends = metafunc.config.stash[KEY_BACKENDS]
 
     # Subset of marker names applied to the test function
     marker_names = sorted(
@@ -249,7 +290,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     argvalues: list["str | ParameterSet"] = []
 
     # Iterate over all available backends
-    for backend_name in sorted(ixmp.backend.available()):
+    for backend_name in backends:
         # Match on the backend name followed by 0 or more marker names
         match [backend_name] + marker_names:
             case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
@@ -384,6 +425,15 @@ def tmp_env(
         # default/local platform within the pytest temporary directory
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
+
+        name = pytestconfig.stash[KEY_IXMP4_PG_NAME]
+        if not name.startswith(PG_NAME_NONE):
+            # Use the DSN for the database created for this session in
+            # pytest_sessionstart
+            ixmp_config.values["platform"]["ixmp4-local"].update(
+                dsn=format_url(pytestconfig.option.ixmp_postgres, database=name),
+                ixmp4_name=name,
+            )
 
     # Save for other processes
     ixmp_config.save()
@@ -656,22 +706,21 @@ def _platform_fixture(
         kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
         args = []
+        name = f"ixmp_test_{worker_id}"
         kwargs = dict(
-            ixmp4_name=f"ixmp_test_{worker_id}",
-            dsn=f"postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test_{worker_id}",
+            ixmp4_name=name,
+            dsn=format_url(request.config.option.ixmp_postgres, database=name),
             jdbc_compat=True,
         )
         if request.scope == "function":
             # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
-            from ixmp4.data.backend.db import SqlAlchemyBackend
-
             from ixmp.backend.ixmp4 import IXMP4Backend
 
             _backend = IXMP4Backend(**kwargs)
-            assert isinstance(_backend._backend, SqlAlchemyBackend)
-            _backend._backend.close()
-            # TODO Properly isinstance check and remove these once we drop Python 3.9
-            _backend._backend.teardown()
+            if is_sqlalchemybackend(_backend._backend):
+                _backend._backend.close()
+                # TODO Properly isinstance check and remove when Python 3.9 is dropped
+                _backend._backend.teardown()
 
     # Add platform to ixmp configuration
     ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
@@ -679,10 +728,7 @@ def _platform_fixture(
     # Launch Platform
     mp = Platform(name=platform_name)
 
-    if is_ixmp4backend(mp._backend):
-        from ixmp4.data.backend.db import SqlAlchemyBackend
-
-        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
         mp._backend._backend.setup()
 
     yield mp
@@ -693,8 +739,7 @@ def _platform_fixture(
 
     # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup above,
     # mp._backend._backend is always of type PostgresTestBackend
-    if is_ixmp4backend(mp._backend):
-        assert isinstance(mp._backend._backend, SqlAlchemyBackend)
+    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
         mp._backend._backend.close()
         mp._backend._backend.teardown()
 

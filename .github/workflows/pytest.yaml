@@ -82,14 +82,10 @@ jobs:
         license: ${{ secrets.GAMS_LICENSE }}
 
     - uses: ikalnytskyi/action-setup-postgres@v8
-      with:
-        # username: postgres
-        # password: postgres
-        database: ixmp_test
-        # port: 5432
-        postgres-version: "16"
-        # ssl: true
       id: setup-postgres
+      with:
+        # NB Defaults include username=password=database="postgres", port=5432
+        postgres-version: "16"
 
     - name: Set RETICULATE_PYTHON
       # Retrieve the Python executable set up above
@@ -119,20 +115,14 @@ jobs:
         IRkernel::installspec()
       shell: Rscript {0}
 
-    - name: Setup template & default-ixmp4-local Postgres schema
-      if: matrix.python-version != '3.9'
-      run: |
-        ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/template1" template1
-        ixmp4 platforms add --dsn "postgresql+psycopg://postgres:postgres@localhost:5432/ixmp_test" ixmp_test
-        IXMP4_MANAGED=false ixmp4 platforms upgrade
-
     - name: Run tests
       run: |
         pytest ixmp \
           -m "not performance" \
           --color=yes --durations=20 -rA --verbose \
           --cov-report=xml \
-          --numprocesses=auto --dist=loadgroup
+          --numprocesses=auto --dist=loadgroup \
+          --ixmp-postgres=${{ steps.setup-postgres.outputs.connection-uri }}
 
     - name: Upload test coverage to Codecov.io
       uses: codecov/codecov-action@v5

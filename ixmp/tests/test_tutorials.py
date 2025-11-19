@@ -7,9 +7,7 @@ from typing import TypedDict
 import numpy as np
 import pytest
 
-from ixmp.testing import get_cell_output, run_notebook
-
-GHA = "GITHUB_ACTIONS" in os.environ
+from ixmp.testing import GHA, get_cell_output, run_notebook
 
 GROUP_BASE_NAME = platform.system() + platform.python_version()
 

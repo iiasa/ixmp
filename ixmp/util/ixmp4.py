@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 import pandas as pd
 
 if TYPE_CHECKING:
+    from ixmp4.data.backend.db import SqlAlchemyBackend
+
     from ixmp.backend.ixmp4 import IXMP4Backend
 
 
@@ -69,6 +71,24 @@ def configure_logging_and_warnings() -> None:
     )
 
 
+def format_url(value: str, **replacements: str) -> str:
+    """Format an :mod:`ixmp4` compatible database URL.
+
+    - :mod:`ixmp4` depends on :mod:`psycopg`, whereas :mod:`sqlalchemy` uses "psycopg2"
+      as the default driver for backend "postgresql". The
+      :attr:`sqlalchemy.engine.URL.drivername` is forced to "postgresql+psycopg".
+    - Any other `replacements` are applied using :meth:`sqlalchemy.engine.URL.set`.
+    """
+    from sqlalchemy import make_url
+
+    url = make_url(value)
+    if "postgresql" in url.drivername:
+        replacements.update(drivername="postgresql+psycopg")
+    if replacements:
+        url = url.set(**replacements)  # type: ignore [arg-type]
+    return url.render_as_string(hide_password=False)
+
+
 def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
     """Type guard to ensure that `obj` is an IXMP4Backend.
 
@@ -89,3 +109,10 @@ def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
     return isinstance(obj, IXMP4Backend)
+
+
+def is_sqlalchemybackend(obj: Any) -> TypeGuard["SqlAlchemyBackend"]:
+    """Ensure that `obj` is :class:`ixmp4.data.backend.db.SqlAlchemyBackend`."""
+    from ixmp4.data.backend.db import SqlAlchemyBackend
+
+    return isinstance(obj, SqlAlchemyBackend)

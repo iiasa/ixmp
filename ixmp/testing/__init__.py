@@ -110,8 +110,12 @@ __all__ = [
 GHA = "GITHUB_ACTIONS" in os.environ
 
 # Pytest stash keys
+KEY_BACKENDS = pytest.StashKey[list[str]]()
 KEY_ENGINE = pytest.StashKey["Engine"]()
 KEY_IXMP4_PG_NAME = pytest.StashKey[str]()
+
+# Used for `KEY_IXMP4_PG_NAME` when no postgres database is available
+PG_NAME_NONE = "NONE"
 
 _uname = platform.uname()
 
@@ -166,6 +170,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+def pytest_report_collectionfinish(
+    config: pytest.Config, start_path: Path, items: Sequence[Any]
+) -> list[str]:
+    """Show messages if a database error means IXMP4Backend tests cannot be run."""
+    from ixmp.backend import available
+
+    db_name = config.stash[KEY_IXMP4_PG_NAME]
+
+    messages = []
+    if "ixmp4" in available() and db_name.startswith(PG_NAME_NONE):  # pragma: no cover
+        messages += [
+            "",
+            "No PostgreSQL database available → tests of IXMP4Backend will be skipped:",
+        ] + db_name.splitlines()[1:]
+    return messages
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Unset configuration read from the user's home directory or ``IXMP_DATA.
 
@@ -192,36 +213,49 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         # tmp_env below.
         ixmp_config.values["platform"]["local"].pop("path")
 
+    # Available backends: 0 or more of "jdbc", "ixmp4"
+    backends = session.config.stash[KEY_BACKENDS] = sorted(available())
+
     jdbc._GC_AGGRESSIVE = False
 
-    if "ixmp4" in available():
+    if "ixmp4" in backends:
+        # Connect to a PostgreSQL server and create a test database for this worker
         from sqlalchemy import create_engine, text
+        from sqlalchemy.exc import OperationalError
         from xdist import get_xdist_worker_id
 
         db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
         url = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
         engine = create_engine(url, isolation_level="AUTOCOMMIT")
-        with engine.connect() as connection:
-            connection.execute(text(f"CREATE DATABASE {db_name}"))
 
-        # Store for pytest_sessionfinish()
-        session.config.stash[KEY_ENGINE] = engine
+        try:
+            with engine.connect() as connection:
+                connection.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+                connection.execute(text(f"CREATE DATABASE {db_name}"))
+        except OperationalError as e:  # pragma: no cover
+            # Some error connecting to the database → store a message and text of `e`
+            db_name = f"{PG_NAME_NONE}\nException: {e!r}\nURL: {url}"
+            # Do not run tests for ixmp4
+            backends.remove("ixmp4")
+        else:
+            # Store for pytest_sessionfinish()
+            session.config.stash[KEY_ENGINE] = engine
+
         session.config.stash[KEY_IXMP4_PG_NAME] = db_name
 
 
 def pytest_sessionfinish(
     session: pytest.Session, exitstatus: int | pytest.ExitCode
 ) -> None:
-    try:
+    db_name = session.config.stash[KEY_IXMP4_PG_NAME]
+
+    if not db_name.startswith(PG_NAME_NONE):
+        # Remove the database created for this session
         from sqlalchemy import text
 
         engine = session.config.stash[KEY_ENGINE]
-        db_name = session.config.stash[KEY_IXMP4_PG_NAME]
-
         with engine.connect() as connection:
             connection.execute(text(f"DROP DATABASE {db_name}"))
-    except (ImportError, KeyError):
-        pass
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -237,7 +271,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "backend" not in metafunc.fixturenames:
         return
 
-    import ixmp.backend
+    # Available backends in this session
+    backends = metafunc.config.stash[KEY_BACKENDS]
 
     # Subset of marker names applied to the test function
     marker_names = sorted(
@@ -249,7 +284,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     argvalues: list["str | ParameterSet"] = []
 
     # Iterate over all available backends
-    for backend_name in sorted(ixmp.backend.available()):
+    for backend_name in backends:
         # Match on the backend name followed by 0 or more marker names
         match [backend_name] + marker_names:
             case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:

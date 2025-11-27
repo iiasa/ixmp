@@ -83,7 +83,7 @@ IXMP4Backend
    See :ref:`jdbc-vs-ixmp4`, below.
 
    As of :mod:`ixmp` version 3.11,
-   IXMP4Backend uses :mod:`ixmp4` version 0.10.
+   IXMP4Backend uses :mod:`ixmp4` version 0.14.
    This is a development release;
    a 'stable' version 1.0 or later has not yet been released.
    For this reason:
@@ -94,7 +94,7 @@ IXMP4Backend
    The same holds for IXMP4Backend.
    Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
 
-   As of version 0.10, :mod:`ixmp4` supports only Python 3.10 and above.
+   As of version 0.14, :mod:`ixmp4` supports only Python 3.10 and above.
 
    - If you want to use IXMP4Backend,
      please ensure you are using a sufficiently recent Python version.

@@ -235,7 +235,6 @@ def test_platform_copy(
         call("copy", f"p1-{test_specific_name}", f"p3-{test_specific_name}")
 
 
-@pytest.mark.ixmp4_209
 def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) -> None:
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
@@ -284,7 +283,6 @@ def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) 
     assert len(scen.timeseries(variable=["Testing"])) == 0
 
 
-@pytest.mark.ixmp4_209
 def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     populate_test_platform(test_mp)
     tmp_path /= "dantzig.xlsx"
@@ -347,7 +345,6 @@ def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None
     assert result.exit_code == 0, result.output
 
 
-@pytest.mark.ixmp4_209
 def test_excel_io_filters(
     ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path
 ) -> None:

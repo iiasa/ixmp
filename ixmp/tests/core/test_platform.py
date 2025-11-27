@@ -59,13 +59,11 @@ def test_log_level(
             log_level_mp.set_log_level(level)
 
 
-@pytest.mark.ixmp4_209
 def test_scenario_list(mp: ixmp.Platform) -> None:
     scenario = mp.scenario_list(model="Douglas Adams")["scenario"]
     assert scenario[0] == "Hitchhiker"
 
 
-@pytest.mark.ixmp4_209
 def test_export_timeseries_data(mp: ixmp.Platform, tmp_path: Path) -> None:
     path = tmp_path / "export.csv"
     mp.export_timeseries_data(path, model="Douglas Adams", unit="???", region="World")
@@ -97,7 +95,6 @@ def test_export_ts_wrong_params(test_mp: ixmp.Platform, tmp_path: Path) -> None:
         )
 
 
-@pytest.mark.ixmp4_209
 def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Export timeseries of all runs."""
     path = tmp_path / "export.csv"
@@ -145,7 +142,6 @@ def test_export_ts_of_all_runs(mp: ixmp.Platform, tmp_path: Path) -> None:
     assert expected == len(obs)
 
 
-@pytest.mark.ixmp4_209
 def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None:
     """Dont export data if given models/scenarios do not have any runs."""
     path = tmp_path / "export.csv"
@@ -158,13 +154,11 @@ def test_export_timeseries_data_empty(mp: ixmp.Platform, tmp_path: Path) -> None
     assert 0 == len(pd.read_csv(path, index_col=False, header=0))
 
 
-@pytest.mark.ixmp4_209
 def test_unit_list(test_mp: ixmp.Platform) -> None:
     units = test_mp.units()
     assert ("cases" in units) is True
 
 
-@pytest.mark.ixmp4_209
 def test_add_unit(test_mp: ixmp.Platform) -> None:
     test_mp.add_unit("test", "just testing")
 
@@ -305,13 +299,11 @@ def test_weakref(refcount_offset: int) -> None:
     # *s* is garbage-collected at this point
 
 
-@pytest.mark.ixmp4_209
 def test_add_model_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_model_name("new_model_name")
     assert "new_model_name" in test_mp.get_model_names()
 
 
-@pytest.mark.ixmp4_209
 def test_add_scenario_name(test_mp: ixmp.Platform) -> None:
     test_mp.add_scenario_name("new_scenario_name")
     assert "new_scenario_name" in test_mp.get_scenario_names()
@@ -349,7 +341,6 @@ class TestPlatform:
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
 
-    @pytest.mark.ixmp4_209
     def test_scenario_list(self, mp: ixmp.Platform) -> None:
         scenario = mp.scenario_list()
         assert isinstance(scenario, pd.DataFrame)

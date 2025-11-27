@@ -153,7 +153,6 @@ markers = [
   "performance: ixmp performance test.",
   "jdbc: tests exclusive to JDBCBackend or not (yet) implemented on IXMP4Backend.",
   "ixmp4: tests exclusive to IXMP4Backend.",
-  "ixmp4_209: https://github.com/iiasa/ixmp4/pull/209",
   "ixmp4_never: tests that ixmp4 will never implement",
   "ixmp4_not_yet: tests that ixmp4 does not yet support"
 ]

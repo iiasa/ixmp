@@ -89,7 +89,6 @@ def assert_timeseries(
 # Fixtures
 
 
-@pytest.mark.ixmp4_209
 class TestTimeSeries:
     """Tests of :class:`.TimeSeries`.
 
@@ -464,7 +463,6 @@ class TestTimeSeries:
 
     # Geodata
 
-    @pytest.mark.ixmp4_209
     @pytest.mark.ixmp4_never
     def test_add_geodata(self, ts: TimeSeries) -> None:
         # Empty TimeSeries includes no geodata
@@ -478,7 +476,6 @@ class TestTimeSeries:
         obs = ts.get_geodata().sort_values("year").reset_index(drop=True)
         assert_frame_equal(DATA["geo"], obs)
 
-    @pytest.mark.ixmp4_209
     @pytest.mark.ixmp4_never
     @pytest.mark.parametrize(
         "rows",
@@ -593,14 +590,12 @@ class TestTimeSeries:
         # setting False raises an error because subannual data exists
         pytest.raises(ValueError, scen.timeseries, subannual=False)
 
-    @pytest.mark.ixmp4_209
     @pytest.mark.ixmp4_never
     def test_fetch_empty_geodata(self, mp: "Platform") -> None:
         scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         empty = scen.get_geodata()
         assert_geodata(empty, DATA["geo"].loc[[False, False, False]])
 
-    @pytest.mark.ixmp4_209
     @pytest.mark.ixmp4_never
     def test_remove_multiple_geodata(self, mp: "Platform") -> None:
         scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")

@@ -59,7 +59,7 @@ docs = [
   "sphinxcontrib-bibtex",
 ]
 ixmp4 = [
-  "ixmp4 >= 0.13, < 0.14",
+  "ixmp4 >= 0.14, < 0.15",
   "gamsapi[core,transfer] >= 45.7.0",
 ]
 report = ["genno[compat,graphviz]"]

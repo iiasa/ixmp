@@ -120,19 +120,12 @@ PG_NAME_NONE = "NONE"
 _uname = platform.uname()
 
 #: Pytest marks for use throughout the test suite.
-#:
-#: - ``ixmp4#209``: https://github.com/iiasa/ixmp4/pull/209,
-#:   https://github.com/unionai-oss/pandera/pull/2158.
 MARK = {
     "IXMP4Backend Never": pytest.mark.xfail(
         reason="Not implemented on IXMP4Backend", raises=NotImplementedError
     ),
     "IXMP4Backend Not Yet": pytest.mark.xfail(
         reason="Not yet supported by IXMP4Backend"
-    ),
-    "ixmp4#209": pytest.mark.xfail(
-        condition=platform.python_version_tuple() >= ("3", "14", "0"),
-        reason="ixmp4/pandera do not yet support Python 3.14",
     ),
     "pytest#10843": pytest.mark.xfail(
         condition=GHA
@@ -283,7 +276,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     # Subset of marker names applied to the test function
     marker_names = sorted(
         set(m.name for m in metafunc.definition.iter_markers())
-        & {"ixmp4", "ixmp4_209", "ixmp4_never", "ixmp4_not_yet", "jdbc"}
+        & {"ixmp4", "ixmp4_never", "ixmp4_not_yet", "jdbc"}
     )
 
     # Argument values for pytest.parametrize()
@@ -300,12 +293,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             case ["ixmp4", "ixmp4_never"]:  # "Won't ever be implemented on IXMP4"
                 mark: Any = MARK["IXMP4Backend Never"]
             case ["ixmp4", "ixmp4_not_yet"]:  # "Not yet supported on IXMP4"
-                mark = MARK["IXMP4Backend Not Yet"]
-            # FIXME Remove the following 2 case blocks once iiasa/ixmp4#209 is resolved
-            case ["ixmp4", *_, "ixmp4_209"]:
-                mark = MARK["ixmp4#209"]
-            case ["ixmp4", "ixmp4_209", *_]:
-                # ixmp4_209 + other markers like _{never,not_yet} → use a broader XFAIL
                 mark = MARK["IXMP4Backend Not Yet"]
             case _:
                 mark = []

@@ -73,7 +73,6 @@ def test_dict() -> dict[str, bool | float | int | str]:
     }
 
 
-@pytest.mark.ixmp4_209
 class TestScenario:
     """Tests of :class:`ixmp.Scenario`."""
 
@@ -662,7 +661,6 @@ class TestScenario:
         assert scen.get_meta("new_attr") == "new_attr"
 
 
-@pytest.mark.ixmp4_209
 def test_range(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
@@ -678,7 +676,6 @@ def test_range(scen_empty: "Scenario") -> None:
     scen.add_par("new_par", ii, [1.2] * len(ii))
 
 
-@pytest.mark.ixmp4_209
 def test_gh_210(scen_empty: "Scenario") -> None:
     scen = scen_empty
     i = ["i0", "i1", "i2"]
@@ -698,7 +695,6 @@ def test_gh_210(scen_empty: "Scenario") -> None:
     assert all(foo_data.columns == columns)
 
 
-@pytest.mark.ixmp4_209
 def test_set(scen_empty: "Scenario") -> None:
     """Test ixmp.Scenario.add_set(), .set(), and .remove_set()."""
     scen = scen_empty
@@ -804,7 +800,6 @@ def test_set(scen_empty: "Scenario") -> None:
     assert "h" not in scen.set_list()
 
 
-@pytest.mark.ixmp4_209
 def test_filter_str(scen_empty: "Scenario") -> None:
     scen = scen_empty
 
@@ -840,7 +835,6 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     assert_frame_equal(exp[["s", "value"]], obs[["s", "value"]])
 
 
-@pytest.mark.ixmp4_209
 def test_solve_callback(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Test the callback argument to Scenario.solve().
 

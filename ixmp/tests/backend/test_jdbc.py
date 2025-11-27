@@ -262,7 +262,6 @@ class TestJDBCBackend:
         be.gc()
 
 
-@pytest.mark.ixmp4_209
 def test_exceptions(test_mp: "Platform") -> None:
     """Ensure that Python exceptions are raised for some actions."""
     s = ixmp.Scenario(test_mp, "model name", "scenario name", "new")
@@ -397,7 +396,6 @@ def test_init(
         ixmp.Platform(*args, **kwargs)  # type: ignore[misc]
 
 
-@pytest.mark.ixmp4_209
 def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
 
@@ -724,7 +722,6 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
-@pytest.mark.ixmp4_209
 def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scen = make_dantzig(test_mp, request=request)
     # test model docs
@@ -752,7 +749,6 @@ def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     assert ex.value.args[0] == exp
 
 
-@pytest.mark.ixmp4_209
 def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Removing set elements causes the cache to be cleared entirely."""
     scen = make_dantzig(test_mp, request=request)
@@ -772,7 +768,6 @@ def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> Non
     assert df.shape[0] < d0.shape[0]
 
 
-@pytest.mark.ixmp4_209
 def test_cat_set_elements(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     scenario = ixmp.Scenario(
         test_mp,

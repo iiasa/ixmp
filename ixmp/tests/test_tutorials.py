@@ -20,8 +20,6 @@ FLAKY = pytest.mark.flaky(
 
 LONG_MACOS = sys.version_info[:2] in {(3, 11), (3, 12)}
 
-pytestmark = pytest.mark.ixmp4_209
-
 
 class DefaultKwargs(TypedDict, total=False):
     default_platform: str

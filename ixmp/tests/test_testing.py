@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING
 
-import pytest
-
 import ixmp
 from ixmp.testing import models
 from ixmp.testing.data import random_ts_data
@@ -16,7 +14,6 @@ def test_random_ts_data(N: int = 100) -> None:
     assert N == len(df)
 
 
-@pytest.mark.ixmp4_209
 def test_resource_limit(resource_limit: None, test_mp: "Platform") -> None:
     """Exercise :func:`memory_usage` and :func:`resource_limit`."""
     # TODO expand to cover other missed lines in those functions

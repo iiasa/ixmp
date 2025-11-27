@@ -1,12 +1,9 @@
 from pathlib import Path
 
-import pytest
-
 import ixmp
 from ixmp.testing import add_random_model_data, models
 
 
-@pytest.mark.ixmp4_209
 def test_read_excel_big(test_mp: ixmp.Platform, tmp_path: Path) -> None:
     """Excel files with model items split across sheets can be read.
 

@@ -12,7 +12,13 @@ import pytest
 from pandas.testing import assert_frame_equal
 
 import ixmp
-from ixmp.testing import _platform_fixture, assert_logs, make_dantzig, models
+from ixmp.testing import (
+    KEY_BACKENDS,
+    _platform_fixture,
+    assert_logs,
+    make_dantzig,
+    models,
+)
 from ixmp.testing.data import populate_test_platform
 from ixmp.util.ixmp4 import is_ixmp4backend
 
@@ -49,6 +55,9 @@ def platforms(
 
     The first uses :class:`JDBCBackend`, the second uses :class:`IXMP4Backend`.
     """
+    if "ixmp4" not in request.config.stash[KEY_BACKENDS]:  # pragma: no cover
+        pytest.skip("Cannot construct fixture `platforms` without IXMP4Backend")
+
     args: "PlatformFixtureArgs" = dict(
         request=request,
         tmp_env=tmp_env,

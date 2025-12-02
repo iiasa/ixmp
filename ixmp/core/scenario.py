@@ -878,36 +878,44 @@ class Scenario(TimeSeries):
         shift_first_model_year: int | None = None,
         platform: Platform | None = None,
     ) -> "Scenario":
-        """Clone the current scenario and return the clone.
+        """Create and return a clone (copy) of the Scenario.
 
-        If the (`model`, `scenario`) given already exist on the :class:`.Platform`, the
-        `version` for the cloned Scenario follows the last existing version. Otherwise,
-        the `version` for the cloned Scenario is 1.
+        If the given (`model` name, `scenario` name) already exist on the `platform`,
+        the clone is assigned a `version` larger by ≥1 than than the last existing
+        version for that (model name, scenario name). Otherwise, the `version` for the
+        clone is 1.
 
         .. note::
             :meth:`clone` does not set or alter default versions. This means that a
             clone to new (`model`, `scenario`) names has no default version, and will
-            not be returned by :meth:`Platform.scenario_list` unless `default=False` is
-            given.
+            not be returned by :meth:`Platform.scenario_list`—unless :py:`default=False`
+            is given.
 
         Parameters
         ----------
         model : str, optional
-            New model name. If not given, use the existing model name.
+            New model name. If not given, the same as :attr:`~.TimeSeries.model`.
         scenario : str, optional
-            New scenario name. If not given, use the existing scenario name.
+            New scenario name. If not given, the same as :attr:`~.TimeSeries.scenario`.
         annotation : str, optional
             Explanatory comment for the clone commit message to the database.
         keep_solution : bool, optional
-            If :obj:`True`, include all timeseries data and the solution (vars and
-            equs) from the source scenario in the clone. If :obj:`False`, only
-            include timeseries data marked `meta=True` (see :meth:`.add_timeseries`).
+            If :obj:`True`, copy all time series data and model solution data
+            (equations and variables) from the original Scenario to the clone. If
+            :obj:`False`, only include timeseries data marked `meta=True` (see
+            :meth:`.add_timeseries`) and omit model solution data.
         shift_first_model_year: int, optional
             If given, all timeseries data in the Scenario is omitted from the clone for
             years from `first_model_year` onwards. Timeseries data with the `meta` flag
             (see :meth:`.add_timeseries`) are cloned for all years.
-        platform : :class:`Platform`, optional
-            Platform to clone to (default: current platform)
+        platform :
+            Platform to store the clone. If not given, the same platform as the original
+            Scenario.
+
+        Raises
+        ------
+        NotImplementedError, ValueError
+            For not supported combinations of arguments.
         """
         if shift_first_model_year is not None:
             if keep_solution:

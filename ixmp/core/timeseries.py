@@ -35,8 +35,8 @@ class TimeSeries:
 
     Parameters
     ----------
-    mp : :class:`Platform`
-        ixmp instance in which to store data.
+    mp :
+        :class:`.Platform` on which to store data.
     model : str
         Model name.
     scenario : str
@@ -48,6 +48,9 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+
+    #: A reference to the :class:`.Platform` on which the TimeSeries is stored.
+    platform: Platform
 
     #: Name of the model associated with the TimeSeries.
     model: str
@@ -74,8 +77,7 @@ class TimeSeries:
             raise ValueError(f"version={repr(version)}")
         elif version == "new" and annotation is None:
             log.info(
-                f"Missing annotation for new {self.__class__.__name__}"
-                f" {model}/{scenario}"
+                f"Missing annotation for new {type(self).__name__} {model}/{scenario}"
             )
             annotation = ""
 
@@ -97,7 +99,7 @@ class TimeSeries:
         # NOTE mypy says mp can never be a subtype of ProxyType, but removing the
         # isinstance check leads to errors
         # Annotating mp as Union[..., ProxyType[Platform]] doesn't help, either
-        self.platform: Platform = mp if isinstance(mp, ProxyType) else proxy(mp)  # type: ignore[unreachable]
+        self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)  # type: ignore [unreachable]
 
         if version == "new":
             # Initialize a new object

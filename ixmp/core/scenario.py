@@ -588,9 +588,9 @@ class Scenario(TimeSeries):
         | pd.DataFrame
         | range
         | None = None,
-        value: float | Iterable[float] | None = None,
-        unit: str | Iterable[str] | None = None,
-        comment: str | Iterable[str] | None = None,
+        value: float | Sequence[float] | None = None,
+        unit: str | Sequence[str] | None = None,
+        comment: str | Sequence[str] | None = None,
     ) -> None:
         """Set the values of a parameter.
 
@@ -671,19 +671,17 @@ class Scenario(TimeSeries):
             raise ValueError("no parameter values supplied")
 
         if "unit" not in data.columns:
-            # Broadcast single unit across all values. pandas raises ValueError
-            # if *unit* is iterable but the wrong length
-            data["unit"] = unit or "???"
+            # Broadcast single unit across all observations. Pandas raises ValueError if
+            # `unit` is iterable but the wrong length.
+            data = data.assign(unit=unit or "???")
 
         if "comment" not in data.columns:
-            if comment:
-                # Broadcast single comment across all values. pandas raises
-                # ValueError if *comment* is iterable but the wrong length
-                data["comment"] = comment
-            else:
-                # Store a 'None' comment
-                data["comment"] = None
+            if not comment:
+                # Don't apply a dtype to None values
                 types.pop("comment")
+            # Broadcast a single comment value across all observations. Pandas raises
+            # ValueError if `comment` is iterable but the wrong length.
+            data = data.assign(comment=comment or None)
 
         # Convert types, generate tuples
         elements = map(

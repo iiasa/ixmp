@@ -10,7 +10,7 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, overload
 from warnings import warn
 
 import pandas as pd
@@ -18,7 +18,8 @@ import pandas as pd
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
 
-from ixmp.backend.common import ItemType
+from ixmp.backend.common import CrossPlatformClone, ItemType
+from ixmp.core.item import Equation, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list, check_year
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
         ParData,
         ScalarParData,
         ScenarioInitKwargs,
+        SetData,
         SolutionData,
         VersionType,
         WriteFilters,
@@ -195,9 +197,7 @@ class Scenario(TimeSeries):
         else:
             return [str(key_or_keys)]
 
-    def set(
-        self, name: str, filters: "Filters" = None
-    ) -> "pd.Series[float | int | str] | pd.DataFrame":
+    def set(self, name: str, filters: "Filters" = None) -> "SetData":
         """Return the (filtered) elements of a set.
 
         Parameters
@@ -343,7 +343,7 @@ class Scenario(TimeSeries):
             elements.append((k, None, None, c))
 
         # Send to backend
-        self.platform._backend.item_set_elements(self, "set", name, elements)
+        self.platform._backend.item_set_elements(self, Set, name, elements)
 
     def remove_set(
         self,
@@ -471,6 +471,64 @@ class Scenario(TimeSeries):
 
             # Retrieve the data
             yield (name, self.par(name, filters=_filters))
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.SET],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "SetData"]]: ...
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.PAR],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "ParData"]]: ...
+
+    @overload
+    def iter_item_data(
+        self,
+        item_type: Literal[ItemType.EQU, ItemType.VAR],
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "SolutionData"]]: ...
+
+    def iter_item_data(
+        self,
+        item_type: "ModelItemType",
+        filters: "Filters" = None,
+        *,
+        indexed_by: str | None = None,
+    ) -> Iterator[tuple[str, "ParData | SetData | SolutionData"]]:
+        filters = filters or dict()
+
+        data_function_map: dict[
+            "ModelItemType",
+            Callable[[str, "Filters"], "ParData | SetData | SolutionData"],
+        ] = {
+            ItemType.SET: self.set,
+            ItemType.PAR: self.par,
+            ItemType.EQU: self.equ,
+            ItemType.VAR: self.var,
+        }
+
+        data_function = data_function_map[item_type]
+
+        for name in self.items(type=item_type, indexed_by=indexed_by):
+            idx_names = set(self.idx_names(name))
+
+            if filters and not set(filters) & idx_names:
+                continue
+
+            _filters = {k: v for k, v in filters.items() if k in idx_names}
+
+            yield (name, data_function(name, _filters))
 
     # NOTE Changing the default here since that seems to be unused/untested
     def has_item(self, name: str, item_type: "ModelItemType" = ItemType.PAR) -> bool:
@@ -692,7 +750,7 @@ class Scenario(TimeSeries):
         # Store
         # TODO Not sure how to tell type checker, but columns are always converted to
         # tuple[str | object, float, str, str]
-        self.platform._backend.item_set_elements(self, "par", name, elements)  # type: ignore[arg-type]
+        self.platform._backend.item_set_elements(self, Parameter, name, elements)  # type: ignore[arg-type]
 
     def init_scalar(
         self,
@@ -755,7 +813,7 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.platform._backend.item_set_elements(
-            self, "par", name, [(None, float(val), unit, comment)]
+            self, Parameter, name, [(None, float(val), unit, comment)]
         )
 
     def remove_par(
@@ -820,36 +878,44 @@ class Scenario(TimeSeries):
         shift_first_model_year: int | None = None,
         platform: Platform | None = None,
     ) -> "Scenario":
-        """Clone the current scenario and return the clone.
+        """Create and return a clone (copy) of the Scenario.
 
-        If the (`model`, `scenario`) given already exist on the :class:`.Platform`, the
-        `version` for the cloned Scenario follows the last existing version. Otherwise,
-        the `version` for the cloned Scenario is 1.
+        If the given (`model` name, `scenario` name) already exist on the `platform`,
+        the clone is assigned a `version` larger by ≥1 than than the last existing
+        version for that (model name, scenario name). Otherwise, the `version` for the
+        clone is 1.
 
         .. note::
             :meth:`clone` does not set or alter default versions. This means that a
             clone to new (`model`, `scenario`) names has no default version, and will
-            not be returned by :meth:`Platform.scenario_list` unless `default=False` is
-            given.
+            not be returned by :meth:`Platform.scenario_list`—unless :py:`default=False`
+            is given.
 
         Parameters
         ----------
         model : str, optional
-            New model name. If not given, use the existing model name.
+            New model name. If not given, the same as :attr:`~.TimeSeries.model`.
         scenario : str, optional
-            New scenario name. If not given, use the existing scenario name.
+            New scenario name. If not given, the same as :attr:`~.TimeSeries.scenario`.
         annotation : str, optional
             Explanatory comment for the clone commit message to the database.
         keep_solution : bool, optional
-            If :obj:`True`, include all timeseries data and the solution (vars and
-            equs) from the source scenario in the clone. If :obj:`False`, only
-            include timeseries data marked `meta=True` (see :meth:`.add_timeseries`).
+            If :obj:`True`, copy all time series data and model solution data
+            (equations and variables) from the original Scenario to the clone. If
+            :obj:`False`, only include timeseries data marked `meta=True` (see
+            :meth:`.add_timeseries`) and omit model solution data.
         shift_first_model_year: int, optional
             If given, all timeseries data in the Scenario is omitted from the clone for
             years from `first_model_year` onwards. Timeseries data with the `meta` flag
             (see :meth:`.add_timeseries`) are cloned for all years.
-        platform : :class:`Platform`, optional
-            Platform to clone to (default: current platform)
+        platform :
+            Platform to store the clone. If not given, the same platform as the original
+            Scenario.
+
+        Raises
+        ------
+        NotImplementedError, ValueError
+            For not supported combinations of arguments.
         """
         if shift_first_model_year is not None:
             if keep_solution:
@@ -860,17 +926,25 @@ class Scenario(TimeSeries):
         model = model or self.model
         scenario = scenario or self.scenario
 
-        return self.platform._backend.clone(
-            self,
-            platform_dest=platform,
-            model=model,
-            scenario=scenario,
-            annotation=annotation,
-            keep_solution=keep_solution,
-            first_model_year=shift_first_model_year
-            if check_year(shift_first_model_year, "first_model_year")
-            else None,
-        )
+        try:
+            # Use the Backend implementation to clone:
+            # - Within the same Backend.
+            # - Across 2 Backends of the same type, if supported.
+            # - Across 2 Backends of differing type, if supported.
+            return self.platform._backend.clone(
+                self,
+                platform_dest=platform,
+                model=model,
+                scenario=scenario,
+                annotation=annotation,
+                keep_solution=keep_solution,
+                first_model_year=shift_first_model_year
+                if check_year(shift_first_model_year, "first_model_year")
+                else None,
+            )
+        except CrossPlatformClone:
+            # Use a generic, Backend-unaware clone method
+            return _clone(self, platform, model, scenario, keep_solution)
 
     def has_solution(self) -> bool:
         """Return :obj:`True` if the Scenario contains model solution data."""
@@ -1078,3 +1152,81 @@ class Scenario(TimeSeries):
             init_items=init_items,
             commit_steps=commit_steps,
         )
+
+
+def _clone(
+    s: Scenario, platform_dest: Platform, model: str, scenario: str, keep_solution: bool
+) -> Scenario:
+    """:class:`Backend`-unaware implementation of :meth:`Scenario.clone`.
+
+    This function uses only the Scenario and Backend APIs.
+    """
+    from . import timeseries
+
+    # - Create a clone of the same class as `s` on `platform_dest`.
+    # - Clone time series data.
+    s_dest = timeseries._clone(s, platform_dest, model, scenario)
+    # Direct reference to the backend storing s_dest
+    b_dest = s_dest.platform._backend
+
+    def _data_to_elements(
+        data: dict[str, Any] | pd.DataFrame,
+    ) -> Iterator[tuple[Any, ...]]:
+        """Convert data to elements for :meth:`.Backend.item_set_elements`."""
+        if isinstance(data, dict):
+            # Identify element value fields for (equ, var) or (par, set)
+            c0, c1 = ("lvl", "mrg") if "lvl" in data else ("value", "unit")
+            # Yield a single element
+            yield (None, data[c0], data[c1], "")
+        else:
+            c0, c1 = ("lvl", "mrg") if "lvl" in data.columns else ("value", "unit")
+            cols = data.columns.to_list()
+            # Indices of key colums, for pd.DataFrame.take()
+            i_key = list(range(len(cols)))
+            # Indices of value fields
+            i0, i1 = cols.index(c0), cols.index(c1)
+            # Exclude these from the key
+            i_key.remove(i0)
+            i_key.remove(i1)
+
+            yield from [
+                (row.take(i_key).to_list(), row.iloc[i0], row.iloc[i1], "")
+                for _, row in data.iterrows()
+            ]
+
+    def _maybe_init(it: ItemType, name: str) -> None:
+        """Initialize item `name` on `s_dest`, if it does not already exist."""
+        if name in existing[it]:
+            return
+        idx_sets, idx_names = s.idx_sets(name), s.idx_names(name)
+
+        b_dest.init_item(s_dest, type_.ix_type, name, idx_sets, idx_names)
+
+    # Clone optimization data
+
+    # Identify items already present in the Scenario. These may be created by a
+    # Model.initialize() class method.
+    existing = {
+        item_type: set(s_dest.list_items(item_type))  # type: ignore [arg-type]
+        for item_type in (ItemType.EQU, ItemType.PAR, ItemType.SET, ItemType.VAR)
+    }
+
+    with s_dest.transact():
+        # Iterate over item names and data
+        for name, set_data in s.iter_item_data(ItemType.SET):
+            _maybe_init(ItemType.SET, name)
+            s_dest.add_set(name, set_data)
+
+        for item_type, type_, condition in (
+            (ItemType.PAR, Parameter, True),
+            # Only clone EQU and VAR data if keep_solution is True
+            (ItemType.EQU, Equation, keep_solution),
+            (ItemType.VAR, Variable, keep_solution),
+        ):
+            if not condition:
+                continue
+            for name, data in s.iter_item_data(item_type):  # type: ignore [call-overload]
+                _maybe_init(item_type, name)
+                b_dest.item_set_elements(s_dest, type_, name, _data_to_elements(data))
+
+    return s_dest

@@ -1,16 +1,25 @@
+import os
 import re
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
+import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
 import ixmp
-from ixmp.testing import assert_logs, make_dantzig, models
+from ixmp.testing import (
+    KEY_BACKENDS,
+    _platform_fixture,
+    assert_logs,
+    make_dantzig,
+    models,
+)
+from ixmp.testing.data import populate_test_platform
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -18,20 +27,56 @@ if TYPE_CHECKING:
     from ixmp.core.scenario import Scenario
     from ixmp.types import GamsModelInitKwargs, ModelScenario
 
+    class AddParKwargs(TypedDict, total=False):
+        value: float | list[int]
+        unit: str
+        comment: str
 
-class AddParKwargs(TypedDict, total=False):
-    value: float | list[int]
-    unit: str
-    comment: str
+    class PlatformFixtureArgs(TypedDict):
+        request: pytest.FixtureRequest
+        tmp_env: os._Environ[str]
+        test_data_path: Path
+        worker_id: str
 
-
-### TODO
-###
-### When tests error out at setup, the ixmp_test_master DB is not torn down
-### (Sometimes, the same happens on failures when running the same file again)
+    Platforms = tuple[Platform, Platform]
 
 
 # Fixtures
+
+
+@pytest.fixture
+def platforms(
+    request: pytest.FixtureRequest,
+    tmp_env: os._Environ[str],
+    test_data_path: Path,
+    worker_id: str,
+) -> Iterator["Platforms"]:
+    """A :class:`tuple` of 2 temporary Platform instances.
+
+    The first uses :class:`JDBCBackend`, the second uses :class:`IXMP4Backend`.
+    """
+    if "ixmp4" not in request.config.stash[KEY_BACKENDS]:  # pragma: no cover
+        pytest.skip("Cannot construct fixture `platforms` without IXMP4Backend")
+
+    args: "PlatformFixtureArgs" = dict(
+        request=request,
+        tmp_env=tmp_env,
+        test_data_path=test_data_path,
+        worker_id=worker_id,
+    )
+    jdbc_mp = _platform_fixture(backend="jdbc", **args)
+    ixmp4_mp = _platform_fixture(backend="ixmp4", **args)
+
+    yield from zip(jdbc_mp, ixmp4_mp)
+
+
+@pytest.fixture
+def platforms_populated(platforms: "Platforms") -> Iterator["Platforms"]:
+    """Same as :func:`platform`, with test data on the first (JDBC) platform."""
+    populate_test_platform(platforms[0])
+    yield platforms
+
+
 @pytest.fixture(scope="class")
 def scen(mp: "Platform") -> Generator["Scenario", Any, None]:
     """The default version of the Dantzig on the mp."""
@@ -71,6 +116,21 @@ def test_dict() -> dict[str, bool | float | int | str]:
         "test_bool": True,
         "test_bool_false": False,
     }
+
+
+# Test utility functions
+
+
+def assert_frame_equal_sorted(
+    left: pd.DataFrame, right: pd.DataFrame, **kwargs: Any
+) -> None:
+    """Same as :func:`pandas.testing.assert_frame_equal`, but after sorting the data."""
+    cols = left.columns.to_list()
+    assert_frame_equal(
+        left.sort_values(cols, ignore_index=True),
+        right.sort_values(cols, ignore_index=True),
+        **kwargs,
+    )
 
 
 class TestScenario:
@@ -221,6 +281,57 @@ class TestScenario:
         clone = scen.clone(model=unique_model_name)
         assert clone.is_default()
 
+    def test_clone_jdbc_to_ixmp4(self, platforms_populated: "Platforms") -> None:
+        """Test clone between :class:`JDBCBackend` and :class:`IXMP4Backend`."""
+        # Unpack source and destination platforms
+        p0, p1 = platforms_populated
+
+        # Retrieve a Scenarios prepared by populate_test_platform()
+        scen = ixmp.Scenario(p0, **models["dantzig"])
+        scen.remove_solution()
+        with scen.transact("Add an extra parameter outside of the Dantzig schema"):
+            scen.init_par("foo", ["i", "i", "j", "j"], ["i1", "i2", "j1", "j2"])
+            scen.add_par(
+                "foo", ["san-diego", "seattle", "chicago", "new-york"], 1.0, "cases"
+            )
+        scen.solve()
+
+        # Add required regions and units to ixmp4 platform
+        # NB Without adding these, clone fails with RegionNotFound. We don't test the
+        #    assertion, since the test would fail without ixmp4 installed
+        p1.add_region(region="DantzigLand", hierarchy="country")
+        p1.add_unit(unit="USD")
+        p1.add_unit(unit="???")
+        p1.add_unit(unit="USD/km")
+
+        # Clone from JDBCBackend to IXMP4Backend succeeds
+        scen.clone(platform=p1)
+
+        clone = ixmp.Scenario(mp=p1, **models["dantzig"])
+
+        # TODO Expand these assertions
+        # Check an exemplary parameter
+        assert clone.has_par("d")
+        scen_d = scen.par("d")
+        clone_d = clone.par("d")
+        assert isinstance(scen_d, pd.DataFrame) and isinstance(clone_d, pd.DataFrame)
+        assert_frame_equal_sorted(scen_d, clone_d, check_like=True)
+
+        # Check time series data
+        assert_frame_equal_sorted(scen.timeseries(), clone.timeseries())
+
+        # Check optimization solution data
+        npt.assert_almost_equal(clone.var("z")["lvl"], np.float64(153.675), decimal=3)
+
+        # Test cloning (again) without solution
+        # NB The first version of a Scenario is automatically set as default, but this
+        #    is the second version
+        _clone = scen.clone(platform=p1, keep_solution=False)
+        _clone.set_as_default()
+        clone = ixmp.Scenario(mp=p1, **models["dantzig"])
+
+        assert clone.var("z") == {"lvl": np.nan, "mrg": np.nan}
+
     # Initialize items
     def test_init_set(self, scen: "Scenario") -> None:
         """Test ixmp.Scenario.init_set()."""
@@ -316,7 +427,7 @@ class TestScenario:
         self,
         scen: "Scenario",
         args: tuple[str, list[str] | pd.DataFrame],
-        kwargs: AddParKwargs,
+        kwargs: "AddParKwargs",
     ) -> None:
         scen = scen.clone(keep_solution=False)
         scen.check_out()

@@ -41,7 +41,9 @@ All changes
 - Improve :class:`.IXMP4Backend` (:pull:`581`):
 
   - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).
-  - Streamline and fix various functions to enable more tests to pass (:pull:`601`, :pull:`611`).
+  - Streamline and fix various functions to expand coverage of the :mod:`ixmp` API (:pull:`601`, :pull:`611`).
+    All remaining differences between :class:`.JDBCBackend` and :class:`.IXMP4Backend` are documented.
+  - :class:`.Scenario.clone` can clone a Scenario *from* JDBCBackend *to* IXMP4Backend (:pull:`610`).
 
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.
@@ -64,7 +66,6 @@ All changes
   Calling this method emits :class:`DeprecationWarning`,
   and the method will be removed in a future version of :mod:`ixmp`.
 - Improve performance of :meth:`.Scenario.remove_par` and :meth:`.Scenario.remove_set` (:pull:`598`).
-- Document all differences between :class:`.JDBCBackend` and :class:`.IXMP4Backend` (:pull:`601`).
 
 .. _v3.11.1:
 

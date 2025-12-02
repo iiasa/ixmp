@@ -52,6 +52,10 @@ FIELDS = {
 IAMC_IDX: list[str | int] = ["model", "scenario", "region", "variable", "unit"]
 
 
+class CrossPlatformClone(NotImplementedError):
+    """Raised for not implemented clone operations between multiple platforms."""
+
+
 class ItemType(IntFlag):
     """Type of data items in :class:`.ixmp.TimeSeries` and :class:`.ixmp.Scenario`."""
 

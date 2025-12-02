@@ -3,7 +3,7 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -35,8 +35,8 @@ class TimeSeries:
 
     Parameters
     ----------
-    mp : :class:`Platform`
-        ixmp instance in which to store data.
+    mp :
+        :class:`.Platform` on which to store data.
     model : str
         Model name.
     scenario : str
@@ -48,6 +48,9 @@ class TimeSeries:
     annotation : str, optional
         A short annotation/comment used when ``version='new'``.
     """
+
+    #: A reference to the :class:`.Platform` on which the TimeSeries is stored.
+    platform: Platform
 
     #: Name of the model associated with the TimeSeries.
     model: str
@@ -74,8 +77,7 @@ class TimeSeries:
             raise ValueError(f"version={repr(version)}")
         elif version == "new" and annotation is None:
             log.info(
-                f"Missing annotation for new {self.__class__.__name__}"
-                f" {model}/{scenario}"
+                f"Missing annotation for new {type(self).__name__} {model}/{scenario}"
             )
             annotation = ""
 
@@ -97,7 +99,7 @@ class TimeSeries:
         # NOTE mypy says mp can never be a subtype of ProxyType, but removing the
         # isinstance check leads to errors
         # Annotating mp as Union[..., ProxyType[Platform]] doesn't help, either
-        self.platform: Platform = mp if isinstance(mp, ProxyType) else proxy(mp)  # type: ignore[unreachable]
+        self.platform = mp if isinstance(mp, ProxyType) else proxy(mp)  # type: ignore [unreachable]
 
         if version == "new":
             # Initialize a new object
@@ -674,3 +676,26 @@ class TimeSeries:
             firstyear=firstyear,
             lastyear=lastyear,
         )
+
+
+# TimeSeries or a subtype
+TS = TypeVar("TS", bound=TimeSeries)
+
+
+def _clone(ts: TS, platform_dest: Platform, model: str, scenario: str) -> TS:
+    """Clone `ts` to (`platform_dest`, `model`, `scenario`).
+
+    This function uses only the TimeSeries and (generic) Backend APIs, so is ‘naïve’
+    about the concrete Backend type(s) underlying the source and target platforms.
+    """
+    ts_dest = type(ts)(platform_dest, model, scenario, "new", ts.scheme)
+    ts_dest.commit(f"clone from ixmp://{ts.platform.name}/{ts.url}")
+
+    # Clone meta data
+    ts_dest.set_meta(ts.get_meta())
+
+    # Clone time-series data
+    with ts_dest.transact("Clone time series data"):
+        ts_dest.add_timeseries(ts.timeseries())
+
+    return ts_dest

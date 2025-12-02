@@ -34,14 +34,14 @@ import pandas as pd
 from typing_extensions import Unpack, override
 
 from ixmp.core.item import CLASS as ITEM_CLASS
-from ixmp.core.item import Item, Set
+from ixmp.core.item import Equation, Item, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list
 
 from .base import CachingBackend
-from .common import FIELDS, ItemType
+from .common import FIELDS, CrossPlatformClone, ItemType
 
 if TYPE_CHECKING:
     from ixmp.types import (
@@ -898,10 +898,7 @@ class JDBCBackend(CachingBackend):
         y = to_jlist(year)
 
         # Field types
-        ftype = {
-            "year": int,
-            "value": float,
-        }
+        ftype = {"year": int, "value": float}
 
         # Iterate over returned rows
         for row in self.jindex[ts].getTimeseries(r, v, u, None, y):
@@ -1043,13 +1040,13 @@ class JDBCBackend(CachingBackend):
         first_model_year: int | None = None,
     ) -> Scenario:
         # Raise exceptions for limitations of JDBCBackend
-        if not isinstance(platform_dest._backend, self.__class__):
-            raise NotImplementedError(  # pragma: no cover
-                f"Clone between {self.__class__} and{platform_dest._backend.__class__}"
+        if not isinstance(platform_dest._backend, type(self)):
+            raise CrossPlatformClone(  # pragma: no cover
+                f"Clone between {self.__class__} and {platform_dest._backend.__class__}"
             )
         elif platform_dest._backend is not self:
             package = s.__class__.__module__.split(".")[0]
-            msg = f"Cross-platform clone of {package}.Scenario with"
+            msg = f"Clone of {package}.Scenario between JDBCBackend with"
             if keep_solution is False:
                 raise NotImplementedError(f"{msg} `keep_solution=False`")
             elif "message_ix" in msg and first_model_year is not None:
@@ -1283,17 +1280,20 @@ class JDBCBackend(CachingBackend):
     def item_set_elements(
         self,
         s: Scenario,
-        type: Literal["par", "set"],
+        type: type[Equation | Parameter | Set | Variable],
         name: str,
         elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
-        jobj = self._get_item(s, ITEM_CLASS[type](name))
+        if type not in {Parameter, Set}:  # pragma: no cover
+            raise NotImplementedError(f"Set elements of {type=} on JDBCBackend")
+
+        jobj = self._get_item(s, type(name))
 
         try:
             for key, value, unit, comment in elements:
                 # Prepare arguments
                 args = [to_jlist(key)] if key else []
-                if type == "par":
+                if type is Parameter:
                     args.extend([java.Double(value), unit])
                 if comment:
                     args.append(comment)
@@ -1314,7 +1314,7 @@ class JDBCBackend(CachingBackend):
             else:  # pragma: no cover
                 _raise_jexception(e)
 
-        self.cache_invalidate(s, type, name)
+        self.cache_invalidate(s, type.ix_type, name)
 
     def item_delete_elements(
         self,

@@ -29,7 +29,6 @@ from weakref import WeakKeyDictionary
 import jpype
 import numpy as np
 import pandas as pd
-from ixmp4 import DataPoint
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack, override
@@ -40,10 +39,9 @@ from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list
-from ixmp.util.ixmp4 import is_ixmp4backend
 
 from .base import CachingBackend
-from .common import FIELDS, ItemType
+from .common import FIELDS, CrossPlatformClone, ItemType
 
 if TYPE_CHECKING:
     from ixmp.types import (
@@ -1031,146 +1029,6 @@ class JDBCBackend(CachingBackend):
 
     # Scenario methods
 
-    def _clone_to_ixmp4(
-        self,
-        s: Scenario,
-        platform_dest: Platform,
-        model: str,
-        scenario: str,
-        keep_solution: bool,
-    ) -> Scenario:
-        # Assume that all required units and regions exist on platform_dest
-        ixmp4_backend = platform_dest._backend
-        assert is_ixmp4backend(ixmp4_backend)
-
-        run = ixmp4_backend._platform.runs.create(model=model, scenario=scenario)
-
-        # Clone IAMC/timeseries data
-        # TODO If we can't read the 'meta'-status of timeseries data, how can we clone
-        # it?
-        datapoints = s.timeseries().rename(columns={"year": "step_year"})
-        datapoints["run__id"] = run.id
-        _data_type = DataPoint.Type.ANNUAL
-        if "subannual" in datapoints.columns:
-            datapoints = datapoints.rename(columns={"subannual": "step_category"})
-            _data_type = DataPoint.Type.CATEGORICAL
-
-        with run.transact("Clone datapoints from JDBC"):
-            run.iamc.add(df=datapoints, type=_data_type)
-
-        # Clone optimization data
-        # NOTE It seems that JDBC offers no option other than to iterate. ixmp4 would
-        # also need bulk_insert definitions for all item types, but would that require a
-        # safeguard for other use cases? We can skip validation here because data comes
-        # from a validated Scenario.
-        # Need to start with IndexSets for proper linking, so temporarily skip Tables
-        # Since this is hopefully not performance-critical, try one-by-one. Otherwise,
-        # collect items here and use bulk_insert where possible, but remember to also
-        # insert IndexSetData and the various *Association tables!
-        tables: set[tuple[str, pd.DataFrame]] = set()
-        for set_name, set_data in s.iter_item_data(ItemType.SET):
-            if isinstance(set_data, pd.DataFrame):
-                tables.add((set_name, set_data))
-            else:
-                indexset = ixmp4_backend._backend.optimization.indexsets.create(
-                    run_id=run.id, name=set_name
-                )
-                ixmp4_backend._backend.optimization.indexsets.add_data(
-                    id=indexset.id, data=set_data.to_list()
-                )
-
-        for table_name, table_data in tables:
-            # NOTE What happens when idx_names is the same as idx_sets?
-            table = ixmp4_backend._backend.optimization.tables.create(
-                run_id=run.id,
-                name=table_name,
-                constrained_to_indexsets=s.idx_sets(name=table_name),
-                column_names=s.idx_names(name=table_name),
-            )
-            ixmp4_backend._backend.optimization.tables.add_data(
-                id=table.id, data=table_data
-            )
-
-        for parameter_name, parameter_data in s.iter_item_data(ItemType.PAR):
-            if isinstance(parameter_data, pd.DataFrame):
-                parameter = ixmp4_backend._backend.optimization.parameters.create(
-                    run_id=run.id,
-                    name=parameter_name,
-                    constrained_to_indexsets=s.idx_sets(name=parameter_name),
-                    column_names=s.idx_names(name=parameter_name),
-                )
-                ixmp4_backend._backend.optimization.parameters.add_data(
-                    id=parameter.id,
-                    data=parameter_data.rename(
-                        columns={"value": "values", "unit": "units"}
-                    ),
-                )
-            else:
-                ixmp4_backend._backend.optimization.scalars.create(
-                    run_id=run.id,
-                    name=parameter_name,
-                    value=parameter_data["value"],
-                    unit_name=parameter_data["unit"],
-                )
-
-        for equation_name, equation_data in s.iter_item_data(ItemType.EQU):
-            equation = ixmp4_backend._backend.optimization.equations.create(
-                run_id=run.id,
-                name=equation_name,
-                constrained_to_indexsets=s.idx_sets(name=equation_name),
-                column_names=s.idx_names(name=equation_name),
-            )
-            if keep_solution:
-                _equation_data = (
-                    equation_data.rename(columns={"lvl": "levels", "mrg": "marginals"})
-                    if isinstance(equation_data, pd.DataFrame)
-                    else {
-                        "levels": [equation_data["lvl"]],
-                        "marginals": [equation_data["mrg"]],
-                    }
-                )
-                ixmp4_backend._backend.optimization.equations.add_data(
-                    id=equation.id, data=_equation_data
-                )
-
-        for variable_name, variable_data in s.iter_item_data(ItemType.VAR):
-            variable = ixmp4_backend._backend.optimization.variables.create(
-                run_id=run.id,
-                name=variable_name,
-                constrained_to_indexsets=s.idx_sets(name=variable_name),
-                column_names=s.idx_names(name=variable_name),
-            )
-            if keep_solution:
-                _variable_data = (
-                    variable_data.rename(columns={"lvl": "levels", "mrg": "marginals"})
-                    if isinstance(variable_data, pd.DataFrame)
-                    else {
-                        "levels": [variable_data["lvl"]],
-                        "marginals": [variable_data["mrg"]],
-                    }
-                )
-                ixmp4_backend._backend.optimization.variables.add_data(
-                    id=variable.id, data=_variable_data
-                )
-
-        # Clone meta data
-        meta = pd.DataFrame().from_dict(s.get_meta(), orient="index").reset_index()
-        if not meta.empty:
-            meta.columns = ["key", "value"]
-            meta["run__id"] = run.id
-            ixmp4_backend._backend.meta.bulk_upsert(df=meta)
-
-        cloned_s = s.__class__(
-            mp=platform_dest,
-            model=model,
-            scenario=scenario,
-            version=run.version,
-            scheme=s.scheme,
-        )
-        ixmp4_backend._index_and_set_attrs(run=run, ts=cloned_s)
-
-        return cloned_s
-
     def clone(
         self,
         s: Scenario,
@@ -1182,21 +1040,13 @@ class JDBCBackend(CachingBackend):
         first_model_year: int | None = None,
     ) -> Scenario:
         # Raise exceptions for limitations of JDBCBackend
-        if is_ixmp4backend(platform_dest._backend):
-            return self._clone_to_ixmp4(
-                s=s,
-                platform_dest=platform_dest,
-                model=model,
-                scenario=scenario,
-                keep_solution=keep_solution,
-            )
-        elif not isinstance(platform_dest._backend, self.__class__):
-            raise NotImplementedError(  # pragma: no cover
-                f"Clone between {self.__class__} and{platform_dest._backend.__class__}"
+        if not isinstance(platform_dest._backend, type(self)):
+            raise CrossPlatformClone(  # pragma: no cover
+                f"Clone between {self.__class__} and {platform_dest._backend.__class__}"
             )
         elif platform_dest._backend is not self:
             package = s.__class__.__module__.split(".")[0]
-            msg = f"Cross-platform clone of {package}.Scenario with"
+            msg = f"Clone of {package}.Scenario between JDBCBackend with"
             if keep_solution is False:
                 raise NotImplementedError(f"{msg} `keep_solution=False`")
             elif "message_ix" in msg and first_model_year is not None:

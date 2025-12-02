@@ -35,7 +35,7 @@ from ixmp4 import DataPoint
 from typing_extensions import Unpack, override
 
 from ixmp.core.item import CLASS as ITEM_CLASS
-from ixmp.core.item import Item, Set
+from ixmp.core.item import Equation, Item, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
@@ -1430,17 +1430,20 @@ class JDBCBackend(CachingBackend):
     def item_set_elements(
         self,
         s: Scenario,
-        type: Literal["par", "set"],
+        type: type[Equation | Parameter | Set | Variable],
         name: str,
         elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
-        jobj = self._get_item(s, ITEM_CLASS[type](name))
+        if type not in {Parameter, Set}:  # pragma: no cover
+            raise NotImplementedError(f"Set elements of {type=} on JDBCBackend")
+
+        jobj = self._get_item(s, type(name))
 
         try:
             for key, value, unit, comment in elements:
                 # Prepare arguments
                 args = [to_jlist(key)] if key else []
-                if type == "par":
+                if type is Parameter:
                     args.extend([java.Double(value), unit])
                 if comment:
                     args.append(comment)
@@ -1461,7 +1464,7 @@ class JDBCBackend(CachingBackend):
             else:  # pragma: no cover
                 _raise_jexception(e)
 
-        self.cache_invalidate(s, type, name)
+        self.cache_invalidate(s, type.ix_type, name)
 
     def item_delete_elements(
         self,

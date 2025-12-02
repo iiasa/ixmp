@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import pandas as pd
 from typing_extensions import Unpack
 
+from ixmp.core.item import Equation, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
@@ -1026,7 +1027,7 @@ class Backend(ABC):
     def item_set_elements(
         self,
         s: Scenario,
-        type: Literal["par", "set"],
+        type: type[Equation | Parameter | Set | Variable],
         name: str,
         elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
@@ -1034,11 +1035,13 @@ class Backend(ABC):
 
         Parameters
         ----------
-        type : 'par' or 'set'
+        type :
+            Type of the item.
         name : str
-            Name of the items.
+            Name of the item.
         elements : iterable of tuple
-            The members of each tuple are:
+            The members of each tuple depend on `type`.
+            For :class:`.Parameter`:
 
             ======= ========================== ===
             ID      Type                       Description
@@ -1049,15 +1052,31 @@ class Backend(ABC):
             comment str or None                Description of the change
             ======= ========================== ===
 
-            If `name` is indexed by other set(s), then the number of elements
-            of each `key`, and their contents, must match the index set(s).
-            When `type` is 'set', `value` and `unit` **must** be :obj:`None`.
+            If `name` is indexed by other set(s), then the number of elements of each
+            `key`, and their contents, must match the respective index set(s).
+            If :py:`type is Set`, `value` and `unit` **must** be :obj:`None`.
+
+            For :class:`.Equation` or :class:`.Variable`:
+
+            ======== ========================== ===
+            ID       Type                       Description
+            ======== ========================== ===
+            key      str or list of str or None Value indices
+            level    float or None              Equation or variable value
+            marginal float or None              Equation or variable marginal value
+            comment  str or None                Description of the change
+            ======== ========================== ===
 
         Raises
         ------
         ValueError
-            If `elements` contain invalid values, e.g. key values not in the
+            If `elements` contain invalid values, e.g. key values not in the respective
             index set(s).
+        NotImplementedError
+            If `type` is either :class:`.Equation` or :class:`.Variable` and the Backend
+            does not support setting elements on items of this type. A Backend **must**
+            support setting elements for :class:`.Parameter` and :class:`.Set`, so
+            **must not** raise NotImplementedError when these are given as the `type`.
         Exception
             If the Backend encounters any error adding the elements.
 

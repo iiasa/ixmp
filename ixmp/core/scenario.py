@@ -19,6 +19,7 @@ import pandas as pd
 from typing_extensions import Unpack
 
 from ixmp.backend.common import ItemType
+from ixmp.core.item import Equation, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list, check_year
@@ -342,7 +343,7 @@ class Scenario(TimeSeries):
             elements.append((k, None, None, c))
 
         # Send to backend
-        self.platform._backend.item_set_elements(self, "set", name, elements)
+        self.platform._backend.item_set_elements(self, Set, name, elements)
 
     def remove_set(
         self,
@@ -749,7 +750,7 @@ class Scenario(TimeSeries):
         # Store
         # TODO Not sure how to tell type checker, but columns are always converted to
         # tuple[str | object, float, str, str]
-        self.platform._backend.item_set_elements(self, "par", name, elements)  # type: ignore[arg-type]
+        self.platform._backend.item_set_elements(self, Parameter, name, elements)  # type: ignore[arg-type]
 
     def init_scalar(
         self,
@@ -812,7 +813,7 @@ class Scenario(TimeSeries):
             Description of the change.
         """
         self.platform._backend.item_set_elements(
-            self, "par", name, [(None, float(val), unit, comment)]
+            self, Parameter, name, [(None, float(val), unit, comment)]
         )
 
     def remove_par(

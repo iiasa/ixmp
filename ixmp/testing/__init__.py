@@ -718,19 +718,20 @@ def _platform_fixture(
     if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
         mp._backend._backend.setup()
 
-    yield mp
+    try:
+        yield mp
+    finally:
+        # Teardown: don't show log messages when destroying the platform, even if the
+        # test using the fixture modified the log level
+        mp._backend.set_log_level(logging.CRITICAL)
 
-    # Teardown: don't show log messages when destroying the platform, even if the test
-    # using the fixture modified the log level
-    mp._backend.set_log_level(logging.CRITICAL)
+        # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup
+        # above, mp._backend._backend is always of type PostgresTestBackend
+        if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
+            mp._backend._backend.close()
+            mp._backend._backend.teardown()
 
-    # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup above,
-    # mp._backend._backend is always of type PostgresTestBackend
-    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
-        mp._backend._backend.close()
-        mp._backend._backend.teardown()
+        del mp
 
-    del mp
-
-    # Remove from configuration
-    ixmp_config.remove_platform(platform_name)
+        # Remove from configuration
+        ixmp_config.remove_platform(platform_name)

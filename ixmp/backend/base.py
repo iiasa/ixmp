@@ -879,6 +879,12 @@ class Backend(ABC):
             The cloned Scenario. If `s` is an instance of a subclass of
             :class:`ixmp.Scenario`, the returned object **must** be of the same
             subclass.
+
+        Raises
+        ------
+        CrossPlatformClone
+            If `platform_dest` is not the same Platform/Backend as `s`, and the Backend
+            implementation does not support cloning across two 2 platforms/backends.
         """
 
     @abstractmethod

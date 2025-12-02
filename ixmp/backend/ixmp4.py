@@ -1,3 +1,4 @@
+import builtins
 import logging
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from copy import copy
@@ -49,6 +50,10 @@ from ixmp4.data.backend.base import Backend as ixmp4_backend
 # TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
 from typing_extensions import Unpack
 
+from ixmp.core.item import Equation as IXMPEquation
+from ixmp.core.item import Item, Set
+from ixmp.core.item import Parameter as IXMPParameter
+from ixmp.core.item import Variable as IXMPVariable
 from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
@@ -1086,15 +1091,16 @@ class IXMP4Backend(CachingBackend):
     def item_set_elements(
         self,
         s: Scenario,
-        type: Literal["par", "set"],
+        type: type[Item],
         name: str,
         elements: Iterable[tuple[Any, float | None, str | None, str | None]],
     ) -> None:
-        for key, value, unit, comment in elements:
-            if type == "set":
+        if type is Set:
+            for key, value, unit, comment in elements:
                 self._add_data_to_set(s=s, name=name, key=key, comment=comment)
-            else:
-                if key is None:
+        elif type is IXMPParameter:
+            for key, value, unit, comment in elements:
+                if not bool(key):
                     repo = self._get_backend_repo(s, type=Scalar)
                     run = self.index[s]
                     scalar = repo.get(run_id=run.id, name=name)
@@ -1122,15 +1128,44 @@ class IXMP4Backend(CachingBackend):
                     self._add_data_to_parameter(
                         s=s, name=name, key=key, value=value, unit=unit, comment=comment
                     )
+        else:
+            # NB(PNK): Simplified equivalent to _add_data_to_parameter()
+            # Convert an ixmp.core.Item subclass to an IXMP4 type
+            type_ = cast(
+                builtins.type[Equation | Variable],
+                {IXMPEquation: Equation, IXMPVariable: Variable}[type],
+            )
+            # Retrieve the item from its respective repository
+            item = self._get_repo(s, type_).get(name)
+            # Key dimensions of the item
+            dims = item.column_names or item.indexset_names or []
+            i_d = list(enumerate(dims))
+            # Convert `elements` to the data structure required by ixmp4
 
-        self.cache_invalidate(ts=s, ix_type=type, name=name)
+            # Container for data
+            data: dict[str, list[Any]] = {"levels": [], "marginals": []} | {
+                d: [] for d in dims
+            }
+            for key, level, marginal, comment in elements:
+                for i, d in i_d:
+                    data[d].append(key[i])
+                data["levels"].append(level)
+                data["marginals"].append(marginal)
+
+            # NB `repo` is a {Equation,Variable}Repository object associated with a
+            #    particular Run. It does not have a method .add_data(). For this,
+            #    instead use a "backend repository" object.
+            be_repo = self._get_backend_repo(s, type_)
+            be_repo.add_data(id=item.id, data=data)
+
+        self.cache_invalidate(ts=s, ix_type=type.ix_type, name=name)
 
     def _get_set_data(
         self,
         s: Scenario,
         name: str,
         filters: dict[str, list[Any]] | None = None,
-    ) -> "pd.Series[float | int | str] | pd.DataFrame":
+    ) -> "pd.Series[int] | pd.Series[str] | pd.DataFrame":
         """Get the data stored in `name` in `s`.
 
         Parameters

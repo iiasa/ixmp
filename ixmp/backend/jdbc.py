@@ -15,6 +15,7 @@ from collections.abc import (
 from contextlib import contextmanager
 from copy import copy
 from functools import lru_cache
+from itertools import islice
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import (
@@ -1233,14 +1234,15 @@ class JDBCBackend(CachingBackend):
             columns = []
 
             def _get(method: str, name: str, *args: Any) -> None:
-                columns.append(
-                    pd.Series(
-                        # NB [:] causes JPype to use a faster code path
-                        getattr(item, f"get{method}")(*args, jList)[:],
-                        dtype=dtypes[name],
-                        name=name,
-                    )
-                )
+                # NB [:] causes JPype to use a faster code path
+                java_array = getattr(item, f"get{method}")(*args, jList)[:]
+
+                # Use numpy buffer protocol for numeric types (much faster)
+                # String types must iterate element-by-element (JPype limitation)
+                if dtypes[name] in (float, int):
+                    java_array = np.array(java_array)
+
+                columns.append(pd.Series(java_array, dtype=dtypes[name], name=name))
 
             # Index columns
             for i, idx_name in enumerate(idx_names):
@@ -1325,8 +1327,29 @@ class JDBCBackend(CachingBackend):
     ) -> None:
         item = ITEM_CLASS[type](name)
         jitem = self._get_item(s, item, load=False)
-        for key in keys:
-            jitem.removeElement(to_jlist(key))
+
+        # Process keys in batches to balance performance and memory usage
+        # Batch size chosen to limit memory consumption while reducing method calls
+        BATCH_SIZE = 1000000
+
+        # Use islice for memory-efficient iteration without materializing all keys
+        # TODO: Replace islice with itertools.batched() once Python 3.12 is min vers
+        # ArrayList + explicit loop performs best for large batches
+        ArrayList = jpype.JClass("java.util.ArrayList")
+
+        keys_iter = iter(keys)
+        while batch := list(islice(keys_iter, BATCH_SIZE)):
+            if len(batch) == 1:
+                # Extract single key from batch list: batch[0] is ["i1", "j1"]
+                # to_jlist(batch[0]) creates LinkedList("i1", "j1") as expected
+                # to_jlist(batch) would incorrectly create LinkedList([["i1", "j1"]])
+                jitem.removeElement(to_jlist(batch[0]))
+            else:
+                # Preallocate ArrayList capacity to avoid repeated memory allocations
+                key_vectors = ArrayList(len(batch))
+                for key in batch:
+                    key_vectors.add(to_jlist(key))
+                jitem.removeElements(key_vectors)
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed

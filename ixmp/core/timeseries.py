@@ -3,7 +3,7 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from warnings import warn
 from weakref import ProxyType, proxy
 
@@ -674,3 +674,26 @@ class TimeSeries:
             firstyear=firstyear,
             lastyear=lastyear,
         )
+
+
+# TimeSeries or a subtype
+TS = TypeVar("TS", bound=TimeSeries)
+
+
+def _clone(ts: TS, platform_dest: Platform, model: str, scenario: str) -> TS:
+    """Clone `ts` to (`platform_dest`, `model`, `scenario`).
+
+    This function uses only the TimeSeries and (generic) Backend APIs, so is ‘naïve’
+    about the concrete Backend type(s) underlying the source and target platforms.
+    """
+    ts_dest = type(ts)(platform_dest, model, scenario, "new", ts.scheme)
+    ts_dest.commit(f"clone from ixmp://{ts.platform.name}/{ts.url}")
+
+    # Clone meta data
+    ts_dest.set_meta(ts.get_meta())
+
+    # Clone time-series data
+    with ts_dest.transact("Clone time series data"):
+        ts_dest.add_timeseries(ts.timeseries())
+
+    return ts_dest

@@ -89,8 +89,10 @@ def package_base_path(
 class GitHubLinker:
     """Handler for storing files/line numbers for code objects and formatting links."""
 
+    line_numbers: dict[str, tuple[Path, int, int]]
+
     def __init__(self) -> None:
-        self.line_numbers: dict[str, tuple[Path, int, int]] = dict()
+        self.line_numbers = dict()
 
     def config_inited(
         self, app: "sphinx.application.Sphinx", config: sphinx.config.Config

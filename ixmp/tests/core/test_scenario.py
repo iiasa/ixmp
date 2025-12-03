@@ -288,6 +288,8 @@ class TestScenario:
 
         # Retrieve a Scenarios prepared by populate_test_platform()
         scen = ixmp.Scenario(p0, **models["dantzig"])
+
+        # Add a parameter that will trigger _maybe_init()
         scen.remove_solution()
         with scen.transact("Add an extra parameter outside of the Dantzig schema"):
             scen.init_par("foo", ["i", "i", "j", "j"], ["i1", "i2", "j1", "j2"])

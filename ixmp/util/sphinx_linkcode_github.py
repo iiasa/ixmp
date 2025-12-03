@@ -4,7 +4,7 @@
 import inspect
 import sys
 from collections.abc import Callable, Sequence
-from functools import _lru_cache_wrapper, lru_cache, partial
+from functools import lru_cache, partial
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import TYPE_CHECKING, Any
@@ -14,6 +14,7 @@ from sphinx.util import logging
 
 if TYPE_CHECKING:
     import sphinx.application
+
 
 log = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class GitHubLinker:
         app: "sphinx.application.Sphinx",
         what: str,
         name: str,
-        obj: "property | FunctionType |_lru_cache_wrapper[Any] | partial[Any] | ModuleType",  # noqa: E501
+        obj: Any,
         options: Any,
         lines: Sequence[str],
     ) -> None:
@@ -117,31 +118,35 @@ class GitHubLinker:
 
         Records the file and source line numbers containing `obj`.
         """
-        # TODO Handle wrapper_descriptor, e.g.
-        #      message_ix_models.tests.model.test_bare.TestConfig.__init__
-
-        _obj: (
-            Callable[[Any], Any] | FunctionType | ModuleType | "_lru_cache_wrapper[Any]"
-        )
-
-        # Identify the object for which to locate code
-        if isinstance(obj, property):
-            # Reference the getter method
-            assert obj.fget
-            _obj = obj.fget
-        elif isinstance(obj, (FunctionType, _lru_cache_wrapper)):
-            # Reference a wrapped function, rather than the wrapper, which may be in the
-            # standard library somewhere
-            _obj = getattr(obj, "__wrapped__", obj)
-        elif isinstance(obj, partial):
-            # Reference the module in which the partial object is defined
-            _obj = sys.modules[obj.__module__]
-        elif type(obj).__name__ == "FixtureFunctionDefinition":
-            # Pytest v8.4 and later. This class is not part of the public API, so check
-            # via the class name only
-            _obj = obj._get_wrapped_function()
-        else:
-            _obj = obj
+        # Recursively identify the object for which to locate code
+        _obj = obj
+        while True:
+            type_name = type(_obj).__name__
+            if isinstance(_obj, property):
+                # property: reference the getter method
+                assert _obj.fget
+                _obj = _obj.fget
+            elif hasattr(_obj, "__wrapped__"):
+                # FunctionType, functools._lru_cache_wrapper, others: reference a
+                # wrapped function, rather than the wrapper, which may be in the
+                # standard library somewhere
+                _obj = _obj.__wrapped__
+            elif isinstance(_obj, partial):
+                # partial: reference the module in which the partial object is defined
+                _obj = sys.modules[_obj.__module__]
+            elif (
+                type_name == "wrapper_descriptor"
+                and _obj.__objclass__ is object
+                and _obj.__name__ == "__init__"
+            ) or type_name == "builtin_function_or_method":
+                # Built-in Python objects that getsourcefile() cannot handle
+                return
+            elif type_name == "FixtureFunctionDefinition":
+                # Pytest v8.4 and later. This class is not part of the public API, so
+                # check via the class name only
+                _obj = _obj._get_wrapped_function()
+            else:
+                break
 
         try:
             # Identify the source file and source lines
@@ -149,16 +154,23 @@ class GitHubLinker:
             assert sf is not None
             file = Path(sf).relative_to(package_base_path(_obj))
             lines, start_line = inspect.getsourcelines(_obj)
-        except TypeError:
-            # inspect.getsourcefile() can't handle ordinary class attributes or
-            # module-level data. In linkcode_resolve we'll resolve to the `__init__` or
-            # module instead.
+        except TypeError as e:
+            # inspect.getsourcefile() can't handle, inter alia:
+            # - ordinary class attributes.
+            # - module-level data.
+            # - built-in modules.
+            #
+            # In linkcode_resolve these are resolved to the `__init__` or module
+            # instead.
+            #
             # TODO extend using e.g. ast to identify the source lines
-            if what not in {"attribute", "data"}:
-                log.error(f"{what=} {name=}, {type(obj).__mro__=}")
-                raise
+            if not (what in {"attribute", "data"} or "is a built-in module" in repr(e)):
+                log.warning(
+                    f"inspect.getsourcefile() failed for {what=} {name=} (MRO: "
+                    f"{type(_obj).__mro__}) with {e!r}"
+                )
         except Exception as e:  # Other exceptions
-            log.info(f"{name} {e}")
+            log.warning(f"{name} {e}")
         else:
             # Store information for use by linkcode_resolve
             self.line_numbers[name] = (file, start_line, start_line + len(lines))

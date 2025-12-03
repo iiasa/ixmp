@@ -191,7 +191,7 @@ class GitHubLinker:
 LINKER = GitHubLinker()
 
 
-def setup(app: "sphinx.application.Sphinx") -> None:
+def setup(app: "sphinx.application.Sphinx") -> dict[str, bool]:
     """Sphinx extension registration hook."""
     # Required first-party extensions
     app.setup_extension("sphinx.ext.autodoc")
@@ -204,4 +204,7 @@ def setup(app: "sphinx.application.Sphinx") -> None:
     # Connect signals and config
     app.connect("config-inited", LINKER.config_inited)
     app.connect("autodoc-process-docstring", LINKER.autodoc_process_docstring)
-    app.config["linkcode_resolve"] = LINKER.linkcode_resolve
+    # Use a lambda to avoid a warning from Sphinx about a direct reference to method
+    app.config["linkcode_resolve"] = lambda *args: LINKER.linkcode_resolve(*args)
+
+    return dict(parallel_read_safe=True, parallel_write_safe=True)

@@ -173,19 +173,19 @@ class GitHubLinker:
         """
         # Candidates for lookup in self.line_numbers
         combined = "{module}.{fullname}".format(**info)
-        parent = combined.rsplit(".", 1)[0]
+        parent = combined.rpartition(".")[0]
         candidates = (combined, parent, f"{parent}.__init__", info["module"])
 
-        try:
-            # Use the info for the first of `candidates` available
-            line_info: tuple[Path, int, int] = next(
-                filter(None, map(self.line_numbers.get, candidates))
-            )
-        except StopIteration:
+        # Use the info for the first of `candidates` available
+        line_info: list[tuple[Path, int, int]] = list(
+            filter(None, map(self.line_numbers.get, candidates))
+        )
+
+        if not line_info:
             log.info(f"Cannot locate code for {combined!r} or parent class/module")
             return None
         else:
-            file, start_line, end_line = line_info
+            file, start_line, end_line = line_info[0]
             return f"{self.base_url}/{file}#L{start_line}-L{end_line}"
 
 

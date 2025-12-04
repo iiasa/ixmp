@@ -346,10 +346,10 @@ class TimeSeries:
 
             To support subannual temporal resolution of timeseries data, a column
             `subannual` is optional in `df`. The entries in this column must have been
-            defined in the Platform instance using :meth:`.add_timeslice` beforehand. If
-            no column `subannual` is included in `df`, the data is assumed to contain
-            yearly values. See :meth:`.timeslices` for a detailed description of the
-            feature.
+            defined in the Platform instance using :meth:`~.Platform.add_timeslice`
+            beforehand. If no column `subannual` is included in `df`, the data is
+            assumed to contain yearly values. See :meth:`~.Platform.timeslices` for a
+            detailed description of the feature.
 
         meta : bool, optional
             If :obj:`True`, store `df` as metadata. Metadata is treated specially when

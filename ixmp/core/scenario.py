@@ -1076,6 +1076,61 @@ class Scenario(TimeSeries):
                 # Callback indicates convergence is reached
                 break
 
+    def create_model_instance(
+        self,
+        model: Optional[str] = None,
+        modifiable_pars: Optional[list[str]] = None,
+        fixable_vars: Optional[list[str]] = None,
+        **model_options: Any,
+    ):
+        """Create a persistent GAMS model instance for efficient resolving.
+
+        This method creates a GAMS model instance that can be resolved multiple times
+        without rebuilding the model. The initial compilation is done without solving
+        to save time.
+
+        Parameters
+        ----------
+        model : str, optional
+            Model name (e.g., MESSAGE) or GAMS file name (excluding '.gms').
+            If not provided, uses the scenario's scheme.
+        modifiable_pars : list of str, optional
+            List of parameter names that can be modified between solves.
+            Parameters used in conditional expressions ($) cannot be modifiable.
+        fixable_vars : list of str, optional
+            List of variable names that can be fixed between solves using
+            UpdateAction.Fixed.
+        model_options :
+            Keyword arguments specific to the model. See :class:`.GAMSModel`.
+
+        Returns
+        -------
+        tuple of (GamsModelInstance, GamsWorkspace)
+            The model instance and workspace that can be used for efficient resolving.
+
+        Examples
+        --------
+        >>> mi, ws = scen.create_model_instance(
+        ...     modifiable_pars=["inv_cost", "var_cost"]
+        ... )
+        >>> mi.solve()
+        >>> # Modify parameters in mi.sync_db and resolve
+        >>> mi.solve()
+
+        See Also
+        --------
+        .GAMSModel.create_model_instance
+        """
+        from ixmp.model import get_model
+
+        # Instantiate a model
+        model_obj = get_model(model or self.scheme, **model_options)
+
+        # Create and return the model instance
+        return model_obj.create_model_instance(
+            self, modifiable_pars=modifiable_pars, fixable_vars=fixable_vars
+        )
+
     # Input and output
     def to_excel(
         self,

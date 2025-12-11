@@ -11,16 +11,14 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 import ixmp4.conf
 import numpy as np
 import pandas as pd
-from ixmp4 import DataPoint
 from ixmp4 import Platform as ixmp4_platform
-from ixmp4.core import Run
-from ixmp4.core.exceptions import (
+from ixmp4.backend import Backend as ixmp4_backend
+from ixmp4.base_exceptions import (
     NotUnique,
     OptimizationDataValidationError,
     PlatformNotFound,
-    RunIsLocked,
-    RunLockRequired,
 )
+from ixmp4.core import Run
 from ixmp4.core.optimization import (
     equation,
     indexset,
@@ -30,21 +28,26 @@ from ixmp4.core.optimization import (
     variable,
 )
 from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.indexset import IndexSetServiceFacade as IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter
-from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
+from ixmp4.core.optimization.scalar import Scalar
+from ixmp4.core.optimization.scalar import ScalarServiceFacade as ScalarRepository
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
-from ixmp4.data.abstract.iamc.datapoint import EnumerateKwargs as IamcEnumerateKwargs
-from ixmp4.data.abstract.meta import RunMetaEntry
-from ixmp4.data.abstract.optimization.indexset import (
-    IndexSetRepository as BEIndexSetRepository,
+from ixmp4.data.dataframe import SerializableDataFrame
+from ixmp4.data.iamc.datapoint.filter import DataPointFilter as IamcEnumerateKwargs
+from ixmp4.data.iamc.datapoint.type import Type
+from ixmp4.data.meta.type import _type_map as RunMetaEntry_type_map
+from ixmp4.data.optimization.indexset.exceptions import IndexSetNotFound
+from ixmp4.data.optimization.indexset.service import (
+    IndexSetService as BEIndexSetRepository,
 )
-from ixmp4.data.abstract.optimization.scalar import (
-    ScalarRepository as BEScalarRepository,
-)
-from ixmp4.data.abstract.region import Region
-from ixmp4.data.backend.base import Backend as ixmp4_backend
+from ixmp4.data.optimization.scalar.service import ScalarService as BEScalarRepository
+from ixmp4.data.optimization.table.exceptions import TableNotFound
+from ixmp4.data.region.exceptions import RegionNotFound
+from ixmp4.data.run.exceptions import RunIsLocked, RunLockRequired
+from ixmp4.data.run.filter import RunFilter
 
 # TODO Import this from typing when dropping Python 3.11
 # TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
@@ -64,25 +67,28 @@ from .common import ItemType
 from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
 if TYPE_CHECKING:
-    from ixmp4.core.optimization.equation import EquationRepository
-    from ixmp4.core.optimization.parameter import ParameterRepository
-    from ixmp4.core.optimization.table import TableRepository
+    from ixmp4.conf.platforms import TomlPlatform
+    from ixmp4.core.optimization.equation import (
+        EquationServiceFacade as EquationRepository,
+    )
+    from ixmp4.core.optimization.parameter import (
+        ParameterServiceFacade as ParameterRepository,
+    )
+    from ixmp4.core.optimization.table import TableServiceFacade as TableRepository
     from ixmp4.core.optimization.variable import (
-        VariableRepository as OptimizationVariableRepository,
+        VariableServiceFacade as OptimizationVariableRepository,
     )
-    from ixmp4.data.abstract.optimization.equation import (
-        EquationRepository as BEEquationRepository,
+    from ixmp4.data.optimization.equation.service import (
+        EquationService as BEEquationRepository,
     )
-    from ixmp4.data.abstract.optimization.indexset import IndexSet as BEIndexSet
-    from ixmp4.data.abstract.optimization.parameter import (
-        ParameterRepository as BEParameterRepository,
+    from ixmp4.data.optimization.indexset.dto import IndexSet as BEIndexSet
+    from ixmp4.data.optimization.parameter.service import (
+        ParameterService as BEParameterRepository,
     )
-    from ixmp4.data.abstract.optimization.table import Table as BETable
-    from ixmp4.data.abstract.optimization.table import (
-        TableRepository as BETableRepository,
-    )
-    from ixmp4.data.abstract.optimization.variable import (
-        VariableRepository as BEVariableRepository,
+    from ixmp4.data.optimization.table.dto import Table as BETable
+    from ixmp4.data.optimization.table.service import TableService as BETableRepository
+    from ixmp4.data.optimization.variable.service import (
+        VariableService as BEVariableRepository,
     )
 
     from ixmp.types import (
@@ -217,7 +223,7 @@ class Options:
         )
 
     @property
-    def platform_info(self) -> "ixmp4.conf.base.PlatformInfo":
+    def platform_info(self) -> "TomlPlatform":
         """Return an ixmp4.PlatformInfo instance.
 
         This ensures that there is an entry in the :mod:`ixmp4` configuration with name
@@ -226,15 +232,18 @@ class Options:
         - If the entry does not exist, it is created.
         - If the entry does exist, its DSN must be the same as :attr:`dsn`.
         """
+        toml_platforms = ixmp4.conf.settings.get_toml_platforms()
         try:
             # Retrieve the info for an existing platform
-            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+            result = toml_platforms.get_platform(self.ixmp4_name)
             assert result.name == self.ixmp4_name and result.dsn == self.dsn
         except PlatformNotFound:
             # Add platform info to ixmp4 configuration
-            ixmp4.conf.settings.toml.add_platform(self.ixmp4_name, self.dsn)
+            toml_platforms.add_platform(self.ixmp4_name, self.dsn)
             # add_platform() returns None, so use get_platform() to retrieve the object
-            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+            result = ixmp4.conf.settings.get_toml_platforms().get_platform(
+                self.ixmp4_name
+            )
         except AssertionError:  # pragma: no cover
             log.error(f"From ixmp4: {result}")
             log.error(f"From ixmp: name={self.ixmp4_name!r}, dsn={self.dsn!r}")
@@ -376,11 +385,12 @@ class IXMP4Backend(CachingBackend):
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
     ) -> Generator[list[bool | int | str], Any, None]:
-        runs = self._platform.runs.list(
-            default_only=default,
-            model={"name": model} if model else None,
-            scenario={"name": scenario} if scenario else None,
-        )
+        kwargs = RunFilter(default_only=default)
+        if model is not None:
+            kwargs["model"] = {"name": model}
+        if scenario is not None:
+            kwargs["scenario"] = {"name": scenario}
+        runs = self._platform.runs.list(**kwargs)
 
         for run in runs:
             yield [
@@ -581,7 +591,7 @@ class IXMP4Backend(CachingBackend):
         return self.index[s].has_solution()
 
     def last_update(self, ts: TimeSeries) -> str | None:
-        last_update = self.index[ts]._model.updated_at
+        last_update = self.index[ts].dto.updated_at
 
         return (
             last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -617,7 +627,7 @@ class IXMP4Backend(CachingBackend):
             model_name=_model, scenario_name=_scenario, version=_version
         )
 
-        meta_df = pd.DataFrame.from_dict(
+        meta_df = SerializableDataFrame.from_dict(
             data=meta, orient="index", columns=["value"]
         ).reset_index(names="key")
         meta_df["run__id"] = run.id
@@ -629,7 +639,7 @@ class IXMP4Backend(CachingBackend):
                 raise ValueError(
                     "Cannot use values provided due to incompatible types! \n "
                     f"Provided: {meta} \n Acceptable types: "
-                    f"{RunMetaEntry._type_map.keys()}"
+                    f"{RunMetaEntry_type_map.keys()}"
                 ) from e
             else:
                 raise e
@@ -650,7 +660,7 @@ class IXMP4Backend(CachingBackend):
 
         # NOTE This doesn't currently return more keys as per the base docstring/strict
         meta_df = self._backend.meta.tabulate(
-            run_id=run.id,
+            run__id=run.id,
             run={
                 "model": {"name": _model},
                 "scenario": {"name": _scenario},
@@ -675,7 +685,7 @@ class IXMP4Backend(CachingBackend):
             model_name=_model, scenario_name=_scenario, version=_version
         )
 
-        meta_df = pd.DataFrame({"key": names})
+        meta_df = SerializableDataFrame({"key": names})
         meta_df["run__id"] = run.id
 
         self._backend.meta.bulk_delete(df=meta_df)
@@ -700,7 +710,7 @@ class IXMP4Backend(CachingBackend):
         # TODO Avoid this loop by adding bulk methods to ixmp4's DocsRepos
         for name, description in docs.items():
             id = int(existing_items[existing_items["name"] == name]["id"].values[0])
-            domain_repo.docs.set(dimension_id=id, description=description)
+            domain_repo.set_docs(dimension__id=id, description=description)
 
     def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
         domain_repo = self._get_domain_repo(domain=domain)
@@ -713,12 +723,12 @@ class IXMP4Backend(CachingBackend):
                         "name"
                     ].values[0]
                 ): str(doc.description)
-                for doc in domain_repo.docs.list(
-                    dimension_id__in=existing_items["id"].astype(int)
+                for doc in domain_repo.list_docs(
+                    dimension__id__in=existing_items["id"].astype(int).to_list()
                 )
             }
         else:
-            return domain_repo.docs.get(domain_repo.get(name=name).id).description
+            return domain_repo.get_docs(domain_repo.get_by_name(name).id).description
 
     # Handle optimization items
 
@@ -798,17 +808,17 @@ class IXMP4Backend(CachingBackend):
         """Return the repository of items of `type` belonging to `s`."""
         match type:
             case scalar.Scalar:
-                return self.index[s].backend.optimization.scalars
+                return self.index[s]._backend.optimization.scalars
             case indexset.IndexSet:
-                return self.index[s].backend.optimization.indexsets
+                return self.index[s]._backend.optimization.indexsets
             case table.Table:
-                return self.index[s].backend.optimization.tables
+                return self.index[s]._backend.optimization.tables
             case parameter.Parameter:
-                return self.index[s].backend.optimization.parameters
+                return self.index[s]._backend.optimization.parameters
             case equation.Equation:
-                return self.index[s].backend.optimization.equations
+                return self.index[s]._backend.optimization.equations
             case variable.Variable:
-                return self.index[s].backend.optimization.variables
+                return self.index[s]._backend.optimization.variables
             case _:  # pragma: no cover
                 raise RuntimeError(type)
 
@@ -910,12 +920,12 @@ class IXMP4Backend(CachingBackend):
         """
         try:
             indexset_repo = self._get_repo(s=s, type=IndexSet)
-            return indexset_repo.get(name=name)
-        except IndexSet.NotFound:
+            return indexset_repo.get_by_name(name)
+        except IndexSetNotFound:
             try:
                 table_repo = self._get_repo(s=s, type=Table)
-                return table_repo.get(name=name)
-            except Table.NotFound as e:
+                return table_repo.get_by_name(name)
+            except TableNotFound as e:
                 raise KeyError from e
 
     def item_index(
@@ -982,15 +992,17 @@ class IXMP4Backend(CachingBackend):
             # NOTE ixmp_source silently ignores duplicate data; replicate here
             # This could be improved by adding data without loading the indexset first,
             # but this requires users to ensure their data are valid
-            indexset = run.optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get_by_name(name)
             if key not in indexset.data:
                 self._backend.optimization.indexsets.add_data(id=indexset.id, data=key)
         else:
-            table = run.optimization.tables.get(name=name)
+            table = run.optimization.tables.get_by_name(name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
             keys = table.column_names or table.indexset_names
-            data_to_add = pd.DataFrame({keys[i]: [key[i]] for i in range(len(key))})
+            data_to_add = SerializableDataFrame(
+                {keys[i]: [key[i]] for i in range(len(key))}
+            )
 
             # Silently ignore duplicate data, see NOTE above
             data_to_add = data_to_add[~data_to_add.isin(values=table.data).all(axis=1)]
@@ -1038,8 +1050,8 @@ class IXMP4Backend(CachingBackend):
             run_id=self.index[s].id, name=name, value=value, unit_name=unit
         )
         if comment:
-            self._backend.optimization.scalars.docs.set(
-                dimension_id=scalar.id, description=comment
+            self._backend.optimization.scalars.set_docs(
+                dimension__id=scalar.id, description=comment
             )
 
     def _add_data_to_parameter(
@@ -1072,7 +1084,7 @@ class IXMP4Backend(CachingBackend):
             log.warning(
                 "`comment` currently unused with ixmp4 when adding data to Parameters."
             )
-        parameter = self.index[s].optimization.parameters.get(name=name)
+        parameter = self.index[s].optimization.parameters.get_by_name(name)
         # TODO there's got to be a better way for handling possible lists
         if isinstance(key, str):
             key = [key]
@@ -1105,7 +1117,7 @@ class IXMP4Backend(CachingBackend):
                     run = self.index[s]
                     scalar = repo.get(run_id=run.id, name=name)
                     # TODO Does this handle 'None'-unit correctly?
-                    _unit = self._backend.units.get(str(unit))
+                    _unit = self._backend.units.get_by_name(str(unit))
                     # NOTE We could implement a core-layer Scalar.update() in ixmp4 and
                     # handle this there
                     try:
@@ -1115,9 +1127,9 @@ class IXMP4Backend(CachingBackend):
                             "The Scalar cannot be edited, check out the Scenario first!"
                         )
 
-                    repo.update(id=scalar.id, value=value, unit_id=_unit.id)
+                    repo.update_by_id(scalar.id, value=value, unit_name=_unit.name)
                     if comment is not None:
-                        repo.docs.set(dimension_id=scalar.id, description=comment)
+                        repo.set_docs(dimension__id=scalar.id, description=comment)
                 else:
                     assert isinstance(value, float), (
                         "Adding data to a Parameter requires a value!"
@@ -1136,7 +1148,7 @@ class IXMP4Backend(CachingBackend):
                 {IXMPEquation: Equation, IXMPVariable: Variable}[type],
             )
             # Retrieve the item from its respective repository
-            item = self._get_repo(s, type_).get(name)
+            item = self._get_repo(s, type_).get_by_name(name)
             # Key dimensions of the item
             dims = item.column_names or item.indexset_names or []
             i_d = list(enumerate(dims))
@@ -1313,12 +1325,12 @@ class IXMP4Backend(CachingBackend):
             else:
                 # TODO can we assume that keys follow same order as indexsets/columns?
                 columns = item.column_names or item.indexset_names
-                data = pd.DataFrame(keys, columns=columns)
+                data = SerializableDataFrame(keys, columns=columns)
                 self._backend.optimization.tables.remove_data(id=item.id, data=data)
         else:
-            parameter = self._get_repo(s=s, type=Parameter).get(name=name)
+            parameter = self._get_repo(s=s, type=Parameter).get_by_name(name)
             columns = parameter.column_names or parameter.indexset_names
-            data = pd.DataFrame(keys, columns=columns)
+            data = SerializableDataFrame(keys, columns=columns)
             self._backend.optimization.parameters.remove_data(
                 id=parameter.id, data=data
             )
@@ -1335,7 +1347,7 @@ class IXMP4Backend(CachingBackend):
         # Locate the item. If `type` maps to >1 IXMP4 model data type, try each repo.
         item = self._find_item(s=s, name=name, types=CLASS_FOR_IX_TYPE[type])
         # Access the repository containing objects of `item`s type; delete
-        self._get_backend_repo(s=s, type=item.__class__).delete(id=item.id)
+        self._get_backend_repo(s=s, type=item.__class__).delete_by_id(item.id)
         self.cache_invalidate(ts=s, ix_type=type, name=name)
 
     # NOTE The name 'cat_`name`' is used for backward compatibility with the JDBC, where
@@ -1378,11 +1390,11 @@ class IXMP4Backend(CachingBackend):
         # Categories can be based on IndexSets directly or on 1-d Tables
         try:
             # Most should be based on IndexSets, try that first
-            indexset = run.optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get_by_name(name)
             indexset_name = indexset.name
-        except IndexSet.NotFound:
+        except IndexSetNotFound:
             # We're dealing with a Table
-            table = run.optimization.tables.get(name=name)
+            table = run.optimization.tables.get_by_name(name)
 
             # Ensure the Table's dimensions are correct before setting variables
             assert len(table.indexset_names) == 1
@@ -1405,16 +1417,16 @@ class IXMP4Backend(CachingBackend):
         # slightly different model type, but the differences are irrelevant here
         category_indexset: IndexSet | "BEIndexSet"
         try:
-            category_indexset = run.optimization.indexsets.get(name=f"type_{name}")
-        except IndexSet.NotFound:
+            category_indexset = run.optimization.indexsets.get_by_name(f"type_{name}")
+        except IndexSetNotFound:
             category_indexset = self._backend.optimization.indexsets.create(
                 run_id=run.id, name=f"type_{name}"
             )
 
         category_table: Table | "BETable"
         try:
-            category_table = run.optimization.tables.get(name=f"cat_{name}")
-        except Table.NotFound:
+            category_table = run.optimization.tables.get_by_name(f"cat_{name}")
+        except TableNotFound:
             category_table = self._backend.optimization.tables.create(
                 run_id=run.id,
                 name=f"cat_{name}",
@@ -1464,14 +1476,14 @@ class IXMP4Backend(CachingBackend):
         # NOTE ixmp_source treats "all" this way
         if cat == "all":
             return list(
-                map(str, self.index[ms].optimization.indexsets.get(name=name).data)
+                map(str, self.index[ms].optimization.indexsets.get_by_name(name).data)
             )
 
         # Special treatment for 'technology' for historical reasons:
         if name == "technology":
             name = "tec"
         data = pd.DataFrame(
-            self.index[ms].optimization.tables.get(name=f"cat_{name}").data
+            self.index[ms].optimization.tables.get_by_name(f"cat_{name}").data
         )
 
         if data.empty:
@@ -1487,7 +1499,9 @@ class IXMP4Backend(CachingBackend):
         # Special treatment for 'technology' for historical reasons:
         if name == "technology":
             name = "tec"
-        category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
+        category_indexset = self.index[ms].optimization.indexsets.get_by_name(
+            f"type_{name}"
+        )
         return [str(item) for item in category_indexset.data]
 
     def set_data(
@@ -1516,7 +1530,7 @@ class IXMP4Backend(CachingBackend):
         iterables = [years, values, regions, variables, units, is_input]
         columns = ["step_year", "value", "region", "variable", "unit", "is_input"]
 
-        # NOTE We don't handle DataPoint.Type.DATETIME yet
+        # NOTE We don't handle Type.DATETIME yet
         # NOTE subannual == "Year" per default and some string otherwise
         if subannual != "Year":
             categories = [subannual] * number_of_years
@@ -1524,9 +1538,7 @@ class IXMP4Backend(CachingBackend):
             columns.append("step_category")
 
         _data = list(zip(*iterables))
-        _data_type = (
-            DataPoint.Type.ANNUAL if subannual == "Year" else DataPoint.Type.CATEGORICAL
-        )
+        _data_type = Type.ANNUAL if subannual == "Year" else Type.CATEGORICAL
 
         # Add timeseries dataframe
         run = self.index[ts]
@@ -1536,7 +1548,7 @@ class IXMP4Backend(CachingBackend):
 
         try:
             run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
-        except Region.NotFound:
+        except RegionNotFound:
             raise ValueError(f"region = {region}")
 
         if not _owns_lock:
@@ -1693,7 +1705,7 @@ class IXMP4Backend(CachingBackend):
                 filter = (
                     filters.pop(filter_name)
                     if filter_name != "scenario"
-                    else set(cast(list[str], filters.pop(filter_name)))
+                    else list(set(cast(list[str], filters.pop(filter_name))))
                 )
 
                 # ixmp4's "name__in" with an empty list will exclude all data
@@ -1725,7 +1737,7 @@ class IXMP4Backend(CachingBackend):
             if data.empty:
                 columns = copy(expected_columns)
                 columns.extend(["ID", "TIME_SERIES__ID", "TYPE"])
-                data = pd.DataFrame(columns=columns)
+                data = SerializableDataFrame(columns=columns)
 
             data = data.drop(columns=["ID", "TIME_SERIES__ID"])
 

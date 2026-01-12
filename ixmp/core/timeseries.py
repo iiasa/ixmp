@@ -14,6 +14,7 @@ from ixmp.backend.common import FIELDS, ItemType
 from ixmp.core.platform import Platform
 from ixmp.util import (
     as_str_list,
+    is_dict_int_float,
     maybe_check_out,
     maybe_commit,
     parse_url,
@@ -395,13 +396,13 @@ class TimeSeries:
         df.drop(list(filter(predicate, df.columns)), axis=1, inplace=True)
 
         # Add one time series per row
-        for key, data in df.iterrows():
+        for key, row in df.iterrows():
             assert isinstance(key, tuple)
             r, v, u, sa = key
+            data = row.astype(float).dropna().to_dict()
+            assert is_dict_int_float(data)
             # Values as float; exclude NA
-            self.platform._backend.set_data(
-                self, r, v, data.astype(float).dropna().to_dict(), u, sa, meta
-            )
+            self.platform._backend.set_data(self, r, v, data, u, sa, meta)
 
     def timeseries(
         self,
@@ -501,6 +502,7 @@ class TimeSeries:
 
         # Remove all years for a given (r, v, u) combination at once
         for (r, v, u, t), data in df.groupby(id_cols):
+            r, v, u, t = map(str, (r, v, u, t))
             self.platform._backend.delete(self, r, v, t, data["year"].tolist(), u)
 
     # Geodata
@@ -551,6 +553,7 @@ class TimeSeries:
         for (r, v, t, u), data in df.groupby(
             ["region", "variable", "subannual", "unit"]
         ):
+            r, v, t, u = map(str, (r, v, t, u))
             self.platform._backend.delete_geo(self, r, v, t, data["year"].tolist(), u)
 
     def get_geodata(self) -> pd.DataFrame:

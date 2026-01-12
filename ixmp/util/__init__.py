@@ -10,7 +10,7 @@ from importlib.util import find_spec
 from itertools import chain, repeat
 from pathlib import Path
 from types import ModuleType
-from typing import IO, TYPE_CHECKING, Any, Literal
+from typing import IO, TYPE_CHECKING, Any, Literal, TypeGuard
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -106,6 +106,11 @@ def as_str_list(
         return [str(arg[idx]) for idx in idx_names]
     else:
         return list(map(str, arg))
+
+
+def is_dict_int_float(value: dict[Any, Any]) -> TypeGuard[dict[int, float]]:
+    """Type guard to narrow type of `value` to :py:`dict[int, float]`."""
+    return all(isinstance(k, int) for k in value.keys())
 
 
 def isscalar(x: object) -> bool:
@@ -507,12 +512,12 @@ def format_scenario_list(
         _match = match if isinstance(match, str) else match.pattern
         match = re.compile(".*" + _match + ".*")
 
-    def describe(df: pd.DataFrame) -> "pd.Series[Any]":
+    def describe(df: pd.DataFrame) -> "pd.Series":
         N = len(df)
         min = df.version.min()
         max = df.version.max()
 
-        result: dict[str, int | str] = dict(N=N, range="")
+        result: dict[str, Any] = dict(N=N, range="")
         if N > 1:
             result["range"] = "{}–{}".format(min, max)
             if N != max:

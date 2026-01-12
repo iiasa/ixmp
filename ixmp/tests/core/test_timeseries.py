@@ -418,10 +418,8 @@ class TestTimeSeries:
     )
     def test_long_variable_name_jdbc(self, ts: TimeSeries, format: str, N: int) -> None:
         """Variable names up to 256 characters can be added or removed."""
-        data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
-
         # Use long variable name, max 256 characters
-        data.variable = "x" * N
+        data = (DATA[0] if format == "long" else wide(DATA[0])).assign(variable="x" * N)
 
         ts.add_timeseries(data)
         ts.commit("")
@@ -448,10 +446,8 @@ class TestTimeSeries:
         self, ts: TimeSeries, format: str, N: int
     ) -> None:
         """Variable names up to 255 characters can be added or removed."""
-        data = (DATA[0] if format == "long" else wide(DATA[0])).copy()
-
         # Use long variable name, max 255 characters
-        data.variable = "x" * N
+        data = (DATA[0] if format == "long" else wide(DATA[0])).assign(variable="x" * N)
 
         ts.add_timeseries(data)
         ts.commit("")

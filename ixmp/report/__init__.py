@@ -29,7 +29,7 @@ __all__ = [
 
 
 # TODO Remove once genno adds annotation
-@genno.config.handles("filters", iterate=False)  # type: ignore[misc]
+@genno.config.handles("filters", iterate=False)  # type: ignore [untyped-decorator]
 def filters(c: Computer, filters: dict[str, Any]) -> None:
     """Handle the entire ``filters:`` config section."""
     # Ensure a filters dict exists
@@ -48,14 +48,14 @@ def filters(c: Computer, filters: dict[str, Any]) -> None:
             c.graph["config"]["filters"].pop(key, None)
 
 
-@genno.config.handles("rename_dims", iterate=False)  # type: ignore[misc]
+@genno.config.handles("rename_dims", iterate=False)  # type: ignore [untyped-decorator]
 def rename_dims(c: Computer, info: dict[str, str]) -> None:
     """Handle the entire ``rename_dims:`` config section."""
     common.RENAME_DIMS.update(info)
 
 
 # keep=True is different vs. genno.config
-@genno.config.handles("units", iterate=False, discard=False)  # type: ignore[misc]
+@genno.config.handles("units", iterate=False, discard=False)  # type: ignore [untyped-decorator]
 def units(c: Computer, info: dict[str, str]) -> None:
     """Handle the entire ``units:`` config section."""
     genno.config.units(c, info)

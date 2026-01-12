@@ -719,9 +719,7 @@ class Scenario(TimeSeries):
         if "key" not in data.columns:
             # Form the 'key' column from other columns
             if N_dim > 1 and len(data):
-                data["key"] = (
-                    data[idx_names].astype(str).agg(lambda s: s.tolist(), axis=1)
-                )
+                data["key"] = data[idx_names].astype(str).agg(pd.Series.tolist, axis=1)
             else:
                 data["key"] = data[idx_names[0]]
 

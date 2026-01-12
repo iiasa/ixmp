@@ -512,12 +512,12 @@ def format_scenario_list(
         _match = match if isinstance(match, str) else match.pattern
         match = re.compile(".*" + _match + ".*")
 
-    def describe(df: pd.DataFrame) -> "pd.Series[Any]":
+    def describe(df: pd.DataFrame) -> "pd.Series":
         N = len(df)
         min = df.version.min()
         max = df.version.max()
 
-        result: dict[str, int | str] = dict(N=N, range="")
+        result: dict[str, Any] = dict(N=N, range="")
         if N > 1:
             result["range"] = "{}–{}".format(min, max)
             if N != max:

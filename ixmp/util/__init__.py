@@ -10,7 +10,7 @@ from importlib.util import find_spec
 from itertools import chain, repeat
 from pathlib import Path
 from types import ModuleType
-from typing import IO, TYPE_CHECKING, Any, Literal
+from typing import IO, TYPE_CHECKING, Any, Literal, TypeGuard
 from urllib.parse import urlparse
 from warnings import warn
 
@@ -106,6 +106,11 @@ def as_str_list(
         return [str(arg[idx]) for idx in idx_names]
     else:
         return list(map(str, arg))
+
+
+def is_dict_int_float(value: dict[Any, Any]) -> TypeGuard[dict[int, float]]:
+    """Type guard to narrow type of `value` to :py:`dict[int, float]`."""
+    return all(isinstance(k, int) for k in value.keys())
 
 
 def isscalar(x: object) -> bool:

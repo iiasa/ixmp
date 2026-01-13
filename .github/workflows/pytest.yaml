@@ -96,7 +96,7 @@ jobs:
       # [docs] → [tests] → [ixmp4,report,tutorial]
       run: |
         uv pip install \
-            "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'" \
+            "ixmp4 @ git+https://github.com/iiasa/ixmp4@enhancement/tk-integration-proto; python_version > '3.9'" \
             .[docs]
       shell: bash
 

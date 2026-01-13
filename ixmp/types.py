@@ -9,37 +9,40 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 import pandas
-from ixmp4.core.optimization.equation import Equation, EquationRepository
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
-from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
-from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
-from ixmp4.core.optimization.table import Table, TableRepository
+from ixmp4.core.optimization.equation import Equation
+from ixmp4.core.optimization.equation import EquationServiceFacade as EquationRepository
+from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.indexset import IndexSetServiceFacade as IndexSetRepository
+from ixmp4.core.optimization.parameter import Parameter
+from ixmp4.core.optimization.parameter import (
+    ParameterServiceFacade as ParameterRepository,
+)
+from ixmp4.core.optimization.scalar import Scalar
+from ixmp4.core.optimization.scalar import ScalarServiceFacade as ScalarRepository
+from ixmp4.core.optimization.table import Table
+from ixmp4.core.optimization.table import TableServiceFacade as TableRepository
 from ixmp4.core.optimization.variable import Variable
 from ixmp4.core.optimization.variable import (
-    VariableRepository as OptimizationVariableRepository,
+    VariableServiceFacade as OptimizationVariableRepository,
 )
-from ixmp4.data.abstract.iamc.variable import VariableRepository
-from ixmp4.data.abstract.model import ModelRepository
-from ixmp4.data.abstract.optimization.equation import (
-    EquationRepository as BEEquationRepository,
+from ixmp4.data.iamc.variable.service import VariableService as VariableRepository
+from ixmp4.data.model.service import ModelService as ModelRepository
+from ixmp4.data.optimization.equation.service import (
+    EquationService as BEEquationRepository,
 )
-from ixmp4.data.abstract.optimization.indexset import (
-    IndexSetRepository as BEIndexSetRepository,
+from ixmp4.data.optimization.indexset.service import (
+    IndexSetService as BEIndexSetRepository,
 )
-from ixmp4.data.abstract.optimization.parameter import (
-    ParameterRepository as BEParameterRepository,
+from ixmp4.data.optimization.parameter.service import (
+    ParameterService as BEParameterRepository,
 )
-from ixmp4.data.abstract.optimization.scalar import (
-    ScalarRepository as BEScalarRepository,
+from ixmp4.data.optimization.scalar.service import ScalarService as BEScalarRepository
+from ixmp4.data.optimization.table.service import TableService as BETableRepository
+from ixmp4.data.optimization.variable.service import (
+    VariableService as BEVariableRepository,
 )
-from ixmp4.data.abstract.optimization.table import (
-    TableRepository as BETableRepository,
-)
-from ixmp4.data.abstract.optimization.variable import (
-    VariableRepository as BEVariableRepository,
-)
-from ixmp4.data.abstract.region import RegionRepository
-from ixmp4.data.abstract.scenario import ScenarioRepository
+from ixmp4.data.region.service import RegionService as RegionRepository
+from ixmp4.data.scenario.service import ScenarioService as ScenarioRepository
 
 # Compatibility with Python 3.11 and earlier
 # TODO Use "from typing import NotRequired" when dropping support for Python 3.10

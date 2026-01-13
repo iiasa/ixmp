@@ -1,22 +1,24 @@
 import logging
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Literal, TypeVar, cast
+from typing import Literal, TypeVar, cast
 
 import gams.transfer as gt
 import pandas as pd
 from ixmp4.core import Run
-from ixmp4.core.optimization.base import Lister
 from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+from ixmp4.core.optimization.indexset import IndexSet
+from ixmp4.core.optimization.indexset import IndexSetServiceFacade as IndexSetRepository
 from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
-from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
-from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
+from ixmp4.data.dataframe import SerializableDataFrame
+from ixmp4.data.optimization.equation.dto import Equation as AbstractEquation
+from ixmp4.data.optimization.variable.dto import Variable as AbstractVariable
 
 from ixmp.model.gams import gams_info
+from ixmp.types import IXMP4Repository
 from ixmp.util.ixmp4 import ContainerData
 
 log = logging.getLogger(__name__)
@@ -83,7 +85,7 @@ def _records(
 
 
 def _ensure_correct_item_order(
-    items: list[Item4], repo: Lister[Any, Any]
+    items: list[Item4], repo: IXMP4Repository
 ) -> list[Item4]:
     """Reorder items to ensure the GDX file is written correctly.
 
@@ -282,7 +284,7 @@ def write_run_to_gdx(
     # Define the container
     container = gt.Container(system_directory=str(gams_info().system_dir))
 
-    repository: list[Lister[Any, Any]] = [
+    repository: list[IXMP4Repository] = [
         run.optimization.indexsets,
         run.optimization.scalars,
         run.optimization.tables,
@@ -346,7 +348,7 @@ def _read_variables_to_run(  # type: ignore[no-any-unimported]
         columns_of_interest = _set_columns_to_read_from_records(item=variable)
 
         try:
-            records = pd.DataFrame(container.data[variable.name].records)
+            records = SerializableDataFrame(container.data[variable.name].records)
         except KeyError:
             # container doesn't contain this variable
             continue
@@ -360,7 +362,7 @@ def _read_variables_to_run(  # type: ignore[no-any-unimported]
             records.columns = pd.Index(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
-            run.backend.optimization.variables.add_data(
+            run._backend.optimization.variables.add_data(
                 id=variable.id, data=records[columns_of_interest]
             )
 
@@ -373,7 +375,7 @@ def _read_equations_to_run(  # type: ignore[no-any-unimported]
         columns_of_interest = _set_columns_to_read_from_records(item=equation)
 
         try:
-            records = pd.DataFrame(container.data[equation.name].records)
+            records = SerializableDataFrame(container.data[equation.name].records)
         except KeyError:
             # container doesn't contain this equation
             continue
@@ -387,7 +389,7 @@ def _read_equations_to_run(  # type: ignore[no-any-unimported]
             records.columns = pd.Index(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
-            run.backend.optimization.equations.add_data(
+            run._backend.optimization.equations.add_data(
                 id=equation.id, data=records[columns_of_interest]
             )
 
@@ -444,9 +446,9 @@ def read_gdx_to_run(
     # NOTE This handles empty `var_list`, too,
     # which is not necessary as long as any Variables are required in message_ix
     variables = (
-        run.backend.optimization.variables.list(run_id=run.id, name__in=var_list)
+        run._backend.optimization.variables.list(run__id=run.id, name__in=var_list)
         if len(var_list)
-        else run.backend.optimization.variables.list(run_id=run.id)
+        else run._backend.optimization.variables.list(run__id=run.id)
     )
     _read_variables_to_run(container=container, run=run, variables=variables)
 
@@ -454,8 +456,8 @@ def read_gdx_to_run(
     # NOTE This handles empty `equ_list`, too,
     # which is not necessary as long as any Equations are required in message_ix
     equations = (
-        run.backend.optimization.equations.list(run_id=run.id, name__in=equ_list)
+        run._backend.optimization.equations.list(run__id=run.id, name__in=equ_list)
         if len(equ_list)
-        else run.backend.optimization.equations.list(run_id=run.id)
+        else run._backend.optimization.equations.list(run__id=run.id)
     )
     _read_equations_to_run(container=container, run=run, equations=equations)

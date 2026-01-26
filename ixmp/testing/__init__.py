@@ -132,6 +132,11 @@ MARK = {
         and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
         reason="https://github.com/pytest-dev/pytest/issues/10843",
     ),
+    "ixmp4-pandas-3": pytest.mark.xfail(
+        raises=AttributeError,
+        # 'str' object has no attribute 'value' in ixmp4.data.db.meta.repository
+        reason="XFAIL for IXMP4Backend only",
+    ),
 }
 
 # Pytest hooks

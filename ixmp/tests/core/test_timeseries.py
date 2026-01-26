@@ -11,7 +11,7 @@ from pandas.testing import assert_frame_equal
 
 import ixmp.backend
 from ixmp import IAMC_IDX, Scenario, TimeSeries
-from ixmp.testing import DATA, models
+from ixmp.testing import DATA, MARK, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -209,6 +209,7 @@ class TestTimeSeries:
         with pytest.raises(ValueError):
             ts.add_timeseries(DATA[0].drop("unit", axis=1))
 
+    @MARK["ixmp4-pandas-3"]
     def test_discard_changes(self, ts: TimeSeries) -> None:
         ts.commit("")
         assert 0 == len(ts.timeseries())

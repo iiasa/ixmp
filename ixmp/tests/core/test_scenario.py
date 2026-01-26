@@ -14,6 +14,7 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKENDS,
+    MARK,
     _platform_fixture,
     assert_logs,
     make_dantzig,
@@ -721,6 +722,7 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
+    @MARK["ixmp4-pandas-3"]
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -757,6 +759,7 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
+    @MARK["ixmp4-pandas-3"]
     def test_meta_bulk(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:

@@ -48,7 +48,6 @@ def mp(test_mp_f: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
 # DB Model. ixmp4 can only store meta entries for a Run, which is always linked to Model
 # AND Scenario. So the tests here that call *_meta() without full arguments won't pass
 # on ixmp4.
-@pytest.mark.ixmp4_not_yet
 class TestMeta:
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_set_meta_missing_argument(
@@ -63,6 +62,7 @@ class TestMeta:
         with pytest.raises(ValueError):
             mp.set_meta(meta, scenario=DANTZIG["scenario"], version=0)
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_set_get_meta(
         self,
@@ -74,6 +74,7 @@ class TestMeta:
         obs = mp.get_meta(model=DANTZIG["model"])
         assert obs == meta
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_unique_meta(
         self,
@@ -107,6 +108,7 @@ class TestMeta:
         with pytest.raises(Exception, match=expected):
             mp.set_meta(meta, **DANTZIG, version=scenario.version)
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_set_get_meta_equals(
         self,
@@ -118,6 +120,7 @@ class TestMeta:
         obs_meta = mp.get_meta(scenario=DANTZIG["scenario"])
         assert obs_meta == initial_meta
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_unique_meta_model_scenario(
         self,
@@ -143,6 +146,7 @@ class TestMeta:
         with pytest.raises(Exception, match=expected):
             mp.set_meta(meta, **dantzig2)
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_get_meta_strict(
         self,
@@ -247,6 +251,7 @@ class TestMeta:
         )
         assert obs6_strict == meta_scen
 
+    @pytest.mark.ixmp4_not_yet
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_unique_meta_scenario(
         self,
@@ -274,6 +279,7 @@ class TestMeta:
         with pytest.raises(Exception, match=expected):
             mp.set_meta(meta, model=DANTZIG["model"])
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_partial_overwrite(self, mp: ixmp.Platform) -> None:
         meta1 = {
             "sample_string": 3.0,
@@ -293,6 +299,7 @@ class TestMeta:
         obs = scen.get_meta()
         assert obs == expected
 
+    @pytest.mark.ixmp4_not_yet
     def test_remove_meta(self, mp: ixmp.Platform) -> None:
         meta = {"sample_int": 3.0, "another_string": "string_value"}
         remove_key = "another_string"
@@ -303,6 +310,7 @@ class TestMeta:
         obs = mp.get_meta(**DANTZIG)
         assert expected == obs
 
+    @pytest.mark.ixmp4_not_yet
     def test_remove_invalid_meta(self, mp: ixmp.Platform) -> None:
         """
         Removing nonexisting meta entries or None shouldn't result in any meta
@@ -316,6 +324,7 @@ class TestMeta:
         obs = mp.get_meta(**DANTZIG)
         assert obs == SAMPLE_META
 
+    @pytest.mark.ixmp4_not_yet
     def test_set_and_remove_meta_scenario(self, mp: ixmp.Platform) -> None:
         """
         Test partial overwriting and meta deletion on scenario level.
@@ -337,6 +346,7 @@ class TestMeta:
         obs = scen.get_meta()
         assert obs == expected
 
+    @pytest.mark.ixmp4_not_yet
     def test_scenario_delete_meta_warning(self, mp: ixmp.Platform) -> None:
         """
         Scenario.delete_meta works but raises a deprecation warning.
@@ -355,6 +365,7 @@ class TestMeta:
         obs = scen.get_meta()
         assert obs == expected
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_arguments(self, mp: ixmp.Platform) -> None:
         """Set scenario meta with key-value arguments"""
         meta = {"sample_int": 3}
@@ -366,6 +377,7 @@ class TestMeta:
         scen2.set_meta(*meta.popitem())
         assert scen.get_meta() == scen2.get_meta()
 
+    @pytest.mark.ixmp4_not_yet
     def test_update_meta_lists(self, mp: ixmp.Platform) -> None:
         """Set metadata categories having list/array values."""
         SAMPLE_META = {"list_category": ["a", "b", "c"]}
@@ -378,6 +390,7 @@ class TestMeta:
         obs = mp.get_meta(model=DANTZIG["model"])
         assert obs == SAMPLE_META
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_mixed_list(self, mp: ixmp.Platform) -> None:
         """Set metadata categories having list/array values."""
         meta = {"mixed_category": ["string", 0.01, True]}

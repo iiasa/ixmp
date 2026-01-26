@@ -1255,7 +1255,7 @@ class JDBCBackend(CachingBackend):
                 _get("Levels", "lvl")
                 _get("Marginals", "mrg")
 
-            result = pd.concat(columns, axis=1, copy=False)
+            result = pd.concat(columns, axis=1)
         elif ix_type == "set":
             # Index sets
             # dtype=object is to silence a warning in pandas 1.0

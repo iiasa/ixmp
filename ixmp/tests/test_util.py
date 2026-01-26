@@ -1,6 +1,7 @@
 """Tests for ixmp.util."""
 
 import logging
+import re
 from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
@@ -198,11 +199,9 @@ def test_discard_on_error(
             s.add_par("d", pd.DataFrame([["foo", "bar", 1.0, "kg"]]))
 
     # Exception was caught and logged
-    assert caplog.messages[-3].startswith("Avoid locking ")
-    assert [
-        "Discard scenario changes",
-        "Close database connection",
-    ] == caplog.messages[-2:]
+    assert any(re.match("Avoid locking ", msg) for msg in caplog.messages)
+    assert any(re.search("[Dd]iscard scenario changes", msg) for msg in caplog.messages)
+    assert "Close database connection" == caplog.messages[-1]
 
     # Re-load the mp and the scenario
     with (

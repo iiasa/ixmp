@@ -94,12 +94,8 @@ IXMP4Backend
    The same holds for IXMP4Backend.
    Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
 
-   As of version 0.14, :mod:`ixmp4` supports only Python 3.10 and above.
-
-   - If you want to use IXMP4Backend,
-     please ensure you are using a sufficiently recent Python version.
-   - If you are restricted to Python 3.9 and below,
-     please use JDBCBackend instead.
+   As of version 0.14.0, :mod:`ixmp4` is not compatible with Pandas 3.0.0.
+   If you want to use IXMP4Backend, please install a version of `pandas < 3`.
 
 .. automodule:: ixmp.backend.ixmp4
    :members:

@@ -22,11 +22,23 @@ from ixmp.util import (
     year_list,
 )
 from ixmp.util.ixmp4 import is_ixmp4backend
+from ixmp.util.pandas import STRING_DTYPE
 
 if TYPE_CHECKING:
     from ixmp.types import VersionType
 
 log = logging.getLogger(__name__)
+
+#: Pandas dtypes returned by :meth:`TimeSeries.get_geodata`.
+GEO_DTYPES = {
+    "meta": int,
+    "region": STRING_DTYPE,
+    "subannual": STRING_DTYPE,
+    "unit": STRING_DTYPE,
+    "value": STRING_DTYPE,
+    "variable": STRING_DTYPE,
+    "year": int,
+}
 
 
 class TimeSeries:
@@ -564,13 +576,12 @@ class TimeSeries:
         :class:`pandas.DataFrame`
             Specified data.
         """
-        # TODO remove astype here; this is the responsibility of Backend
         return (
             pd.DataFrame(
                 self.platform._backend.get_geo(self), columns=FIELDS["ts_get_geo"]
             )
             .reset_index(drop=True)
-            .astype({"meta": "int64", "year": "int64"})
+            .astype(GEO_DTYPES)
         )
 
     # Metadata

@@ -39,6 +39,7 @@ from ixmp.core.platform import Platform
 from ixmp.core.scenario import Scenario
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list
+from ixmp.util.pandas import STRING_DTYPE
 
 from .base import CachingBackend
 from .common import FIELDS, CrossPlatformClone, ItemType
@@ -1254,11 +1255,11 @@ class JDBCBackend(CachingBackend):
                 _get("Levels", "lvl")
                 _get("Marginals", "mrg")
 
-            result = pd.concat(columns, axis=1, copy=False)
+            result = pd.concat(columns, axis=1)
         elif ix_type == "set":
             # Index sets
             # dtype=object is to silence a warning in pandas 1.0
-            result = pd.Series(item.getCol(0, jList)[:], dtype=object)
+            result = pd.Series(item.getCol(0, jList)[:], dtype=STRING_DTYPE)
         elif ix_type == "par":
             # Scalar parameter
             result = dict(

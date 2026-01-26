@@ -52,7 +52,6 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
-from ixmp.backend import available
 from ixmp.backend.ixmp4 import IXMP4Backend
 from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
 
@@ -133,6 +132,11 @@ MARK = {
         and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
         reason="https://github.com/pytest-dev/pytest/issues/10843",
     ),
+    "ixmp4-pandas-3": pytest.mark.xfail(
+        raises=AttributeError,
+        # 'str' object has no attribute 'value' in ixmp4.data.db.meta.repository
+        reason="XFAIL for IXMP4Backend only",
+    ),
 }
 
 # Pytest hooks
@@ -173,12 +177,11 @@ def pytest_report_collectionfinish(
     config: pytest.Config, start_path: Path, items: Sequence[Any]
 ) -> list[str]:
     """Show messages if a database error means IXMP4Backend tests cannot be run."""
-    from ixmp.backend import available
-
+    backends = config.stash[KEY_BACKENDS]
     db_name = config.stash[KEY_IXMP4_PG_NAME]
 
     messages = []
-    if "ixmp4" in available() and db_name.startswith(PG_NAME_NONE):  # pragma: no cover
+    if "ixmp4" in backends and db_name.startswith(PG_NAME_NONE):  # pragma: no cover
         messages += [
             "",
             "No PostgreSQL database available → tests of IXMP4Backend will be skipped:",
@@ -204,7 +207,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     - :data:`.jdbc._GC_AGGRESSIVE` is set to :any:`False` to disable aggressive garbage
       collection, which can be slow.
     """
-    from ixmp.backend import jdbc
+    from ixmp.backend import available, jdbc
 
     if not session.config.option.ixmp_user_config:
         ixmp_config.clear()
@@ -216,6 +219,8 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     backends = session.config.stash[KEY_BACKENDS] = sorted(available())
 
     jdbc._GC_AGGRESSIVE = False
+
+    db_name = PG_NAME_NONE
 
     if "ixmp4" in backends:
         # Connect to a PostgreSQL server and create a test database for this worker
@@ -240,7 +245,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
             # Store for pytest_sessionfinish()
             session.config.stash[KEY_ENGINE] = engine
 
-        session.config.stash[KEY_IXMP4_PG_NAME] = db_name
+    session.config.stash[KEY_IXMP4_PG_NAME] = db_name
 
 
 def pytest_sessionfinish(

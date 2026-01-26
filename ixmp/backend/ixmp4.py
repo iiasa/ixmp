@@ -123,7 +123,7 @@ def _align_dtypes_for_filters(
 ) -> None:
     """Convert `filters` values to types enabling `data.isin()`."""
     # TODO Is this really the proper way to handle these types?
-    TYPE_MAP = {"object": str, "int64": int}
+    TYPE_MAP = {"object": str, "int64": int, "str": str}
 
     for column_name in filters.keys():
         # Guard against empty filters like {'time': []}
@@ -617,11 +617,11 @@ class IXMP4Backend(CachingBackend):
             model_name=_model, scenario_name=_scenario, version=_version
         )
 
-        meta_df = pd.DataFrame.from_dict(
-            data=meta, orient="index", columns=["value"]
-        ).reset_index(names="key")
-        meta_df["run__id"] = run.id
-
+        meta_df = (
+            pd.DataFrame.from_dict(data=meta, orient="index", columns=["value"])
+            .reset_index(names="key")
+            .assign(run__id=run.id)
+        )
         try:
             self._backend.meta.bulk_upsert(df=meta_df)
         except KeyError as e:

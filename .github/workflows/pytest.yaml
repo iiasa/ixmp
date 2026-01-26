@@ -34,11 +34,24 @@ jobs:
         - "3.14"  # Latest supported by ixmp
         gams-version:
         - "45.7.0" # Oldest version of gamsapi allowed by pyproject.toml
+        extra-id:
+        - ""
+        install-extra:
+        - ""
+
+        # Extra job that forces installation of pandas >=3,
+        # notwithstanding other dependencies that bound pandas <2.4.
+        include:
+        - os: ubuntu-latest
+          python-version: "3.14"
+          gams-version: "45.7.0"
+          extra-id: "-pandas-3"
+          install-extra: uv pip install "pandas >=3"
 
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-py${{ matrix.python-version }}
+    name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.extra-id }}
 
     steps:
     - uses: actions/checkout@v6
@@ -98,6 +111,7 @@ jobs:
         uv pip install \
             "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'" \
             .[docs]
+        ${{ matrix.install-extra }}
       shell: bash
 
     - name: "Install libpng-dev"  # for R 'png', required by reticulate

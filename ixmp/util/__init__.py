@@ -17,6 +17,8 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
+from ixmp.util.pandas import STRING_DTYPE
+
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
     from ixmp.types import Filters, ParData, PlatformInfo, TimeSeriesIdentifiers
@@ -171,7 +173,7 @@ def diff(
             kw = merge_kw | dict(left_index=True, right_index=True)
 
         # Merge the data from each side
-        return pd.merge(x, y, **kw).astype({"value_a": float})
+        return pd.merge(x, y, **kw).astype({"unit_a": STRING_DTYPE, "value_a": float})
 
     # Iterator over parameter data from `b`, followed by name="~ end"/empty data frame
     items_b = chain(b.iter_par_data(filters=filters), repeat(("~ end", pd.DataFrame())))
@@ -234,12 +236,13 @@ def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
             + str(e).splitlines()[0].strip('"')
         )
 
+        msg = f"Discard {type(ts).__name__.lower()} changes"
         try:
             ts.discard_changes()
-        except Exception:  # pragma: no cover
-            pass  # Some exception trying to discard changes()
+        except Exception as e:  # pragma: no cover
+            log.error(f"When trying to {msg.lower()}: {type(e).__name__}: {e}")
         else:
-            log.info(f"Discard {ts.__class__.__name__.lower()} changes")
+            log.info(msg)
 
         mp.close_db()
         log.info("Close database connection")

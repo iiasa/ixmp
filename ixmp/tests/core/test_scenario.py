@@ -14,6 +14,7 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKENDS,
+    MARK,
     _platform_fixture,
     assert_logs,
     make_dantzig,
@@ -21,6 +22,7 @@ from ixmp.testing import (
 )
 from ixmp.testing.data import populate_test_platform
 from ixmp.util.ixmp4 import is_ixmp4backend
+from ixmp.util.pandas import STRING_DTYPE
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -720,6 +722,7 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
+    @MARK["ixmp4-pandas-3"]
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -756,6 +759,7 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
+    @MARK["ixmp4-pandas-3"]
     def test_meta_bulk(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -927,7 +931,7 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     # Elements are stored and returned as str
     s = scen.set("s")
     assert isinstance(s, pd.Series)
-    assert s.dtype == "object"
+    assert s.dtype == STRING_DTYPE
     assert all(isinstance(element, str) for element in s)
     assert expected == cast("pd.Series[str]", s.tolist())
 

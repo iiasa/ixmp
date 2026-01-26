@@ -38,6 +38,8 @@ All changes
   - Use :mod:`ixmp4` version 0.14.x (:pull:`613`).
 
 - Support for Python 3.9 is dropped (:pull:`602`), as it has reached end-of-life.
+- :mod:`ixmp` is tested and compatible with `Pandas 3.0.0 <https://pandas.pydata.org/pandas-docs/stable/whatsnew/v3.0.0.html>`_,
+  released 2026-01-21 (:pull:`627`, :issue:`626`).
 - Improve :class:`.IXMP4Backend` (:pull:`581`):
 
   - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).

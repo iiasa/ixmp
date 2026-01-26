@@ -21,6 +21,7 @@ from ixmp.testing import (
 )
 from ixmp.testing.data import populate_test_platform
 from ixmp.util.ixmp4 import is_ixmp4backend
+from ixmp.util.pandas import STRING_DTYPE
 
 if TYPE_CHECKING:
     from ixmp.core.platform import Platform
@@ -927,7 +928,7 @@ def test_filter_str(scen_empty: "Scenario") -> None:
     # Elements are stored and returned as str
     s = scen.set("s")
     assert isinstance(s, pd.Series)
-    assert s.dtype == "object"
+    assert s.dtype == STRING_DTYPE
     assert all(isinstance(element, str) for element in s)
     assert expected == cast("pd.Series[str]", s.tolist())
 

@@ -17,6 +17,8 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
+from ixmp.util.pandas import STRING_DTYPE
+
 if TYPE_CHECKING:
     from ixmp import Platform, Scenario, TimeSeries
     from ixmp.types import Filters, ParData, PlatformInfo, TimeSeriesIdentifiers
@@ -171,7 +173,7 @@ def diff(
             kw = merge_kw | dict(left_index=True, right_index=True)
 
         # Merge the data from each side
-        return pd.merge(x, y, **kw).astype({"value_a": float})
+        return pd.merge(x, y, **kw).astype({"unit_a": STRING_DTYPE, "value_a": float})
 
     # Iterator over parameter data from `b`, followed by name="~ end"/empty data frame
     items_b = chain(b.iter_par_data(filters=filters), repeat(("~ end", pd.DataFrame())))

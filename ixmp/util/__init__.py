@@ -234,12 +234,13 @@ def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
             + str(e).splitlines()[0].strip('"')
         )
 
+        msg = f"Discard {type(ts).__name__.lower()} changes"
         try:
             ts.discard_changes()
-        except Exception:  # pragma: no cover
-            pass  # Some exception trying to discard changes()
+        except Exception as e:  # pragma: no cover
+            log.error(f"When trying to {msg.lower()}: {type(e).__name__}: {e}")
         else:
-            log.info(f"Discard {ts.__class__.__name__.lower()} changes")
+            log.info(msg)
 
         mp.close_db()
         log.info("Close database connection")

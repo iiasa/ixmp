@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
 
+from .pandas import SettingWithCopyWarning
+
 if TYPE_CHECKING:
     from ixmp4.data.backend.db import SqlAlchemyBackend
 
@@ -43,8 +45,6 @@ def configure_logging_and_warnings() -> None:
     """
     import logging
     import warnings
-
-    from pandas.errors import SettingWithCopyWarning
 
     logging.getLogger("ixmp4.data.db.base").setLevel(logging.WARNING + 1)
 

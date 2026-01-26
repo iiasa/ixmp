@@ -68,7 +68,7 @@ tests = [
   "ixmp[ixmp4,report,tutorial]",
   "memory_profiler",
   "nbclient >= 0.5",
-  "pytest >= 5",
+  "pytest >= 9",
   "pytest-benchmark",
   "pytest-cov",
   "pytest-httpserver",
@@ -130,16 +130,18 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.pytest.ini_options]
-# Disable faulthandler plugin on Windows to prevent spurious console noise; see
-# - https://github.com/jpype-project/jpype/issues/561
-# - https://github.com/iiasa/ixmp/issues/229
-# - https://github.com/iiasa/ixmp/issues/247
-addopts = """
-  -m "not rixmp and not performance"
-  -p no:faulthandler
-  --benchmark-skip
-  --cov=ixmp --cov-report="""
+[tool.pytest]
+addopts = [
+  '-m "not rixmp and not performance"',
+  # Disable faulthandler plugin on Windows to prevent spurious console noise; see
+  # - https://github.com/jpype-project/jpype/issues/561
+  # - https://github.com/iiasa/ixmp/issues/229
+  # - https://github.com/iiasa/ixmp/issues/247
+  "-p no:faulthandler",
+  "--benchmark-skip",
+  "--cov=ixmp",
+  "--cov-report=",
+]
 # Parallel to .util.ixmp4.configure_logging_and_warnings(), prevent warnings
 # from appearing in the test output
 filterwarnings = [
@@ -157,8 +159,11 @@ markers = [
   "ixmp4_never: tests that ixmp4 will never implement",
   "ixmp4_not_yet: tests that ixmp4 does not yet support"
 ]
+minversion = "9.0"
+strict_config = true
+strict_markers = true
 tmp_path_retention_policy = "none"
-usefixtures = "tmp_env"
+usefixtures = ["tmp_env"]
 
 [tool.ruff.lint]
 select = ["C9", "E", "F", "I", "W"]

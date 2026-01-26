@@ -9,7 +9,6 @@ import pytest
 from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
-import ixmp.backend
 from ixmp import IAMC_IDX, Scenario, TimeSeries
 from ixmp.testing import DATA, MARK, models
 from ixmp.util.ixmp4 import is_ixmp4backend
@@ -18,8 +17,12 @@ if TYPE_CHECKING:
     from ixmp.core.platform import Platform
     from ixmp.types import TimeSeriesIdentifiers
 
-if "ixmp4" in ixmp.backend.available():
+try:
     import sqlalchemy.exc
+except ImportError:  # pragma: no cover
+    MARKS: list[pytest.MarkDecorator] = []
+else:
+    MARKS = [pytest.mark.xfail(raises=sqlalchemy.exc.DataError)]
 
 # string columns for timeseries checks
 IDX_COLS = ["region", "variable", "unit", "year"]
@@ -437,10 +440,7 @@ class TestTimeSeries:
         (
             255,
             # This fails at add_timeseries()
-            pytest.param(
-                256,
-                marks=pytest.mark.xfail(raises=sqlalchemy.exc.DataError),
-            ),
+            pytest.param(256, marks=MARKS),
         ),
     )
     def test_long_variable_name_ixmp4(

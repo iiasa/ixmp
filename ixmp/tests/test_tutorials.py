@@ -1,24 +1,35 @@
 import os
 import platform
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import TypedDict
 
 import numpy as np
 import pytest
+from packaging.version import Version as V
 
 from ixmp.testing import GHA, get_cell_output, run_notebook
 
 GROUP_BASE_NAME = platform.system() + platform.python_version()
 
-FLAKY = pytest.mark.flaky(
-    reruns=5,
-    rerun_delay=2,
-    condition=GHA and platform.system() == "Windows",
-    reason="Flaky; see iiasa/ixmp#543",
-)
-
-LONG_MACOS = sys.version_info[:2] in {(3, 11), (3, 12)}
+MARK = {
+    0: pytest.mark.flaky(
+        reruns=5,
+        rerun_delay=2,
+        condition=GHA and platform.system() == "Windows",
+        reason="Flaky; see iiasa/ixmp#543",
+    ),
+    1: pytest.mark.skipif(
+        GHA and sys.platform == "darwin" and sys.version_info[:2] in {(3, 11), (3, 12)},
+        reason="Times out",
+    ),
+    2: pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out"),
+    3: pytest.mark.xfail(
+        V(version("pandas")) >= V("3"),
+        reason="https://github.com/iiasa/ixmp/issues/628",
+    ),
+}
 
 
 class DefaultKwargs(TypedDict, total=False):
@@ -37,9 +48,9 @@ def default_args(default_platform_name: str) -> DefaultKwargs:
     return dict(default_platform=default_platform_name, timeout=60 if GHA else 0)
 
 
-@FLAKY
+@MARK[0]
+@MARK[1]
 @pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-0")
-@pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport(
     tmp_path: Path,
     tmp_env: os._Environ[str],
@@ -55,8 +66,8 @@ def test_py_transport(
     assert np.isclose(get_cell_output(nb, -5)["lvl"], 153.6750030517578)
 
 
+@MARK[1]
 @pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-0")
-@pytest.mark.skipif(GHA and sys.platform == "darwin" and LONG_MACOS, reason="Times out")
 def test_py_transport_scenario(
     tutorial_path: Path,
     tmp_path: Path,
@@ -71,11 +82,10 @@ def test_py_transport_scenario(
     assert np.isclose(get_cell_output(nb, "scen-detroit-z")["lvl"], 161.324)
 
 
-@FLAKY
+@MARK[0]
+@MARK[2]
 @pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-1")
 @pytest.mark.rixmp
-# TODO investigate and resolve the cause of the time outs; remove this mark
-@pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")
 def test_R_transport(
     tutorial_path: Path,
     tmp_path: Path,
@@ -89,10 +99,10 @@ def test_R_transport(
     assert errors == []
 
 
+@MARK[2]
+@MARK[3]
 @pytest.mark.xdist_group(name=f"{GROUP_BASE_NAME}-1")
 @pytest.mark.rixmp
-# TODO investigate and resolve the cause of the time outs; remove this mark
-@pytest.mark.skipif(GHA and sys.platform == "linux", reason="Times out")
 def test_R_transport_scenario(
     tutorial_path: Path,
     tmp_path: Path,

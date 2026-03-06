@@ -120,7 +120,10 @@ jobs:
 
     - name: Install R dependencies and tutorial requirements
       run: |
-        install.packages(c("IRkernel", "reticulate"))
+        install.packages(c("IRkernel", "remotes", "reticulate"))
+
+        # Work around rstudio/reticulate#1889 / iiasa/ixmp#628
+        remotes::install_version("reticulate", version="1.44.1")
 
         # commented: for debugging
         # print(reticulate::py_config())

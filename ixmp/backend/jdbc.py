@@ -1345,12 +1345,15 @@ class JDBCBackend(CachingBackend):
                 # to_jlist(batch[0]) creates LinkedList("i1", "j1") as expected
                 # to_jlist(batch) would incorrectly create LinkedList([["i1", "j1"]])
                 jitem.removeElement(to_jlist(batch[0]))
-            else:
+            elif type == "par":
                 # Preallocate ArrayList capacity to avoid repeated memory allocations
                 key_vectors = ArrayList(len(batch))
                 for key in batch:
                     key_vectors.add(to_jlist(key))
                 jitem.removeElements(key_vectors)
+            else:
+                for key in batch:
+                    jitem.removeElement(to_jlist(key))
 
         # Since `name` may be an index set, clear the cache entirely. This ensures that
         # e.g. parameter elements for parameters indexed by `name` are also refreshed

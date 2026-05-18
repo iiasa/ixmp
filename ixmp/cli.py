@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 ScenarioClass: type[ixmp.Scenario] = ixmp.Scenario
 
 
-class VersionType(click.ParamType):
+class VersionType(click.ParamType[int | Literal["new"]]):
     """A Click parameter type that accepts :class:`int` or 'all'."""
 
     name = "version"  # https://github.com/pallets/click/issues/411

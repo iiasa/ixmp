@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 ScenarioClass: type[ixmp.Scenario] = ixmp.Scenario
 
 
-class VersionType(click.ParamType):
+class VersionType(click.ParamType[int | Literal["new"]]):
     """A Click parameter type that accepts :class:`int` or 'all'."""
 
     name = "version"  # https://github.com/pallets/click/issues/411
@@ -139,7 +139,7 @@ def report(context: dict[str, Any], config: str | Path | None, key: str | None) 
 
     # Print the target
     # TODO Remove once genno adds annotation
-    print(r.get(key).to_series().sort_index())  # type: ignore[no-untyped-call]
+    print(r.get(key).to_series().sort_index())
 
 
 @main.command("show-versions")

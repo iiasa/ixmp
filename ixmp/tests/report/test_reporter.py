@@ -46,7 +46,7 @@ def test_configure(
     scen = make_dantzig(test_mp, request=request)
     rep = Reporter.from_scenario(scen)
     assert "d:i_renamed-j" in rep, rep.graph.keys()
-    assert ["seattle", "san-diego"] == rep.get("i_renamed")  # type: ignore[no-untyped-call]
+    assert ["seattle", "san-diego"] == rep.get("i_renamed")
 
     # Original name 'i' are not found in the reporter
     assert "d:i-j" not in rep, rep.graph.keys()
@@ -102,7 +102,7 @@ def test_platform_units(
 
         # Parsing units with invalid chars raises an intelligible exception
         with pytest.raises(ComputationError, match=msg.format(expr, chars)):
-            rep.get(x_key)  # type: ignore[no-untyped-call]
+            rep.get(x_key)
 
     # Now using parseable but unrecognized units
     x["unit"] = "USD/kWa"
@@ -113,7 +113,7 @@ def test_platform_units(
 
     # Protect from --verbose command-line option, which sets the level to DEBUG
     with caplog.at_level(logging.INFO):
-        rep.get(x_key)  # type: ignore[no-untyped-call]
+        rep.get(x_key)
 
     # NB cannot use assert_logs here. report.util.parse_units uses the pint
     #    application registry, so depending which tests are run and in which order, this
@@ -128,7 +128,7 @@ def test_platform_units(
     scen.add_par("x", x)
 
     caplog.clear()
-    rep.get(x_key)  # type: ignore[no-untyped-call]
+    rep.get(x_key)
     assert not any("Add unit definition: USD = [USD]" in m for m in caplog.messages)
 
     # Mixed units are discarded
@@ -138,7 +138,7 @@ def test_platform_units(
     with assert_logs(
         caplog, ["x: mixed units", "kg", "USD/pkm", "discarded"], at_level=logging.INFO
     ):
-        rep.get(x_key)  # type: ignore[no-untyped-call]
+        rep.get(x_key)
 
     # Configured unit substitutions are applied
     rep.graph["config"]["units"] = dict(apply=dict(x="USD/pkm"))
@@ -146,7 +146,7 @@ def test_platform_units(
     with assert_logs(
         caplog, "x: replace units dimensionless with USD/pkm", at_level=logging.INFO
     ):
-        x = rep.get(x_key)  # type: ignore[no-untyped-call]
+        x = rep.get(x_key)
 
     # Applied units are pint objects with the correct dimensionality
     unit = x.attrs["_unit"]
@@ -215,7 +215,7 @@ def test_filters(
     x_key = rep.full_key("x")
 
     def assert_t_indices(labels: list[str]) -> None:
-        assert set(rep.get(x_key).coords["t"].values) == set(labels)  # type: ignore[no-untyped-call]
+        assert set(rep.get(x_key).coords["t"].values) == set(labels)
 
     # 1. Set filters directly
     rep.graph["config"]["filters"] = {"t": t_foo}
@@ -275,4 +275,4 @@ def test_filters(
         ),
         at_level=logging.DEBUG,
     ):
-        rep.get(x_key)  # type: ignore[no-untyped-call]
+        rep.get(x_key)

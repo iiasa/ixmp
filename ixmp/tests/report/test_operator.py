@@ -67,12 +67,12 @@ def test_get_remove_ts(
 
     # Can be used through a Computer
 
-    c = Computer()  # type: ignore[no-untyped-call]
+    c = Computer()
     c.require_compat("ixmp.report.operator")
     c.add("scenario", ts)
 
     key = c.add("test1", "get_ts", "scenario", filters=dict(variable="GDP"))
-    result1 = c.get(key)  # type: ignore[no-untyped-call]
+    result1 = c.get(key)
     assert 3 == len(result1)
 
     # remove_ts() can be used through Computer
@@ -80,7 +80,7 @@ def test_get_remove_ts(
 
     # Task runs, logs
     with assert_logs(caplog, "Remove 5 of 5 (1964 <= year) rows of time series data"):
-        c.get(key)  # type: ignore[no-untyped-call]
+        c.get(key)
 
     # See comment above; only one row is removed
     assert 6 - 3 == len(ts.timeseries())
@@ -133,7 +133,7 @@ def test_update_scenario(
     assert 6 == N_before
 
     # A Computer used as calculation engine
-    c = Computer()  # type: ignore[no-untyped-call]
+    c = Computer()
 
     # Target Scenario for updating data
     c.add("target", scen)
@@ -152,7 +152,7 @@ def test_update_scenario(
     # Trigger the computation that results in data being added
     with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
         # Returns nothing
-        assert c.get("test 1") is None  # type: ignore[no-untyped-call]
+        assert c.get("test 1") is None
 
     # Rows were added to the parameter
     assert len(scen.par("d")) == N_before + len(data)
@@ -170,7 +170,7 @@ def test_update_scenario(
 
     # Trigger the computation
     with assert_logs(caplog, f"'d' ← {len(data)} rows", at_level=logging.INFO):
-        c.get("test 2")  # type: ignore[no-untyped-call]
+        c.get("test 2")
 
     # All the rows have been updated
     # TODO We should probably rework scen.par() to only return pd.DataFrame and handle
@@ -184,7 +184,7 @@ def test_update_scenario(
 
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
     # Computer and target scenario
-    c = Computer()  # type: ignore[no-untyped-call]
+    c = Computer()
 
     # Target scenario
     model_name = __name__
@@ -213,7 +213,7 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
     assert 0 == len(scen.timeseries())
 
     # The computation runs successfully
-    c.get("test 1")  # type: ignore[no-untyped-call]
+    c.get("test 1")
 
     # All rows from both inputs are present
     assert len(input_1) + len(input_2) == len(scen.timeseries())
@@ -228,7 +228,7 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
 
     # Succeeds with default strict=False
     caplog.clear()
-    c.get("test 2")  # type: ignore[no-untyped-call]
+    c.get("test 2")
 
     # A message is logged
     r = caplog.record_tuples[-1]
@@ -246,4 +246,4 @@ def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None
         ComputationError,
         match=re.compile("computing 'test 2' using:.*region = Moon", flags=re.DOTALL),
     ):
-        c.get("test 2")  # type: ignore[no-untyped-call]
+        c.get("test 2")

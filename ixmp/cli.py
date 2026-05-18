@@ -139,7 +139,7 @@ def report(context: dict[str, Any], config: str | Path | None, key: str | None) 
 
     # Print the target
     # TODO Remove once genno adds annotation
-    print(r.get(key).to_series().sort_index())  # type: ignore[no-untyped-call]
+    print(r.get(key).to_series().sort_index())
 
 
 @main.command("show-versions")

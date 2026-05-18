@@ -18,7 +18,7 @@ class Reporter(Computer):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # TODO Remove once genno adds annotation
-        super().__init__(*args, **kwargs)  # type: ignore[no-untyped-call]
+        super().__init__(*args, **kwargs)
 
         # Append ixmp.report.operator to the modules in which the Computer will look up
         # names

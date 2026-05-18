@@ -16,7 +16,7 @@ docutils==0.21.2
     #   sphinxcontrib-bibtex
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.47
+gitpython==3.1.50
     # via -r requirements.in
 idna==3.7
     # via requests
@@ -95,7 +95,7 @@ tabulate==0.9.0
     # via numpydoc
 tzdata==2025.2
     # via pandas
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements.in
     #   requests

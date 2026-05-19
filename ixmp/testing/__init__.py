@@ -42,6 +42,7 @@ from copy import deepcopy
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeAlias
+from unittest import mock
 
 import pint
 import pytest
@@ -390,7 +391,9 @@ def test_mp(
 
 @pytest.fixture(scope="session")
 def tmp_env(
-    pytestconfig: pytest.Config, tmp_path_factory: pytest.TempPathFactory
+    pytestconfig: pytest.Config,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[os._Environ[str], Any, None]:
     """Temporary environment for testing.
 
@@ -434,15 +437,24 @@ def tmp_env(
     ixmp_config.save()
 
     try:
-        import ixmp4.conf
+        from ixmp4 import __version_tuple__
 
-        # Replace an automatic reference to the user's home directory with a
-        # subdirectory of the pytest temporary directory
-        ixmp4.conf.settings.storage_directory = base_temp.joinpath("ixmp4")
-        # Ensure this directory and a further subdirectory "databases" exist
-        ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
-            parents=True, exist_ok=True
-        )
+        if __version_tuple__ < (0, 15, 0):
+            import ixmp4.conf
+
+            # Replace an automatic reference to the user's home directory with a
+            # subdirectory of the pytest temporary directory
+            ixmp4.conf.settings.storage_directory = base_temp.joinpath("ixmp4")
+            # Ensure this directory and a further subdirectory "databases" exist
+            ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
+                parents=True, exist_ok=True
+            )
+        else:
+            from ixmp4.conf.settings import Settings
+
+            settings = Settings(storage_directory=base_temp.joinpath("ixmp4"))
+            mock.patch("ixmp4.conf.settings.Settings", new=settings)
+
     except ImportError:
         pass
 

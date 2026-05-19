@@ -68,10 +68,21 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
     from ixmp.util.ixmp4 import has_ixmp4
 
     if has_ixmp4():
-        import ixmp4.conf
+        from ixmp4 import __version_tuple__
 
-        # Use configured ixmp4 storage directory
-        ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath("databases")
+        # NB (0, 0, 0) occurs with an unpublished version, e.g. from `main`
+        if (0, 0, 0) < __version_tuple__ < (0, 15, 0):
+            import ixmp4.conf
+
+            # Use configured ixmp4 storage directory
+            ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath(  # type: ignore [attr-defined]
+                "databases"
+            )
+        else:
+            from ixmp4.conf.settings import Settings
+
+            settings = Settings()
+            ixmp4_databases = settings.get_database_dir()
     else:
         # ixmp4 not installed or importable; construct a likely value
         from platformdirs import user_data_path

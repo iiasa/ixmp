@@ -81,7 +81,8 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
         else:
             from ixmp4.conf.settings import Settings
 
-            settings = Settings()
+            # omitting fields with defaults requires the pydantic mypy plugin
+            settings = Settings()  # type: ignore[call-arg]
             ixmp4_databases = settings.get_database_dir()
     else:
         # ixmp4 not installed or importable; construct a likely value

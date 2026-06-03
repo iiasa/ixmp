@@ -47,6 +47,7 @@ from unittest import mock
 import pint
 import pytest
 from click.testing import CliRunner, Result
+from sqlalchemy import text
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import override
@@ -54,7 +55,7 @@ from typing_extensions import override
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
+from ixmp.util.ixmp4 import format_url, is_ixmp4backend
 
 from .data import (
     DATA,
@@ -74,7 +75,7 @@ from .resource import resource_limit
 if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
     from ixmp4.core import Run
-    from sqlalchemy import Engine  # noqa: F401
+    from sqlalchemy import Connection, Engine  # noqa: F401
 
     try:
         # Pint 0.25.1 or later
@@ -190,6 +191,20 @@ def pytest_report_collectionfinish(
     return messages
 
 
+def clear_pg_connections(db_name: str, connection: "Connection") -> None:
+    connection.execute(
+        text(
+            """
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = :db_name
+                AND pid <> pg_backend_pid()
+            """
+        ),
+        {"db_name": db_name},
+    )
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Unset configuration read from the user's home directory or ``IXMP_DATA.
 
@@ -228,6 +243,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         logging.getLogger("faker").setLevel(logging.INFO)
 
         # Connect to a PostgreSQL server and create a test database for this worker
+        from ixmp4.db import get_alembic_controller
         from sqlalchemy import create_engine, text
         from sqlalchemy.exc import OperationalError
         from xdist import get_xdist_worker_id
@@ -238,8 +254,13 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
         try:
             with engine.connect() as connection:
+                clear_pg_connections(db_name, connection)
                 connection.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
                 connection.execute(text(f"CREATE DATABASE {db_name}"))
+            # Initialize schema on the new DB so ixmp4 can use it immediately.
+            get_alembic_controller(
+                format_url(session.config.option.ixmp_postgres, database=db_name)
+            ).upgrade_database("head")
         except OperationalError as e:  # pragma: no cover
             # Some error connecting to the database → store a message and text of `e`
             db_name = f"{PG_NAME_NONE}\nException: {e!r}\nURL: {url}"
@@ -260,10 +281,16 @@ def pytest_sessionfinish(
     if not db_name.startswith(PG_NAME_NONE):
         # Remove the database created for this session
         from sqlalchemy import text
+        from sqlalchemy.exc import OperationalError
 
         engine = session.config.stash[KEY_ENGINE]
         with engine.connect() as connection:
-            connection.execute(text(f"DROP DATABASE {db_name}"))
+            clear_pg_connections(db_name, connection)
+            try:
+                connection.execute(text(f"DROP DATABASE {db_name}"))
+            except OperationalError:  # pragma: no cover
+                # Avoid converting teardown cleanup failure into test failure.
+                log.exception("Failed to drop PostgreSQL test database %s", db_name)
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -393,7 +420,6 @@ def test_mp(
 def tmp_env(
     pytestconfig: pytest.Config,
     tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[os._Environ[str], Any, None]:
     """Temporary environment for testing.
 
@@ -415,6 +441,8 @@ def tmp_env(
     """
     base_temp = tmp_path_factory.getbasetemp()
     os.environ["IXMP_DATA"] = str(base_temp)
+    # Test backends create/drop databases dynamically; skip ixmp4's alembic guard.
+    os.environ["IXMP4_CHECK_ALEMBIC_VERSION"] = "false"
 
     if not pytestconfig.option.ixmp_user_config:
         # Clear user's config. This (harmlessly) duplicates pytest_sessionstart, above.
@@ -437,23 +465,11 @@ def tmp_env(
     ixmp_config.save()
 
     try:
-        from ixmp4 import __version_tuple__
+        from ixmp4.conf.settings import Settings
 
-        if __version_tuple__ < (0, 15, 0):
-            import ixmp4.conf
-
-            # Replace an automatic reference to the user's home directory with a
-            # subdirectory of the pytest temporary directory
-            ixmp4.conf.settings.storage_directory = base_temp.joinpath("ixmp4")
-            # Ensure this directory and a further subdirectory "databases" exist
-            ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
-                parents=True, exist_ok=True
-            )
-        else:
-            from ixmp4.conf.settings import Settings
-
-            settings = Settings(storage_directory=base_temp.joinpath("ixmp4"))
-            mock.patch("ixmp4.conf.settings.Settings", new=settings)
+        # omitting fields with defaults requires the pydantic mypy plugin
+        settings = Settings(storage_directory=base_temp.joinpath("ixmp4"))  # type: ignore[call-arg]
+        mock.patch("ixmp4.conf.settings.Settings", new=settings)
 
     except ImportError:
         pass
@@ -712,22 +728,27 @@ def _platform_fixture(
         args = ["hsqldb"]
         kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
     elif backend == "ixmp4":
+        from ixmp4.conf.settings import Settings
+
         args = []
         name = f"ixmp_test_{worker_id}"
         kwargs = dict(
             ixmp4_name=name,
             dsn=format_url(request.config.option.ixmp_postgres, database=name),
             jdbc_compat=True,
+            # Disable migration-version check for transient test databases.
+            ixmp4_settings=Settings(check_alembic_version=False),  # type: ignore[call-arg]
         )
         if request.scope == "function":
             # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
+            from ixmp4.transport import DirectTransport
+
             from ixmp.backend.ixmp4 import IXMP4Backend
 
             _backend = IXMP4Backend(**kwargs)
-            if is_sqlalchemybackend(_backend._backend):
-                _backend._backend.close()
-                # TODO Properly isinstance check and remove when Python 3.9 is dropped
-                _backend._backend.teardown()
+            transport = _backend._backend.transport
+            if isinstance(transport, DirectTransport):
+                transport.close()
 
     # Add platform to ixmp configuration
     ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
@@ -735,8 +756,19 @@ def _platform_fixture(
     # Launch Platform
     mp = Platform(name=platform_name)
 
-    if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
-        mp._backend._backend.setup()
+    if is_ixmp4backend(mp._backend):
+        from ixmp4.db import get_alembic_controller
+        from ixmp4.transport import DirectTransport
+
+        transport = mp._backend._backend.transport
+        if (
+            isinstance(transport, DirectTransport)
+            and transport.session.bind is not None
+        ):
+            db_url = transport.session.bind.engine.url.render_as_string(
+                hide_password=False
+            )
+            get_alembic_controller(db_url).upgrade_database("head")
 
     try:
         yield mp
@@ -747,9 +779,12 @@ def _platform_fixture(
 
         # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup
         # above, mp._backend._backend is always of type PostgresTestBackend
-        if is_ixmp4backend(mp._backend) and is_sqlalchemybackend(mp._backend._backend):
-            mp._backend._backend.close()
-            mp._backend._backend.teardown()
+        if is_ixmp4backend(mp._backend):
+            from ixmp4.transport import DirectTransport
+
+            transport = mp._backend._backend.transport
+            if isinstance(transport, DirectTransport):
+                transport.close()
 
         del mp
 

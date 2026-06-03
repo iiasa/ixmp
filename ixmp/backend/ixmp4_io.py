@@ -1,31 +1,26 @@
 import logging
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Literal, TypeVar, cast
+from typing import Literal, cast
 
 import gams.transfer as gt
 import pandas as pd
-from ixmp4.core import Run
-from ixmp4.core.optimization.base import Lister
 from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
+from ixmp4.core.optimization.indexset import IndexSet, IndexSetServiceFacade
 from ixmp4.core.optimization.parameter import Parameter
 from ixmp4.core.optimization.scalar import Scalar
 from ixmp4.core.optimization.table import Table
 from ixmp4.core.optimization.variable import Variable
-from ixmp4.data.abstract.optimization.equation import Equation as AbstractEquation
-from ixmp4.data.abstract.optimization.variable import Variable as AbstractVariable
+from ixmp4.core.run import Run
 
 from ixmp.model.gams import gams_info
+from ixmp.types import IXMP4ModelData, IXMP4ServiceFacade
 from ixmp.util.ixmp4 import ContainerData
 
 log = logging.getLogger(__name__)
 
-# Type variable that can be any one of these 6 types, but not a union of 2+ of them
-Item4 = TypeVar("Item4", Equation, IndexSet, Parameter, Scalar, Table, Variable)
 
-
-def _domain(item: Item4) -> list[str] | None:
+def _domain(item: IXMP4ModelData) -> list[str] | None:
     """Return domain for `item`.
 
     For IndexSets and Scalars, this is :obj:`None`.
@@ -39,7 +34,7 @@ def _domain(item: Item4) -> list[str] | None:
 
 
 def _records(
-    item: Item4,
+    item: IXMP4ModelData,
 ) -> (
     float
     | list[float]
@@ -83,8 +78,8 @@ def _records(
 
 
 def _ensure_correct_item_order(
-    items: list[Item4], repo: Lister[Any, Any]
-) -> list[Item4]:
+    items: list[IXMP4ModelData], repo: IXMP4ServiceFacade
+) -> list[IXMP4ModelData]:
     """Reorder items to ensure the GDX file is written correctly.
 
     gamsapi stores all unique elements of all items in a single list internally. If item
@@ -92,7 +87,7 @@ def _ensure_correct_item_order(
     are then requested, they are returned starting with those in A in their order,
     disrupting expectations.
     """
-    if isinstance(repo, IndexSetRepository):
+    if isinstance(repo, IndexSetServiceFacade):
         # Move all indexsets called 'type_*' to the end of the list
         for type_indexset in list(
             filter(lambda item: item.name.startswith("type_"), items)
@@ -104,7 +99,7 @@ def _ensure_correct_item_order(
 
 
 def _align_records_and_domain(
-    item: Item4, records: dict[str, list[float] | list[int] | list[str]]
+    item: IXMP4ModelData, records: dict[str, list[float] | list[int] | list[str]]
 ) -> dict[str, list[float] | list[int] | list[str]]:
     """Align the order of `records.keys()` with domain of `item`."""
     # This function will only be called for these types
@@ -187,7 +182,9 @@ def _add_items_to_container(  # type: ignore[no-any-unimported]
             _update_item_in_container(container=container, item=item)
 
 
-def _convert_ixmp4_items_to_containerdata(items: list[Item4]) -> list[ContainerData]:
+def _convert_ixmp4_items_to_containerdata(
+    items: list[IXMP4ModelData],
+) -> list[ContainerData]:
     """Convert list of ixmp4 `items` to ContainerData."""
     if not items:
         return []  # Nothing to be done
@@ -282,7 +279,7 @@ def write_run_to_gdx(
     # Define the container
     container = gt.Container(system_directory=str(gams_info().system_dir))
 
-    repository: list[Lister[Any, Any]] = [
+    repository: list[IXMP4ServiceFacade] = [
         run.optimization.indexsets,
         run.optimization.scalars,
         run.optimization.tables,
@@ -292,8 +289,9 @@ def write_run_to_gdx(
     ]
     idx = slice(None) if include_variables_and_equations else slice(-2)
     for r in repository[idx]:
+        items: list[IXMP4ModelData] = cast(list[IXMP4ModelData], r.list())
         # Reorder items if necessary for GAMS to successfully read the GDX
-        ixmp4_items = _ensure_correct_item_order(items=r.list(), repo=r)
+        ixmp4_items = _ensure_correct_item_order(items=items, repo=r)
 
         # Convert ixmp4 items to ContainerData to streamline adding to container
         container_items = _convert_ixmp4_items_to_containerdata(items=ixmp4_items)
@@ -320,7 +318,7 @@ def write_run_to_gdx(
 # have proper attributes defined. Maybe we could define a TypeAlias that catches both
 # cases and avoids the need of type: ignores
 def _set_columns_to_read_from_records(
-    item: AbstractVariable | AbstractEquation,
+    item: Variable | Equation,
 ) -> list[str]:
     """Gather all columns for `item` to read from GDX records."""
     # Prepare columns to select from container.data
@@ -339,7 +337,7 @@ def _set_columns_to_read_from_records(
 
 
 def _read_variables_to_run(  # type: ignore[no-any-unimported]
-    container: gt.Container, run: Run, variables: Iterable[AbstractVariable]
+    container: gt.Container, run: Run, variables: Iterable[Variable]
 ) -> None:
     """Read `variables` from `container` and store them in `run`."""
     for variable in variables:
@@ -360,13 +358,11 @@ def _read_variables_to_run(  # type: ignore[no-any-unimported]
             records.columns = pd.Index(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
-            run.backend.optimization.variables.add_data(
-                id=variable.id, data=records[columns_of_interest]
-            )
+            variable.add_data(records[columns_of_interest])
 
 
 def _read_equations_to_run(  # type: ignore[no-any-unimported]
-    container: gt.Container, run: Run, equations: Iterable[AbstractEquation]
+    container: gt.Container, run: Run, equations: Iterable[Equation]
 ) -> None:
     """Read `equations` from `container` and store them in `run`."""
     for equation in equations:
@@ -387,9 +383,7 @@ def _read_equations_to_run(  # type: ignore[no-any-unimported]
             records.columns = pd.Index(
                 columns_of_interest + ["lower", "upper", "scale"]
             )
-            run.backend.optimization.equations.add_data(
-                id=equation.id, data=records[columns_of_interest]
-            )
+            equation.add_data(records[columns_of_interest])
 
 
 # FIXME This assumes that all IndexSets of the to-be-read Equations and Variables are
@@ -444,9 +438,9 @@ def read_gdx_to_run(
     # NOTE This handles empty `var_list`, too,
     # which is not necessary as long as any Variables are required in message_ix
     variables = (
-        run.backend.optimization.variables.list(run_id=run.id, name__in=var_list)
+        run.optimization.variables.list(run__id=run.id, name__in=var_list)
         if len(var_list)
-        else run.backend.optimization.variables.list(run_id=run.id)
+        else run.optimization.variables.list(run__id=run.id)
     )
     _read_variables_to_run(container=container, run=run, variables=variables)
 
@@ -454,8 +448,8 @@ def read_gdx_to_run(
     # NOTE This handles empty `equ_list`, too,
     # which is not necessary as long as any Equations are required in message_ix
     equations = (
-        run.backend.optimization.equations.list(run_id=run.id, name__in=equ_list)
+        run.optimization.equations.list(run__id=run.id, name__in=equ_list)
         if len(equ_list)
-        else run.backend.optimization.equations.list(run_id=run.id)
+        else run.optimization.equations.list(run__id=run.id)
     )
     _read_equations_to_run(container=container, run=run, equations=equations)

@@ -6,8 +6,6 @@ import pandas as pd
 from .pandas import SettingWithCopyWarning
 
 if TYPE_CHECKING:
-    from ixmp4.data.backend.db import SqlAlchemyBackend
-
     from ixmp.backend.ixmp4 import IXMP4Backend
 
 
@@ -109,10 +107,3 @@ def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
     return isinstance(obj, IXMP4Backend)
-
-
-def is_sqlalchemybackend(obj: Any) -> TypeGuard["SqlAlchemyBackend"]:
-    """Ensure that `obj` is :class:`ixmp4.data.backend.db.SqlAlchemyBackend`."""
-    from ixmp4.data.backend.db import SqlAlchemyBackend
-
-    return isinstance(obj, SqlAlchemyBackend)

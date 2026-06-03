@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 import pandas
+from ixmp4.core.iamc.variable import VariableServiceFacade as IamcVariableServiceFacade
+from ixmp4.core.model import ModelServiceFacade
 from ixmp4.core.optimization.equation import Equation, EquationServiceFacade
 from ixmp4.core.optimization.indexset import IndexSet, IndexSetServiceFacade
 from ixmp4.core.optimization.parameter import Parameter, ParameterServiceFacade
@@ -18,10 +20,8 @@ from ixmp4.core.optimization.variable import Variable
 from ixmp4.core.optimization.variable import (
     VariableServiceFacade as OptimizationVariableServiceFacade,
 )
-from ixmp4.data.iamc.variable.service import VariableService as IamcVariableService
-from ixmp4.data.model.service import ModelService
-from ixmp4.data.region.service import RegionService
-from ixmp4.data.scenario.service import ScenarioService
+from ixmp4.core.region import RegionServiceFacade
+from ixmp4.core.scenario import ScenarioServiceFacade
 
 # Compatibility with Python 3.11 and earlier
 # TODO Use "from typing import NotRequired" when dropping support for Python 3.10
@@ -45,7 +45,10 @@ IXMP4ServiceFacade = (
 )
 
 IXMP4IamcDomainService = (
-    ModelService | RegionService | ScenarioService | IamcVariableService
+    ModelServiceFacade
+    | RegionServiceFacade
+    | ScenarioServiceFacade
+    | IamcVariableServiceFacade
 )
 
 

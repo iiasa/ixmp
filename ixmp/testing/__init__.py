@@ -54,7 +54,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
-from ixmp.util.ixmp4 import format_url, has_ixmp4, is_ixmp4backend, is_sqlalchemybackend
+from ixmp.util.ixmp4 import format_url, has_ixmp4, is_ixmp4backend
 
 from .data import (
     DATA,

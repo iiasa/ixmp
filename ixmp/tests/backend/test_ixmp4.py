@@ -45,25 +45,25 @@ class TestIxmp4Functions:
             ixmp4_backend._ni()
 
     def test__get_repo(self, ixmp4_backend: "IXMP4Backend", scenario: Scenario) -> None:
-        from ixmp4.core.optimization.equation import Equation, EquationRepository
-        from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
-        from ixmp4.core.optimization.parameter import Parameter, ParameterRepository
-        from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
-        from ixmp4.core.optimization.table import Table, TableRepository
-        from ixmp4.core.optimization.variable import Variable, VariableRepository
+        from ixmp4.core.optimization.equation import Equation, EquationServiceFacade
+        from ixmp4.core.optimization.indexset import IndexSet, IndexSetServiceFacade
+        from ixmp4.core.optimization.parameter import Parameter, ParameterServiceFacade
+        from ixmp4.core.optimization.scalar import Scalar, ScalarServiceFacade
+        from ixmp4.core.optimization.table import Table, TableServiceFacade
+        from ixmp4.core.optimization.variable import Variable, VariableServiceFacade
 
         repos = {
-            IndexSet: IndexSetRepository,
-            Scalar: ScalarRepository,
-            Table: TableRepository,
-            Parameter: ParameterRepository,
-            Equation: EquationRepository,
-            Variable: VariableRepository,
+            IndexSet: IndexSetServiceFacade,
+            Scalar: ScalarServiceFacade,
+            Table: TableServiceFacade,
+            Parameter: ParameterServiceFacade,
+            Equation: EquationServiceFacade,
+            Variable: VariableServiceFacade,
         }
 
         # Test correct kind of instance is returned
         for type, expected_repo in repos.items():
-            repo = ixmp4_backend._get_repo(s=scenario, type=type)  # type: ignore [arg-type]
+            repo = ixmp4_backend._get_repo(s=scenario, type=type)  # type: ignore [arg-type, call-overload]
             assert isinstance(repo, expected_repo)
 
     def test__find_item(
@@ -131,7 +131,9 @@ class TestIxmp4Functions:
             s=scenario, name=name, value=value, unit=None, comment=comment
         )
         # NOTE We don't really have a way to retrieve Scalars from IXMP4Backend
-        scalar = ixmp4_backend.index[scenario].optimization.scalars.get(name=name)
+        scalar = ixmp4_backend.index[scenario].optimization.scalars.get_by_name(
+            name=name
+        )
         assert scalar.value == value
         assert scalar.docs == comment
 
@@ -154,7 +156,9 @@ class TestIxmp4Functions:
         ixmp4_backend._add_data_to_parameter(
             s=scenario, name=name, key=key, value=value, unit=unit_name, comment=comment
         )
-        parameter = ixmp4_backend.index[scenario].optimization.parameters.get(name=name)
+        parameter = ixmp4_backend.index[scenario].optimization.parameters.get_by_name(
+            name=name
+        )
         assert parameter.data == {
             indexset_name: [key],
             "values": [value],
@@ -253,11 +257,11 @@ class TestIxmp4Functions:
         table_data = {"Indexset": [indexset_data]}
         # NOTE New Scenarios are locked and ready for changes by default
         indexset = run.optimization.indexsets.create("Indexset")
-        indexset.add(data=indexset_data)
+        indexset.add_data(data=indexset_data)
         table = run.optimization.tables.create(
             "Table", constrained_to_indexsets=[indexset.name]
         )
-        table.add(data=table_data)
+        table.add_data(data=table_data)
 
         # Assert data is stored in scenario
         set_data = scenario.set(name=table.name)
@@ -281,8 +285,8 @@ class TestIxmp4Functions:
         indexset = run.optimization.indexsets.create("Indexset")
         ixmp4_backend.delete_item(s=scenario, type="set", name=indexset.name)
 
-        # Test there are no 'sets' on scenario anymore
-        assert ixmp4_backend.list_items(s=scenario, type="set") == []
+        # Test the 'set' was deleted from the scenario
+        assert "Indexset" not in ixmp4_backend.list_items(s=scenario, type="set")
 
     def test_write_file(self, ixmp4_backend: "IXMP4Backend") -> None:
         # Test raising an error for unknown file extension

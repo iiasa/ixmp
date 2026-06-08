@@ -1690,7 +1690,8 @@ class IXMP4Backend(CachingBackend):
             # data = data.drop(columns={"STEP_CATEGORY", "TYPE"})
 
             # # Sort columns according to ixmp_source expectations
-            # # NOTE Alternatively, check_like=True might work in test/assert_frame_equal
+            # # NOTE Alternatively, check_like=True might work in
+            # # test/assert_frame_equal
             # data = data[expected_columns]
 
             data.to_csv(path_or_buf=_path, index=False)

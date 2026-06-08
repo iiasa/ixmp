@@ -107,12 +107,12 @@ jobs:
     - name: Install the package and dependencies
       # Install [docs] → [tests] → [ixmp4,report,tutorial]
       #
-      # Temporary:
-      # - Use branch for https://github.com/iiasa/ixmp4/pull/208
+      # Temporary
+      # - Use branch for https://github.com/iiasa/ixmp6/pull/268
       run: |
         uv pip install \
-            "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'" \
-            .[docs]
+          "ixmp4 @ git+https://github.com/iiasa/ixmp4@issue/267" \
+          .[docs]
         ${{ matrix.install-extra }}
       shell: bash
 

@@ -116,7 +116,7 @@ class TestIxmp4IOFunctions:
     def test__records(self, run: "Run") -> None:
         from ixmp.backend.ixmp4_io import _records
 
-        run.backend.units.create("unit")
+        run._backend.units.create("unit")
 
         # Test records of a Scalar
         with run.transact("Test _records for Scalar"):
@@ -133,7 +133,7 @@ class TestIxmp4IOFunctions:
 
         # Test records of an IndexSet
         with run.transact("Test _records for IndexSet"):
-            indexset.add(["foo", "bar"])
+            indexset.add_data(["foo", "bar"])
         assert _records(indexset) == indexset.data
 
         # Test records of a Parameter
@@ -141,7 +141,7 @@ class TestIxmp4IOFunctions:
             parameter = run.optimization.parameters.create(
                 "Parameter", constrained_to_indexsets=[indexset.name]
             )
-            parameter.add(
+            parameter.add_data(
                 {indexset.name: ["foo", "bar"], "values": [1, 2], "units": ["unit"] * 2}
             )
         expected = parameter.data.copy()
@@ -201,7 +201,7 @@ class TestIxmp4IOFunctions:
         # Test adding an Indexset (covers no new cases, but we need to index a Table)
         with run.transact("Test _convert_ixmp4_items_to_containerdata with IndexSet"):
             indexset = run.optimization.indexsets.create("Indexset")
-            indexset.add(data=["foo", "bar", "baz"])
+            indexset.add_data(data=["foo", "bar", "baz"])
         container_list = _convert_ixmp4_items_to_containerdata(items=[indexset])
         assert len(container_list) == 1
         indexset_data = container_list[0]
@@ -213,7 +213,7 @@ class TestIxmp4IOFunctions:
             table = run.optimization.tables.create(
                 "Table", constrained_to_indexsets=[indexset.name]
             )
-            table.add(data={indexset.name: ["baz", "foo", "bar"]})
+            table.add_data(data={indexset.name: ["baz", "foo", "bar"]})
         container_list = _convert_ixmp4_items_to_containerdata(items=[table])
         table_data = container_list[0]
         assert table.name == table_data.name
@@ -264,25 +264,22 @@ class TestIxmp4IOFunctions:
 
         # Test an Equation without dimensions
         with run.transact("Test _set_columns_to_read_from_records Equ w/o dims"):
-            equation = run.backend.optimization.equations.create(
-                run_id=run.id, name="Equation"
-            )
+            equation = run.optimization.equations.create(name="Equation")
         columns = _set_columns_to_read_from_records(item=equation)
         assert columns == default_columns
 
         # Test an indexed Variable
         with run.transact("Test _set_columns_to_read_from_records Var w/ dims"):
             indexset = run.optimization.indexsets.create("Indexset")
-            variable = run.backend.optimization.variables.create(
-                run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
+            variable = run.optimization.variables.create(
+                name="Variable", constrained_to_indexsets=[indexset.name]
             )
         columns = _set_columns_to_read_from_records(item=variable)
         assert columns == [indexset.name] + default_columns
 
         # Test an Equation with dimension names
         with run.transact("Test _set_columns_to_read_from_records Equ w/ column_names"):
-            equation_2 = run.backend.optimization.equations.create(
-                run_id=run.id,
+            equation_2 = run.optimization.equations.create(
                 name="Equation 2",
                 constrained_to_indexsets=[indexset.name],
                 column_names=["Column"],
@@ -298,9 +295,9 @@ class TestIxmp4IOFunctions:
 
         with run.transact("Test _read_variables_to_run"):
             indexset = run.optimization.indexsets.create("Indexset")
-            indexset.add(data=["foo", "bar", "baz"])
-            variable = run.backend.optimization.variables.create(
-                run_id=run.id, name="Variable", constrained_to_indexsets=[indexset.name]
+            indexset.add_data(data=["foo", "bar", "baz"])
+            variable = run.optimization.variables.create(
+                name="Variable", constrained_to_indexsets=[indexset.name]
             )
 
         # NOTE A read GDX always contains 'level', 'marginal', 'lower', 'upper', 'scale'
@@ -321,9 +318,7 @@ class TestIxmp4IOFunctions:
             "levels": records["level"],
             "marginals": records["marginal"],
         }
-        variable = run.backend.optimization.variables.get(
-            run_id=run.id, name=variable.name
-        )
+        variable = run.optimization.variables.get_by_name(variable.name)
         assert variable.data == expected
 
     def test__read_equations_to_run(self, run: "Run", container: Any) -> None:
@@ -331,9 +326,9 @@ class TestIxmp4IOFunctions:
 
         with run.transact("Test _read_equations_to_run"):
             indexset = run.optimization.indexsets.create("Indexset")
-            indexset.add(data=["foo", "bar", "baz"])
-            equation = run.backend.optimization.equations.create(
-                run_id=run.id, name="Equation", constrained_to_indexsets=[indexset.name]
+            indexset.add_data(data=["foo", "bar", "baz"])
+            equation = run.optimization.equations.create(
+                name="Equation", constrained_to_indexsets=[indexset.name]
             )
 
         # NOTE A read GDX always contains 'level', 'marginal', 'lower', 'upper', 'scale'
@@ -356,24 +351,16 @@ class TestIxmp4IOFunctions:
             "levels": records["level"],
             "marginals": records["marginal"],
         }
-        equation = run.backend.optimization.equations.get(
-            run_id=run.id, name=equation.name
-        )
+        equation = run.optimization.equations.get_by_name(name=equation.name)
         assert equation.data == expected
 
     def test_read_gdx_to_run(self, run: "Run", tmp_path: Path) -> None:
         from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
         # NOTE Names without space to produce "valid GAMS names"
-        variable_1 = run.backend.optimization.variables.create(
-            run_id=run.id, name="Variable1"
-        )
-        variable_2 = run.backend.optimization.variables.create(
-            run_id=run.id, name="Variable2"
-        )
-        variable_3 = run.backend.optimization.variables.create(
-            run_id=run.id, name="Variable3"
-        )
+        variable_1 = run.optimization.variables.create(name="Variable1")
+        variable_2 = run.optimization.variables.create(name="Variable2")
+        variable_3 = run.optimization.variables.create(name="Variable3")
         records: dict[str, list[float] | list[int] | list[str]] = {
             "level": [1.0],
             "marginal": [0],

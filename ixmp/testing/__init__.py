@@ -223,6 +223,9 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     db_name = PG_NAME_NONE
 
     if "ixmp4" in backends:
+        # Silence noisy debug logging from ixmp4 → litestar → polyfactory → faker
+        logging.getLogger("faker").setLevel(logging.INFO)
+
         # Connect to a PostgreSQL server and create a test database for this worker
         from sqlalchemy import create_engine, text
         from sqlalchemy.exc import OperationalError

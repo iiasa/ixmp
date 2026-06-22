@@ -575,12 +575,14 @@ class JDBCBackend(CachingBackend):
         """
         try:
             self.jobj.closeDB()
-        except java.IxException as e:  # pragma: no cover
-            log.warning(str(e))
-        except (AttributeError, jpype.JVMNotRunning):
-            # - self.jobj is None, e.g. cleanup after __init__ fails
-            # - JVM has already shut down, e.g. on program exit
+        except (AttributeError, ImportError):
+            # self.jobj is None, e.g. cleanup after __init__ fails
             pass
+        except Exception as e:  # pragma: no cover
+            # JVM has already shut down, e.g. on program exit. At this point, the
+            # `jpype` global is None, so we cannot check its type in the above block
+            if str(e) != "Java Virtual Machine is not running":
+                print(str(e))
 
     def get_auth(self, user: str, models: Iterable[str], kind: str) -> dict[str, bool]:
         model_access = self.jobj.checkModelAccess(user, kind, to_jlist(models))

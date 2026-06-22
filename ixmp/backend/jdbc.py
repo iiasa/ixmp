@@ -14,6 +14,8 @@ from collections.abc import (
 )
 from contextlib import contextmanager
 from copy import copy
+from dataclasses import asdict, dataclass, field
+from enum import Enum, auto
 from functools import lru_cache
 from itertools import islice
 from pathlib import Path, PurePosixPath
@@ -22,6 +24,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    NoReturn,
     cast,
     overload,
 )
@@ -48,7 +51,6 @@ from .common import FIELDS, CrossPlatformClone, ItemType
 if TYPE_CHECKING:
     from ixmp.types import (
         Filters,
-        JDBCBackendInitKwargs,
         ParData,
         ReadKwargs,
         SetData,
@@ -76,6 +78,9 @@ LOG_LEVELS = {
     "DEBUG": "DEBUG",
     "NOTSET": "ALL",
 }
+
+#: Default URL-end property/value pairs for HyperSQL databases.
+HSQLDB_DEFAULT_PROPS = ["hsqldb.default_table_type=cached"]
 
 # Java classes, loaded by start_jvm(). These become available as e.g. java.IxException
 # or java.HashMap.
@@ -105,67 +110,186 @@ JAVA_CLASSES = [
 ]
 
 
-DRIVER_CLASS = {
-    "oracle": "oracle.jdbc.driver.OracleDriver",
-    "hsqldb": "org.hsqldb.jdbcDriver",
-}
+class DRIVER(Enum):
+    """Supported JDBC drivers."""
+
+    #: HyperSQL.
+    hsqldb = auto()
+    #: Oracle.
+    oracle = auto()
+
+    @classmethod
+    def from_str(cls, value: "str | DRIVER") -> "DRIVER":
+        """Maybe convert :class:`str` to an enumeration member."""
+        try:
+            return cls[value] if isinstance(value, str) else value
+        except KeyError:
+            raise ValueError(f"unrecognized/unsupported JDBC driver {value!r}")
 
 
-def _create_properties(
-    driver: str | None = None,
-    path: str | Path | None = None,
-    url: str | None = None,
-    user: str | None = None,
-    password: str | None = None,
-) -> Any:
-    """Create a database Properties from arguments."""
-    properties = java.Properties()
+@dataclass
+class Options:
+    """Options and configuration for :class:`JDBCBackend`."""
 
-    # Handle arguments
-    try:
-        # FIXME Improve handling of None driver value
-        properties.setProperty("jdbc.driver", DRIVER_CLASS[driver])  # type:ignore[index]
-    except KeyError:
-        raise ValueError(f"unrecognized/unsupported JDBC driver {repr(driver)}")
+    driver: DRIVER
+    path: os.PathLike[str] | None = None
+    url: str = ""
+    user: str = ""
+    password: str = ""
+    extra_properties: dict[str, str] = field(default_factory=dict)
+    jvmargs: str | list[str] = ""
 
-    if driver == "oracle":
-        if url is None or path is not None:
+    def __post_init__(self) -> None:
+        # Maybe convert a str to a DRIVER member
+        self.driver = DRIVER.from_str(self.driver)
+
+        # Check consistency of fields
+        if self.driver is DRIVER.oracle and (self.path or not self.url):
             raise ValueError("use JDBCBackend(driver='oracle', url=…)")
+        elif self.driver is DRIVER.hsqldb and not self.path and not self.url:
+            raise ValueError(
+                "use JDBCBackend(driver='hsqldb', path=…) or "
+                "JDBCBackend(driver='hsqldb', url=…)"
+            )
 
-        full_url = f"jdbc:oracle:thin:@{url}"
-    elif driver == "hsqldb":
-        if path is None and url is None:
-            raise ValueError("use JDBCBackend(driver='hsqldb', path=…)")
+        # Remaining arguments are for the JVM
+        if isinstance(self.jvmargs, list):
+            self.jvmargs, *extra = self.jvmargs or [""]
+            if extra:
+                raise ValueError(f"Extra arguments for JDBCBackend: {extra!r}")
 
-        if url is not None:
-            if url.startswith("jdbc:hsqldb:"):
-                full_url = url
-            else:
-                raise ValueError(url)
+    @property
+    def full_url(self) -> str:
+        """The full JDBC URL for the connection."""
+        result = ["jdbc", self.driver.name]
+        match self.driver:
+            case DRIVER.oracle:
+                result.extend(["thin", f"@{self.url}"])
+            case DRIVER.hsqldb:
+                if self.path:
+                    proto = "file"
+                    # Convert Windows paths to use forward slashes
+                    db = str(PurePosixPath(Path(self.path).resolve())).replace("\\", "")
+                    props = HSQLDB_DEFAULT_PROPS.copy()
+                elif match := re.fullmatch(
+                    "(jdbc:hsqldb:)?(?P<proto>file|mem):(?P<db>[^;]+)(;(?P<props>.*))?",
+                    self.url,
+                ):
+                    proto, db, all_props = match.group("proto", "db", "props")
+                    props = all_props.split(";") if all_props else []
+                else:
+                    raise ValueError(f"Cannot construct a JDBC URL for {self}")
+
+                # Use cached tables by default for non-memory databases
+                if proto == "file" and not any(
+                    HSQLDB_DEFAULT_PROPS[0].partition("=")[0] in p for p in props
+                ):
+                    props.append(HSQLDB_DEFAULT_PROPS[0])
+
+                result.append(proto)
+                result.append(db + ((";".join([""] + props)) if props else ""))
+
+        return ":".join(result)
+
+    @property
+    def properties(self) -> Any:
+        """Return a Java Properties instance for use with ``ixmp.Platform(…)``."""
+        result = java.Properties()
+
+        for key, value in (
+            {
+                "jdbc.driver": {
+                    DRIVER.hsqldb: "org.hsqldb.jdbcDriver",
+                    DRIVER.oracle: "oracle.jdbc.driver.OracleDriver",
+                }[self.driver],
+                "jdbc.url": self.full_url,
+                "jdbc.user": self.user or "ixmp",
+                "jdbc.pwd": self.password or "ixmp",
+                # commented: This has no effect, apparently because ixmp_source Platform
+                # class fails to pass the property on to HyperSQL
+                # "hsqldb.default_table_type": "cached",
+            }
+            | self.extra_properties
+        ).items():
+            result.setProperty(key, value)
+
+        return result
+
+    @classmethod
+    def handle_config(cls, args: Sequence[Any], **kw: Any) -> dict[str, str]:
+        """Handle CLI arguments to :program:`ixmp platform add [name] ...`.
+
+        Returns
+        -------
+        dict
+            Representation of the `args` and `kw` suitable for :file:`config.json`.
+        """
+        args = list(args)
+
+        # Shorthand for exception formatting
+        exp, got = " expected for JDBCBackend", f"; got {args}, {kw!r}"
+
+        def _raise(text: str) -> NoReturn:
+            raise ValueError(f"{text}{exp}{got}")
+
+        # First argument: driver
+        try:
+            driver = DRIVER.from_str(args.pop(0))
+        except IndexError:
+            _raise("≥1 positional argument (driver)")
         else:
-            # path can not also be None due to the check above, convince type checker
-            assert path is not None
-            # Convert Windows paths to use forward slashes per HyperSQL JDBC URL spec
-            url_path = str(PurePosixPath(Path(path).resolve())).replace("\\", "")
-            full_url = f"jdbc:hsqldb:file:{url_path}"
-        user = user or "ixmp"
-        password = password or "ixmp"
+            exp += f"(driver={driver.name!r})"
 
-    properties.setProperty("jdbc.url", full_url)
-    properties.setProperty("jdbc.user", user)
-    properties.setProperty("jdbc.pwd", password)
+        # Remaining arguments
+        match driver:
+            case DRIVER.oracle:
+                if len(args) < 3:
+                    _raise("3–4 arguments (URL, user, password, [jvmargs])")
 
-    return properties
+                kw["url"], kw["user"], kw["password"], *kw["jvmargs"] = args
+            case DRIVER.hsqldb:
+                try:
+                    kw["path"] = Path(args.pop(0)).resolve()
+                except IndexError:
+                    if "url" not in kw:
+                        _raise("either positional path or url= keyword argument")
+                kw["jvmargs"] = args
 
+        # Convert from a Config instance back to a dict
+        result = dict()
+        for key, value in asdict(cls(driver, **kw)).items():
+            if key == "driver":
+                result["driver"] = value.name  # String name of enumeration value
+            elif value:
+                result[key] = value  # Non-empty item
 
-def _read_properties(file: Path) -> dict[str, str]:
-    """Read database properties from *file*, returning :class:`dict`."""
-    properties = dict()
-    for line in file.read_text().split("\n"):
-        match = re.search(r"([^\s]+)\s*=\s*(.+)\s*", line)
-        if match is not None:
-            properties[match.group(1)] = match.group(2)
-    return properties
+        return result
+
+    @classmethod
+    def from_file(cls, path: os.PathLike[str], jvmargs: str | list[str]) -> "Options":
+        """Read database properties from a file at `path`."""
+        path = Path(path)
+        if not path.exists() and path.is_file():
+            raise FileNotFoundError(path)
+
+        args: dict[str, Any] = dict(path=None, extra_properties={})
+        expr = re.compile(r"^(?:jdbc\.)?([\w\.]+)\s*=\s*(.+)\s*")
+        for match in filter(None, map(expr.fullmatch, path.read_text().splitlines())):
+            name, value = match.group(1), match.group(2)
+            match name:
+                case "driver":
+                    args[name] = DRIVER.hsqldb if "hsqldb" in value else DRIVER.oracle
+                case "pwd":
+                    args["password"] = value  # Change name
+                case "url" | "user":
+                    args[name] = value  # Store
+                case _:
+                    args["extra_properties"][name] = value  # Store
+
+        if "url" not in args:
+            raise ValueError(f"File {path} contains no database URL")
+
+        return cls(**args, jvmargs=jvmargs)
 
 
 def _raise_jexception(exc: Any, msg: str = "unhandled Java exception: ") -> None:
@@ -285,6 +409,8 @@ class JDBCBackend(CachingBackend):
         `driver`, `url`, `user`, and `password` information.
     """
 
+    _options: Options
+
     # NB Much of the code of this backend is in Java, in the iiasa/ixmp_source GitHub
     #    repository.
     #
@@ -300,7 +426,7 @@ class JDBCBackend(CachingBackend):
     #    - s_clone() is only supported when target_backend is JDBCBackend.
 
     #: Reference to the at.ac.iiasa.ixmp.Platform Java object.
-    jobj: jpype.JObject = None  # type: ignore[no-any-unimported]
+    jobj: jpype.JObject = None  # type: ignore [no-any-unimported]
 
     #: Mapping from ixmp.TimeSeries object to the underlying at.ac.iiasa.ixmp.Scenario
     #: object (or subclasses of either).
@@ -314,60 +440,34 @@ class JDBCBackend(CachingBackend):
         dbprops: os.PathLike[str] | None = None,
         cache: bool = True,
         log_level: int | str | None = None,
-        **kwargs: Unpack["JDBCBackendInitKwargs"],
+        **kwargs: Any,
     ) -> None:
-        properties: Any | None = None
-
-        # Handle arguments
-        if dbprops:
-            # Use an existing file
-            _dbprops = Path(dbprops)
-            if _dbprops.exists() and _dbprops.is_file():
-                # Existing properties file
-                properties = _read_properties(_dbprops)
-                if "jdbc.url" not in properties:
-                    raise ValueError("Config file contains no database URL")
-            else:
-                raise FileNotFoundError(_dbprops)
-
-        start_jvm(jvmargs)
-
-        # Invoke the parent constructor to initialize the cache
-        super().__init__(cache_enabled=cache)
-
         # Extract a log_level keyword argument before _create_properties(). By default,
         # use the same level as the 'ixmp' logger, whatever that has been set to.
         ixmp_logger = logging.getLogger("ixmp")
         log_level = log_level or ixmp_logger.getEffectiveLevel()
 
-        # Create a database properties object
-        if properties:
-            # ...using file contents
-            new_props = java.Properties()
-            [new_props.setProperty(k, v) for k, v in properties.items()]
-            properties = new_props
-        else:
-            # ...from arguments
-            try:
-                properties = _create_properties(**kwargs)
-            except TypeError as e:
-                msg = e.args[0].replace("_create_properties", "JDBCBackend")
-                raise TypeError(msg)
-
-        # We seem to assume this
-        assert properties is not None
-
-        log.info(
-            "launching ixmp.Platform connected to {}".format(
-                properties.getProperty("jdbc.url")
+        # Handle arguments, create a Config object, and store for later reference
+        try:
+            self._options = (
+                Options.from_file(dbprops, jvmargs or "")
+                if dbprops
+                else Options(**kwargs, jvmargs=jvmargs or "")
             )
-        )
+        except TypeError as e:
+            raise TypeError(e.args[0].replace("Options.__init__", "JDBCBackend"))
 
-        # Store a copy of the properties for later introspection
-        self._properties = properties
+        # Start the JVM
+        start_jvm(self._options.jvmargs)
+
+        # Invoke the parent constructor to initialize the cache
+        super().__init__(cache_enabled=cache)
+
+        log.info(f"launching ixmp.Platform connected to {self._options.full_url}")
 
         try:
-            self.jobj = java.Platform("Python", properties)
+            # Instantiate the Java Platform object
+            self.jobj = java.Platform("Python", self._options.properties)
         except java.NoClassDefFoundError as e:  # pragma: no cover
             raise NameError(
                 f"{e}\nCheck that dependencies of ixmp.jar are "
@@ -377,11 +477,10 @@ class JDBCBackend(CachingBackend):
             # Handle Java exceptions
             jclass = e.__class__.__name__
             if jclass.endswith("HikariPool.PoolInitializationException"):
-                redacted = copy(kwargs)
                 # See https://github.com/python/mypy/issues/6019 for why we need a dict
                 # here
-                redacted.update({"user": "(HIDDEN)", "password": "(HIDDEN)"})
-                msg = f"unable to connect to database:\n{repr(redacted)}"
+                redacted = kwargs | dict(user="(HIDDEN)", password="(HIDDEN)")
+                msg = f"unable to connect to database:\n{redacted!r}"
             elif jclass.endswith("FlywayException"):
                 msg = "when initializing database:"
                 if "applied migration" in e.args[0]:
@@ -427,51 +526,7 @@ class JDBCBackend(CachingBackend):
         - ("hsqldb",) with "url" supplied via `kwargs`, e.g. "jdbc:hsqldb:mem://foo" for
           an in-memory database.
         """
-        args = list(args)
-        info = copy(kwargs)
-
-        # First argument: driver
-        try:
-            info["driver"] = args.pop(0)
-        except IndexError:
-            raise ValueError(
-                f"≥1 positional argument required for class=jdbc: driver; got: {args}, "
-                + str(kwargs)
-            )
-
-        if info["driver"] == "oracle":
-            if len(args) < 3:
-                raise ValueError(
-                    "3 or 4 arguments expected for driver=oracle: url, user, password, "
-                    f"[jvmargs]; got: {str(args)}"
-                )
-            info["url"], info["user"], info["password"], *jvmargs = args
-
-        elif info["driver"] == "hsqldb":
-            try:
-                info["path"] = Path(args.pop(0)).resolve()
-            except IndexError:
-                if "url" not in info:
-                    raise ValueError(
-                        "must supply either positional path or url= keyword argument "
-                        "for driver=hsqldb"
-                    )
-            jvmargs = args
-
-        else:
-            raise ValueError(
-                f"driver={info['driver']}; expected one of {set(DRIVER_CLASS)}"
-            )
-
-        if len(jvmargs) > 1:
-            raise ValueError(
-                f"Unrecognized extra argument(s) for driver={info['driver']}: "
-                f"{jvmargs[1:]}"
-            )
-        elif len(jvmargs):
-            info["jvmargs"] = jvmargs[0]
-
-        return info
+        return Options.handle_config(args, **kwargs)
 
     def set_log_level(self, level: int | str) -> None:
         # Set the level of the 'ixmp.backend.jdbc' logger. Messages are handled by the
@@ -583,8 +638,8 @@ class JDBCBackend(CachingBackend):
 
         for s in scenarios:
             data = []
-            for field in FIELDS["get_scenarios"]:
-                data.append(int(s[field]) if field == "version" else s[field])
+            for _field in FIELDS["get_scenarios"]:
+                data.append(int(s[_field]) if _field == "version" else s[_field])
             yield data
 
     def set_unit(self, name: str, comment: str) -> None:
@@ -967,9 +1022,7 @@ class JDBCBackend(CachingBackend):
         meta: bool,
     ) -> None:
         # Oracle is unable to handle ±∞ (issue #442)
-        if self._properties["jdbc.driver"] == DRIVER_CLASS["oracle"] and any(
-            map(np.isinf, data.values())
-        ):
+        if self._options.driver is DRIVER.oracle and any(map(np.isinf, data.values())):
             raise ValueError(
                 f"± infinity (at region={region}, variable={variable}) cannot be stored"
                 " in an Oracle database using JDBCBackend"

@@ -2,7 +2,8 @@ import gc
 import logging
 import os
 import platform
-from collections.abc import Callable, Generator
+import re
+from collections.abc import Generator
 from sys import getrefcount
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -15,7 +16,7 @@ from pytest import raises
 
 import ixmp
 import ixmp.backend.jdbc
-from ixmp.backend.jdbc import DRIVER_CLASS, java
+from ixmp.backend.jdbc import DRIVER, Options, java
 from ixmp.testing import DATA, MARK, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 from ixmp.util.ixmp4 import is_ixmp4backend
@@ -38,6 +39,26 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
+
+
+class TestOptions:
+    def test_default_table_types_duplicate(self, tmp_path: "Path") -> None:
+        """ "hsqldb.default_table_type=cached" is added by default, at most once."""
+        expr = re.compile("jdbc:hsqldb:file:[^;]*;hsqldb.default_table_type=cached")
+
+        # Using a path
+        assert expr.fullmatch(Options(DRIVER.hsqldb, path=tmp_path).full_url)
+
+        # Using a URL
+        assert expr.fullmatch(Options(DRIVER.hsqldb, url="file:foo").full_url)
+
+        # Using a URL with the parameter already added
+        opt = Options(DRIVER.hsqldb, url="file:foo;hsqldb.default_table_type=cached")
+        assert expr.fullmatch(opt.full_url)
+
+        # Existing property with default value is not overridden
+        opt = Options(DRIVER.hsqldb, url="file:foo;hsqldb.default_table_type=memory")
+        assert not expr.fullmatch(opt.full_url) and "=cached" not in opt.full_url
 
 
 @pytest.mark.flaky(
@@ -227,7 +248,7 @@ class TestJDBCBackend:
         # Make `mp` think it is connected to an Oracle database
         # NOTE mp inside this class only knows one backend
         assert isinstance(mp._backend, ixmp.backend.jdbc.JDBCBackend)
-        mp._backend._properties["jdbc.driver"] = DRIVER_CLASS["oracle"]
+        mp._backend._options.driver = DRIVER.oracle
 
         # TimeSeries object and data to add
         ts = ixmp.TimeSeries(mp, "model name", "scenario name", version="new")
@@ -279,10 +300,13 @@ def test_pass_properties() -> None:
 
 
 def test_invalid_properties_file(test_data_path: "Path") -> None:
-    # HyperSQL creates a file with a .properties suffix for every file-based
-    # database, but these files do not contain the information needed to
-    # instantiate a database connection
-    with pytest.raises(ValueError, match="Config file contains no database URL"):
+    """An exception is raised for an invalid :file:`.properties` file.
+
+    HyperSQL creates a file with a .properties suffix for every file-based database, but
+    these files files do not contain the information needed to instantiate a database
+    connection.
+    """
+    with pytest.raises(ValueError, match="File .* contains no database URL"):
         ixmp.Platform(dbprops=test_data_path / "hsqldb.properties")
 
 
@@ -329,32 +353,22 @@ def test_cache_arg(arg: bool, request: pytest.FixtureRequest) -> None:
     assert len(mp._backend._cache) == (1 if arg else 0)
 
 
-# This variable formerly had 'warns' as the third element in some tuples, to
-# test for deprecation warnings.
 INIT_PARAMS: tuple[
-    tuple[
-        list[str],
-        "TestInitKwargs",
-        Callable[..., Any],
-        type[TypeError] | type[ValueError],
-        str | None,
-    ],
+    tuple[list[str], "TestInitKwargs", type[Exception], str | None],
     ...,
 ] = (
     # Handled in JDBCBackend:
     (
         ["nonexistent.properties"],
         dict(),
-        raises,
         ValueError,
-        "platform name " r"'nonexistent.properties' not among \['default'",
+        r"platform name 'nonexistent.properties' not among \['default'",
     ),
-    (["nonexistent.properties"], dict(name="default"), raises, TypeError, None),
+    (["nonexistent.properties"], dict(name="default"), TypeError, None),
     # Using the dbtype keyword argument
     (
         [],
         dict(dbtype="HSQLDB"),
-        raises,
         TypeError,
         r"JDBCBackend\(\) got an unexpected keyword argument 'dbtype'",
     ),
@@ -362,38 +376,34 @@ INIT_PARAMS: tuple[
     (
         [],
         dict(backend="jdbc", driver="oracle", path="foo/bar"),
-        raises,
         ValueError,
         None,
     ),
     # …with driver='oracle' and no url
-    ([], dict(backend="jdbc", driver="oracle"), raises, ValueError, None),
+    ([], dict(backend="jdbc", driver="oracle"), ValueError, None),
     # …with driver='hsqldb' and no path
-    ([], dict(backend="jdbc", driver="hsqldb"), raises, ValueError, None),
+    ([], dict(backend="jdbc", driver="hsqldb"), ValueError, None),
     # …with driver='hsqldb' and url
     (
         [],
         dict(backend="jdbc", driver="hsqldb", url="example.com:1234:SCHEMA"),
-        raises,
         ValueError,
         None,
     ),
 )
 
 
-@pytest.mark.parametrize("args,kwargs,action,kind,match", INIT_PARAMS)
-def test_init(
+@pytest.mark.parametrize("args, kwargs,  kind, match", INIT_PARAMS)
+def test_init_raises(
     tmp_env: os._Environ[str],
     args: list[str],
     kwargs: "TestInitKwargs",
-    action: Callable[..., Any],
-    kind: type[TypeError] | type[ValueError],
+    kind: type[Exception],
     match: str | None,
 ) -> None:
-    """Semantics for JDBCBackend.__init__()."""
-    # NOTE Triggering some errors on purpose
-    with action(kind, match=match):
-        ixmp.Platform(*args, **kwargs)  # type: ignore[misc]
+    """Certain arguments to JDBCBackend.__init__() raise certain exceptions."""
+    with pytest.raises(kind, match=match):
+        ixmp.Platform(*args, **kwargs)  # type: ignore [misc]
 
 
 def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:

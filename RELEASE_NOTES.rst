@@ -48,9 +48,14 @@ All changes
     All remaining differences between :class:`.JDBCBackend` and :class:`.IXMP4Backend` are documented.
   - :class:`.Scenario.clone` can clone a Scenario *from* JDBCBackend *to* IXMP4Backend (:pull:`610`).
 
+- Improve :class:`.JDBCBackend` (:pull:`645`):
+
+  - Use cached tables for HyperSQL local file databases by default to improve performance
+    (:issue:`433`, :issue:`643`).
+
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.
-- Improve type hinting in :mod:`ixmp` (:pull:`581`, :pull:`587`).
+- Improve type hinting (:pull:`581`, :pull:`587`).
   This supports more precise and complete type checking of downstream code that uses :mod:`ixmp`.
 
   - New module :mod:`ixmp.types` containing types for annotating code that uses :mod:`ixmp`.

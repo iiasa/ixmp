@@ -33,7 +33,7 @@ jobs:
         - "3.13"
         - "3.14"  # Latest supported by ixmp
         gams-version:
-        - "45.7.0" # Oldest version of gamsapi allowed by pyproject.toml
+        - "48.7.0" # Oldest version of gamsapi allowed by pyproject.toml
         extra-id:
         - ""
         install-extra:
@@ -44,7 +44,7 @@ jobs:
         include:
         - os: ubuntu-latest
           python-version: "3.14"
-          gams-version: "45.7.0"
+          gams-version: "48.7.0"
           extra-id: "-pandas-3"
           install-extra: uv pip install "pandas >=3"
 
@@ -54,7 +54,7 @@ jobs:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.extra-id }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: ${{ env.depth }}
         fetch-tags: true
@@ -142,7 +142,7 @@ jobs:
           --ixmp-postgres=${{ steps.setup-postgres.outputs.connection-uri }}
 
     - name: Upload test coverage to Codecov.io
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN}}
 
@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: astral-sh/setup-uv@v7
       with: { enable-cache: true, python-version: "3.14" }
     - name: Clear and re-create the pre-commit environments

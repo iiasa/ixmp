@@ -33,23 +33,36 @@ JDBCBackend
 -----------
 
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
-   :members: handle_config, read_file, write_file
+   :members: handle_config, read_file, write_file 
 
-   JDBCBackend supports:
+   JDBCBackend supports two :class:`DRIVER` options:
 
-   - Databases in local files (HyperSQL) using ``driver='hsqldb'`` and the *path* argument.
-   - Remote, Oracle databases using ``driver='oracle'`` and the *url*, *username* and *password* arguments.
-   - Temporary, in-memory databases using ``driver='hsqldb'`` and the *url* argument.
-     Use the `url` parameter with the format ``jdbc:hsqldb:mem:[NAME]``, where [NAME] is any string::
+   :any:`DRIVER.oracle`
+      Shared databases on remote (networked) servers using :attr:`~.jdbc.Options.url`,
+      :attr:`~.jdbc.Options.user`, and :attr:`~.jdbc.Options.password`.
 
-       mp = ixmp.Platform(
-           backend="jdbc",
-           driver="hsqldb",
-           url="jdbc:hsqldb:mem:temporary platform",
-       )
+   :any:`DRIVER.hsqldb`
+      - Databases in local files (HyperSQL) using :attr:`~.jdbc.Options.path`.
 
+        For such databases,
+        JDBCBackend automatically ensures a binary cache of the table data is stored on disk.
+        See :attr:`.Options.full_url` and :data:`.HSQLDB_DEFAULT_PROPS` for details.
+     - Temporary, in-memory databases using :attr:`~.jdbc.Options.url`.
+       Give a URL in the form "jdbc:hsqldb:mem:[NAME]",
+       where "[NAME]" is any string:
 
-   JDBCBackend caches values in memory to improve performance when repeatedly reading data from the same items with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
+       .. code-block:: python
+
+          mp = ixmp.Platform(
+              backend="jdbc",
+              driver="hsqldb",
+              url="jdbc:hsqldb:mem:temporary platform",
+          )
+
+   JDBCBackend is a subclass of :class:`.CachingBackend`.
+   As such, it caches values in memory to improve performance
+   when repeatedly reading data from the same items
+   with :meth:`.par`, :meth:`.equ`, or :meth:`.var`.
 
    .. tip:: If repeatedly accessing the same item with different *filters*:
 
@@ -63,7 +76,9 @@ JDBCBackend
    JDBCBackend has the following **limitations**:
 
    - The `comment` argument to :meth:`.Platform.add_unit` is limited to 64 characters.
-   - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`) cannot be stored using :meth:`.TimeSeries.add_timeseries` when using an Oracle database via ``driver='oracle'``.
+   - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`) cannot be stored
+     using :meth:`.TimeSeries.add_timeseries` when using an Oracle database via ``driver='oracle'``.
+   - :meth:`.JDBCBackend.s_clone` is only supported when `target_backend` is JDBCBackend.
 
    JDBCBackend's implementation allows the following kinds of file input and output:
 
@@ -72,7 +87,22 @@ JDBCBackend
       read_file
       write_file
 
-.. autofunction:: ixmp.backend.jdbc.start_jvm
+   .. note:: Much of the code of this backend is in Java,
+      in the iiasa/ixmp_source GitHub repository.
+ 
+      Among other abstractions, this backend:
+
+      - Handles any conversion between Java and Python types
+        that is not done automatically by JPype.
+      - Catches Java exceptions
+        such as :py:`at.ac.iiasa.ixmp.exceptions.IxException`
+        and re-raises them as appropriate Python exceptions.
+    
+.. automodule:: ixmp.backend.jdbc
+   :members: DRIVER, Options, start_jvm
+
+.. automodule:: ixmp.backend.jdbc.options
+   :members: HSQLDB_DEFAULT_PROPS
 
 .. currentmodule:: ixmp.backend.ixmp4
 

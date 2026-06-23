@@ -132,7 +132,7 @@ ignore_missing_imports = true
 
 [tool.pytest]
 addopts = [
-  '-m "not rixmp and not performance"',
+  "-m (not rixmp and not performance)",
   # Disable faulthandler plugin on Windows to prevent spurious console noise; see
   # - https://github.com/jpype-project/jpype/issues/561
   # - https://github.com/iiasa/ixmp/issues/229

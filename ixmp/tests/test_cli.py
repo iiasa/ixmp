@@ -64,7 +64,7 @@ def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # because temp.properties is empty)
     result = ixmp_cli.invoke(cmd[2:])
     assert result.exception
-    assert "Config file contains no database URL" in result.exception.args[0]
+    assert "temp.properties contains no database URL" in result.exception.args[0]
 
     # --url argument can be given
     cmd = [

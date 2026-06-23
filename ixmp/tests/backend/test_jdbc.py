@@ -2,7 +2,6 @@ import gc
 import logging
 import os
 import platform
-import re
 from collections.abc import Generator
 from sys import getrefcount
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -16,7 +15,7 @@ from pytest import raises
 
 import ixmp
 import ixmp.backend.jdbc
-from ixmp.backend.jdbc import DRIVER, Options, java
+from ixmp.backend.jdbc.options import DRIVER
 from ixmp.testing import DATA, MARK, add_random_model_data, bool_param_id, make_dantzig
 from ixmp.testing.resource import memory_usage
 from ixmp.util.ixmp4 import is_ixmp4backend
@@ -41,26 +40,6 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-class TestOptions:
-    def test_default_table_types_duplicate(self, tmp_path: "Path") -> None:
-        """ "hsqldb.default_table_type=cached" is added by default, at most once."""
-        expr = re.compile("jdbc:hsqldb:file:[^;]*;hsqldb.default_table_type=cached")
-
-        # Using a path
-        assert expr.fullmatch(Options(DRIVER.hsqldb, path=tmp_path).full_url)
-
-        # Using a URL
-        assert expr.fullmatch(Options(DRIVER.hsqldb, url="file:foo").full_url)
-
-        # Using a URL with the parameter already added
-        opt = Options(DRIVER.hsqldb, url="file:foo;hsqldb.default_table_type=cached")
-        assert expr.fullmatch(opt.full_url)
-
-        # Existing property with default value is not overridden
-        opt = Options(DRIVER.hsqldb, url="file:foo;hsqldb.default_table_type=memory")
-        assert not expr.fullmatch(opt.full_url) and "=cached" not in opt.full_url
-
-
 @pytest.mark.flaky(
     reruns=5,
     rerun_delay=2,
@@ -79,7 +58,7 @@ def test_jvm_warn(recwarn: pytest.WarningsRecorder) -> None:
     """
 
     # Start the JVM for the first time in the test session
-    from ixmp.backend.jdbc import start_jvm
+    from ixmp.backend.jdbc.jvm import start_jvm
 
     start_jvm()
 
@@ -643,6 +622,7 @@ def test_reload_cycle(
     """
     # NB coverage is omitted because this test is not included in the standard
     #    suite
+    from ixmp.backend.jdbc.jvm import java
 
     # Clone reload_cycle_scenario onto a new Platform for this test
     platform_args: "PlatformInitKwargs" = dict(
@@ -658,7 +638,7 @@ def test_reload_cycle(
     mp = None
 
     # GC before cycling
-    java.System.gc()
+    java.lang.System.gc()
 
     # Set the garbage collection behaviour of JDBCBackend
     ixmp.backend.jdbc._GC_AGGRESSIVE = gc

@@ -73,7 +73,7 @@ def memory_usage(message: str = "", reset: bool = False) -> MemInfo:
     """
     import memory_profiler
 
-    from ixmp.backend.jdbc import java
+    from ixmp.backend.jdbc.jvm import java
 
     global _COUNT, _PREV, _RT
 
@@ -85,7 +85,7 @@ def memory_usage(message: str = "", reset: bool = False) -> MemInfo:
 
     try:
         # Get the Java runtime
-        runtime = _RT or java.Runtime.getRuntime()
+        runtime = _RT or java.lang.Runtime.getRuntime()
     except AttributeError:
         # JVM not loaded
         runtime = None

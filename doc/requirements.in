@@ -3,7 +3,7 @@
 # Unless otherwise noted, these are set in response to dependabot
 # security alerts; view the line blame for details.
 
-# Last updated per https://github.com/iiasa/ixmp/pull/636
+# Last updated per https://github.com/iiasa/ixmp/pull/648
 gitpython>=3.1.54
 idna>=3.15
 numpydoc==1.8.0

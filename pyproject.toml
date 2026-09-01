@@ -51,17 +51,14 @@ Repository = "https://github.com/iiasa/ixmp"
 [project.optional-dependencies]
 docs = [
   "ixmp[tests]",
-  "genno >= 1.26",  # For sphinx extensions; see doc/conf.py
+  "genno >= 1.26",        # For sphinx extensions; see doc/conf.py
   "GitPython",
   "numpydoc",
   "sphinx >= 3.0",
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]
-ixmp4 = [
-  "ixmp4 >= 0.14, < 0.15",
-  "gamsapi[core,transfer] >= 45.7.0",
-]
+ixmp4 = ["ixmp4 >= 0.16.3, < 0.17", "gamsapi[core,transfer] >= 45.7.0"]
 report = ["genno[compat,graphviz]"]
 tutorial = ["jupyter"]
 tests = [
@@ -84,23 +81,16 @@ exclude_also = [
   # Imports only used by type checkers
   "if TYPE_CHECKING:",
 ]
-omit = [
-  ".venv/*",
-  "ixmp/types.py",
-  "ixmp/util/sphinx_linkcode_github.py",
-]
+omit = [".venv/*", "ixmp/types.py", "ixmp/util/sphinx_linkcode_github.py"]
 
 [tool.mypy]
-files = [
-  "doc",
-  "ixmp",
-]
+files = ["doc", "ixmp"]
 # The following are roughly equivalent to `mypy --strict`; see `mypy --help`
 # and https://mypy.rtfd.io/en/stable/command_line.html#cmdoption-mypy-strict.
 # "Extra" are additional settings.
 check_untyped_defs = true
 disallow_any_generics = true
-disallow_any_unimported = true # Extra
+disallow_any_unimported = true     # Extra
 disallow_incomplete_defs = true
 disallow_subclassing_any = true
 disallow_untyped_calls = true
@@ -108,12 +98,12 @@ disallow_untyped_decorators = true
 disallow_untyped_defs = true
 extra_checks = true
 no_implicit_reexport = true
-show_error_codes = true  # Extra
+show_error_codes = true            # Extra
 strict_bytes = true
 strict_equality = true
 warn_redundant_casts = true
 warn_return_any = true
-warn_unreachable = true  # Extra
+warn_unreachable = true            # Extra
 warn_unused_configs = true
 warn_unused_ignores = true
 
@@ -157,7 +147,7 @@ markers = [
   "jdbc: tests exclusive to JDBCBackend or not (yet) implemented on IXMP4Backend.",
   "ixmp4: tests exclusive to IXMP4Backend.",
   "ixmp4_never: tests that ixmp4 will never implement",
-  "ixmp4_not_yet: tests that ixmp4 does not yet support"
+  "ixmp4_not_yet: tests that ixmp4 does not yet support",
 ]
 minversion = "9.0"
 strict_config = true

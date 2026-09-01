@@ -70,10 +70,12 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
 
         configure_logging_and_warnings()
 
-        import ixmp4.conf
+        from ixmp4.conf.settings import Settings
 
-        # Use configured ixmp4 storage directory
-        ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath("databases")
+        # omitting fields with defaults requires the pydantic mypy plugin
+        settings = Settings()  # type: ignore[call-arg]
+        ixmp4_databases = settings.get_database_dir()
+
     except ImportError:
         # ixmp4 not installed or importable; construct a likely value
         from platformdirs import user_data_path

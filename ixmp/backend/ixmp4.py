@@ -1563,23 +1563,25 @@ class IXMP4Backend(CachingBackend):
         years: Iterable[int],
         unit: str,
     ) -> None:
-        run = self.index[ts]
-
-        data_to_delete = self._platform.iamc.tabulate(
-            join_run_id=True,
-            run={"id": run.id, "default_only": False},
+        # Retrieve existing time series data matching `region`, `variable`, `years`,
+        # `unit`, and `subannual`.
+        # NOTE Here we *do not* include `META`-prefixed forms of the `variable` name.
+        #      The expected behaviour is that these data cannot be deleted.
+        df_to_delete = self._backend.iamc.datapoints.tabulate(
+            join_run_id=True,  # Needed to filter on run, below
+            join_parameters=True,  # Needed to filter on region, variable, and unit
+            run={"id": self.index[ts].id, "default_only": False},
             region={"name": region},
             variable={"name": variable},
-            year__in=list(years),
             unit={"name": unit},
-            # is_input=False,
+            type="ANNUAL" if subannual == "Year" else subannual,
+            # NB This may not work if type is something other than "ANNUAL"; then the
+            #    step_category column may be present instead.
+            step_year__in=list(years),
         )
 
-        # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
-        _subannual = "ANNUAL" if subannual == "Year" else subannual
-        data_to_delete = data_to_delete[data_to_delete["type"] == _subannual]
-
-        self._backend.iamc.datapoints.bulk_delete(df=data_to_delete)
+        # Delete these data
+        self._backend.iamc.datapoints.bulk_delete(df_to_delete)
 
     # Handle I/O
 

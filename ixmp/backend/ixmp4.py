@@ -507,6 +507,11 @@ class IXMP4Backend(CachingBackend):
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
 
+        # Clone to version 1 of a given (model name, scenario name) becomes the initial
+        # default. This matches behaviour of the Java code underlying JDBCBackend.
+        if cloned_run.version == 1:
+            cloned_run.set_as_default()
+
         return cloned_s
 
     def _get_max_as_default(self, model: str, scenario: str) -> Run:

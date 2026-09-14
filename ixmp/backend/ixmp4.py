@@ -1557,6 +1557,8 @@ class IXMP4Backend(CachingBackend):
     ) -> None:
         run = self.index[ts]
 
+        # Retrieve existing time series data matching `region`, `variable`, `years`,
+        # and `unit`
         data_to_delete = self._platform.iamc.tabulate(
             join_run_id=True,
             run={"id": run.id, "default_only": False},
@@ -1567,9 +1569,27 @@ class IXMP4Backend(CachingBackend):
             # is_input=False,
         )
 
-        # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
-        _subannual = "ANNUAL" if subannual == "Year" else subannual
-        data_to_delete = data_to_delete[data_to_delete["type"] == _subannual]
+        # Transform data as expected by bulk_delete()
+
+        # The docstring for ixmp4…PlatformIamcData.tabulate() indicates that "type" is
+        # one of the returned columns, but in v0.16.8 it appears missing sometimes or
+        # always.
+        if "type" in data_to_delete.columns:
+            # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
+            _subannual = "ANNUAL" if subannual == "Year" else subannual
+
+            # Query existing data of the corresponding type
+            data_to_delete = data_to_delete[data_to_delete["type"] == _subannual]
+        else:
+            # Assign value(s) to 1 or more columns.
+            # - ixmp4 v0.16.8 appears to expect 1 or more column(s) named
+            #   "step_categorical", "step_datetime", or "step_year"
+            # - tabulate() above returns a column "run__id", but bulk_delete() errors
+            #   without a column "time_series__id".
+            # FIXME Do not hard-code values here; reference ixmp4 documentation
+            data_to_delete = data_to_delete.assign(step_year=1).rename(
+                columns={"run__id": "time_series__id"}
+            )
 
         self._backend.iamc.datapoints.bulk_delete(df=data_to_delete)
 

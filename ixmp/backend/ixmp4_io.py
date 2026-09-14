@@ -444,22 +444,16 @@ def read_gdx_to_run(
         load_from=result_file, system_directory=str(gams_info().system_dir)
     )
 
-    # Load requested Variables and read them to `run`
-    # NOTE This handles empty `var_list`, too,
-    # which is not necessary as long as any Variables are required in message_ix
-    variables = (
-        run.optimization.variables.list(run__id=run.id, name__in=var_list)
-        if len(var_list)
-        else run.optimization.variables.list(run__id=run.id)
-    )
-    _read_variables_to_run(container=container, run=run, variables=variables)
+    # Lists of equations and variables to be read
+    equations = run.optimization.equations.list(run__id=run.id)
+    if equ_list:
+        equations = list(filter(lambda equ: equ.name in equ_list, equations))
+    variables = run.optimization.variables.list(run__id=run.id)
+    if var_list:
+        variables = list(filter(lambda var: var.name in var_list, variables))
 
-    # Load requested Equations and read them to `run`
-    # NOTE This handles empty `equ_list`, too,
-    # which is not necessary as long as any Equations are required in message_ix
-    equations = (
-        run.optimization.equations.list(run__id=run.id, name__in=equ_list)
-        if len(equ_list)
-        else run.optimization.equations.list(run__id=run.id)
-    )
-    _read_equations_to_run(container=container, run=run, equations=equations)
+    with run.transact("Read solution data from GDX"):
+        # Load requested Variables and read them to `run`
+        _read_variables_to_run(container=container, run=run, variables=variables)
+        # Load requested Equations and read them to `run`
+        _read_equations_to_run(container=container, run=run, equations=equations)

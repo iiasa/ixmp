@@ -15,7 +15,7 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend.common import FIELDS
-from ixmp.testing import DATA, assert_logs, models
+from ixmp.testing import DATA, assert_logs, make_dantzig, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -340,6 +340,38 @@ class TestPlatform:
         """Test __getattr__."""
         with pytest.raises(AttributeError):
             test_mp.not_a_direct_backend_method
+
+    def test_set_doc(
+        self, test_mp: ixmp.Platform, request: pytest.FixtureRequest
+    ) -> None:
+        """Test :meth:`.Platform.set_doc` and :meth:`.Platform.get_doc`."""
+        scen = make_dantzig(test_mp, request=request)
+
+        # 'Doc' strings associated with a specific model name can be stored/retrieved
+        test_mp.set_doc("model", {scen.model: "Dantzig model"})
+        assert test_mp.get_doc("model") == {"canning problem": "Dantzig model"}
+
+        # 'Doc' strings associated with time series 'variable' strings can be stored/
+        # retrieved
+        gdp = (
+            "Gross Domestic Product (GDP) is the monetary value of all "
+            "finished goods and services made within a country during "
+            "a specific period."
+        )
+        test_mp.set_doc("timeseries", dict(GDP=gdp))
+        assert test_mp.get_doc("timeseries", "GDP") == gdp
+
+        # Exception is raised for a doc 'domain' that is not supported
+        existing_domains = (
+            "model, region, scenario, timeseries"
+            if is_ixmp4backend(test_mp._backend)
+            else "scenario, model, region, metadata, timeseries"
+        )
+        with pytest.raises(
+            ValueError,
+            match=f"No such domain: baddomain, existing domains: {existing_domains}",
+        ):
+            test_mp.set_doc("baddomain", {})
 
     def test_scenario_list(self, mp: ixmp.Platform) -> None:
         scenario = mp.scenario_list()

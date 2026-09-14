@@ -712,33 +712,6 @@ def test_reload_cycle(
     memory_usage("shutdown")
 
 
-def test_docs(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
-    scen = make_dantzig(test_mp, request=request)
-    # test model docs
-    test_mp.set_doc("model", {scen.model: "Dantzig model"})
-    assert test_mp.get_doc("model") == {"canning problem": "Dantzig model"}
-
-    # test timeseries variables docs
-    gdp = (
-        "Gross Domestic Product (GDP) is the monetary value of all "
-        "finished goods and services made within a country during "
-        "a specific period."
-    )
-    test_mp.set_doc("timeseries", dict(GDP=gdp))
-    assert test_mp.get_doc("timeseries", "GDP") == gdp
-
-    # test bad domain
-    ex = raises(ValueError, test_mp.set_doc, "baddomain", {})
-    existing_domains = (
-        "model, region, scenario, timeseries"
-        if is_ixmp4backend(test_mp._backend)
-        else "scenario, model, region, metadata, timeseries"
-    )
-    exp = f"No such domain: baddomain, existing domains: {existing_domains}"
-
-    assert ex.value.args[0] == exp
-
-
 def test_cache_clear(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     """Removing set elements causes the cache to be cleared entirely."""
     scen = make_dantzig(test_mp, request=request)

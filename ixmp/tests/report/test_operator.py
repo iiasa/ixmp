@@ -23,6 +23,8 @@ from ixmp.report.operator import (
 )
 from ixmp.testing import DATA as test_data
 from ixmp.testing import assert_logs, make_dantzig
+from ixmp.testing.data import HIST_DF, INP_DF
+from ixmp.util import year_list
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -49,15 +51,20 @@ def test_from_url(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
     assert ts.url == result.url
 
 
-# TODO For all genno-related type ignores, remove once genno adds annotations
-
-
 def test_get_remove_ts(
     caplog: pytest.LogCaptureFixture,
     test_mp: "Platform",
     request: pytest.FixtureRequest,
 ) -> None:
+    # In the make_dantzig() scenario:
+    # - 3 rows with variable="GDP" are marked as meta=True.
+    # - 2 rows with variable="Demand" are not so marked.
     ts = make_dantzig(test_mp, request=request)
+
+    # Check number of rows of time series data
+    N = len(ts.timeseries())
+    N_non_meta = len(year_list(INP_DF.columns))
+    assert N == N_non_meta + len(year_list(HIST_DF))
 
     caplog.set_level(logging.INFO, "ixmp")
 
@@ -82,14 +89,14 @@ def test_get_remove_ts(
     with assert_logs(caplog, "Remove 5 of 5 (1964 <= year) rows of time series data"):
         c.get(key)
 
-    # See comment above; only one row is removed
-    assert 6 - 3 == len(ts.timeseries())
+    # See comment above. Only rows *not* marked meta are removed.
+    assert N - N_non_meta == len(ts.timeseries())
 
     # remove_ts() can be used directly
     remove_ts(ts)
 
     # All non-'meta' data were removed
-    assert 6 - 3 == len(ts.timeseries())
+    assert N - N_non_meta == len(ts.timeseries())
 
 
 def test_map_as_qty() -> None:

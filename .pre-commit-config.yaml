@@ -7,8 +7,7 @@ repos:
     additional_dependencies:
     - genno
     - GitPython
-    # TEMPORARY Use branch for https://github.com/iiasa/ixmp4/pull/208
-    - "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'"
+    - ixmp4
     - nbclient
     # Work around https://github.com/pandas-dev/pandas-stubs/issues/1787
     - "pandas-stubs < 3.0.3.260530"

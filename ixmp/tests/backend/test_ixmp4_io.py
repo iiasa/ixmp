@@ -312,7 +312,9 @@ class TestIxmp4IOFunctions:
         }
         container.addVariable(name="Variable", domain=[indexset.name], records=records)
 
-        _read_variables_to_run(container=container, run=run, variables=[variable])
+        with run.transact("test__read_variables_to_run"):
+            _read_variables_to_run(container=container, run=run, variables=[variable])
+
         expected = {
             indexset.name: records[indexset.name],
             "levels": records["level"],
@@ -345,7 +347,9 @@ class TestIxmp4IOFunctions:
             name="Equation", type="E", domain=[indexset.name], records=records
         )
 
-        _read_equations_to_run(container=container, run=run, equations=[equation])
+        with run.transact("test__read_equations_to_run"):
+            _read_equations_to_run(container=container, run=run, equations=[equation])
+
         expected = {
             indexset.name: records[indexset.name],
             "levels": records["level"],
@@ -358,9 +362,11 @@ class TestIxmp4IOFunctions:
         from ixmp.backend.ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
         # NOTE Names without space to produce "valid GAMS names"
-        variable_1 = run.optimization.variables.create(name="Variable1")
-        variable_2 = run.optimization.variables.create(name="Variable2")
-        variable_3 = run.optimization.variables.create(name="Variable3")
+        with run.transact("test_read_gdx_to_run preparation"):
+            variable_1 = run.optimization.variables.create(name="Variable1")
+            variable_2 = run.optimization.variables.create(name="Variable2")
+            variable_3 = run.optimization.variables.create(name="Variable3")
+
         records: dict[str, list[float] | list[int] | list[str]] = {
             "level": [1.0],
             "marginal": [0],

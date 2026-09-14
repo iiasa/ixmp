@@ -622,12 +622,24 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None = None,
         version: int | None = None,
     ) -> None:
+        # Retrieve a reference to an ixmp4.core.Run given (model, scenario, version)
         _model, _scenario, _version = self._validate_meta_args(
             model=model, scenario=scenario, version=version
         )
         run = self._platform.runs.get(
             model=_model, scenario=_scenario, version=_version
         )
+
+        # If the same (model, scenario, version) is already in memory (self.index), use
+        # that instance instead of `run`, which may have an incorrect value for
+        # `Run.owns_lock`.
+        # FIXME This appears to be an issue upstream in ixmp4. Report, resolve, and then
+        #       remove this workaround.
+        for other in filter(lambda obj: type(obj) is type(run), self.index.values()):
+            if other.id == run.id:  # Same ID in the database
+                run = other
+                break
+
         new_meta = {**dict(run.meta), **meta}
 
         try:

@@ -137,10 +137,11 @@ class Options:
 
     #: Name (also 'key') of the backend/platform in :mod:`ixmp4` configuration.
     ixmp4_name: str
-    #: Settings for the :mod:`ixmp4` platform
 
-    # omitting fields with defaults requires the pydantic mypy plugin
-    ixmp4_settings: "Settings" = field(default_factory=lambda: Settings())  # type: ignore[call-arg]
+    # Settings() is a pydantic class, so mypy can only understand that the omitted
+    # fields have defaults using the pydantic plugin for mypy.
+    #: Settings for the :mod:`ixmp4` platform.
+    ixmp4_settings: "Settings" = field(default_factory=lambda: Settings())  # type: ignore [call-arg]
 
     #: :mod:`ixmp4` data source name.
     dsn: str = ""

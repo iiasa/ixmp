@@ -14,14 +14,21 @@ log = logging.getLogger(__name__)
 
 
 class _JSONEncoder(json.JSONEncoder):
-    """Helper for writing config to file.
-
-    The default JSONEncoder does not automatically convert pathlib.Path objects.
-    """
+    """Helper for writing config to file."""
 
     def default(self, o: Any) -> Any:
+        """Handle two classes not handled by :class:`json.JSONEncoder`:
+
+        1. :class:`pathlib.Path`: encoded as :class:`str`.
+        2. :class:`ixmp4.conf.Settings`: encoded as empty :class:`dict`. This is
+           redundant with :attr:`.backend.ixmp4.Options.ixmp4_name`, which stores a
+           reference to an ixmp4 configuration record.
+        """
         if isinstance(o, Path):
             return str(o)
+        elif getattr(type(o), "__module__", "").startswith("ixmp4"):
+            return {}  # ixmp4.conf.Settings is not JSON serializable; skip
+
         return json.JSONEncoder.default(self, o)
 
 

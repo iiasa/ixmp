@@ -9,6 +9,7 @@ from ixmp.backend.common import ItemType
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
+    from ixmp.types import IXMP4ModelDataType
 
 
 def test__align_dtypes_for_filters() -> None:
@@ -52,7 +53,7 @@ class TestIxmp4Functions:
         from ixmp4.core.optimization.table import Table, TableServiceFacade
         from ixmp4.core.optimization.variable import Variable, VariableServiceFacade
 
-        repos = {
+        repos: dict["IXMP4ModelDataType", Any] = {
             IndexSet: IndexSetServiceFacade,
             Scalar: ScalarServiceFacade,
             Table: TableServiceFacade,
@@ -63,7 +64,7 @@ class TestIxmp4Functions:
 
         # Test correct kind of instance is returned
         for type, expected_repo in repos.items():
-            repo = ixmp4_backend._get_repo(s=scenario, type=type)  # type: ignore [arg-type, call-overload]
+            repo = ixmp4_backend._get_repo(s=scenario, type=type)
             assert isinstance(repo, expected_repo)
 
     def test__find_item(

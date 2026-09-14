@@ -631,8 +631,7 @@ class IXMP4Backend(CachingBackend):
         new_meta = {**dict(run.meta), **meta}
 
         try:
-            # TODO: __set__ should take a `Mapping` -> fix ixmp4 typehints
-            run.meta = new_meta  # type: ignore[assignment]
+            run.meta = new_meta
         except KeyError as e:
             if "<class" in str(e):
                 raise ValueError(

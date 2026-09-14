@@ -25,12 +25,22 @@ def _domain(item: IXMP4ModelData) -> list[str] | None:
 
     For IndexSets and Scalars, this is :obj:`None`.
 
-    For all others, this is `item.indexsets`.
+    For all others, this is for instance
+    :attr:`ixmp4.core.optimization.parameter.Parameter.indexset_names`, with non-index
+    set names like "values" removed.
     """
     if isinstance(item, (IndexSet, Scalar)):
         return None
     else:
-        return item.indexset_names
+        # Remove "values" from `item.indexset_names`. This appears to be an upstream
+        # but, since "values" is a name for the measure, and not a dimension (indexed by
+        # an 'indexset').
+        # TODO File and fix upstream, then remove this
+        result = (
+            list(filter(lambda name: name != "values", item.indexset_names or []))
+            or None
+        )
+        return result
 
 
 def _records(

@@ -111,15 +111,7 @@ class TestTimeSeries:
         node = hash(request.node.nodeid.replace("/", " "))
         # Class of object to yield
         cls = request.param
-        try:
-            yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
-        finally:
-            # Work around https://github.com/iiasa/ixmp4/issues/205
-            if is_ixmp4backend(mp._backend):
-                from ixmp4.data.backend.test import PostgresTestBackend
-
-                assert isinstance(mp._backend._backend, PostgresTestBackend)
-                mp._backend._backend.session.rollback()
+        yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
 
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])

@@ -271,13 +271,11 @@ class TestScenario:
     def test_clone_default_version(
         self, request: pytest.FixtureRequest, test_mp: "Platform"
     ) -> None:
+        """:meth:`Scenario.clone` to new/unique (m, s) names is the default version."""
         scen = ixmp.Scenario(
             mp=test_mp, model="Model", scenario="Scenario", version="new"
         )
-
-        # TODO Is this an indicator of something still needing to change?
-        if not is_ixmp4backend(test_mp._backend):
-            scen.commit("")
+        scen.commit("")
 
         unique_model_name = str(hash(request.node.nodeid))
         clone = scen.clone(model=unique_model_name)

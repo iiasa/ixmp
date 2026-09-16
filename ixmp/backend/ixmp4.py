@@ -1,5 +1,6 @@
 import builtins
 import logging
+import re
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -83,6 +84,9 @@ CLASS_FOR_IX_TYPE: dict[str, tuple["IXMP4ModelDataType", ...]] = {
     "set": (IndexSet, Table),
     "var": (Variable,),
 }
+
+#: String prefix used to encode the 'meta' attribute of time series data points.
+META = "__META__|"
 
 #: Mapping from keys of ixmp4 {Equation,Parameter,Variable}.data and column names used
 #: by ixmp.Scenario.
@@ -1469,42 +1473,35 @@ class IXMP4Backend(CachingBackend):
     ) -> None:
         """Implementation of :meth:`.base.Backend.set_data`.
 
-        - `meta` is stored in a column labeled "is_input".
+        - `meta` is stored by adding the prefix :data:`META` to the `variable` name.
         """
-        # Construct dataframe as ixmp4 expects it
-        years = data.keys()
-        values = data.values()
-        number_of_years = len(years)
-        regions = [region] * number_of_years
-        variables = [variable] * number_of_years
-        units = [unit] * number_of_years
-        is_input = [meta] * number_of_years
+        # Construct a pd.Dataframe in the form expected by ixmp4
+        df = pd.Series(data).reset_index().set_axis(["step_year", "value"], axis=1)
 
-        iterables = [years, values, regions, variables, units, is_input]
-        columns = ["step_year", "value", "region", "variable", "unit", "is_input"]
+        # Values to pass to DataFrame.assign()
+        assign = dict(
+            region=region, variable=(META if meta else "") + variable, unit=unit
+        )
 
         # NOTE We don't handle DataPoint.Type.DATETIME yet
         # NOTE subannual == "Year" per default and some string otherwise
         if subannual != "Year":
-            categories = [subannual] * number_of_years
-            iterables.append(categories)
-            columns.append("step_category")
+            assign.update(step_category=subannual)
+            data_type = ixmp4.iamc.DataPoint.Type.CATEGORICAL
+        else:
+            data_type = ixmp4.iamc.DataPoint.Type.ANNUAL
 
-        _data = list(zip(*iterables))
-        _data_type = (
-            ixmp4.iamc.DataPoint.Type.ANNUAL
-            if subannual == "Year"
-            else ixmp4.iamc.DataPoint.Type.CATEGORICAL
-        )
-
-        # Add timeseries dataframe
+        # Retrieve a reference to the Run
         run = self.index[ts]
+
+        # Possibly lock
         _owns_lock = run.owns_lock
         if not _owns_lock:
             run._lock()
 
         try:
-            run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+            # Add IAMC-structured data
+            run.iamc.add(df.assign(**assign), type=data_type)
         except Region.NotFound:
             raise ValueError(f"region = {region}")
 
@@ -1522,11 +1519,22 @@ class IXMP4Backend(CachingBackend):
         filter = ixmp4.iamc.DataPoint.Filter()
         if len(region):
             filter["region"] = {"name__in": list(region)}
-        if len(variable):
-            filter["variable"] = {"name__in": list(variable)}
+        if variable:
+            # Filter both `variable` names and the same names with the meta prefix
+            filter["variable"] = {
+                "name__in": list(variable) + list(map(f"{META}{{}}".format, variable))
+            }
         if len(unit):
             filter["unit"] = {"name__in": list(unit)}
-        data = self.index[ts].iamc.tabulate(**filter)
+
+        # - Retrieve the data.
+        # - Remove the meta prefix, which does not affect the behaviour of this method
+        #   and is not to be returned.
+        data = (
+            self.index[ts]
+            .iamc.tabulate(**filter)
+            .replace("^" + re.escape(META), "", regex=True)
+        )
 
         # Protect against empty data
         if not data.empty:

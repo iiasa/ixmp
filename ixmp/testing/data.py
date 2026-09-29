@@ -11,6 +11,7 @@ import pint
 import pytest
 
 from ixmp import IAMC_IDX, Platform, Scenario, TimeSeries
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.types import ModelScenario, TimeSeriesIdentifiers
@@ -205,11 +206,8 @@ def make_dantzig(
     --------
     .DantzigModel
     """
-    if sys.version_info >= (3, 10):
-        from ixmp.backend.ixmp4 import IXMP4Backend
-
-        if isinstance(mp._backend, IXMP4Backend):
-            _add_required_units(mp=mp)
+    if sys.version_info >= (3, 10) and is_ixmp4backend(mp._backend):
+        _add_required_units(mp=mp)
 
     # Add custom units and region for time series data
     try:

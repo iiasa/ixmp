@@ -52,8 +52,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
-from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
+from ixmp.util.ixmp4 import format_url, has_ixmp4, is_ixmp4backend, is_sqlalchemybackend
 
 from .data import (
     DATA,
@@ -74,6 +73,8 @@ if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
     from ixmp4.core import Run
     from sqlalchemy import Engine  # noqa: F401
+
+    from ixmp.backend.ixmp4 import IXMP4Backend
 
     try:
         # Pint 0.25.1 or later
@@ -433,7 +434,7 @@ def tmp_env(
     # Save for other processes
     ixmp_config.save()
 
-    try:
+    if has_ixmp4():
         import ixmp4.conf
 
         # Replace an automatic reference to the user's home directory with a
@@ -443,8 +444,6 @@ def tmp_env(
         ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
             parents=True, exist_ok=True
         )
-    except ImportError:
-        pass
 
     yield os.environ
 
@@ -529,7 +528,9 @@ def test_mp_f(
 
 
 @pytest.fixture
-def ixmp4_backend(test_mp: Platform) -> IXMP4Backend:
+def ixmp4_backend(test_mp: Platform) -> "IXMP4Backend":
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
     assert isinstance(test_mp._backend, IXMP4Backend)
     return test_mp._backend
 
@@ -545,7 +546,7 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
 
 
 @pytest.fixture
-def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
+def run(ixmp4_backend: "IXMP4Backend", scenario: Scenario) -> "Run":
     # NOTE New Scenario-backing Runs are locked per default, but our tests expect them
     # to be lockable for `transact()`
     _run = ixmp4_backend.index[scenario]

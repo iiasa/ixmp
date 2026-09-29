@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import genno
 import pandas as pd
-import pyam
 import pytest
 from genno import ComputationError, Computer
 from genno.testing import assert_qty_equal
@@ -183,6 +182,8 @@ def test_update_scenario(
 
 
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
+    import pyam
+
     # Computer and target scenario
     c = Computer()
 

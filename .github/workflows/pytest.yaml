@@ -105,8 +105,10 @@ jobs:
       run: echo "RETICULATE_PYTHON=$(uv python find)" >> $GITHUB_ENV
 
     - name: Install the package and dependencies
-      # TEMPORARY Use branch for https://github.com/iiasa/ixmp4/pull/208
-      # [docs] → [tests] → [ixmp4,report,tutorial]
+      # Install [docs] → [tests] → [ixmp4,report,tutorial]
+      #
+      # Temporary:
+      # - Use branch for https://github.com/iiasa/ixmp4/pull/208
       run: |
         uv pip install \
             "ixmp4 @ git+https://github.com/iiasa/ixmp4@enh/fixes-for-ixmp-support-september-2025; python_version > '3.9'" \

@@ -65,16 +65,14 @@ def _locate(filename: str | None = None) -> Path:
 
 def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
     """Default values for the `platform` setting on BaseValues."""
-    try:
-        from ixmp.util.ixmp4 import configure_logging_and_warnings
+    from ixmp.util.ixmp4 import has_ixmp4
 
-        configure_logging_and_warnings()
-
+    if has_ixmp4():
         import ixmp4.conf
 
         # Use configured ixmp4 storage directory
         ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath("databases")
-    except ImportError:
+    else:
         # ixmp4 not installed or importable; construct a likely value
         from platformdirs import user_data_path
 

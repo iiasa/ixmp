@@ -52,8 +52,7 @@ from typing_extensions import override
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
-from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import format_url, is_ixmp4backend, is_sqlalchemybackend
+from ixmp.util.ixmp4 import format_url, has_ixmp4, is_ixmp4backend, is_sqlalchemybackend
 
 from .data import (
     DATA,
@@ -74,6 +73,8 @@ if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
     from ixmp4.core import Run
     from sqlalchemy import Engine  # noqa: F401
+
+    from ixmp.backend.ixmp4 import IXMP4Backend
 
     try:
         # Pint 0.25.1 or later
@@ -131,6 +132,14 @@ MARK = {
         and _uname.system == "Windows"
         and ("2025" in _uname.release or _uname.version >= "10.0.26100"),
         reason="https://github.com/pytest-dev/pytest/issues/10843",
+    ),
+    # XFAIL a test if ixmp4 is not installed or importable. This differs from
+    # @pytest.mark.ixmp4, which only affects tests that use the "backend" fixture via
+    # pytest_generate_tests()
+    #
+    # TODO Simplify/unify these behaviours
+    "ixmp4-importable": pytest.mark.xfail(
+        condition=not has_ixmp4(), reason="IXMP4 not installed or importable"
     ),
     "ixmp4-pandas-3": pytest.mark.xfail(
         raises=AttributeError,
@@ -433,7 +442,7 @@ def tmp_env(
     # Save for other processes
     ixmp_config.save()
 
-    try:
+    if has_ixmp4():
         import ixmp4.conf
 
         # Replace an automatic reference to the user's home directory with a
@@ -443,8 +452,6 @@ def tmp_env(
         ixmp4.conf.settings.storage_directory.joinpath("databases").mkdir(
             parents=True, exist_ok=True
         )
-    except ImportError:
-        pass
 
     yield os.environ
 
@@ -529,7 +536,9 @@ def test_mp_f(
 
 
 @pytest.fixture
-def ixmp4_backend(test_mp: Platform) -> IXMP4Backend:
+def ixmp4_backend(test_mp: Platform) -> "IXMP4Backend":
+    from ixmp.backend.ixmp4 import IXMP4Backend
+
     assert isinstance(test_mp._backend, IXMP4Backend)
     return test_mp._backend
 
@@ -545,7 +554,7 @@ def scenario(test_mp: Platform, request: pytest.FixtureRequest) -> Scenario:
 
 
 @pytest.fixture
-def run(ixmp4_backend: IXMP4Backend, scenario: Scenario) -> "Run":
+def run(ixmp4_backend: "IXMP4Backend", scenario: Scenario) -> "Run":
     # NOTE New Scenario-backing Runs are locked per default, but our tests expect them
     # to be lockable for `transact()`
     _run = ixmp4_backend.index[scenario]

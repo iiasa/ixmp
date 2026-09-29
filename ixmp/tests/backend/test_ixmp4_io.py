@@ -6,6 +6,7 @@ import pytest
 from gams.transfer import Container
 
 from ixmp.model.gams import gams_info
+from ixmp.testing import MARK
 from ixmp.util.ixmp4 import ContainerData
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ def container() -> "Container":  # type: ignore [no-any-unimported]
     return Container(system_directory=str(gams_info().system_dir))
 
 
+@MARK["ixmp4-importable"]
 def test__record_versions(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _record_versions
 
@@ -43,6 +45,7 @@ def test__record_versions(container: Any) -> None:
     )
 
 
+@MARK["ixmp4-importable"]
 def test__update_item_in_container(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _update_item_in_container
 
@@ -61,6 +64,7 @@ def test__update_item_in_container(container: Any) -> None:
     assert all(container.hasSymbols(symbols=[item.name for item in item_list]))
 
 
+@MARK["ixmp4-importable"]
 def test__add_items_to_container(container: Any) -> None:
     from ixmp.backend.ixmp4_io import _add_items_to_container
 

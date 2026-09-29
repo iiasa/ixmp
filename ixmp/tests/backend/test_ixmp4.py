@@ -6,11 +6,13 @@ import pytest
 
 from ixmp import Scenario
 from ixmp.backend.common import ItemType
+from ixmp.testing import MARK
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
 
+@MARK["ixmp4-importable"]
 def test__align_dtypes_for_filters() -> None:
     from ixmp.backend.ixmp4 import _align_dtypes_for_filters
 
@@ -330,6 +332,7 @@ class TestIxmp4Functions:
             )
 
 
+@MARK["ixmp4-importable"]
 class TestOptions:
     @pytest.mark.parametrize(
         "exp, jdbc_compat_arg",

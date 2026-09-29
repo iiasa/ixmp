@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import genno
 import pandas as pd
-import pyam
 import pytest
 from genno import ComputationError, Computer
 from genno.testing import assert_qty_equal
@@ -22,7 +21,7 @@ from ixmp.report.operator import (
     update_scenario,
 )
 from ixmp.testing import DATA as test_data
-from ixmp.testing import assert_logs, make_dantzig
+from ixmp.testing import MARK, assert_logs, make_dantzig
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -182,7 +181,10 @@ def test_update_scenario(
     assert_frame_equal(par_df, data, check_like=True)
 
 
+@MARK["ixmp4-importable"]
 def test_store_ts(caplog: pytest.LogCaptureFixture, test_mp: "Platform") -> None:
+    import pyam
+
     # Computer and target scenario
     c = Computer()
 

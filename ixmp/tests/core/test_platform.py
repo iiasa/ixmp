@@ -15,7 +15,7 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend.common import FIELDS
-from ixmp.testing import DATA, assert_logs, models
+from ixmp.testing import DATA, MARK, assert_logs, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -327,7 +327,11 @@ class TestPlatform:
         "_backend, backend_args",
         (
             ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            ("ixmp4", dict(ixmp4_name="ixmp4-test")),
+            pytest.param(
+                "ixmp4",
+                dict(ixmp4_name="ixmp4-test"),
+                marks=MARK["ixmp4-importable"],
+            ),
         ),
     )
     def test_init1(

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from importlib import import_module
 from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
@@ -87,6 +88,24 @@ def format_url(value: str, **replacements: str) -> str:
     if replacements:
         url = url.set(**replacements)  # type: ignore [arg-type]
     return url.render_as_string(hide_password=False)
+
+
+def has_ixmp4() -> bool:
+    """Return :any:`True` if :mod:`ixmp4` is installed and importable without error."""
+    configure_logging_and_warnings()
+
+    try:
+        import_module("ixmp4")
+    except (
+        # Parent class of sqlalchemy.exc.InvalidRequestError,
+        # per https://github.com/iiasa/ixmp4/issues/272
+        Exception,
+        # Not installed or raises ImportError
+        ImportError,
+    ):
+        return False
+    else:
+        return True
 
 
 def is_ixmp4backend(obj: Any) -> TypeGuard["IXMP4Backend"]:

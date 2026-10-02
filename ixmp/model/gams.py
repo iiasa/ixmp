@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import Unpack
 
+from gams.control import GamsModifier, GamsWorkspace
+
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
 from ixmp.util import as_str_list
@@ -479,6 +481,283 @@ class GAMSModel(Model):
 
         # Finished: remove the temporary directory, if any
         self.remove_temp_dir()
+
+    def create_model_instance(
+        self,
+        scenario: Scenario,
+        modifiable_pars: Optional[list[str]] = None,
+        fixable_vars: Optional[list[str]] = None,
+    ):
+        """Create a persistent GAMS model instance for efficient resolving.
+
+        This method creates a GAMS model instance that can be resolved multiple times
+        without rebuilding the model. The initial compilation is done without solving
+        to save time.
+
+        Parameters
+        ----------
+        scenario : .Scenario
+            Scenario containing the model data.
+        modifiable_pars : list of str, optional
+            List of parameter names that can be modified between solves.
+        fixable_vars : list of str, optional
+            List of variable names that can be fixed between solves using
+            UpdateAction.Fixed. For each variable, a parameter named
+            '{var_name}_fix_data' will be created in sync_db to hold the
+            fixed values.
+            These parameters will be made modifiable in the model instance,
+            allowing fast sensitivity analysis without rebuilding.
+            Note: Parameters used in conditional expressions ($) cannot be modifiable.
+
+        Returns
+        -------
+        tuple of (GamsModelInstance, GamsWorkspace)
+            The model instance and workspace that can be used for efficient resolving.
+
+        Examples
+        --------
+        >>> from ixmp.model import get_model
+        >>> model_obj = get_model("MESSAGE")
+
+        # Parameter modification example
+        >>> mi, ws = model_obj.create_model_instance(
+        ...     scen, modifiable_pars=["inv_cost", "fix_cost", "var_cost"]
+        ... )
+        >>> mi.solve()
+        >>> inv_cost = mi.sync_db["inv_cost"]
+        >>> # Modify records and resolve
+        >>> mi.solve()
+
+        # Variable fixing example
+        >>> mi, ws = model_obj.create_model_instance(
+        ...     scen,
+        ...     modifiable_pars=["demand_fixed"],
+        ...     fixable_vars=["CAP_NEW"]
+        ... )
+        >>> mi.solve()
+        >>> # Fix some CAP_NEW values
+        >>> cap_fix = mi.sync_db["CAP_NEW_fix_data"]
+        >>> cap_fix.add_record(["node", "coal_ppl", 2020]).value = 100.0
+        >>> mi.solve()  # Resolve with CAP_NEW fixed
+        """
+        from ixmp.backend.jdbc import JDBCBackend
+
+        # Store the scenario so its attributes can be referenced by format()
+        self.scenario = scenario
+
+        backend_type = (
+            "jdbc"
+            if isinstance(self.scenario.platform._backend, JDBCBackend)
+            else "ixmp4"
+        )
+
+        # Note: We skip record_versions() here unlike in run() because:
+        # 1. create_model_instance() is typically called on already-solved scenarios
+        # 2. record_versions() requires checking out the scenario which fails if solved
+        # 3. Version info is already in the scenario from when it was originally solved
+
+        # Format or retrieve the model file option
+        model_file = Path(self.format_option("model_file"))
+
+        # Determine working directory - use model file parent if not using temp dir
+        self.cwd = Path(tempfile.mkdtemp()) if self.use_temp_dir else model_file.parent
+        # The "case" name
+        self.case = self.clean_path(self.format_option("case").replace(" ", "_"))
+        # Input and output file names
+        self.in_file = Path(self.format_option("in_file"))
+        self.out_file = Path(self.format_option("out_file"))
+
+        # Ensure output directory exists
+        self.out_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Remove stored reference to the Scenario to allow it to be GC'd later
+        delattr(self, "scenario")
+
+        # Common argument for write_file
+        s_arg: "RunKwargs" = dict(filters=dict(scenario=scenario))
+
+        # Instruct ixmp4 to record package versions
+        if backend_type == "ixmp4":
+            s_arg["record_version_packages"] = self.record_version_packages
+            s_arg["container_data"] = self.container_data
+
+        try:
+            # Write model data to file
+            scenario.platform._backend.write_file(
+                self.in_file, ItemType.SET | ItemType.PAR, **s_arg
+            )
+        except NotImplementedError:
+            # Remove the temporary directory, which should be empty
+            self.remove_temp_dir()
+            raise NotImplementedError(
+                "GAMSModel requires a Backend that can write to GDX files, e.g. "
+                "JDBCBackend"
+            )
+
+        # Create GAMS workspace and checkpoint
+        ws = GamsWorkspace(working_directory=str(self.cwd))
+        cp = ws.add_checkpoint()
+
+        # Create job from GAMS file
+        job = ws.add_job_from_file(str(model_file))
+
+        # Set up options with CompileOnly (no solve)
+        opt = ws.add_options()
+        opt.defines["in"] = str(self.in_file)
+        opt.defines["out"] = str(self.out_file)
+        opt.action = "C"  # CompileOnly
+
+        # Run job to create checkpoint
+        job.run(gams_options=opt, checkpoint=cp)
+
+        # Load the input GDX into workspace database
+        import time as time_module
+        t_start = time_module.time()
+        input_db = ws.add_database_from_gdx(str(self.in_file))
+        print(f"[{time_module.time()-t_start:.1f}s] Loaded input GDX", flush=True)
+
+        # Create model instance from checkpoint
+        mi = cp.add_modelinstance()
+        print(f"[{time_module.time()-t_start:.1f}s] Created model instance object", flush=True)
+
+        # Set up modifiable parameters (BEFORE instantiate)
+        modifiers = []
+        if modifiable_pars:
+            from gams.control.workspace import GamsException
+
+            for par_name in modifiable_pars:
+                try:
+                    # Get parameter from input database for dimension info
+                    input_par = input_db[par_name]
+                    # Add EMPTY parameter to sync_db (populated after instantiate)
+                    sync_par = mi.sync_db.add_parameter(par_name, input_par.dimension)
+                    # Create modifier from the empty parameter
+                    modifier = GamsModifier(sync_par)
+                    modifiers.append(modifier)
+                except (KeyError, GamsException, AttributeError, TypeError):
+                    # Parameter not found directly - check for special cases
+
+                    # Special case: demand_fixed is created from demand in MESSAGE
+                    if par_name == "demand_fixed":
+                        try:
+                            source_par = input_db["demand"]
+                            sync_par = mi.sync_db.add_parameter(par_name, source_par.dimension)
+                            modifier = GamsModifier(sync_par)
+                            modifiers.append(modifier)
+                        except (KeyError, GamsException, AttributeError, TypeError):
+                            pass
+
+                    # Special case: fixed_* parameters may not exist in input (used for variable fixing)
+                    # These parameters need to be created empty with correct dimensions
+                    elif par_name.startswith("fixed_"):
+                        # Map parameter names to their known dimensions
+                        fixed_param_dims = {
+                            "fixed_extraction": 4,       # node, commodity, grade, year
+                            "fixed_stock": 4,            # node, commodity, level, year
+                            "fixed_new_capacity": 3,     # node, technology, year_vtg
+                            "fixed_capacity": 4,         # node, technology, year_vtg, year_act
+                            "fixed_activity": 6,         # node, technology, year_vtg, year_act, mode, time
+                            "fixed_land": 3,             # node, land_scenario, year
+                        }
+                        if par_name in fixed_param_dims:
+                            try:
+                                dimension = fixed_param_dims[par_name]
+                                sync_par = mi.sync_db.add_parameter(par_name, dimension)
+                                modifier = GamsModifier(sync_par)
+                                modifiers.append(modifier)
+                            except (GamsException, AttributeError, TypeError):
+                                pass
+                    # Otherwise skip silently
+
+        # Set up fixable variables (BEFORE instantiate)
+        if fixable_vars:
+            from gams.control.workspace import UpdateAction
+
+            # Map MESSAGE variable names to their dimensions
+            message_var_dims = {
+                "CAP_NEW": 3,      # node, technology, year_vtg
+                "CAP": 4,          # node, technology, year_vtg, year_act
+                "ACT": 6,          # node, technology, year_vtg, year_act, mode, time
+                "EXT": 4,          # node, commodity, grade, year
+                "STOCK": 4,        # node, commodity, level, year
+                "LAND": 3,         # node, land_scenario, year
+                "CAP_NEW_UP": 3,   # node, technology, year
+                "CAP_NEW_LO": 3,   # node, technology, year
+                "ACT_UP": 4,       # node, technology, year, time
+                "ACT_LO": 4,       # node, technology, year, time
+            }
+
+            for var_name in fixable_vars:
+                if var_name not in message_var_dims:
+                    print(f"Warning: Unknown variable '{var_name}', skipping", flush=True)
+                    continue
+
+                try:
+                    from gams.control.workspace import VarType
+
+                    dimension = message_var_dims[var_name]
+
+                    # Create parameter to hold fixed values
+                    fix_data_par = mi.sync_db.add_parameter(
+                        f"{var_name}_fix_data", dimension
+                    )
+
+                    # Add variable to sync_db (needed for modifier)
+                    # MESSAGE variables are typically positive (Free for objective)
+                    vartype = VarType.Free if var_name == "OBJ" else VarType.Positive
+                    sync_var = mi.sync_db.add_variable(var_name, dimension, vartype)
+
+                    # Create modifier with UpdateAction.Fixed
+                    modifier = GamsModifier(sync_var, UpdateAction.Fixed, fix_data_par)
+                    modifiers.append(modifier)
+
+                except (GamsException, AttributeError, TypeError) as e:
+                    print(f"Warning: Could not set up fixable variable '{var_name}': {e}", flush=True)
+
+        print(f"[{time_module.time()-t_start:.1f}s] Set up {len(modifiers)} modifiers", flush=True)
+
+        # Set up model instance options
+        mi_opt = ws.add_options()
+        mi_opt.all_model_types = "cplex"
+
+        # Extract model name from file (e.g., "MESSAGE" from "MESSAGE_run.gms")
+        model_name = model_file.stem.replace("_run", "")
+
+        # Instantiate the model with modifiers
+        print(f"[{time_module.time()-t_start:.1f}s] Starting instantiate with {len(modifiers)} modifiers...", flush=True)
+        mi.instantiate(f"{model_name}_LP use lp min OBJ", modifiers, mi_opt)
+        print(f"[{time_module.time()-t_start:.1f}s] Instantiate complete", flush=True)
+
+        # NOW populate the modifiable parameters (AFTER instantiate)
+        if modifiable_pars:
+            for par_name in modifiable_pars:
+                try:
+                    input_par = input_db[par_name]
+                    sync_par = mi.sync_db[par_name]
+                    # Copy all records from input to sync_db
+                    for rec in input_par:
+                        new_rec = sync_par.add_record(rec.keys)
+                        new_rec.value = rec.value
+                except (KeyError, GamsException, AttributeError, TypeError):
+                    # Parameter not found directly - check for special cases
+                    if par_name == "demand_fixed":
+                        try:
+                            # Populate from source parameter
+                            source_par = input_db["demand"]
+                            sync_par = mi.sync_db[par_name]
+                            for rec in source_par:
+                                new_rec = sync_par.add_record(rec.keys)
+                                new_rec.value = rec.value
+                        except (KeyError, GamsException, AttributeError, TypeError):
+                            pass
+                    elif par_name.startswith("fixed_"):
+                        # fixed_* parameters start empty - populated by user between solves
+                        pass
+                    # Otherwise skip silently
+
+        print(f"[{time_module.time()-t_start:.1f}s] Populated parameters in sync_db", flush=True)
+        print(f"[{time_module.time()-t_start:.1f}s] Model instance creation complete", flush=True)
+        return mi, ws
 
 
 def gams_info() -> GAMSInfo:

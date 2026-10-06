@@ -142,6 +142,12 @@ def test_platform(ixmp_cli: Runner, tmp_path: Path) -> None:
     # JBDC Oracle platform can be added
     r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
 
+    # JDBC PostgreSQL platform can be added
+    r = call("add", "p1-pg", "jdbc", "postgresql", "HOST:5432/DB", "USER", "PASSWORD")
+    info = ixmp.config.get_platform_info("p1-pg")[1]
+    assert "postgresql" == info["driver"] and "HOST:5432/DB" == info["url"]
+    call("remove", "p1-pg")
+
     # Default platform can be changed
     r = call("add", "default", "p1")
     r = call("list")

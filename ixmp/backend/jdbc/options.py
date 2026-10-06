@@ -26,6 +26,8 @@ class DRIVER(Enum):
     hsqldb = auto()
     #: Oracle.
     oracle = auto()
+    #: PostgreSQL.
+    postgresql = auto()
 
     @classmethod
     def from_str(cls, value: "str | DRIVER") -> "DRIVER":
@@ -53,10 +55,14 @@ class Options:
 
     #: JDBC driver to use. See :class:`DRIVER`.
     driver: DRIVER
-    #: Path to a local HyperSQL database. Invalid with :any:`DRIVER.oracle`.
+    #: Path to a local HyperSQL database. Invalid with :any:`DRIVER.oracle` and
+    #: :any:`DRIVER.postgresql`.
     path: os.PathLike[str] | None = None
     #: Partial or compelte JDBC URL, for example
-    #: "database-server.example.com:PORT:SCHEMA". See :ref:`configuration`.
+    #: "database-server.example.com:PORT:SCHEMA" (:any:`DRIVER.oracle`) or
+    #: "database-server.example.com:PORT/DATABASE" (:any:`DRIVER.postgresql`). See
+    #: :attr:`full_url` for the forms accepted with PostgreSQL, and
+    #: :ref:`configuration`.
     url: str = ""
     #: Database username.
     user: str = ""
@@ -72,8 +78,10 @@ class Options:
         self.driver = DRIVER.from_str(self.driver)
 
         # Check consistency of fields
-        if self.driver is DRIVER.oracle and (self.path or not self.url):
-            raise ValueError("use JDBCBackend(driver='oracle', url=…)")
+        if self.driver in (DRIVER.oracle, DRIVER.postgresql) and (
+            self.path or not self.url
+        ):
+            raise ValueError(f"use JDBCBackend(driver='{self.driver.name}', url=…)")
         elif self.driver is DRIVER.hsqldb and not self.path and not self.url:
             raise ValueError(
                 "use JDBCBackend(driver='hsqldb', path=…) or "
@@ -90,6 +98,14 @@ class Options:
     def full_url(self) -> str:
         """The full JDBC URL for the connection.
 
+        With :any:`DRIVER.postgresql`, :attr:`url` must be of the form
+        "HOST[:PORT]/DATABASE", optionally preceded by "//", "postgresql://" or
+        "jdbc:postgresql://", and optionally followed by "?" and URL parameters. HOST
+        may be a name, an IPv4 address or an IPv6 address in square brackets, and
+        multiple comma-separated "HOST[:PORT]" may be given. The result is of the form
+        "jdbc:postgresql://HOST[:PORT]/DATABASE". A URL with a user name or password,
+        with an unsupported scheme, or without a database raises :class:`ValueError`.
+
         With :any:`DRIVER.hsqldb` and :attr:`path` set (or the "file:" protocol in
         :attr:`url`), the :data:`HSQLDB_DEFAULT_PROPS` are appended to the constructed
         URL, *unless* the user explicitly has specified the same properties.
@@ -98,6 +114,15 @@ class Options:
         match self.driver:
             case DRIVER.oracle:
                 result.extend(["thin", f"@{self.url}"])
+            case DRIVER.postgresql:
+                # Optional prefix, then host(s) and port(s), "/", database, ?params
+                if m := re.fullmatch(
+                    r"(?:(?:jdbc:)?postgresql:)?(?://)?(?P<url>[^/@?]+/[^/?]+(\?.*)?)",
+                    self.url,
+                ):
+                    result.append(f"//{m.group('url')}")
+                else:
+                    raise ValueError(f"Cannot construct a JDBC URL for {self}")
             case DRIVER.hsqldb:
                 if self.path:
                     proto = "file"
@@ -136,6 +161,7 @@ class Options:
                 "jdbc.driver": {
                     DRIVER.hsqldb: "org.hsqldb.jdbcDriver",
                     DRIVER.oracle: "oracle.jdbc.driver.OracleDriver",
+                    DRIVER.postgresql: "org.postgresql.Driver",
                 }[self.driver],
                 "jdbc.url": self.full_url,
                 "jdbc.user": self.user or "ixmp",
@@ -159,7 +185,8 @@ class Options:
         args
             Positional arguments. These override any `kw`, and may be in the form of:
 
-            1. :py:`("oracle", url, user, password, [jvmargs])`
+            1. :py:`("oracle", url, user, password, [jvmargs])`, or the same with
+               "postgresql".
             2. :py:`("hsqldb", path, [jvmargs])` for a file-backed HyperSQL database.
             3. :py:`("hsqldb",)`. with :attr:`url` supplied via `kwargs`, for instance
                "jdbc:hsqldb:mem://foo" for an in-memory database.
@@ -188,7 +215,7 @@ class Options:
 
         # Remaining arguments
         match driver:
-            case DRIVER.oracle:
+            case DRIVER.oracle | DRIVER.postgresql:
                 if len(args) < 3:
                     _raise("3–4 arguments (URL, user, password, [jvmargs])")
 
@@ -225,6 +252,11 @@ class Options:
 
         All others are stored in :attr:`extra_properties`.
 
+        The "jdbc.driver" value is mapped to :attr:`driver`: if it contains "hsqldb",
+        to :any:`DRIVER.hsqldb`; if it contains "postgresql", to
+        :any:`DRIVER.postgresql`; otherwise, for instance
+        "oracle.jdbc.driver.OracleDriver", to :any:`DRIVER.oracle`.
+
         Raises
         ------
         FileNotFoundError
@@ -240,7 +272,13 @@ class Options:
             name, value = match.group(1), match.group(2)
             match name:
                 case "driver":
-                    args[name] = DRIVER.hsqldb if "hsqldb" in value else DRIVER.oracle
+                    # Other values, including "oracle.jdbc.driver.OracleDriver" → oracle
+                    if "hsqldb" in value:
+                        args[name] = DRIVER.hsqldb
+                    elif "postgresql" in value:
+                        args[name] = DRIVER.postgresql
+                    else:
+                        args[name] = DRIVER.oracle
                 case "pwd":
                     args["password"] = value  # Change name
                 case "url" | "user":

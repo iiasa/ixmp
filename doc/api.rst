@@ -168,6 +168,10 @@ To manipulate the configuration file, use the ``platform`` command in the ixmp c
   # Add a platform named 'p3' with specific JVM arguments
   $ ixmp platform add p3 jdbc hsqldb /path/to/database/files -Xmx12G
 
+  # Add a platform named 'p4' backed by a remote PostgreSQL database
+  $ ixmp platform add p4 jdbc postgresql \
+         database.server.example.com:PORT/DATABASE username password
+
   # Make 'p2' the default Platform
   $ ixmp platform add default p2
 

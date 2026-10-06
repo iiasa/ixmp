@@ -112,7 +112,7 @@ def _domain_enum(domain: str) -> str:
 
 
 class JDBCBackend(CachingBackend):
-    """Backend using JPype/JDBC to connect to Oracle and HyperSQL databases.
+    """Backend using JPype/JDBC for Oracle, PostgreSQL, and HyperSQL databases.
 
     This backend is based on the third-party `JPype <https://jpype.readthedocs.io>`_
     Python package that allows interaction with Java code.

@@ -145,6 +145,16 @@ class TestJDBCBackend:
                 dict(),
                 dict(driver="oracle", url="url", user="user", password="pass"),
             ),
+            (
+                ("postgresql", "host:5432/db", "user", "pass"),
+                dict(),
+                dict(
+                    driver="postgresql",
+                    url="host:5432/db",
+                    user="user",
+                    password="pass",
+                ),
+            ),
             (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
             # Invalid
             pytest.param(tuple(), dict(), None, marks=VE),
@@ -159,6 +169,13 @@ class TestJDBCBackend:
                 ("hsqldb", "path", "-Xmx12G", "extra?!"), dict(), None, marks=VE
             ),
             pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
+            pytest.param(
+                ("postgresql", "url", "u", "p", "-Xmx12G", "extra?!"),
+                dict(),
+                None,
+                marks=VE,
+            ),
+            pytest.param(("postgresql", "url", "missing pass"), dict(), None, marks=VE),
             pytest.param(("hsqldb",), dict(), None, marks=VE),
         ),
     )
@@ -360,6 +377,15 @@ INIT_PARAMS: tuple[
     ),
     # …with driver='oracle' and no url
     ([], dict(backend="jdbc", driver="oracle"), ValueError, None),
+    # Initialize with driver='postgresql' and path
+    (
+        [],
+        dict(backend="jdbc", driver="postgresql", path="foo/bar"),
+        ValueError,
+        None,
+    ),
+    # …with driver='postgresql' and no url
+    ([], dict(backend="jdbc", driver="postgresql"), ValueError, None),
     # …with driver='hsqldb' and no path
     ([], dict(backend="jdbc", driver="hsqldb"), ValueError, None),
     # …with driver='hsqldb' and url

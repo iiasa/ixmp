@@ -35,11 +35,16 @@ JDBCBackend
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
    :members: handle_config, read_file, write_file 
 
-   JDBCBackend supports two :class:`DRIVER` options:
+   JDBCBackend supports three :class:`DRIVER` options:
 
    :any:`DRIVER.oracle`
       Shared databases on remote (networked) servers using :attr:`~.jdbc.Options.url`,
       :attr:`~.jdbc.Options.user`, and :attr:`~.jdbc.Options.password`.
+
+   :any:`DRIVER.postgresql`
+      Shared databases on local or remote (networked) PostgreSQL servers,
+      using the same options as :any:`DRIVER.oracle`.
+      See :ref:`Using PostgreSQL <jdbc-postgresql>`, below.
 
    :any:`DRIVER.hsqldb`
       - Databases in local files (HyperSQL) using :attr:`~.jdbc.Options.path`.
@@ -78,6 +83,9 @@ JDBCBackend
    - The `comment` argument to :meth:`.Platform.add_unit` is limited to 64 characters.
    - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`) cannot be stored
      using :meth:`.TimeSeries.add_timeseries` when using an Oracle database via ``driver='oracle'``.
+   - Geodata cannot yet be stored using :meth:`.TimeSeries.add_geodata` when using a PostgreSQL database of version 15 or later via ``driver='postgresql'``:
+     :meth:`.TimeSeries.commit` raises :class:`RuntimeError`.
+     This is due to an error in the Java code (iiasa/ixmp_source).
    - :meth:`.JDBCBackend.s_clone` is only supported when `target_backend` is JDBCBackend.
 
    JDBCBackend's implementation allows the following kinds of file input and output:
@@ -86,6 +94,56 @@ JDBCBackend
 
       read_file
       write_file
+
+   .. _jdbc-postgresql:
+
+   **Using PostgreSQL.**
+   The database must already exist, but may be empty:
+   JDBCBackend creates (and, on connection, upgrades) the required tables.
+   The user must be able to create tables in the database, for instance by owning it,
+   because PostgreSQL 15 and later no longer allow ordinary users to create tables in the "public" schema by default.
+   The PostgreSQL JDBC driver is included with :mod:`ixmp`.
+   The :attr:`~.jdbc.Options.url` has the form "HOST:PORT/DATABASE";
+   see :attr:`.Options.full_url` for other accepted forms.
+   The user name and password are given using :attr:`~.jdbc.Options.user` and :attr:`~.jdbc.Options.password`, not in the URL.
+   The connection can be configured in any of the following ways:
+
+   1. Using keyword arguments:
+
+      .. code-block:: python
+
+         mp = ixmp.Platform(
+             backend="jdbc",
+             driver="postgresql",
+             url="database.server.example.com:5432/ixmp",
+             user="username",
+             password="password",
+         )
+
+   2. Using the :doc:`command-line interface <cli>` to store the connection information in the :ref:`configuration file <configuration>`;
+      then, refer to the platform by name:
+
+      .. code-block:: shell
+
+         ixmp platform add p1 jdbc postgresql \
+             database.server.example.com:5432/ixmp username password
+
+      .. code-block:: python
+
+         mp = ixmp.Platform("p1")
+
+   3. Using a database properties file, in which the "jdbc.driver" line is required:
+
+      .. code-block:: properties
+
+         jdbc.driver = org.postgresql.Driver
+         jdbc.url = jdbc:postgresql://database.server.example.com:5432/ixmp
+         jdbc.user = username
+         jdbc.pwd = password
+
+      .. code-block:: python
+
+         mp = ixmp.Platform(backend="jdbc", dbprops="/path/to/postgresql.properties")
 
    .. note:: Much of the code of this backend is in Java,
       in the iiasa/ixmp_source GitHub repository.

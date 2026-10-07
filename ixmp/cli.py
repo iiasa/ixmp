@@ -362,6 +362,9 @@ def add(platform_name: str, args: str | Iterable[str]) -> None:
     \b
     - "oracle URL USERNAME PASSWORD", where URL is something like
       "example.com:PORT:SCHEMA". This configures a connection to an Oracle database.
+    - "postgresql URL USERNAME PASSWORD", where URL is something like
+      "example.com:PORT/DATABASE". This configures a connection to a PostgreSQL
+      database.
     - "hsqldb PATH" where PATH is the path to the database files, including the
       directory but not the file extensions. If the files does not exist, it will be
       created.

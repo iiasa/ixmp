@@ -33,6 +33,7 @@ Migration notes
 All changes
 -----------
 
+- :class:`.JDBCBackend` supports PostgreSQL databases with :py:`driver="postgresql"`; see :ref:`Using PostgreSQL <jdbc-postgresql>` (:pull:`656`, :issue:`655`).
 - Improve performance of :meth:`.Scenario.remove_par` by batching JDBC removals (:pull:`603`).
 - :mod:`ixmp` is tested and compatible with `Python 3.14 <https://www.python.org/downloads/release/python-3140/>`__ (:pull:`602`):
 

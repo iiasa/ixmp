@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path, PurePosixPath
 from typing import Any, NoReturn
+from urllib.parse import urlsplit
 
 #: Default URL-end property/value pairs for HyperSQL databases, used by
 #: :attr:`.full_url`.
@@ -26,6 +27,8 @@ class DRIVER(Enum):
     hsqldb = auto()
     #: Oracle.
     oracle = auto()
+    #: PostgreSQL
+    postgresql = auto()
 
     @classmethod
     def from_str(cls, value: "str | DRIVER") -> "DRIVER":
@@ -121,6 +124,8 @@ class Options:
 
                 result.append(proto)
                 result.append(db + ((";".join([""] + props)) if props else ""))
+            case DRIVER.postgresql:
+                result.append(f"//{self.url}")
 
         return ":".join(result)
 
@@ -136,6 +141,7 @@ class Options:
                 "jdbc.driver": {
                     DRIVER.hsqldb: "org.hsqldb.jdbcDriver",
                     DRIVER.oracle: "oracle.jdbc.driver.OracleDriver",
+                    DRIVER.postgresql: "org.postgresql.Driver",
                 }[self.driver],
                 "jdbc.url": self.full_url,
                 "jdbc.user": self.user or "ixmp",
@@ -188,11 +194,6 @@ class Options:
 
         # Remaining arguments
         match driver:
-            case DRIVER.oracle:
-                if len(args) < 3:
-                    _raise("3–4 arguments (URL, user, password, [jvmargs])")
-
-                kw["url"], kw["user"], kw["password"], *kw["jvmargs"] = args
             case DRIVER.hsqldb:
                 try:
                     kw["path"] = Path(args.pop(0)).resolve()
@@ -200,6 +201,17 @@ class Options:
                     if "url" not in kw:
                         _raise("either positional path or url= keyword argument")
                 kw["jvmargs"] = args
+            case DRIVER.oracle:
+                if len(args) < 3:
+                    _raise("3–4 arguments (URL, user, password, [jvmargs])")
+
+                kw["url"], kw["user"], kw["password"], *kw["jvmargs"] = args
+            case DRIVER.postgresql:
+                # Explode a user-supplied url
+                parts = urlsplit(kw["url"])
+                kw["user"] = parts.username
+                kw["password"] = parts.password
+                kw["url"] = f"{parts.hostname}:{parts.port}{parts.path}"
 
         # Convert from a Config instance back to a dict
         result = dict()

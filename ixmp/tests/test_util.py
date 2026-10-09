@@ -24,10 +24,12 @@ class TestDeprecatedPathFinder:
     def test_import(self) -> None:
         with pytest.warns(
             DeprecationWarning,
-            match="Importing from 'ixmp.reporting.computations' is deprecated and will "
-            "fail in a future version. Use 'ixmp.report.operator'.",
+            match="Importing from 'ixmp.reporting' is deprecated and will fail in a "
+            "future version. Use 'ixmp.report'.",
         ):
-            import ixmp.reporting.computations  # noqa: F401
+            import ixmp.reporting
+
+            assert hasattr(ixmp.reporting, "Reporter")
 
     @pytest.mark.filterwarnings("ignore")
     def test_import1(self) -> None:

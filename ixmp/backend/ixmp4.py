@@ -604,7 +604,7 @@ class IXMP4Backend(CachingBackend):
     def last_update(self, ts: TimeSeries) -> str | None:
         # TODO: Expose a correct "updated_at" field in ixmp4
         # last_update = self.index[ts].updated_at
-        last_update = datetime(2000, 0, 0)
+        last_update = datetime(2000, 1, 1)
         return (
             last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
             if last_update is not None

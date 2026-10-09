@@ -13,7 +13,7 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import (
-    KEY_BACKENDS,
+    KEY_BACKEND_DRIVER,
     MARK,
     _platform_fixture,
     assert_logs,
@@ -57,7 +57,11 @@ def platforms(
 
     The first uses :class:`JDBCBackend`, the second uses :class:`IXMP4Backend`.
     """
-    if "ixmp4" not in request.config.stash[KEY_BACKENDS]:  # pragma: no cover
+    from ixmp.testing import BackendDriver
+
+    if not any(
+        bd.backend == "ixmp4" for bd in request.config.stash[KEY_BACKEND_DRIVER]
+    ):  # pragma: no cover
         pytest.skip("Cannot construct fixture `platforms` without IXMP4Backend")
 
     args: "PlatformFixtureArgs" = dict(
@@ -66,8 +70,10 @@ def platforms(
         test_data_path=test_data_path,
         worker_id=worker_id,
     )
-    jdbc_mp = _platform_fixture(backend="jdbc", **args)
-    ixmp4_mp = _platform_fixture(backend="ixmp4", **args)
+    jdbc_mp = _platform_fixture(backend_driver=BackendDriver("jdbc", "hsqldb"), **args)
+    ixmp4_mp = _platform_fixture(
+        backend_driver=BackendDriver("ixmp4", "postgresql"), **args
+    )
 
     yield from zip(jdbc_mp, ixmp4_mp)
 

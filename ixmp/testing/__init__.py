@@ -36,18 +36,17 @@ import logging
 import os
 import platform
 import shutil
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeAlias
+from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeAlias
 from unittest import mock
 
 import pint
 import pytest
 from click.testing import CliRunner, Result
-from sqlalchemy import text
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import override
@@ -55,7 +54,7 @@ from typing_extensions import override
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
 from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import format_url, is_ixmp4backend
+from ixmp.util.ixmp4 import is_ixmp4backend
 
 from .data import (
     DATA,
@@ -107,16 +106,36 @@ __all__ = [
     "tmp_env",
 ]
 
+
+class BackendDriver(NamedTuple):
+    """Names for a combination of a Backend and a driver for that backend."""
+
+    backend: str
+    driver: str
+
+    def __str__(self) -> str:
+        """String representation, e.g. "jdbc_hsqldb"."""
+        return f"{self.backend}_{self.driver}"
+
+
+#: Combinations of backend and driver to be parametrized in tests.
+BACKEND_DRIVER = [
+    BackendDriver("ixmp4", "postgresql"),
+    BackendDriver("jdbc", "hsqldb"),
+    BackendDriver("jdbc", "postgresql"),
+]
+
+
 #: :any:`True` if testing is occurring on GitHub Actions runners/machines.
 GHA = "GITHUB_ACTIONS" in os.environ
 
-# Pytest stash keys
-KEY_BACKENDS = pytest.StashKey[list[str]]()
-KEY_ENGINE = pytest.StashKey["Engine"]()
-KEY_IXMP4_PG_NAME = pytest.StashKey[str]()
+#: :class:`pytest.Stash` key for a subset of :data:`BACKEND_DRIVER` that can be tested
+#: in the current session
+KEY_BACKEND_DRIVER = pytest.StashKey[list[BackendDriver]]()
 
-# Used for `KEY_IXMP4_PG_NAME` when no postgres database is available
-PG_NAME_NONE = "NONE"
+#: :class:`pytest.Stash` key for a mapping from :class:`BackendDriver` instances to
+#: complete database URLs. If no database is available, empty :class:`str` is stored.
+KEY_POSTGRES_DB = pytest.StashKey[MutableMapping[BackendDriver, str]]()
 
 _uname = platform.uname()
 
@@ -127,6 +146,9 @@ MARK = {
     ),
     "IXMP4Backend Not Yet": pytest.mark.xfail(
         reason="Not yet supported by IXMP4Backend"
+    ),
+    "jdbc_postgresql_never": pytest.mark.xfail(
+        reason="Not supported on JDBCBackend with PostgreSQL"
     ),
     "pytest#10843": pytest.mark.xfail(
         condition=GHA
@@ -156,7 +178,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--ixmp-postgres",
         action="store",
-        default="postgresql://postgres:postgres@localhost:5432/postgres",
+        default="postgresql://postgres:postgres@localhost:5432/MISSING",
         help="URL of a PostgreSQL server for testing",
     )
     parser.addoption(
@@ -178,31 +200,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_report_collectionfinish(
     config: pytest.Config, start_path: Path, items: Sequence[Any]
 ) -> list[str]:
-    """Show messages if a database error means IXMP4Backend tests cannot be run."""
-    backends = config.stash[KEY_BACKENDS]
-    db_name = config.stash[KEY_IXMP4_PG_NAME]
+    """Show messages if a database error means PostgreSQL tests cannot be run."""
 
     messages = []
-    if "ixmp4" in backends and db_name.startswith(PG_NAME_NONE):  # pragma: no cover
-        messages += [
-            "",
-            "No PostgreSQL database available → tests of IXMP4Backend will be skipped:",
-        ] + db_name.splitlines()[1:]
+    for bd, db_name in config.stash[KEY_POSTGRES_DB].items():
+        if db_name == "":
+            messages.append(
+                "No PostgreSQL database available → tests of "
+                f"({bd.backend}, {bd.driver}) will be skipped"
+            )
+
     return messages
-
-
-def clear_pg_connections(db_name: str, connection: "Connection") -> None:
-    connection.execute(
-        text(
-            """
-            SELECT pg_terminate_backend(pid)
-            FROM pg_stat_activity
-            WHERE datname = :db_name
-                AND pid <> pg_backend_pid()
-            """
-        ),
-        {"db_name": db_name},
-    )
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -225,72 +233,41 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     """
     from ixmp.backend import available, jdbc
 
+    from .postgres import databases_for_worker
+
     if not session.config.option.ixmp_user_config:
         ixmp_config.clear()
         # Further clear an automatic reference to the user's home directory. See fixture
         # tmp_env below.
         ixmp_config.values["platform"]["local"].pop("path")
 
-    # Available backends: 0 or more of "jdbc", "ixmp4"
-    backends = session.config.stash[KEY_BACKENDS] = sorted(available())
+    # Filter BACKEND_DRIVER according to available backends
+    backend_available = available()
+    session.config.stash[KEY_BACKEND_DRIVER] = list()
+    for bd in BACKEND_DRIVER:
+        if bd.backend not in backend_available:
+            continue
+        session.config.stash[KEY_BACKEND_DRIVER].append(bd)
 
+    # Disable aggressive garbage collection
     jdbc._GC_AGGRESSIVE = False
 
-    db_name = PG_NAME_NONE
+    # Create PostgreSQL database(s) for this worker
+    databases_for_worker(session, create=True)
 
-    if "ixmp4" in backends:
-        # Silence noisy debug logging from ixmp4 → litestar → polyfactory → faker
-        logging.getLogger("faker").setLevel(logging.INFO)
-
-        # Connect to a PostgreSQL server and create a test database for this worker
-        from ixmp4.db import get_alembic_controller
-        from sqlalchemy import create_engine, text
-        from sqlalchemy.exc import OperationalError
-        from xdist import get_xdist_worker_id
-
-        db_name = f"ixmp_test_{get_xdist_worker_id(session)}"
-        url = format_url(session.config.option.ixmp_postgres)
-        engine = create_engine(url, isolation_level="AUTOCOMMIT")
-
-        try:
-            with engine.connect() as connection:
-                clear_pg_connections(db_name, connection)
-                connection.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
-                connection.execute(text(f"CREATE DATABASE {db_name}"))
-            # Initialize schema on the new DB so ixmp4 can use it immediately.
-            get_alembic_controller(
-                format_url(session.config.option.ixmp_postgres, database=db_name)
-            ).upgrade_database("head")
-        except OperationalError as e:  # pragma: no cover
-            # Some error connecting to the database → store a message and text of `e`
-            db_name = f"{PG_NAME_NONE}\nException: {e!r}\nURL: {url}"
-            # Do not run tests for ixmp4
-            backends.remove("ixmp4")
-        else:
-            # Store for pytest_sessionfinish()
-            session.config.stash[KEY_ENGINE] = engine
-
-    session.config.stash[KEY_IXMP4_PG_NAME] = db_name
+    # Remove from testable combinations if database setup did not succeed
+    for bd, db_name in session.config.stash[KEY_POSTGRES_DB].items():
+        if db_name == "":
+            session.config.stash[KEY_BACKEND_DRIVER].remove(bd)
 
 
 def pytest_sessionfinish(
     session: pytest.Session, exitstatus: int | pytest.ExitCode
 ) -> None:
-    db_name = session.config.stash[KEY_IXMP4_PG_NAME]
+    """Drop PostgreSQL databases created for this session."""
+    from .postgres import databases_for_worker
 
-    if not db_name.startswith(PG_NAME_NONE):
-        # Remove the database created for this session
-        from sqlalchemy import text
-        from sqlalchemy.exc import OperationalError
-
-        engine = session.config.stash[KEY_ENGINE]
-        with engine.connect() as connection:
-            clear_pg_connections(db_name, connection)
-            try:
-                connection.execute(text(f"DROP DATABASE {db_name}"))
-            except OperationalError:  # pragma: no cover
-                # Avoid converting teardown cleanup failure into test failure.
-                log.exception("Failed to drop PostgreSQL test database %s", db_name)
+    databases_for_worker(session)
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -298,44 +275,49 @@ def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
     return f"ixmp config: {repr(ixmp_config.values)}"
 
 
-# NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
-# sound like what we need, but I couldn't quite get it to work. Instead, this is more
-# following https://pytest-with-eric.com/introduction/pytest-generate-tests/
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    """Parametrize tests for the two backend options."""
-    if "backend" not in metafunc.fixturenames:
+    """Parametrize tests for multiple (backend, driver) combinations."""
+    # NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
+    # sound like what we need, but I [Fridolin Glatter] couldn't quite get it to work.
+    # Instead, this is more following
+    # https://pytest-with-eric.com/introduction/pytest-generate-tests/
+    if "backend_driver" not in metafunc.fixturenames:
         return
 
     # Available backends in this session
-    backends = metafunc.config.stash[KEY_BACKENDS]
+    backend_driver = metafunc.config.stash[KEY_BACKEND_DRIVER]
 
     # Subset of marker names applied to the test function
     marker_names = sorted(
         set(m.name for m in metafunc.definition.iter_markers())
-        & {"ixmp4", "ixmp4_never", "ixmp4_not_yet", "jdbc"}
+        & {"ixmp4", "ixmp4_never", "ixmp4_not_yet", "jdbc", "jdbc_postgresql_never"}
     )
 
     # Argument values for pytest.parametrize()
     argvalues: list["str | ParameterSet"] = []
 
     # Iterate over all available backends
-    for backend_name in backends:
+    for bd in backend_driver:
         # Match on the backend name followed by 0 or more marker names
-        match [backend_name] + marker_names:
+        match [bd.backend] + marker_names:
             case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
                 # These markers mean "even though a parametrized fixture is used, this
                 # test should run only for {IXMP4,JDBC}Backend"
                 continue
-            case ["ixmp4", "ixmp4_never"]:  # "Won't ever be implemented on IXMP4"
-                mark: Any = MARK["IXMP4Backend Never"]
-            case ["ixmp4", "ixmp4_not_yet"]:  # "Not yet supported on IXMP4"
+            case ["jdbc", *_, "jdbc_postgresql_never"]:
+                mark: Any = (
+                    MARK["jdbc_postgresql_never"] if bd.driver == "postgresql" else []
+                )
+            case ["ixmp4", "ixmp4_never", *_]:  # "Won't ever be implemented on IXMP4"
+                mark = MARK["IXMP4Backend Never"]
+            case ["ixmp4", "ixmp4_not_yet", *_]:  # "Not yet supported on IXMP4"
                 mark = MARK["IXMP4Backend Not Yet"]
             case _:
                 mark = []
 
-        argvalues.append(pytest.param(backend_name, marks=mark))
+        argvalues.append(pytest.param(bd, marks=mark, id=str(bd)))
 
-    metafunc.parametrize("backend", argvalues, indirect=True)
+    metafunc.parametrize("backend_driver", argvalues, indirect=True)
 
 
 # Session-scoped fixtures
@@ -385,9 +367,9 @@ def test_data_path() -> Path:
 
 
 # NOTE We need to declare this as module-scope explicitly; otherwise, pytest creates
-# backend for pytest_generate_tests as function-scoped fixture automatically
+# backend_driver for pytest_generate_tests as function-scoped fixture automatically
 @pytest.fixture(scope="module")
-def backend(request: pytest.FixtureRequest) -> Literal["ixmp4", "jdbc"]:
+def backend_driver(request: pytest.FixtureRequest) -> BackendDriver:
     # pytest_generate_tests() applies these marks, pytest always only registers Any
     return request.param  # type: ignore[no-any-return]
 
@@ -403,7 +385,7 @@ def test_mp(
     request: pytest.FixtureRequest,
     tmp_env: os._Environ[str],
     test_data_path: Path,
-    backend: Literal["ixmp4", "jdbc"],
+    backend_driver: BackendDriver,
     worker_id: str,
 ) -> Iterator[Platform]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
@@ -412,14 +394,13 @@ def test_mp(
     module.
     """
     yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+        request, tmp_env, test_data_path, backend_driver, worker_id=worker_id
     )
 
 
 @pytest.fixture(scope="session")
 def tmp_env(
-    pytestconfig: pytest.Config,
-    tmp_path_factory: pytest.TempPathFactory,
+    pytestconfig: pytest.Config, tmp_path_factory: pytest.TempPathFactory
 ) -> Iterator[os._Environ[str]]:
     """Temporary environment for testing.
 
@@ -452,14 +433,21 @@ def tmp_env(
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
 
-        name = pytestconfig.stash[KEY_IXMP4_PG_NAME]
-        if not name.startswith(PG_NAME_NONE):
+        for bd, url in pytestconfig.stash[KEY_POSTGRES_DB].items():
             # Use the DSN for the database created for this session in
             # pytest_sessionstart
-            ixmp_config.values["platform"]["ixmp4-local"].update(
-                dsn=format_url(pytestconfig.option.ixmp_postgres, database=name),
-                ixmp4_name=name,
-            )
+            if url == "":
+                continue
+
+            platform_name = f"{bd.backend}-local"
+
+            if bd.backend == "ixmp4":
+                values = dict(dsn=url, ixmp4_name=url.rpartition("/")[2])
+            elif bd.backend == "jdbc":
+                values = dict(url=url)
+
+            existing = ixmp_config.values["platform"].setdefault(platform_name, {})
+            existing.update(values)
 
     # Save for other processes
     ixmp_config.save()
@@ -544,7 +532,7 @@ def test_mp_f(
     request: pytest.FixtureRequest,
     tmp_env: os._Environ[str],
     test_data_path: Path,
-    backend: Literal["ixmp4", "jdbc"],
+    backend_driver: BackendDriver,
     worker_id: str,
 ) -> Iterator[Platform]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
@@ -557,7 +545,7 @@ def test_mp_f(
     test_mp
     """
     yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend=backend, worker_id=worker_id
+        request, tmp_env, test_data_path, backend_driver, worker_id=worker_id
     )
 
 
@@ -720,43 +708,54 @@ def _platform_fixture(
     request: pytest.FixtureRequest,
     tmp_env: os._Environ[str],
     test_data_path: Path,
-    backend: Literal["jdbc", "ixmp4"],
+    backend_driver: BackendDriver,
     worker_id: str,
 ) -> Iterator[Platform]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
-    # Remove '/' so that the name can be used in URL tests.
-    platform_name = f"{request.node.nodeid.replace('/', ' ')}_{backend}"
+    # - Use the pytest.Node ID.
+    # - Remove '/' so that the name can be used in URL tests.
+    # - Prepend the backend and driver.
+    platform_name = " ".join([*backend_driver, request.node.nodeid.replace("/", " ")])
+
+    stash = request.config.stash
 
     # Construct positional and keyword arguments to Config.add_platform()
-    if backend == "jdbc":
-        args = ["hsqldb"]
-        kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
-    elif backend == "ixmp4":
-        from ixmp4.conf.settings import Settings
+    match backend_driver:
+        case ("jdbc", "hsqldb"):
+            args = ["hsqldb"]
+            kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
+        case ("jdbc", "postgresql"):
+            args = ["postgresql"]
+            kwargs = dict(url=stash[KEY_POSTGRES_DB][backend_driver])
+        case ("ixmp4", "postgresql"):
+            from ixmp4.conf.settings import Settings
 
-        args = []
-        name = f"ixmp_test_{worker_id}"
-        kwargs = dict(
-            ixmp4_name=name,
-            dsn=format_url(request.config.option.ixmp_postgres, database=name),
-            jdbc_compat=True,
-            # Disable migration-version check for transient test databases.
-            ixmp4_settings=Settings(check_alembic_version=False),  # type: ignore[call-arg]
-        )
-        if request.scope == "function":
-            # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
-            from ixmp4.transport import DirectTransport
+            args = []
+            # TODO Retrieve these from a common location, instead of recreating them
+            name = f"ixmp_test_{worker_id}_ixmp4"
+            kwargs = dict(
+                ixmp4_name=name,
+                dsn=stash[KEY_POSTGRES_DB][backend_driver],
+                jdbc_compat=True,
+                # Disable migration-version check for transient test databases.
+                ixmp4_settings=Settings(check_alembic_version=False),  # type: ignore[call-arg]
+            )
+            if request.scope == "function":
+                # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
+                from ixmp4.transport import DirectTransport
 
-            from ixmp.backend.ixmp4 import IXMP4Backend
+                from ixmp.backend.ixmp4 import IXMP4Backend
 
-            _backend = IXMP4Backend(**kwargs)
-            transport = _backend._backend.transport
-            if isinstance(transport, DirectTransport):
-                transport.close()
+                _backend = IXMP4Backend(**kwargs)
+                transport = _backend._backend.transport
+                if isinstance(transport, DirectTransport):
+                    transport.close()
+        case _:
+            raise NotImplementedError(backend_driver)
 
     # Add platform to ixmp configuration
-    ixmp_config.add_platform(platform_name, backend, *args, **kwargs)
+    ixmp_config.add_platform(platform_name, backend_driver[0], *args, **kwargs)
 
     # Launch Platform
     mp = Platform(name=platform_name)

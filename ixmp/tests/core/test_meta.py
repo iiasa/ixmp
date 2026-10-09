@@ -153,10 +153,8 @@ class TestMeta:
         mp: ixmp.Platform,
         meta: dict[str, bool | int | str | list[bool | float | int | str]],
     ) -> None:
-        """
-        Set meta indicators on several model/scenario/version levels and test
-        the 'strict' parameter of get_meta().
-        """
+        """Test the `strict` parameter to :meth:`.TimeSeries.get_meta`."""
+        # Set meta inciators on several model/scenario/version levels
         # set meta on various levels
         model_meta: dict[str, bool | int | str] = {
             "model_int": 3,

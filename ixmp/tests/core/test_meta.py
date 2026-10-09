@@ -48,6 +48,7 @@ def mp(test_mp_f: ixmp.Platform) -> Iterator[ixmp.Platform]:
 # DB Model. ixmp4 can only store meta entries for a Run, which is always linked to Model
 # AND Scenario. So the tests here that call *_meta() without full arguments won't pass
 # on ixmp4.
+@pytest.mark.jdbc_postgresql_never
 class TestMeta:
     @pytest.mark.parametrize("meta", META_ENTRIES)
     def test_set_meta_missing_argument(
@@ -153,10 +154,8 @@ class TestMeta:
         mp: ixmp.Platform,
         meta: dict[str, bool | int | str | list[bool | float | int | str]],
     ) -> None:
-        """
-        Set meta indicators on several model/scenario/version levels and test
-        the 'strict' parameter of get_meta().
-        """
+        """Test the `strict` parameter to :meth:`.TimeSeries.get_meta`."""
+        # Set meta inciators on several model/scenario/version levels
         # set meta on various levels
         model_meta: dict[str, bool | int | str] = {
             "model_int": 3,

@@ -453,6 +453,7 @@ class TestTimeSeries:
     # Geodata
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     def test_add_geodata(self, ts: TimeSeries) -> None:
         # Empty TimeSeries includes no geodata
         assert_frame_equal(DATA["geo"].loc[[False, False, False]], ts.get_geodata())
@@ -466,6 +467,7 @@ class TestTimeSeries:
         assert_frame_equal(DATA["geo"], obs)
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     @pytest.mark.parametrize(
         "rows",
         [[1], [1, 2], [0, 1, 2]],
@@ -586,6 +588,7 @@ class TestTimeSeries:
         assert_geodata(empty, DATA["geo"].loc[[False, False, False]])
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     def test_remove_multiple_geodata(self, mp: "Platform") -> None:
         scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         scen.add_geodata(DATA["geo"])

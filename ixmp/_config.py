@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from collections.abc import Generator
+from collections.abc import Iterator
 from copy import copy
 from dataclasses import Field, asdict, dataclass, field, fields, make_dataclass
 from pathlib import Path
@@ -32,7 +32,7 @@ class _JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-def _iter_config_paths() -> Generator[tuple[str, Path], Any, None]:
+def _iter_config_paths() -> Iterator[tuple[str, Path]]:
     """Yield recognized configuration paths, in order of priority."""
     try:
         yield "environment (IXMP_DATA)", Path(os.environ["IXMP_DATA"]).resolve()

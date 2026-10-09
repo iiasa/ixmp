@@ -3,7 +3,7 @@
 #      behaviour they actually test.
 
 import copy
-from typing import Any, Generator
+from typing import Iterator
 
 import pytest
 
@@ -26,7 +26,7 @@ DANTZIG = models["dantzig"]
 
 
 @pytest.fixture(scope="function")
-def mp(test_mp_f: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
+def mp(test_mp_f: ixmp.Platform) -> Iterator[ixmp.Platform]:
     """A test Platform.
 
     The platform contains one time series with the "dantizg" model & scenario name from

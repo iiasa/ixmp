@@ -2,7 +2,7 @@
 
 import logging
 from collections import namedtuple
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 try:
@@ -136,7 +136,7 @@ def memory_usage(message: str = "", reset: bool = False) -> MemInfo:
 
 
 @pytest.fixture(scope="function")
-def resource_limit(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
+def resource_limit(request: pytest.FixtureRequest) -> Iterator[None]:
     """A fixture that limits Python :mod:`resources <resource>`.
 
     See the documentation (``pytest --help``) for the ``--resource-limit`` command-line

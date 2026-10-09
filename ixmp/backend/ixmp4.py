@@ -3,7 +3,7 @@ import logging
 import re
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import chain
 from os import PathLike
 from pathlib import Path
@@ -603,14 +603,9 @@ class IXMP4Backend(CachingBackend):
         return self.index[s].optimization.has_solution()
 
     def last_update(self, ts: TimeSeries) -> str | None:
-        # TODO: Expose a correct "updated_at" field in ixmp4
-        # last_update = self.index[ts].updated_at
-        last_update = datetime(2000, 0, 0)
-        return (
-            last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
-            if last_update is not None
-            else last_update
-        )
+        # FIXME This should be exposed by the Run object without accessing ._dto
+        last_update = self.index[ts]._dto.updated_at or datetime.now(timezone.utc)
+        return last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
 
     def _validate_meta_args(
         self,

@@ -419,7 +419,7 @@ class Scenario(TimeSeries):
                 DeprecationWarning,
                 2,
             )
-        elif kwargs.get("par_data", None) is not None:
+        elif kwargs.get("par_data", None) is True:
             warn(
                 "Scenario.items(…, par_data=True); use Scenario.iter_par_data()",
                 DeprecationWarning,

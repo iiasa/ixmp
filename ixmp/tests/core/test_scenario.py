@@ -1,6 +1,6 @@
 import os
 import re
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
@@ -80,13 +80,13 @@ def platforms_populated(platforms: "Platforms") -> Iterator["Platforms"]:
 
 
 @pytest.fixture(scope="class")
-def scen(mp: "Platform") -> Generator["Scenario", Any, None]:
+def scen(mp: "Platform") -> Iterator["Scenario"]:
     """The default version of the Dantzig on the mp."""
     yield ixmp.Scenario(mp, **models["dantzig"])
 
 
 @pytest.fixture(scope="function")
-def scen_f(mp: "Platform") -> Generator["Scenario", Any, None]:
+def scen_f(mp: "Platform") -> Iterator["Scenario"]:
     """The default version of the Dantzig Scenario on the mp, function scoped."""
     # TODO Can we validate that if with_data, scheme needs to be "dantzig"?
     # Or make GamsModel accept/ignore that silently?
@@ -98,7 +98,7 @@ def scen_f(mp: "Platform") -> Generator["Scenario", Any, None]:
 @pytest.fixture(scope="function")
 def scen_empty(
     request: pytest.FixtureRequest, test_mp: "Platform"
-) -> Generator["Scenario", Any, None]:
+) -> Iterator["Scenario"]:
     """An empty Scenario with a temporary name on the test_mp."""
     yield ixmp.Scenario(
         test_mp,

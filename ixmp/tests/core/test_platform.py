@@ -2,10 +2,10 @@
 
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -23,11 +23,13 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
+def log_level_mp(test_mp: ixmp.Platform) -> Iterator[ixmp.Platform]:
     """A fixture that preserves the log level of *test_mp*."""
     tmp = test_mp.get_log_level()
-    yield test_mp
-    test_mp.set_log_level(tmp)
+    try:
+        yield test_mp
+    finally:
+        test_mp.set_log_level(tmp)
 
 
 @pytest.mark.parametrize(

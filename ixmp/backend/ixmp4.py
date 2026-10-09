@@ -1,7 +1,7 @@
 import builtins
 import logging
 import re
-from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from collections.abc import Iterable, Iterator, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from itertools import chain
@@ -358,20 +358,20 @@ class IXMP4Backend(CachingBackend):
 
     # TODO clarify: ixmp4.Run doesn't have a name, but is the new ixmp.Scenario:
     # Should it have a name or are these scenario names okay?
-    def get_scenario_names(self) -> Generator[str, None, None]:
+    def get_scenario_names(self) -> Iterator[str]:
         for scenario in self._platform.scenarios.list():
             yield scenario.name
 
     def add_model_name(self, name: str) -> None:
         self._platform.models.create(name=name)
 
-    def get_model_names(self) -> Generator[str, None, None]:
+    def get_model_names(self) -> Iterator[str]:
         for model in self._platform.models.list():
             yield model.name
 
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
-    ) -> Generator[list[bool | int | str], Any, None]:
+    ) -> Iterator[list[bool | int | str]]:
         filter = ixmp4.Run.Filter(default_only=default)
         if model is not None:
             filter["model"] = {"name": model}
@@ -1515,7 +1515,7 @@ class IXMP4Backend(CachingBackend):
         variable: Sequence[str],
         unit: Sequence[str],
         year: Sequence[int] | Sequence[str],
-    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
+    ) -> Iterator[tuple[str, str, str, int, float]]:
         filter = ixmp4.iamc.DataPoint.Filter()
         if len(region):
             filter["region"] = {"name__in": list(region)}
@@ -1832,7 +1832,7 @@ class IXMP4Backend(CachingBackend):
         )
         pass
 
-    def get_timeslices(self) -> Generator[tuple[str, str, float], Any, None]:
+    def get_timeslices(self) -> Iterator[tuple[str, str, float]]:
         # NOTE meksor suggests running something like
         # # SELECT DISTINCT step_category FROM datapoints WHERE step_category != NULL
         # in ixmp4 to retrieve the data wanted here. This only returns the 'name',

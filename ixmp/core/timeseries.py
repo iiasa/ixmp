@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Generator, Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager, nullcontext
 from os import PathLike
 from pathlib import Path
@@ -241,7 +241,7 @@ class TimeSeries:
     @contextmanager
     def transact(
         self, message: str = "", condition: bool = True, discard_on_error: bool = False
-    ) -> Generator[None, Any, None]:
+    ) -> Iterator[None]:
         """Context manager to wrap code in a 'transaction'.
 
         Parameters

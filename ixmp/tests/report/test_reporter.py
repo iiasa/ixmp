@@ -1,8 +1,8 @@
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pint
 import pytest
@@ -23,7 +23,7 @@ test_args = ("Douglas Adams", "Hitchhiker")
 
 
 @pytest.fixture
-def scenario(test_mp: "Platform") -> Generator["Scenario", Any, None]:
+def scenario(test_mp: "Platform") -> Iterator["Scenario"]:
     # from test_feature_timeseries.test_new_timeseries_as_year_value
     scen = ixmp.Scenario(test_mp, *test_args, version="new", annotation="foo")
     scen.commit("importing a testing timeseries")

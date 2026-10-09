@@ -36,7 +36,7 @@ import logging
 import os
 import platform
 import shutil
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
@@ -354,14 +354,14 @@ class Runner(CliRunner):
 
 
 @pytest.fixture(scope="session")
-def ixmp_cli(tmp_env: os._Environ[str]) -> Generator["Runner", Any, None]:
+def ixmp_cli(tmp_env: os._Environ[str]) -> Iterator["Runner"]:
     """A CliRunner object that invokes the ixmp command-line interface."""
 
     yield Runner(env=tmp_env)
 
 
 @pytest.fixture(scope="module")
-def mp(test_mp: Platform) -> Generator[Platform, Any, None]:
+def mp(test_mp: Platform) -> Iterator[Platform]:
     """A :class:`.Platform` containing test data.
 
     This fixture is **module** -scoped, and is used in :mod:`.test_platform`,
@@ -405,7 +405,7 @@ def test_mp(
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
     worker_id: str,
-) -> Generator[Platform, Any, None]:
+) -> Iterator[Platform]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
@@ -420,7 +420,7 @@ def test_mp(
 def tmp_env(
     pytestconfig: pytest.Config,
     tmp_path_factory: pytest.TempPathFactory,
-) -> Generator[os._Environ[str], Any, None]:
+) -> Iterator[os._Environ[str]]:
     """Temporary environment for testing.
 
     In this environment:
@@ -484,7 +484,7 @@ def tutorial_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def ureg() -> Generator["UReg", Any, None]:
+def ureg() -> Iterator["UReg"]:
     """Application-wide units registry."""
     # Pylance registers an ApplicationRegistry, so maybe try `follow-untyped-imports`?
     registry = pint.get_application_registry()  # type: ignore[no-untyped-call]
@@ -500,7 +500,7 @@ def ureg() -> Generator["UReg", Any, None]:
 
 
 @pytest.fixture(scope="function")
-def protect_pint_app_registry() -> Generator[None, Any, None]:
+def protect_pint_app_registry() -> Iterator[None]:
     """Protect pint's application registry.
 
     Use this fixture on tests which invoke code that calls
@@ -513,12 +513,14 @@ def protect_pint_app_registry() -> Generator[None, Any, None]:
     # registry without swapping out the UnitRegistry instance for a different
     # one
     saved = deepcopy(pint.get_application_registry())  # type: ignore[no-untyped-call]
-    yield
-    pint.set_application_registry(saved)  # type: ignore[no-untyped-call]
+    try:
+        yield
+    finally:
+        pint.set_application_registry(saved)  # type: ignore[no-untyped-call]
 
 
 @pytest.fixture(scope="function")
-def protect_rename_dims() -> Generator[None, Any, None]:
+def protect_rename_dims() -> Iterator[None]:
     """Protect :data:`RENAME_DIMS`.
 
     Use this fixture on tests which invoke code that imports :mod:`message_ix`, e.g.
@@ -529,9 +531,12 @@ def protect_rename_dims() -> Generator[None, Any, None]:
     from ixmp.report.common import RENAME_DIMS
 
     saved = deepcopy(RENAME_DIMS)  # Probably just copy() is sufficient
-    yield
-    RENAME_DIMS.clear()
-    RENAME_DIMS.update(saved)
+
+    try:
+        yield
+    finally:
+        RENAME_DIMS.clear()
+        RENAME_DIMS.update(saved)
 
 
 @pytest.fixture(scope="function")
@@ -541,7 +546,7 @@ def test_mp_f(
     test_data_path: Path,
     backend: Literal["ixmp4", "jdbc"],
     worker_id: str,
-) -> Generator[Platform, Any, None]:
+) -> Iterator[Platform]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
     This fixture has **function** scope: the same Platform is reused for one test
@@ -589,7 +594,7 @@ def assert_logs(
     caplog: pytest.LogCaptureFixture,
     message_or_messages: str | Iterable[str] | None = None,
     at_level: int | None = None,
-) -> Generator[None, Any, None]:
+) -> Iterator[None]:
     """Assert that *message_or_messages* appear in logs.
 
     Use assert_logs as a context manager for a statement that is expected to trigger
@@ -717,7 +722,7 @@ def _platform_fixture(
     test_data_path: Path,
     backend: Literal["jdbc", "ixmp4"],
     worker_id: str,
-) -> Generator[Platform, Any, None]:
+) -> Iterator[Platform]:
     """Helper for :func:`test_mp` and other fixtures."""
     # Long, unique name for the platform.
     # Remove '/' so that the name can be used in URL tests.

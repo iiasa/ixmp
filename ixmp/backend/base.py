@@ -5,9 +5,9 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections.abc import (
-    Generator,
     Hashable,
     Iterable,
+    Iterator,
     Mapping,
     MutableMapping,
     Sequence,
@@ -340,7 +340,7 @@ class Backend(ABC):
     @abstractmethod
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
-    ) -> Generator[list[bool | int | str], Any, None]:
+    ) -> Iterator[list[bool | int | str]]:
         """Iterate over TimeSeries stored on the Platform.
 
         Scenarios, as subclasses of TimeSeries, are also included.
@@ -675,7 +675,7 @@ class Backend(ABC):
         variable: Sequence[str],
         unit: Sequence[str],
         year: Sequence[int] | Sequence[str],
-    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
+    ) -> Iterator[tuple[str, str, str, int, float]]:
         """Retrieve time series data.
 
         Parameters
@@ -709,7 +709,7 @@ class Backend(ABC):
     @abstractmethod
     def get_geo(
         self, ts: TimeSeries
-    ) -> Generator[tuple[str, str, int, str, str, str, bool], Any, None]:
+    ) -> Iterator[tuple[str, str, int, str, str, str, bool]]:
         """Retrieve time-series 'geodata'.
 
         Yields

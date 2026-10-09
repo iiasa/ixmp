@@ -1,9 +1,9 @@
 """Tests for compatibility with other packages, especially :mod:`message_ix`."""
 
 import os
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture()
-def tmp_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Path, Any, None]:
+def tmp_path(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     p0 = tmp_path_factory.mktemp("foo")
     p1 = p0.joinpath("bar", "baz")
     p1.mkdir(exist_ok=True, parents=True)

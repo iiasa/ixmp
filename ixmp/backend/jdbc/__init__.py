@@ -5,8 +5,8 @@ import re
 from collections import ChainMap
 from collections.abc import (
     Callable,
-    Generator,
     Iterable,
+    Iterator,
     Mapping,
     MutableMapping,
     Sequence,
@@ -315,13 +315,13 @@ class JDBCBackend(CachingBackend):
         elif synonym and not (parent or hierarchy):
             self.jobj.addNodeSynonym(synonym, name)
 
-    def get_nodes(self) -> Generator[tuple[str, str | None, str, str]]:
+    def get_nodes(self) -> Iterator[tuple[str, str | None, str, str]]:
         for r in self.jobj.listNodes("%"):
             n, p, h = r.getName(), r.getParent(), r.getHierarchy()
             yield (n, None, p, h)
             yield from [(s, n, p, h) for s in (r.getSynonyms() or [])]
 
-    def get_timeslices(self) -> Generator[tuple[str, str, float], Any, None]:
+    def get_timeslices(self) -> Iterator[tuple[str, str, float]]:
         for r in self.jobj.getTimeslices():
             name, category, duration = (r.getName(), r.getCategory(), r.getDuration())
             yield name, category, duration
@@ -335,17 +335,17 @@ class JDBCBackend(CachingBackend):
     def add_scenario_name(self, name: str) -> None:
         self.jobj.addScenario(str(name))
 
-    def get_model_names(self) -> Generator[str, None, None]:
+    def get_model_names(self) -> Iterator[str]:
         for model in self.jobj.listModels():
             yield str(model)
 
-    def get_scenario_names(self) -> Generator[str, None, None]:
+    def get_scenario_names(self) -> Iterator[str]:
         for scenario in self.jobj.listScenarios():
             yield str(scenario)
 
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
-    ) -> Generator[list[bool | int | str], Any, None]:
+    ) -> Iterator[list[bool | int | str]]:
         # List<Map<String, Object>>
         with handle_jexception():
             scenarios = self.jobj.getScenarioList(default, model, scenario)
@@ -661,7 +661,7 @@ class JDBCBackend(CachingBackend):
         variable: Sequence[str],
         unit: Sequence[str],
         year: Sequence[int] | Sequence[str],
-    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
+    ) -> Iterator[tuple[str, str, str, int, float]]:
         # Convert the selectors to Java lists
         r = to_jlist(region)
         v = to_jlist(variable)
@@ -681,7 +681,7 @@ class JDBCBackend(CachingBackend):
 
     def get_geo(
         self, ts: TimeSeries
-    ) -> Generator[tuple[str, str, int, str, str, str, bool], Any, None]:
+    ) -> Iterator[tuple[str, str, int, str, str, str, bool]]:
         # NB the return type of getGeoData() requires more processing than
         #    getTimeseries. It also accepts no selectors.
 

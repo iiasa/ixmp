@@ -1,8 +1,8 @@
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -145,7 +145,7 @@ class TestGAMSModel:
     @pytest.fixture(scope="class")
     def dantzig(
         self, test_mp: "Platform", request: pytest.FixtureRequest
-    ) -> Generator[Scenario, Any, None]:
+    ) -> Iterator[Scenario]:
         yield make_dantzig(test_mp, request=request)
 
     @pytest.mark.parametrize("char", r'<>"/\|?*')

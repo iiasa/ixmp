@@ -2,9 +2,9 @@ import gc
 import logging
 import os
 import platform
-from collections.abc import Generator
+from collections.abc import Iterator
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import jpype
 import numpy as np
@@ -119,19 +119,19 @@ VE = pytest.mark.xfail(raises=ValueError)
 
 class TestJDBCBackend:
     @pytest.fixture(scope="class")
-    def klass(self) -> Generator[type["JDBCBackend"], Any, None]:
+    def klass(self) -> Iterator[type["JDBCBackend"]]:
         """The JDBCBackend class."""
         yield ixmp.backend.jdbc.JDBCBackend
 
     @pytest.fixture(scope="function")
-    def mp(self) -> Generator["Platform", Any, None]:
+    def mp(self) -> Iterator["Platform"]:
         """A Platform connected to a JDBCBackend."""
         yield ixmp.Platform(
             backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest"
         )
 
     @pytest.fixture()
-    def be(self, mp: "Platform") -> Generator["JDBCBackend", Any, None]:
+    def be(self, mp: "Platform") -> Iterator["JDBCBackend"]:
         """The Backend object itself."""
         assert isinstance(mp._backend, ixmp.backend.jdbc.JDBCBackend)
         yield mp._backend
@@ -397,7 +397,7 @@ def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
-def exception_verbose_true() -> Generator[None, Any, None]:
+def exception_verbose_true() -> Iterator[None]:
     """A fixture which ensures JDBCBackend raises verbose exceptions.
 
     The set value is not disturbed for other tests/code.
@@ -539,7 +539,7 @@ def reload_cycle_scenario(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
     rc_data_size: int,
-) -> Generator["Scenario", Any, None]:  # pragma: no cover
+) -> Iterator["Scenario"]:  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
     kwarg: "PlatformInitKwargs" = dict(driver="hsqldb")

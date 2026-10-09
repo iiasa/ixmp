@@ -1,8 +1,8 @@
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone, tzinfo
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -104,7 +104,7 @@ class TestTimeSeries:
     @pytest.fixture(scope="function", params=[TimeSeries, Scenario])
     def ts(
         self, request: pytest.FixtureRequest, mp: "Platform"
-    ) -> Generator[TimeSeries | Scenario, Any, None]:
+    ) -> Iterator[TimeSeries | Scenario]:
         """An empty TimeSeries with a temporary name on the :func:`mp`."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name

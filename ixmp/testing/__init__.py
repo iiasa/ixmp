@@ -197,6 +197,51 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Parametrize tests for multiple (backend, driver) combinations."""
+    # NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
+    # sound like what we need, but I [Fridolin Glatter] couldn't quite get it to work.
+    # Instead, this is more following
+    # https://pytest-with-eric.com/introduction/pytest-generate-tests/
+    if "backend_driver" not in metafunc.fixturenames:
+        return
+
+    # Available backends in this session
+    backend_driver = metafunc.config.stash[KEY_BACKEND_DRIVER]
+
+    # Subset of marker names applied to the test function
+    marker_names = sorted(
+        set(m.name for m in metafunc.definition.iter_markers())
+        & {"ixmp4", "ixmp4_never", "ixmp4_not_yet", "jdbc", "jdbc_postgresql_never"}
+    )
+
+    # Argument values for pytest.parametrize()
+    argvalues: list["str | ParameterSet"] = []
+
+    # Iterate over all available backends
+    for bd in backend_driver:
+        # Match on the backend name followed by 0 or more marker names
+        match [bd.backend] + marker_names:
+            case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
+                # These markers mean "even though a parametrized fixture is used, this
+                # test should run only for {IXMP4,JDBC}Backend"
+                continue
+            case ["jdbc", *_, "jdbc_postgresql_never"]:
+                mark: Any = (
+                    MARK["jdbc_postgresql_never"] if bd.driver == "postgresql" else []
+                )
+            case ["ixmp4", "ixmp4_never", *_]:  # "Won't ever be implemented on IXMP4"
+                mark = MARK["IXMP4Backend Never"]
+            case ["ixmp4", "ixmp4_not_yet", *_]:  # "Not yet supported on IXMP4"
+                mark = MARK["IXMP4Backend Not Yet"]
+            case _:
+                mark = []
+
+        argvalues.append(pytest.param(bd, marks=mark, id=str(bd)))
+
+    metafunc.parametrize("backend_driver", argvalues, indirect=True)
+
+
 def pytest_report_collectionfinish(
     config: pytest.Config, start_path: Path, items: Sequence[Any]
 ) -> list[str]:
@@ -211,6 +256,20 @@ def pytest_report_collectionfinish(
             )
 
     return messages
+
+
+def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
+    """Add the ixmp configuration to the pytest report header."""
+    return f"ixmp config: {repr(ixmp_config.values)}"
+
+
+def pytest_sessionfinish(
+    session: pytest.Session, exitstatus: int | pytest.ExitCode
+) -> None:
+    """Drop PostgreSQL databases created for this session."""
+    from .postgres import databases_for_worker
+
+    databases_for_worker(session)
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -259,65 +318,6 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     for bd, db_name in session.config.stash[KEY_POSTGRES_DB].items():
         if db_name == "":
             session.config.stash[KEY_BACKEND_DRIVER].remove(bd)
-
-
-def pytest_sessionfinish(
-    session: pytest.Session, exitstatus: int | pytest.ExitCode
-) -> None:
-    """Drop PostgreSQL databases created for this session."""
-    from .postgres import databases_for_worker
-
-    databases_for_worker(session)
-
-
-def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
-    """Add the ixmp configuration to the pytest report header."""
-    return f"ixmp config: {repr(ixmp_config.values)}"
-
-
-def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    """Parametrize tests for multiple (backend, driver) combinations."""
-    # NOTE https://docs.pytest.org/en/latest/example/markers.html#marking-platform-specific-tests-with-pytest
-    # sound like what we need, but I [Fridolin Glatter] couldn't quite get it to work.
-    # Instead, this is more following
-    # https://pytest-with-eric.com/introduction/pytest-generate-tests/
-    if "backend_driver" not in metafunc.fixturenames:
-        return
-
-    # Available backends in this session
-    backend_driver = metafunc.config.stash[KEY_BACKEND_DRIVER]
-
-    # Subset of marker names applied to the test function
-    marker_names = sorted(
-        set(m.name for m in metafunc.definition.iter_markers())
-        & {"ixmp4", "ixmp4_never", "ixmp4_not_yet", "jdbc", "jdbc_postgresql_never"}
-    )
-
-    # Argument values for pytest.parametrize()
-    argvalues: list["str | ParameterSet"] = []
-
-    # Iterate over all available backends
-    for bd in backend_driver:
-        # Match on the backend name followed by 0 or more marker names
-        match [bd.backend] + marker_names:
-            case ["jdbc", "ixmp4", *_] | ["ixmp4", *_, "jdbc"]:
-                # These markers mean "even though a parametrized fixture is used, this
-                # test should run only for {IXMP4,JDBC}Backend"
-                continue
-            case ["jdbc", *_, "jdbc_postgresql_never"]:
-                mark: Any = (
-                    MARK["jdbc_postgresql_never"] if bd.driver == "postgresql" else []
-                )
-            case ["ixmp4", "ixmp4_never", *_]:  # "Won't ever be implemented on IXMP4"
-                mark = MARK["IXMP4Backend Never"]
-            case ["ixmp4", "ixmp4_not_yet", *_]:  # "Not yet supported on IXMP4"
-                mark = MARK["IXMP4Backend Not Yet"]
-            case _:
-                mark = []
-
-        argvalues.append(pytest.param(bd, marks=mark, id=str(bd)))
-
-    metafunc.parametrize("backend_driver", argvalues, indirect=True)
 
 
 # Session-scoped fixtures

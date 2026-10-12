@@ -211,17 +211,16 @@ class TestScenario:
             scen, mp = ixmp.Scenario.from_url(url + "foo")
         assert scen is None and isinstance(mp, ixmp.Platform)
 
-    def test_clone(self, mp: "Platform") -> None:
+    def test_clone(self, request: pytest.FixtureRequest, mp: "Platform") -> None:
         """Scenario can be cloned."""
-        scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
+        scen = make_dantzig(mp, quiet=True, request=request)
 
-        scen.remove_solution()
-        scen.check_out()
-        scen.init_set("h")
-        scen.add_set("h", "test")
-        scen.commit("adding an index set 'h', with element 'test'")
+        with scen.transact("Add a new set 'h' with an element 'test'"):
+            scen.init_set("h")
+            scen.add_set("h", "test")
 
         scen2 = scen.clone(keep_solution=False)
+
         # Cloned scenario contains added set
         obs = scen2.set("h")
         npt.assert_array_equal(obs, ["test"])
@@ -760,21 +759,25 @@ class TestScenario:
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
     def test_meta_bulk(
-        self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
+        self,
+        request: pytest.FixtureRequest,
+        mp: "Platform",
+        test_dict: dict[str, bool | float | int | str],
     ) -> None:
-        scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
+        scen = make_dantzig(mp, quiet=True, request=request)
+
+        # Meta can be set in bulk
         scen.set_meta(test_dict)
 
-        # test all
-        obs_dict = scen.get_meta()
-        for k, exp in test_dict.items():
-            obs = obs_dict[k]
-            assert obs == exp
+        # Meta can be retrieved in bulk
+        obs = scen.get_meta()
+        # Same items are retrieved
+        assert test_dict == {k: obs[k] for k in test_dict}
 
-        # check updating metadata (replace and append)
+        # Meta can be updated/replaced
         scen.set_meta({"test_int": 1234567, "new_attr": "new_attr"})
-        assert scen.get_meta("test_int") == 1234567
-        assert scen.get_meta("new_attr") == "new_attr"
+        assert 1234567 == scen.get_meta("test_int")
+        assert "new_attr" == scen.get_meta("new_attr")
 
 
 def test_range(scen_empty: "Scenario") -> None:

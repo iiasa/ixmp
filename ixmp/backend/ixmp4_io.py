@@ -1,5 +1,6 @@
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Literal, cast
 
@@ -255,6 +256,15 @@ def _record_versions(container: gt.Container, packages: Sequence[str]) -> None: 
 
     # Add Set to the container
     container.addSet(name=name, domain=["*", "*"], records=versions)
+
+
+@contextmanager
+def maybe_transact(run: Run, message: str) -> Iterator[None]:
+    try:
+        with nullcontext() if run.owns_lock else run.transact(message):
+            yield
+    finally:
+        pass
 
 
 def write_run_to_gdx(

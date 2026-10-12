@@ -55,6 +55,7 @@ class BE2(Backend):
     has_solution = noop
     init = noop
     init_item = noop
+    is_checked_out = noop
     is_default = noop
     item_delete_elements = noop
     item_get_elements = noop

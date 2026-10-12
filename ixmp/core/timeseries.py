@@ -291,6 +291,10 @@ class TimeSeries:
         """Set the current :attr:`version` as the default."""
         self.platform._backend.set_as_default(self)
 
+    def is_checked_out(self) -> bool:
+        """Return :obj:`True` if the TimeSeries is checked out."""
+        return self.platform._backend.is_checked_out(self)
+
     def is_default(self) -> bool:
         """Return :obj:`True` if the :attr:`version` is the default version."""
         return self.platform._backend.is_default(self)
@@ -705,11 +709,16 @@ def _clone(ts: TS, platform_dest: Platform, model: str, scenario: str) -> TS:
     ts_dest = type(ts)(platform_dest, model, scenario, "new", ts.scheme)
     ts_dest.commit(f"clone from ixmp://{ts.platform.name}/{ts.url}")
 
-    # Clone meta data
-    ts_dest.set_meta(ts.get_meta())
-
-    # Clone time-series data
     with ts_dest.transact("Clone time series data"):
+        # Clone meta data
+        # NB IXMP4Backend requires that this is enclosed in a transaction;
+        #    JDBCBackend does not.
+        ts_dest.set_meta(ts.get_meta())
+
+        # Clone time-series data
+        # NB For TimeSeries.timeseries(), the underlying JDBCBackend/Java method does
+        #    not include the 'meta' annotation for each value. This means it is not
+        #    possible to clone *only* the 'meta' time series data; all data are cloned.
         ts_dest.add_timeseries(ts.timeseries())
 
     return ts_dest

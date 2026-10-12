@@ -233,6 +233,10 @@ Default contents
    regions and units are populated.
    See :issue:`608` for details.
 
+:meth:`.Platform.add_doc`
+   ixmp4 does not allow to store 'docs' for variable names
+   unless ≥1 time series data point has been stored for that name.
+
 :meth:`.Platform.add_region`
    - ixmp4 and IXMP4Backend do not and will not support the :py:`parent`
      argument.

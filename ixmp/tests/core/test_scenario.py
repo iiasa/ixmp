@@ -3,6 +3,7 @@ import re
 from collections.abc import Generator, Iterator
 from pathlib import Path
 from shutil import copyfile
+from subprocess import run
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import numpy as np
@@ -14,7 +15,6 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKENDS,
-    MARK,
     _platform_fixture,
     assert_logs,
     make_dantzig,
@@ -211,16 +211,16 @@ class TestScenario:
             scen, mp = ixmp.Scenario.from_url(url + "foo")
         assert scen is None and isinstance(mp, ixmp.Platform)
 
-    # Clone Scenario
-    def test_clone(self, mp: "Platform") -> None:
-        scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
-        scen.remove_solution()
-        scen.check_out()
-        scen.init_set("h")
-        scen.add_set("h", "test")
-        scen.commit("adding an index set 'h', with element 'test'")
+    def test_clone(self, request: pytest.FixtureRequest, mp: "Platform") -> None:
+        """Scenario can be cloned."""
+        scen = make_dantzig(mp, quiet=True, request=request)
+
+        with scen.transact("Add a new set 'h' with an element 'test'"):
+            scen.init_set("h")
+            scen.add_set("h", "test")
 
         scen2 = scen.clone(keep_solution=False)
+
         # Cloned scenario contains added set
         obs = scen2.set("h")
         npt.assert_array_equal(obs, ["test"])
@@ -271,13 +271,11 @@ class TestScenario:
     def test_clone_default_version(
         self, request: pytest.FixtureRequest, test_mp: "Platform"
     ) -> None:
+        """:meth:`Scenario.clone` to new/unique (m, s) names is the default version."""
         scen = ixmp.Scenario(
             mp=test_mp, model="Model", scenario="Scenario", version="new"
         )
-
-        # TODO Is this an indicator of something still needing to change?
-        if not is_ixmp4backend(test_mp._backend):
-            scen.commit("")
+        scen.commit("")
 
         unique_model_name = str(hash(request.node.nodeid))
         clone = scen.clone(model=unique_model_name)
@@ -309,9 +307,7 @@ class TestScenario:
         p1.add_unit(unit="USD/km")
 
         # Clone from JDBCBackend to IXMP4Backend succeeds
-        scen.clone(platform=p1)
-
-        clone = ixmp.Scenario(mp=p1, **models["dantzig"])
+        clone = scen.clone(platform=p1, **models["dantzig"])
 
         # TODO Expand these assertions
         # Check an exemplary parameter
@@ -322,6 +318,8 @@ class TestScenario:
         assert_frame_equal_sorted(scen_d, clone_d, check_like=True)
 
         # Check time series data
+        # NB Since TimeSeries.timeseries() does not indicate which values have
+        #    meta=True,
         assert_frame_equal_sorted(scen.timeseries(), clone.timeseries())
 
         # Check optimization solution data
@@ -690,13 +688,14 @@ class TestScenario:
         s.read_excel(tmp_path, add_units=True, init_items=True)
 
     def test_solve(self, tmp_path: Path, scen_f: "Scenario") -> None:
-        from subprocess import run
-
         # Copy the dantzig model file into the `tmp_path`
         model_file = tmp_path.joinpath("dantzig.gms")
         copyfile(
             Path(ixmp.__file__).parent.joinpath("model", "dantzig.gms"), model_file
         )
+
+        # `scen_f` is checked out to start
+        assert scen_f.is_checked_out()  # Same for every Backend
 
         # Scenario solves successfully
         scen_f.solve(
@@ -722,7 +721,7 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    @MARK["ixmp4-pandas-3"]
+    @pytest.mark.ixmp4_not_yet
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -759,23 +758,26 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
-    @MARK["ixmp4-pandas-3"]
     def test_meta_bulk(
-        self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
+        self,
+        request: pytest.FixtureRequest,
+        mp: "Platform",
+        test_dict: dict[str, bool | float | int | str],
     ) -> None:
-        scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
+        scen = make_dantzig(mp, quiet=True, request=request)
+
+        # Meta can be set in bulk
         scen.set_meta(test_dict)
 
-        # test all
-        obs_dict = scen.get_meta()
-        for k, exp in test_dict.items():
-            obs = obs_dict[k]
-            assert obs == exp
+        # Meta can be retrieved in bulk
+        obs = scen.get_meta()
+        # Same items are retrieved
+        assert test_dict == {k: obs[k] for k in test_dict}
 
-        # check updating metadata (replace and append)
+        # Meta can be updated/replaced
         scen.set_meta({"test_int": 1234567, "new_attr": "new_attr"})
-        assert scen.get_meta("test_int") == 1234567
-        assert scen.get_meta("new_attr") == "new_attr"
+        assert 1234567 == scen.get_meta("test_int")
+        assert "new_attr" == scen.get_meta("new_attr")
 
 
 def test_range(scen_empty: "Scenario") -> None:

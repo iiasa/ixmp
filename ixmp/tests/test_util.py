@@ -293,6 +293,10 @@ def test_parse_url(
     assert scenario_info == s
 
 
+# NB Fails with ixmp4 because test_mp_f uses the same PostgreSQL database as test_mp and
+#    sees all its contents. This will be resolved by
+#    https://github.com/iiasa/ixmp/pull/657.
+@pytest.mark.ixmp4_not_yet
 def test_format_scenario_list(test_mp_f: "Platform") -> None:
     # Use the function-scoped fixture for precise version numbers
     mp = test_mp_f

@@ -10,7 +10,7 @@ from numpy import testing as npt
 from pandas.testing import assert_frame_equal
 
 from ixmp import IAMC_IDX, Scenario, TimeSeries
-from ixmp.testing import DATA, MARK, models
+from ixmp.testing import DATA, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -111,15 +111,7 @@ class TestTimeSeries:
         node = hash(request.node.nodeid.replace("/", " "))
         # Class of object to yield
         cls = request.param
-        try:
-            yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
-        finally:
-            # Work around https://github.com/iiasa/ixmp4/issues/205
-            if is_ixmp4backend(mp._backend):
-                from ixmp4.data.backend.test import PostgresTestBackend
-
-                assert isinstance(mp._backend._backend, PostgresTestBackend)
-                mp._backend._backend.session.rollback()
+        yield cls(mp, model=f"test-{node}", scenario=f"test-{node}", version="new")
 
     # Initialize TimeSeries
     @pytest.mark.parametrize("cls", [TimeSeries, Scenario])
@@ -212,7 +204,6 @@ class TestTimeSeries:
         with pytest.raises(ValueError):
             ts.add_timeseries(DATA[0].drop("unit", axis=1))
 
-    @MARK["ixmp4-pandas-3"]
     def test_discard_changes(self, ts: TimeSeries) -> None:
         ts.commit("")
         assert 0 == len(ts.timeseries())
@@ -252,7 +243,9 @@ class TestTimeSeries:
             2020,  # bare int, not in a list
             # Raises java.lang.java.lang.ClassCastException on JDBC
             # Passes on IXMP4Backend because pandas can handle int and str
-            pytest.param(["2010"], marks=pytest.mark.xfail),
+            pytest.param(
+                ["2010"], marks=pytest.mark.xfail(reason="XFAIL for JDBCBackend only")
+            ),
         ],
     )
     def test_get_year(

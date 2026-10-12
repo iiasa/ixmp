@@ -34,8 +34,6 @@ def test_versiontype() -> None:
         vt.convert("xx", None, None)
 
 
-# FIXME The URL needs to be different for ixmp4; can you target model/scenario on pg?
-@pytest.mark.ixmp4_not_yet
 def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # Name of a temporary file that doesn't exist
     tmp_path /= "temp.properties"
@@ -239,23 +237,21 @@ def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) 
     # Ensure the 'canning problem'/'standard' TimeSeries exists
     populate_test_platform(test_mp)
 
+    # Load the default version of the Dantzig scenario; clone to a new version to which
+    # data will be imported
+    scen = ixmp.Scenario(test_mp, **models["dantzig"]).clone()
+
     # Invoke the CLI to import data to version 1 of the TimeSeries
     result = ixmp_cli.invoke(
         [
-            "--platform",
-            test_mp.name,
-            "--model",
-            models["dantzig"]["model"],
-            "--scenario",
-            models["dantzig"]["scenario"],
-            "--version",
-            "1",
+            f"--platform={test_mp.name}",
+            f"--model={models['dantzig']['model']}",
+            f"--scenario={models['dantzig']['scenario']}",
+            f"--version={scen.version}",
             "import",
             "timeseries",
-            "--firstyear",
-            "2020",
-            "--lastyear",
-            "2200",
+            "--firstyear=2020",
+            "--lastyear=2200",
             str(test_data_path / "timeseries_canning.csv"),
         ]
     )
@@ -275,12 +271,11 @@ def test_import_ts(ixmp_cli: Runner, test_mp: "Platform", test_data_path: Path) 
     )
 
     # The specified TimeSeries version contains the expected data
-    scen = ixmp.Scenario(test_mp, **models["dantzig"], version=1)
     assert_frame_equal(scen.timeseries(variable=["Testing"]), exp)
 
     # The data is not present in other versions
-    scen = ixmp.Scenario(test_mp, **models["dantzig"], version=2)
-    assert len(scen.timeseries(variable=["Testing"])) == 0
+    scen_v2 = ixmp.Scenario(test_mp, **models["dantzig"], version=2)
+    assert len(scen_v2.timeseries(variable=["Testing"])) == 0
 
 
 def test_excel_io(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:

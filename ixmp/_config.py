@@ -14,14 +14,21 @@ log = logging.getLogger(__name__)
 
 
 class _JSONEncoder(json.JSONEncoder):
-    """Helper for writing config to file.
-
-    The default JSONEncoder does not automatically convert pathlib.Path objects.
-    """
+    """Helper for writing config to file."""
 
     def default(self, o: Any) -> Any:
+        """Handle two classes not handled by :class:`json.JSONEncoder`:
+
+        1. :class:`pathlib.Path`: encoded as :class:`str`.
+        2. :class:`ixmp4.conf.Settings`: encoded as empty :class:`dict`. This is
+           redundant with :attr:`.backend.ixmp4.Options.ixmp4_name`, which stores a
+           reference to an ixmp4 configuration record.
+        """
         if isinstance(o, Path):
             return str(o)
+        elif getattr(type(o), "__module__", "").startswith("ixmp4"):
+            return {}  # ixmp4.conf.Settings is not JSON serializable; skip
+
         return json.JSONEncoder.default(self, o)
 
 
@@ -68,10 +75,22 @@ def _platform_default() -> dict[str, "str | PlatformInitKwargs"]:
     from ixmp.util.ixmp4 import has_ixmp4
 
     if has_ixmp4():
-        import ixmp4.conf
+        from ixmp4 import __version_tuple__
 
-        # Use configured ixmp4 storage directory
-        ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath("databases")
+        # NB (0, 0, 0) occurs with an unpublished version, e.g. from `main`
+        if (0, 0, 0) < __version_tuple__ < (0, 15, 0):
+            import ixmp4.conf
+
+            # Use configured ixmp4 storage directory
+            ixmp4_databases = ixmp4.conf.settings.storage_directory.joinpath(  # type: ignore [attr-defined]
+                "databases"
+            )
+        else:
+            from ixmp4.conf.settings import Settings
+
+            # omitting fields with defaults requires the pydantic mypy plugin
+            settings = Settings()  # type: ignore[call-arg]
+            ixmp4_databases = settings.get_database_dir()
     else:
         # ixmp4 not installed or importable; construct a likely value
         from platformdirs import user_data_path

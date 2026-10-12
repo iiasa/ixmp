@@ -1,50 +1,36 @@
 import builtins
 import logging
+import re
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
-from copy import copy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from itertools import chain
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
-import ixmp4.conf
+import ixmp4
 import numpy as np
 import pandas as pd
-from ixmp4 import DataPoint
-from ixmp4 import Platform as ixmp4_platform
+from ixmp4.conf.settings import Settings
 from ixmp4.core import Run
 from ixmp4.core.exceptions import (
     NotUnique,
     OptimizationDataValidationError,
     PlatformNotFound,
-    RunIsLocked,
-    RunLockRequired,
 )
 from ixmp4.core.optimization import (
-    equation,
-    indexset,
-    parameter,
-    scalar,
-    table,
-    variable,
+    Equation,
+    IndexSet,
+    Parameter,
+    Scalar,
+    Table,
+    Variable,
 )
-from ixmp4.core.optimization.equation import Equation
-from ixmp4.core.optimization.indexset import IndexSet, IndexSetRepository
-from ixmp4.core.optimization.parameter import Parameter
-from ixmp4.core.optimization.scalar import Scalar, ScalarRepository
-from ixmp4.core.optimization.table import Table
-from ixmp4.core.optimization.variable import Variable
-from ixmp4.data.abstract.iamc.datapoint import EnumerateKwargs as IamcEnumerateKwargs
-from ixmp4.data.abstract.meta import RunMetaEntry
-from ixmp4.data.abstract.optimization.indexset import (
-    IndexSetRepository as BEIndexSetRepository,
-)
-from ixmp4.data.abstract.optimization.scalar import (
-    ScalarRepository as BEScalarRepository,
-)
-from ixmp4.data.abstract.region import Region
-from ixmp4.data.backend.base import Backend as ixmp4_backend
+from ixmp4.core.region import Region
+from ixmp4.data.backend import Backend as ixmp4_backend
+from ixmp4.data.meta.exceptions import InvalidRunMeta
+from ixmp4.transport import DirectTransport, HttpxTransport
 
 # TODO Import this from typing when dropping Python 3.11
 # TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
@@ -60,38 +46,28 @@ from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list
 
 from .base import CachingBackend
-from .common import ItemType
-from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
+from .common import IAMC_IDX, ItemType
+from .ixmp4_io import maybe_transact, read_gdx_to_run, write_run_to_gdx
 
 if TYPE_CHECKING:
-    from ixmp4.core.optimization.equation import EquationRepository
-    from ixmp4.core.optimization.parameter import ParameterRepository
-    from ixmp4.core.optimization.table import TableRepository
+    from ixmp4.conf.platforms import PlatformConnectionInfo
+    from ixmp4.conf.settings import Settings
+    from ixmp4.core.optimization.equation import EquationServiceFacade
+    from ixmp4.core.optimization.indexset import IndexSetServiceFacade
+    from ixmp4.core.optimization.parameter import ParameterServiceFacade
+    from ixmp4.core.optimization.scalar import ScalarServiceFacade
+    from ixmp4.core.optimization.table import TableServiceFacade
     from ixmp4.core.optimization.variable import (
-        VariableRepository as OptimizationVariableRepository,
+        VariableServiceFacade as OptVariableServiceFacade,
     )
-    from ixmp4.data.abstract.optimization.equation import (
-        EquationRepository as BEEquationRepository,
-    )
-    from ixmp4.data.abstract.optimization.indexset import IndexSet as BEIndexSet
-    from ixmp4.data.abstract.optimization.parameter import (
-        ParameterRepository as BEParameterRepository,
-    )
-    from ixmp4.data.abstract.optimization.table import Table as BETable
-    from ixmp4.data.abstract.optimization.table import (
-        TableRepository as BETableRepository,
-    )
-    from ixmp4.data.abstract.optimization.variable import (
-        VariableRepository as BEVariableRepository,
-    )
+    from ixmp4.data.iamc.datapoint.filter import FacadeDataPointFilter
 
     from ixmp.types import (
         Filters,
-        IXMP4BackendRepository,
-        IXMP4IamcDomainRepository,
+        IXMP4IamcDomainService,
         IXMP4ModelData,
         IXMP4ModelDataType,
-        IXMP4Repository,
+        IXMP4ServiceFacade,
         ParData,
         ReadKwargs,
         SetData,
@@ -110,6 +86,9 @@ CLASS_FOR_IX_TYPE: dict[str, tuple["IXMP4ModelDataType", ...]] = {
     "set": (IndexSet, Table),
     "var": (Variable,),
 }
+
+#: String prefix used to encode the 'meta' attribute of time series data points.
+META = "__META__|"
 
 #: Mapping from keys of ixmp4 {Equation,Parameter,Variable}.data and column names used
 #: by ixmp.Scenario.
@@ -165,6 +144,11 @@ class Options:
     #: Name (also 'key') of the backend/platform in :mod:`ixmp4` configuration.
     ixmp4_name: str
 
+    # Settings() is a pydantic class, so mypy can only understand that the omitted
+    # fields have defaults using the pydantic plugin for mypy.
+    #: Settings for the :mod:`ixmp4` platform.
+    ixmp4_settings: "Settings" = field(default_factory=lambda: Settings())  # type: ignore [call-arg]
+
     #: :mod:`ixmp4` data source name.
     dsn: str = ""
 
@@ -179,10 +163,7 @@ class Options:
 
     def __post_init__(self) -> None:
         if not self.dsn:
-            # Construct a DSN based on the platform name
-            path = ixmp4.conf.settings.storage_directory.joinpath(
-                "databases", f"{self.ixmp4_name}.sqlite3"
-            )
+            path = self.ixmp4_settings.get_database_path(self.ixmp4_name)
             self.dsn = f"sqlite:///{path}"
         # Handle str value, e.g. from the command line
         if isinstance(self.jdbc_compat, str):
@@ -200,7 +181,8 @@ class Options:
             raise ValueError(f"Unhandled positional args to IXMP4Backend: {args!r}")
 
         try:
-            return asdict(cls(**kwargs))
+            result = asdict(cls(**kwargs))
+            return result
         except TypeError:
             raise ValueError(
                 "Expected at least 'ixmp4_name' keyword argument to IXMP4Backend; got"
@@ -217,7 +199,7 @@ class Options:
         )
 
     @property
-    def platform_info(self) -> "ixmp4.conf.base.PlatformInfo":
+    def platform_info(self) -> "PlatformConnectionInfo":
         """Return an ixmp4.PlatformInfo instance.
 
         This ensures that there is an entry in the :mod:`ixmp4` configuration with name
@@ -226,15 +208,18 @@ class Options:
         - If the entry does not exist, it is created.
         - If the entry does exist, its DSN must be the same as :attr:`dsn`.
         """
+        toml_platforms = self.ixmp4_settings.get_toml_platforms()
+
+        result: "PlatformConnectionInfo"
         try:
             # Retrieve the info for an existing platform
-            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+            result = toml_platforms.get_platform(self.ixmp4_name)
             assert result.name == self.ixmp4_name and result.dsn == self.dsn
         except PlatformNotFound:
             # Add platform info to ixmp4 configuration
-            ixmp4.conf.settings.toml.add_platform(self.ixmp4_name, self.dsn)
+            toml_platforms.add_platform(self.ixmp4_name, self.dsn)
             # add_platform() returns None, so use get_platform() to retrieve the object
-            result = ixmp4.conf.settings.toml.get_platform(key=self.ixmp4_name)
+            result = toml_platforms.get_platform(self.ixmp4_name)
         except AssertionError:  # pragma: no cover
             log.error(f"From ixmp4: {result}")
             log.error(f"From ixmp: name={self.ixmp4_name!r}, dsn={self.dsn!r}")
@@ -249,7 +234,7 @@ class IXMP4Backend(CachingBackend):
     Keyword arguments are passed to :class:`Options`.
     """
 
-    _platform: "ixmp4_platform"
+    _platform: "ixmp4.Platform"
     _backend: "ixmp4_backend"
     _options: "Options"
 
@@ -267,36 +252,40 @@ class IXMP4Backend(CachingBackend):
         ixmp4_name: str,
         dsn: str = Options.dsn,
         jdbc_compat: bool | str = Options.jdbc_compat,
+        ixmp4_settings: "Settings | None" = None,
         cache: bool = True,
     ) -> None:
-        from ixmp4.data.backend.test import PostgresTestBackend
-
         super().__init__(cache_enabled=cache)
+
+        # Build settings at runtime so test/session env vars are respected.
+        if ixmp4_settings is None:
+            ixmp4_settings = Settings()  # type: ignore[call-arg]
 
         # Handle arguments
         self._options = opts = Options(
-            ixmp4_name=ixmp4_name, dsn=dsn, jdbc_compat=jdbc_compat
+            ixmp4_name=ixmp4_name,
+            dsn=dsn,
+            jdbc_compat=jdbc_compat,
+            ixmp4_settings=ixmp4_settings,
         )
 
         try:
             # Get an existing ixmp4.Backend object
             self._backend = self.backend_index[opts.ixmp4_name]
         except KeyError:
-            # Object does not exist → instantiate using PlatformInfo from `opts`
-            self._backend = self.backend_index[opts.ixmp4_name] = PostgresTestBackend(
-                opts.platform_info
+            # Object does not exist -> instantiate using PlatformInfo from `opts`
+            transport = self._get_transport(opts.platform_info)
+            self._backend = self.backend_index[opts.ixmp4_name] = ixmp4_backend(
+                transport
             )
 
             # NOTE Not running alembic.upgrade_database() here since for new DBs (such
             # as for tests), this happens automatically
-        finally:
-            if isinstance(self._backend, PostgresTestBackend):
-                # Ensure database is set up.
-                # NOTE sqlalchemy catches existing tables to avoid superfluous CREATEs
-                self._backend.setup()
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
-        self._platform = ixmp4_platform(_backend=self._backend)
+        self._platform = ixmp4.Platform(
+            self._backend, settings=self._options.ixmp4_settings
+        )
 
         if opts.jdbc_compat:
             try:
@@ -313,14 +302,23 @@ class IXMP4Backend(CachingBackend):
                 #    dynamically and is not importable
                 pass
 
-        # NOTE ixmp4 can only store documentation for meta entries of particular Runs,
-        # but set_doc and get_doc expect to work Run-agnostic
-        self._doc_domain_map: dict[str, "IXMP4IamcDomainRepository"] = {
-            "model": self._backend.models,
-            "region": self._backend.regions,
-            "scenario": self._backend.scenarios,
-            "timeseries": self._backend.iamc.variables,
-        }
+    def _get_transport(
+        self, ci: "PlatformConnectionInfo", http_credentials: str = "default"
+    ) -> HttpxTransport | DirectTransport:
+        if ci.dsn.startswith("http"):
+            cred_dict = self._options.ixmp4_settings.get_credentials().get(
+                http_credentials
+            )
+            return HttpxTransport.from_url(
+                ci.dsn,
+                settings=self._options.ixmp4_settings.client,
+                auth=self._options.ixmp4_settings.get_client_auth(cred_dict),
+            )
+        else:
+            return DirectTransport.from_dsn(
+                ci.dsn,
+                check_alembic_version=self._options.ixmp4_settings.check_alembic_version,
+            )
 
     @property
     def _log_level(self) -> int:
@@ -376,12 +374,13 @@ class IXMP4Backend(CachingBackend):
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
     ) -> Generator[list[bool | int | str], Any, None]:
-        runs = self._platform.runs.list(
-            default_only=default,
-            model={"name": model} if model else None,
-            scenario={"name": scenario} if scenario else None,
-        )
+        filter = ixmp4.Run.Filter(default_only=default)
+        if model is not None:
+            filter["model"] = {"name": model}
+        if scenario is not None:
+            filter["scenario"] = {"name": scenario}
 
+        runs = self._platform.runs.list(**filter)
         for run in runs:
             yield [
                 str(run.model.name),
@@ -514,35 +513,60 @@ class IXMP4Backend(CachingBackend):
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
 
+        if not keep_solution:
+            self.clear_solution(cloned_s)
+
+        # Clone to version 1 of a given (model name, scenario name) becomes the initial
+        # default. This matches behaviour of the Java code underlying JDBCBackend.
+        if cloned_run.version == 1:
+            cloned_run.set_as_default()
+
         return cloned_s
+
+    def _get_max_as_default(self, model: str, scenario: str) -> Run:
+        # NOTE: This could be done in the database if performance requires it
+        # -> add as a feature in ixmp4
+        all_runs = self._platform.runs.list(
+            model=model, scenario=scenario, default_only=False
+        )
+        return max(all_runs, key=lambda r: r.version)
 
     def get(self, ts: TimeSeries) -> None:
         v = int(ts.version) if ts.version else None
-        run = self._platform.runs.get(
-            model=ts.model, scenario=ts.scenario, version=v, get_max_as_default=True
-        )
+        try:
+            run = self._platform.runs.get(
+                model=ts.model, scenario=ts.scenario, version=v
+            )
+        except Run.NoDefaultVersion:
+            run = self._get_max_as_default(ts.model, ts.scenario)
+
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
+        # TODO: public API in ixmp4
         if timeseries_only:
             log.log(self._log_level, "ixmp4 only allows full or no access to Runs!")
         try:
             self.index[ts]._lock()
-        except RunIsLocked:
+        except Run.IsLocked:
             log.debug("Run is already locked!")
             pass
 
     def discard_changes(self, ts: TimeSeries) -> None:
+        # TODO: public API in ixmp4
         run = self.index[ts]
-        run._revert_changes(target_transaction=run._find_target_transaction())
-        run._meta.refetch_data()
+        # ._dto.lock_transaction holds the tx_id at which the lock was acquired
+        if run._dto.lock_transaction is None or not run.owns_lock:
+            raise RuntimeError("Discarding changes requires prior call to `check_out`.")
+        run._service.revert(run.id, run._dto.lock_transaction)
+        run._refresh()
 
     def commit(self, ts: TimeSeries, comment: str) -> None:
         run = self.index[ts]
         # Convert error for compatibility with JDBC (e.g. util.maybe_commit())
         try:
             run.checkpoints.create(message=comment)
-        except RunLockRequired as e:
+        except Run.LockRequired as e:
             raise RuntimeError from e
 
         run._unlock()
@@ -556,12 +580,16 @@ class IXMP4Backend(CachingBackend):
                     "subclasses"
                 )
         run = self.index[s]
-        if run.owns_lock:
-            run.remove_solution(from_year=from_year)
-        else:
-            with run.transact("Clear solution for ixmp.Scenario"):
-                run.optimization.remove_solution()
-                run.iamc.remove_solution(from_year=from_year)
+
+        with maybe_transact(run, "Clear solution for ixmp.Scenario"):
+            run.optimization.remove_solution()
+
+            # Identify non-'meta' time series data to remove
+            # TODO Do this by calling an upstream method directly
+            df = run.iamc.tabulate(year__gte=from_year or 0)
+            mask = ~df["variable"].str.startswith(META)
+            # Remove these time series data
+            run.iamc.remove(df[mask])
 
         self.cache_invalidate(ts=s)
 
@@ -574,20 +602,23 @@ class IXMP4Backend(CachingBackend):
         # TODO is the Run.version really what this function is after?
         return self.index[ts].version
 
+    def is_checked_out(self, ts: TimeSeries) -> bool:
+        return self.index[ts].owns_lock
+
     def is_default(self, ts: TimeSeries) -> bool:
+        # Force refresh, for the case that another (model, scenario) but different
+        # version has been set as default since the Run instance in self.index was last
+        # refreshed
+        self.index[ts]._refresh()
         return self.index[ts].is_default
 
     def has_solution(self, s: Scenario) -> bool:
-        return self.index[s].has_solution()
+        return self.index[s].optimization.has_solution()
 
     def last_update(self, ts: TimeSeries) -> str | None:
-        last_update = self.index[ts]._model.updated_at
-
-        return (
-            last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
-            if last_update is not None
-            else last_update
-        )
+        # FIXME This should be exposed by the Run object without accessing ._dto
+        last_update = self.index[ts]._dto.updated_at or datetime.now(timezone.utc)
+        return last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
 
     def _validate_meta_args(
         self,
@@ -610,56 +641,56 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None = None,
         version: int | None = None,
     ) -> None:
+        # Retrieve a reference to an ixmp4.core.Run given (model, scenario, version)
         _model, _scenario, _version = self._validate_meta_args(
             model=model, scenario=scenario, version=version
         )
-        run = self._backend.runs.get(
-            model_name=_model, scenario_name=_scenario, version=_version
+        run = self._platform.runs.get(
+            model=_model, scenario=_scenario, version=_version
         )
 
-        meta_df = (
-            pd.DataFrame.from_dict(data=meta, orient="index", columns=["value"])
-            .reset_index(names="key")
-            .assign(run__id=run.id)
-        )
-        try:
-            self._backend.meta.bulk_upsert(df=meta_df)
-        except KeyError as e:
-            if "<class" in str(e):
-                raise ValueError(
-                    "Cannot use values provided due to incompatible types! \n "
-                    f"Provided: {meta} \n Acceptable types: "
-                    f"{RunMetaEntry._type_map.keys()}"
-                ) from e
-            else:
-                raise e
+        # If the same (model, scenario, version) is already in memory (self.index), use
+        # that instance instead of `run`, which may have an incorrect value for
+        # `Run.owns_lock`.
+        # FIXME This appears to be an issue upstream in ixmp4. Report, resolve, and then
+        #       remove this workaround.
+        for other in filter(lambda obj: type(obj) is type(run), self.index.values()):
+            if other.id == run.id:  # Same ID in the database
+                run = other
+                break
+
+        new_meta = {**dict(run.meta), **meta}
+
+        with maybe_transact(run, "Update meta"):
+            try:
+                run.meta = new_meta
+            except KeyError as e:
+                if "<class" in str(e):
+                    raise ValueError(
+                        "Cannot use values provided due to incompatible types! \n "
+                        f"Provided: {meta} \n Acceptable types: int, float, str, bool"
+                    ) from e
+                else:
+                    raise e
+            except InvalidRunMeta as e:
+                raise ValueError(*e.args)
 
     def get_meta(
         self,
         model: str | None = None,
         scenario: str | None = None,
         version: int | None = None,
+        # NOTE: strict is ignored here because ixmp4 does
+        # not have more than one "level" of docs
         strict: bool = False,
     ) -> dict[str, Any]:
         _model, _scenario, _version = self._validate_meta_args(
             model=model, scenario=scenario, version=version
         )
-        run = self._backend.runs.get(
-            model_name=_model, scenario_name=_scenario, version=_version
+        run = self._platform.runs.get(
+            model=_model, scenario=_scenario, version=_version
         )
-
-        # NOTE This doesn't currently return more keys as per the base docstring/strict
-        meta_df = self._backend.meta.tabulate(
-            run_id=run.id,
-            run={
-                "model": {"name": _model},
-                "scenario": {"name": _scenario},
-                "version": _version,
-                "default_only": False,
-            },
-        )
-
-        return {str(row.key): row.value for row in meta_df.itertuples()}
+        return dict(run.meta)
 
     def remove_meta(
         self,
@@ -671,146 +702,103 @@ class IXMP4Backend(CachingBackend):
         _model, _scenario, _version = self._validate_meta_args(
             model=model, scenario=scenario, version=version
         )
-        run = self._backend.runs.get(
-            model_name=_model, scenario_name=_scenario, version=_version
+        run = self._platform.runs.get(
+            model=_model, scenario=_scenario, version=_version
         )
 
+        # TODO: This could have a nicer api in ixmp4
         meta_df = pd.DataFrame({"key": names})
         meta_df["run__id"] = run.id
-
         self._backend.meta.bulk_delete(df=meta_df)
 
-    def _get_domain_repo(self, domain: str) -> "IXMP4IamcDomainRepository":
+    def _get_domain_repo(self, domain: str) -> "IXMP4IamcDomainService":
         # TODO Limit domain annotation with Literal
-        try:
-            return self._doc_domain_map[domain]
-        except KeyError:
-            domains = ", ".join(self._doc_domain_map.keys())
-            raise ValueError(f"No such domain: {domain}, existing domains: {domains}")
+        if domain == "model":
+            return self._platform.models
+        elif domain == "region":
+            return self._platform.regions
+        elif domain == "scenario":
+            return self._platform.scenarios
+        elif domain == "timeseries":
+            return self._platform.iamc.variables
+        raise ValueError(
+            f"No such domain: {domain}, existing domains: "
+            "model, region, scenario, timeseries"
+        )
 
     def set_doc(
         self, domain: str, docs: dict[str, str] | Iterable[tuple[str, str]]
     ) -> None:
         domain_repo = self._get_domain_repo(domain=domain)
 
+        # Convert a list of tuple into a dict
         if not isinstance(docs, dict):
             docs = {name: docstring for (name, docstring) in docs}
-        existing_items = domain_repo.tabulate(name__in=list(docs.keys()))
 
+        # Add `META` prefix to every item
+        docs |= {f"{META}{name}": docstring for name, docstring in docs.items()}
+
+        # Loop over items matching the keys of `docs`
         # TODO Avoid this loop by adding bulk methods to ixmp4's DocsRepos
-        for name, description in docs.items():
-            id = int(existing_items[existing_items["name"] == name]["id"].values[0])
-            domain_repo.docs.set(dimension_id=id, description=description)
+        for item in domain_repo.list(name__in=list(docs.keys())):
+            item.docs = docs[item.name]
 
     def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
-        domain_repo = self._get_domain_repo(domain=domain)
+        items = self._get_domain_repo(domain=domain).list()
 
         if name is None:
-            existing_items = domain_repo.tabulate()
-            return {
-                str(
-                    existing_items[existing_items["id"] == doc.dimension__id][
-                        "name"
-                    ].values[0]
-                ): str(doc.description)
-                for doc in domain_repo.docs.list(
-                    dimension_id__in=existing_items["id"].astype(int)
-                )
-            }
+            return {item.name: (item.docs or "") for item in items}
         else:
-            return domain_repo.docs.get(domain_repo.get(name=name).id).description
+            for item in items:
+                if item.name.split(META)[-1] == name:
+                    return item.docs or ""
+            raise ValueError(f"No {domain!r} named {name!r}")
 
     # Handle optimization items
 
     @overload
-    def _get_repo(self, s: Scenario, type: type[Scalar]) -> "ScalarRepository": ...
-
-    @overload
-    def _get_repo(self, s: Scenario, type: type[IndexSet]) -> "IndexSetRepository": ...
-
-    @overload
-    def _get_repo(self, s: Scenario, type: type[Table]) -> "TableRepository": ...
+    def _get_repo(self, s: Scenario, type: type[Scalar]) -> "ScalarServiceFacade": ...
 
     @overload
     def _get_repo(
-        self, s: Scenario, type: type[Parameter]
-    ) -> "ParameterRepository": ...
-
-    @overload
-    def _get_repo(self, s: Scenario, type: type[Equation]) -> "EquationRepository": ...
-
-    @overload
-    def _get_repo(
-        self, s: Scenario, type: type[Variable]
-    ) -> "OptimizationVariableRepository": ...
-
-    # NOTE Type hints here ensure the function body is checked
-    def _get_repo(self, s: Scenario, type: type) -> "IXMP4Repository":
-        """Return the repository of items of `type` belonging to `s`."""
-        match type:
-            case scalar.Scalar:
-                return self.index[s].optimization.scalars
-            case indexset.IndexSet:
-                return self.index[s].optimization.indexsets
-            case table.Table:
-                return self.index[s].optimization.tables
-            case parameter.Parameter:
-                return self.index[s].optimization.parameters
-            case equation.Equation:
-                return self.index[s].optimization.equations
-            case variable.Variable:
-                return self.index[s].optimization.variables
-            case _:  # pragma: no cover
-                raise RuntimeError(type)
-
-    @overload
-    def _get_backend_repo(
-        self, s: Scenario, type: type[Scalar]
-    ) -> "BEScalarRepository": ...
-
-    @overload
-    def _get_backend_repo(
         self, s: Scenario, type: type[IndexSet]
-    ) -> "BEIndexSetRepository": ...
+    ) -> "IndexSetServiceFacade": ...
 
     @overload
-    def _get_backend_repo(
-        self, s: Scenario, type: type[Table]
-    ) -> "BETableRepository": ...
+    def _get_repo(self, s: Scenario, type: type[Table]) -> "TableServiceFacade": ...
 
     @overload
-    def _get_backend_repo(
+    def _get_repo(
         self, s: Scenario, type: type[Parameter]
-    ) -> "BEParameterRepository": ...
+    ) -> "ParameterServiceFacade": ...
 
     @overload
-    def _get_backend_repo(
+    def _get_repo(
         self, s: Scenario, type: type[Equation]
-    ) -> "BEEquationRepository": ...
+    ) -> "EquationServiceFacade": ...
 
     @overload
-    def _get_backend_repo(
+    def _get_repo(
         self, s: Scenario, type: type[Variable]
-    ) -> "BEVariableRepository": ...
+    ) -> "OptVariableServiceFacade": ...
 
     # NOTE Type hints here ensure the function body is checked
-    def _get_backend_repo(self, s: Scenario, type: type) -> "IXMP4BackendRepository":
+    def _get_repo(self, s: Scenario, type: type) -> "IXMP4ServiceFacade":
         """Return the repository of items of `type` belonging to `s`."""
-        match type:
-            case scalar.Scalar:
-                return self.index[s].backend.optimization.scalars
-            case indexset.IndexSet:
-                return self.index[s].backend.optimization.indexsets
-            case table.Table:
-                return self.index[s].backend.optimization.tables
-            case parameter.Parameter:
-                return self.index[s].backend.optimization.parameters
-            case equation.Equation:
-                return self.index[s].backend.optimization.equations
-            case variable.Variable:
-                return self.index[s].backend.optimization.variables
-            case _:  # pragma: no cover
-                raise RuntimeError(type)
+        if type is Scalar:
+            return self.index[s].optimization.scalars
+        elif type is IndexSet:
+            return self.index[s].optimization.indexsets
+        elif type is Table:
+            return self.index[s].optimization.tables
+        elif type is Parameter:
+            return self.index[s].optimization.parameters
+        elif type is Equation:
+            return self.index[s].optimization.equations
+        elif type is Variable:
+            return self.index[s].optimization.variables
+        else:  # pragma: no cover
+            raise RuntimeError(type)
 
     def init_item(
         self,
@@ -833,7 +821,7 @@ class IXMP4Backend(CachingBackend):
 
         try:
             # NOTE We can't do
-            # if isinstance(repo, BEIndexSetRepository):
+            # if isinstance(repo, IndexSetService):
             # because mypy says this needs "@runtime_checkable protocols"
             if idx == 0 and type == "set":
                 # IndexSet
@@ -849,15 +837,17 @@ class IXMP4Backend(CachingBackend):
                     constrained_to_indexsets=list(idx_sets),
                     column_names=list(idx_names) if idx_names else None,
                 )  # type: ignore[call-arg]
-        except RunLockRequired:
+        except Run.LockRequired:
             raise RuntimeError("This Scenario cannot be edited, do a checkout first!")
         except NotUnique:
             raise ValueError(f"{repr(name)} already exists")
 
     def list_items(self, s: Scenario, type: str) -> list[str]:
+        run_id = self.index[s].id
         types = CLASS_FOR_IX_TYPE[type]
+        # NOTE: bug in ixmp4 returns items for all runs via list by default
         items: Iterable["IXMP4ModelData"] = chain(
-            *[self._get_repo(s=s, type=t).list() for t in types]
+            *[self._get_repo(s=s, type=t).list(run__id=run_id) for t in types]
         )
         return [item.name for item in items]
 
@@ -897,9 +887,10 @@ class IXMP4Backend(CachingBackend):
 
         for cls in types or (Equation, IndexSet, Parameter, Scalar, Table, Variable):
             repo = self._get_repo(s=s, type=cls)
-            if item_list := repo.list(name=name):
-                if len(item_list) == 1:
-                    return item_list[0]
+            try:
+                return repo.get_by_name(name)
+            except cls.NotFound:
+                pass
 
         raise KeyError(f"No item named {name!r} in this Scenario")
 
@@ -910,11 +901,11 @@ class IXMP4Backend(CachingBackend):
         """
         try:
             indexset_repo = self._get_repo(s=s, type=IndexSet)
-            return indexset_repo.get(name=name)
+            return indexset_repo.get_by_name(name=name)
         except IndexSet.NotFound:
             try:
                 table_repo = self._get_repo(s=s, type=Table)
-                return table_repo.get(name=name)
+                return table_repo.get_by_name(name=name)
             except Table.NotFound as e:
                 raise KeyError from e
 
@@ -982,11 +973,11 @@ class IXMP4Backend(CachingBackend):
             # NOTE ixmp_source silently ignores duplicate data; replicate here
             # This could be improved by adding data without loading the indexset first,
             # but this requires users to ensure their data are valid
-            indexset = run.optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get_by_name(name=name)
             if key not in indexset.data:
-                self._backend.optimization.indexsets.add_data(id=indexset.id, data=key)
+                indexset.add_data(data=key)
         else:
-            table = run.optimization.tables.get(name=name)
+            table = run.optimization.tables.get_by_name(name=name)
             # TODO should we enforce in ixmp4 that when constrained_to_indexsets
             # contains duplicate values, column_names must be provided?
             keys = table.column_names or table.indexset_names
@@ -1034,13 +1025,11 @@ class IXMP4Backend(CachingBackend):
             log.info("Setting Scalar as dimensionless")
             unit = self._backend.units.get_or_create("").name
 
-        scalar = self._backend.optimization.scalars.create(
-            run_id=self.index[s].id, name=name, value=value, unit_name=unit
+        scalar = self.index[s].optimization.scalars.create(
+            name=name, value=value, unit=unit
         )
         if comment:
-            self._backend.optimization.scalars.docs.set(
-                dimension_id=scalar.id, description=comment
-            )
+            scalar.docs = comment
 
     def _add_data_to_parameter(
         self,
@@ -1072,7 +1061,7 @@ class IXMP4Backend(CachingBackend):
             log.warning(
                 "`comment` currently unused with ixmp4 when adding data to Parameters."
             )
-        parameter = self.index[s].optimization.parameters.get(name=name)
+        parameter = self.index[s].optimization.parameters.get_by_name(name=name)
         # TODO there's got to be a better way for handling possible lists
         if isinstance(key, str):
             key = [key]
@@ -1101,23 +1090,20 @@ class IXMP4Backend(CachingBackend):
         elif type is IXMPParameter:
             for key, value, unit, comment in elements:
                 if not bool(key):
-                    repo = self._get_backend_repo(s, type=Scalar)
                     run = self.index[s]
-                    scalar = repo.get(run_id=run.id, name=name)
-                    # TODO Does this handle 'None'-unit correctly?
-                    _unit = self._backend.units.get(str(unit))
+                    scalar = run.optimization.scalars.get_by_name(name=name)
                     # NOTE We could implement a core-layer Scalar.update() in ixmp4 and
                     # handle this there
                     try:
                         run.require_lock()
-                    except RunLockRequired:
+                    except Run.LockRequired:
                         raise RuntimeError(
                             "The Scalar cannot be edited, check out the Scenario first!"
                         )
 
-                    repo.update(id=scalar.id, value=value, unit_id=_unit.id)
+                    scalar.update(value=value, unit_name=str(unit))
                     if comment is not None:
-                        repo.docs.set(dimension_id=scalar.id, description=comment)
+                        scalar.docs = comment
                 else:
                     assert isinstance(value, float), (
                         "Adding data to a Parameter requires a value!"
@@ -1136,7 +1122,7 @@ class IXMP4Backend(CachingBackend):
                 {IXMPEquation: Equation, IXMPVariable: Variable}[type],
             )
             # Retrieve the item from its respective repository
-            item = self._get_repo(s, type_).get(name)
+            item = self._get_repo(s, type_).get_by_name(name)
             # Key dimensions of the item
             dims = item.column_names or item.indexset_names or []
             i_d = list(enumerate(dims))
@@ -1155,8 +1141,7 @@ class IXMP4Backend(CachingBackend):
             # NB `repo` is a {Equation,Variable}Repository object associated with a
             #    particular Run. It does not have a method .add_data(). For this,
             #    instead use a "backend repository" object.
-            be_repo = self._get_backend_repo(s, type_)
-            be_repo.add_data(id=item.id, data=data)
+            item.add_data(data=data)
 
         self.cache_invalidate(ts=s, ix_type=type.ix_type, name=name)
 
@@ -1316,7 +1301,7 @@ class IXMP4Backend(CachingBackend):
                 data = pd.DataFrame(keys, columns=columns)
                 self._backend.optimization.tables.remove_data(id=item.id, data=data)
         else:
-            parameter = self._get_repo(s=s, type=Parameter).get(name=name)
+            parameter = self._get_repo(s=s, type=Parameter).get_by_name(name)
             columns = parameter.column_names or parameter.indexset_names
             data = pd.DataFrame(keys, columns=columns)
             self._backend.optimization.parameters.remove_data(
@@ -1335,7 +1320,7 @@ class IXMP4Backend(CachingBackend):
         # Locate the item. If `type` maps to >1 IXMP4 model data type, try each repo.
         item = self._find_item(s=s, name=name, types=CLASS_FOR_IX_TYPE[type])
         # Access the repository containing objects of `item`s type; delete
-        self._get_backend_repo(s=s, type=item.__class__).delete(id=item.id)
+        item.delete()
         self.cache_invalidate(ts=s, ix_type=type, name=name)
 
     # NOTE The name 'cat_`name`' is used for backward compatibility with the JDBC, where
@@ -1378,11 +1363,11 @@ class IXMP4Backend(CachingBackend):
         # Categories can be based on IndexSets directly or on 1-d Tables
         try:
             # Most should be based on IndexSets, try that first
-            indexset = run.optimization.indexsets.get(name=name)
+            indexset = run.optimization.indexsets.get_by_name(name)
             indexset_name = indexset.name
         except IndexSet.NotFound:
             # We're dealing with a Table
-            table = run.optimization.tables.get(name=name)
+            table = run.optimization.tables.get_by_name(name)
 
             # Ensure the Table's dimensions are correct before setting variables
             assert len(table.indexset_names) == 1
@@ -1403,20 +1388,19 @@ class IXMP4Backend(CachingBackend):
         # Get or create the 'type_name' indexset and 'cat_name' table
         # NOTE _backend functions allow avoiding the run.lock requirement, but return a
         # slightly different model type, but the differences are irrelevant here
-        category_indexset: IndexSet | "BEIndexSet"
+        category_indexset: IndexSet
         try:
-            category_indexset = run.optimization.indexsets.get(name=f"type_{name}")
-        except IndexSet.NotFound:
-            category_indexset = self._backend.optimization.indexsets.create(
-                run_id=run.id, name=f"type_{name}"
+            category_indexset = run.optimization.indexsets.get_by_name(
+                name=f"type_{name}"
             )
+        except IndexSet.NotFound:
+            category_indexset = run.optimization.indexsets.create(name=f"type_{name}")
 
-        category_table: Table | "BETable"
+        category_table: Table
         try:
-            category_table = run.optimization.tables.get(name=f"cat_{name}")
+            category_table = run.optimization.tables.get_by_name(name=f"cat_{name}")
         except Table.NotFound:
-            category_table = self._backend.optimization.tables.create(
-                run_id=run.id,
+            category_table = run.optimization.tables.create(
                 name=f"cat_{name}",
                 constrained_to_indexsets=[indexset_name, category_indexset.name],
                 column_names=[column_name, category_indexset.name]
@@ -1464,14 +1448,17 @@ class IXMP4Backend(CachingBackend):
         # NOTE ixmp_source treats "all" this way
         if cat == "all":
             return list(
-                map(str, self.index[ms].optimization.indexsets.get(name=name).data)
+                map(
+                    str,
+                    self.index[ms].optimization.indexsets.get_by_name(name=name).data,
+                )
             )
 
         # Special treatment for 'technology' for historical reasons:
         if name == "technology":
             name = "tec"
         data = pd.DataFrame(
-            self.index[ms].optimization.tables.get(name=f"cat_{name}").data
+            self.index[ms].optimization.tables.get_by_name(name=f"cat_{name}").data
         )
 
         if data.empty:
@@ -1487,7 +1474,9 @@ class IXMP4Backend(CachingBackend):
         # Special treatment for 'technology' for historical reasons:
         if name == "technology":
             name = "tec"
-        category_indexset = self.index[ms].optimization.indexsets.get(f"type_{name}")
+        category_indexset = self.index[ms].optimization.indexsets.get_by_name(
+            f"type_{name}"
+        )
         return [str(item) for item in category_indexset.data]
 
     def set_data(
@@ -1502,40 +1491,35 @@ class IXMP4Backend(CachingBackend):
     ) -> None:
         """Implementation of :meth:`.base.Backend.set_data`.
 
-        - `meta` is stored in a column labeled "is_input".
+        - `meta` is stored by adding the prefix :data:`META` to the `variable` name.
         """
-        # Construct dataframe as ixmp4 expects it
-        years = data.keys()
-        values = data.values()
-        number_of_years = len(years)
-        regions = [region] * number_of_years
-        variables = [variable] * number_of_years
-        units = [unit] * number_of_years
-        is_input = [meta] * number_of_years
+        # Construct a pd.Dataframe in the form expected by ixmp4
+        df = pd.Series(data).reset_index().set_axis(["step_year", "value"], axis=1)
 
-        iterables = [years, values, regions, variables, units, is_input]
-        columns = ["step_year", "value", "region", "variable", "unit", "is_input"]
+        # Values to pass to DataFrame.assign()
+        assign = dict(
+            region=region, variable=(META if meta else "") + variable, unit=unit
+        )
 
         # NOTE We don't handle DataPoint.Type.DATETIME yet
         # NOTE subannual == "Year" per default and some string otherwise
         if subannual != "Year":
-            categories = [subannual] * number_of_years
-            iterables.append(categories)
-            columns.append("step_category")
+            assign.update(step_category=subannual)
+            data_type = ixmp4.iamc.DataPoint.Type.CATEGORICAL
+        else:
+            data_type = ixmp4.iamc.DataPoint.Type.ANNUAL
 
-        _data = list(zip(*iterables))
-        _data_type = (
-            DataPoint.Type.ANNUAL if subannual == "Year" else DataPoint.Type.CATEGORICAL
-        )
-
-        # Add timeseries dataframe
+        # Retrieve a reference to the Run
         run = self.index[ts]
+
+        # Possibly lock
         _owns_lock = run.owns_lock
         if not _owns_lock:
             run._lock()
 
         try:
-            run.iamc.add(pd.DataFrame(_data, columns=columns), type=_data_type)
+            # Add IAMC-structured data
+            run.iamc.add(df.assign(**assign), type=data_type)
         except Region.NotFound:
             raise ValueError(f"region = {region}")
 
@@ -1550,10 +1534,24 @@ class IXMP4Backend(CachingBackend):
         unit: Sequence[str],
         year: Sequence[int] | Sequence[str],
     ) -> Generator[tuple[str, str, str, int, float], Any, None]:
-        data = self.index[ts].iamc.tabulate(
-            region={"name__in": region} if len(region) else None,
-            variable={"name__in": variable} if len(variable) else None,
-            unit={"name__in": unit} if len(unit) else None,
+        filter = ixmp4.iamc.DataPoint.Filter()
+        if len(region):
+            filter["region"] = {"name__in": list(region)}
+        if variable:
+            # Filter both `variable` names and the same names with the meta prefix
+            filter["variable"] = {
+                "name__in": list(variable) + list(map(f"{META}{{}}".format, variable))
+            }
+        if len(unit):
+            filter["unit"] = {"name__in": list(unit)}
+
+        # - Retrieve the data.
+        # - Remove the meta prefix, which does not affect the behaviour of this method
+        #   and is not to be returned.
+        data = (
+            self.index[ts]
+            .iamc.tabulate(**filter)
+            .replace("^" + re.escape(META), "", regex=True)
         )
 
         # Protect against empty data
@@ -1583,31 +1581,25 @@ class IXMP4Backend(CachingBackend):
         years: Iterable[int],
         unit: str,
     ) -> None:
-        run = self.index[ts]
-
-        data_to_delete = self._backend.iamc.datapoints.tabulate(
-            join_run_id=True,
-            run={"id": run.id, "default_only": False},
+        # Retrieve existing time series data matching `region`, `variable`, `years`,
+        # `unit`, and `subannual`.
+        # NOTE Here we *do not* include `META`-prefixed forms of the `variable` name.
+        #      The expected behaviour is that these data cannot be deleted.
+        df_to_delete = self._backend.iamc.datapoints.tabulate(
+            join_run_id=True,  # Needed to filter on run, below
+            join_parameters=True,  # Needed to filter on region, variable, and unit
+            run={"id": self.index[ts].id, "default_only": False},
             region={"name": region},
             variable={"name": variable},
-            year__in=years,
             unit={"name": unit},
-            is_input=False,
+            type="ANNUAL" if subannual == "Year" else subannual,
+            # NB This may not work if type is something other than "ANNUAL"; then the
+            #    step_category column may be present instead.
+            step_year__in=list(years),
         )
 
-        if data_to_delete.empty:
-            log.debug("Found 0 datapoints matching filters to delete!")
-            # ixmp4 doesn't handle an empty dataframe as you would expect (a noop),
-            # instead something in the pandera decorator makes it so that bulk_delete()
-            # below sees a dataframe of all existing datapoints. Thus, we need to stop
-            # here.
-            return
-
-        # Handle subannual; looks like in all our test suite, 'subannual' == 'Year'
-        _subannual = "ANNUAL" if subannual == "Year" else subannual
-        data_to_delete = data_to_delete[data_to_delete["type"] == _subannual]
-
-        self._backend.iamc.datapoints.bulk_delete(df=data_to_delete)
+        # Delete these data
+        self._backend.iamc.datapoints.bulk_delete(df_to_delete)
 
     # Handle I/O
 
@@ -1671,43 +1663,24 @@ class IXMP4Backend(CachingBackend):
                 container_data=kwargs["container_data"],
             )
         elif _path.suffix == ".csv" and item_type is ItemType.TS:
+            # Convert `filters` argument to keyword arguments for tabulate()
             default = filters.pop("default")
+
             # TODO (How) Should we include this?
             # export_all_runs = filters.pop("export_all_runs")
 
-            _kwargs = IamcEnumerateKwargs(run={"default_only": default})
+            _kwargs: "FacadeDataPointFilter" = dict(run={"default_only": default})
 
-            filter_names: set[
-                Literal["model", "scenario", "variable", "unit", "region"]
-            ] = {
-                "model",
-                "scenario",
-                "variable",
-                "unit",
-                "region",
-            }
-
-            for filter_name in filter_names:
+            for filter_name in IAMC_IDX:
                 # NOTE this is what we get for not differentiating e.g. scenario vs
                 # scenarios in filters...
-                filter = (
-                    filters.pop(filter_name)
-                    if filter_name != "scenario"
-                    else set(cast(list[str], filters.pop(filter_name)))
-                )
+                value = filters.pop(filter_name)  # type: ignore
+                filter = value if filter_name != "scenario" else set(value)
 
                 # ixmp4's "name__in" with an empty list will exclude all data
                 if bool(filter):
-                    _kwargs[filter_name] = {"name__in": filter}
+                    _kwargs[filter_name] = {"name__in": filter}  # type: ignore
 
-            data = self._backend.iamc.datapoints.tabulate(
-                join_parameters=True, join_runs=True, **_kwargs
-            ).rename(  # Adhere to ixmp_source expectations...
-                columns={"step_year": "YEAR"}
-            )
-
-            data = data.rename(columns={name: name.upper() for name in data.columns})
-            data = data.rename(columns={"IS_INPUT": "META"})
             expected_columns = [
                 "MODEL",
                 "SCENARIO",
@@ -1721,13 +1694,26 @@ class IXMP4Backend(CachingBackend):
                 "VALUE",
             ]
 
+            # - Retrieve data, including id, time_series__id, and type columns.
+            # - Rename columns to upper case.
+            # - Populate a 'META' column with boolean values.
+            # - Rename 'STEP_YEAR' to the expected 'YEAR'
+            data = (
+                self._backend.iamc.datapoints.tabulate(
+                    join_parameters=True,
+                    join_runs=True,
+                    **_kwargs,  # type: ignore
+                )
+                .rename(columns=lambda c: c.upper())
+                .assign(META=lambda df: df.VARIABLE.str.startswith(META))
+                .rename(columns={"STEP_YEAR": "YEAR"})
+            )
+
             # Guard against entirely empty data selection
             if data.empty:
-                columns = copy(expected_columns)
-                columns.extend(["ID", "TIME_SERIES__ID", "TYPE"])
-                data = pd.DataFrame(columns=columns)
-
-            data = data.drop(columns=["ID", "TIME_SERIES__ID"])
+                data = pd.DataFrame(
+                    columns=["ID", "TIME_SERIES__ID", "TYPE"] + expected_columns
+                )
 
             # NOTE We don't handle step_datetime here
 
@@ -1735,19 +1721,15 @@ class IXMP4Backend(CachingBackend):
             if "STEP_CATEGORY" not in data.columns:
                 data["STEP_CATEGORY"] = None
 
-            data["SUBANNUAL"] = (
-                data["STEP_CATEGORY"]
-                .combine_first(data["TYPE"])
-                .replace({"ANNUAL": "Year"})
-            )
-            data = data.drop(columns={"STEP_CATEGORY", "TYPE"})
-
-            # Sort columns according to ixmp_source expectations
-            # NOTE Alternatively, check_like=True might work in test/assert_frame_equal
-            data = data[expected_columns]
-
-            data.to_csv(path_or_buf=_path, index=False)
-
+            # - Populate the SUBANNUAL column using either STEP_CATEGORY or TYPE.
+            # - Select and sort columns to match behaviour of JDBCBackend.
+            #   Alternatively, check_like=True might work in test/assert_frame_equal.
+            # - Write to CSV.
+            data.assign(
+                SUBANNUAL=lambda df: df.STEP_CATEGORY.combine_first(df.TYPE).replace(
+                    {"ANNUAL": "Year"}
+                )
+            )[expected_columns].to_csv(path_or_buf=_path, index=False)
         else:
             raise NotImplementedError
 

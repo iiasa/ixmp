@@ -636,6 +636,9 @@ class JDBCBackend(CachingBackend):
     def set_as_default(self, ts: TimeSeries) -> None:
         self.jindex[ts].setAsDefaultVersion()
 
+    def is_checked_out(self, ts: TimeSeries) -> bool:
+        return bool(self.jindex[ts].isCheckedOut())
+
     def is_default(self, ts: TimeSeries) -> bool:
         return bool(self.jindex[ts].isDefault())
 

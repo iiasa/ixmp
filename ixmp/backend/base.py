@@ -131,7 +131,7 @@ class Backend(ABC):
     def set_doc(
         self, domain: str, docs: dict[str, str] | Iterable[tuple[str, str]]
     ) -> None:
-        """Save documentation to database
+        """Save documentation to database.
 
         Parameters
         ----------
@@ -144,7 +144,7 @@ class Backend(ABC):
 
     @abstractmethod
     def get_doc(self, domain: str, name: str | None = None) -> str | dict[str, str]:
-        """Read documentation from database
+        """Read documentation from database.
 
         Parameters
         ----------
@@ -625,6 +625,10 @@ class Backend(ABC):
         get
         is_default
         """
+
+    @abstractmethod
+    def is_checked_out(self, ts: TimeSeries) -> bool:
+        """Return :any:`True` if `ts` is checked out."""
 
     @abstractmethod
     def is_default(self, ts: TimeSeries) -> bool:

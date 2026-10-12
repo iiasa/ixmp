@@ -606,6 +606,9 @@ class IXMP4Backend(CachingBackend):
         # TODO is the Run.version really what this function is after?
         return self.index[ts].version
 
+    def is_checked_out(self, ts: TimeSeries) -> bool:
+        return self.index[ts].owns_lock
+
     def is_default(self, ts: TimeSeries) -> bool:
         # Force refresh, for the case that another (model, scenario) but different
         # version has been set as default since the Run instance in self.index was last

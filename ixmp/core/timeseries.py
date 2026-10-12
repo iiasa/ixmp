@@ -291,6 +291,10 @@ class TimeSeries:
         """Set the current :attr:`version` as the default."""
         self.platform._backend.set_as_default(self)
 
+    def is_checked_out(self) -> bool:
+        """Return :obj:`True` if the TimeSeries is checked out."""
+        return self.platform._backend.is_checked_out(self)
+
     def is_default(self) -> bool:
         """Return :obj:`True` if the :attr:`version` is the default version."""
         return self.platform._backend.is_default(self)

@@ -2,6 +2,7 @@ import builtins
 import logging
 import re
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from itertools import chain
@@ -512,6 +513,9 @@ class IXMP4Backend(CachingBackend):
         )
         self._index_and_set_attrs(cloned_run, cloned_s)
 
+        if not keep_solution:
+            self.clear_solution(cloned_s)
+
         # Clone to version 1 of a given (model name, scenario name) becomes the initial
         # default. This matches behaviour of the Java code underlying JDBCBackend.
         if cloned_run.version == 1:
@@ -576,14 +580,20 @@ class IXMP4Backend(CachingBackend):
                     "subclasses"
                 )
         run = self.index[s]
-        if run.owns_lock:
+
+        with (
+            nullcontext()
+            if run.owns_lock
+            else run.transact("Clear solution for ixmp.Scenario")
+        ):
             run.optimization.remove_solution()
-            # TODO: remove_solution API for IAMC data
-            # run.remove_solution(from_year=from_year)
-        else:
-            with run.transact("Clear solution for ixmp.Scenario"):
-                run.optimization.remove_solution()
-                # run.iamc.remove_solution(from_year=from_year)
+
+            # Identify non-'meta' time series data to remove
+            # TODO Do this by calling an upstream method directly
+            df = run.iamc.tabulate(year__gte=from_year or 0)
+            mask = ~df["variable"].str.startswith(META)
+            # Remove these time series data
+            run.iamc.remove(df[mask])
 
         self.cache_invalidate(ts=s)
 

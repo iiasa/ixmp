@@ -34,8 +34,6 @@ def test_versiontype() -> None:
         vt.convert("xx", None, None)
 
 
-# FIXME The URL needs to be different for ixmp4; can you target model/scenario on pg?
-@pytest.mark.ixmp4_not_yet
 def test_main(ixmp_cli: Runner, test_mp: "Platform", tmp_path: Path) -> None:
     # Name of a temporary file that doesn't exist
     tmp_path /= "temp.properties"

@@ -365,7 +365,6 @@ class TestMeta:
         obs = scen.get_meta()
         assert obs == expected
 
-    @pytest.mark.ixmp4_not_yet
     def test_meta_arguments(self, mp: ixmp.Platform) -> None:
         """Set scenario meta with key-value arguments"""
         meta = {"sample_int": 3}

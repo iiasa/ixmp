@@ -3,6 +3,7 @@ import re
 from collections.abc import Generator, Iterator
 from pathlib import Path
 from shutil import copyfile
+from subprocess import run
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import numpy as np
@@ -14,7 +15,6 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKENDS,
-    MARK,
     _platform_fixture,
     assert_logs,
     make_dantzig,
@@ -211,9 +211,10 @@ class TestScenario:
             scen, mp = ixmp.Scenario.from_url(url + "foo")
         assert scen is None and isinstance(mp, ixmp.Platform)
 
-    # Clone Scenario
     def test_clone(self, mp: "Platform") -> None:
+        """Scenario can be cloned."""
         scen = ixmp.Scenario(mp, **models["dantzig"], version=1)
+
         scen.remove_solution()
         scen.check_out()
         scen.init_set("h")
@@ -307,9 +308,7 @@ class TestScenario:
         p1.add_unit(unit="USD/km")
 
         # Clone from JDBCBackend to IXMP4Backend succeeds
-        scen.clone(platform=p1)
-
-        clone = ixmp.Scenario(mp=p1, **models["dantzig"])
+        clone = scen.clone(platform=p1, **models["dantzig"])
 
         # TODO Expand these assertions
         # Check an exemplary parameter
@@ -320,6 +319,8 @@ class TestScenario:
         assert_frame_equal_sorted(scen_d, clone_d, check_like=True)
 
         # Check time series data
+        # NB Since TimeSeries.timeseries() does not indicate which values have
+        #    meta=True,
         assert_frame_equal_sorted(scen.timeseries(), clone.timeseries())
 
         # Check optimization solution data
@@ -688,13 +689,14 @@ class TestScenario:
         s.read_excel(tmp_path, add_units=True, init_items=True)
 
     def test_solve(self, tmp_path: Path, scen_f: "Scenario") -> None:
-        from subprocess import run
-
         # Copy the dantzig model file into the `tmp_path`
         model_file = tmp_path.joinpath("dantzig.gms")
         copyfile(
             Path(ixmp.__file__).parent.joinpath("model", "dantzig.gms"), model_file
         )
+
+        # `scen_f` is checked out to start
+        assert scen_f.is_checked_out()  # Same for every Backend
 
         # Scenario solves successfully
         scen_f.solve(
@@ -720,7 +722,7 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    @MARK["ixmp4-pandas-3"]
+    @pytest.mark.ixmp4_not_yet
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -757,7 +759,6 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
-    @MARK["ixmp4-pandas-3"]
     def test_meta_bulk(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:

@@ -143,11 +143,6 @@ MARK = {
     "ixmp4-importable": pytest.mark.xfail(
         condition=not has_ixmp4(), reason="IXMP4 not installed or importable"
     ),
-    "ixmp4-pandas-3": pytest.mark.xfail(
-        raises=AttributeError,
-        # 'str' object has no attribute 'value' in ixmp4.data.db.meta.repository
-        reason="XFAIL for IXMP4Backend only",
-    ),
 }
 
 # Pytest hooks
@@ -287,7 +282,7 @@ def pytest_sessionfinish(
 ) -> None:
     db_name = session.config.stash[KEY_IXMP4_PG_NAME]
 
-    if not db_name.startswith(PG_NAME_NONE):
+    if not db_name.startswith(PG_NAME_NONE):  # pragma: no cover
         # Remove the database created for this session
         from sqlalchemy import text
         from sqlalchemy.exc import OperationalError

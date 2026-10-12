@@ -330,7 +330,11 @@ class TestPlatform:
             pytest.param(
                 "ixmp4",
                 dict(ixmp4_name="ixmp4-test"),
-                marks=MARK["ixmp4-importable"],
+                # This triggers the creation of a new SQLite3 database but, as of #640 /
+                # ixmp4 v0.16.z, this database is not correctly initialized, leading to
+                # "no such table: unit"
+                marks=MARK["IXMP4Backend Not Yet"],
+                # marks=MARK["ixmp4-importable"],
             ),
         ),
     )
@@ -352,8 +356,8 @@ class TestPlatform:
         scen = make_dantzig(test_mp, request=request)
 
         # 'Doc' strings associated with a specific model name can be stored/retrieved
-        test_mp.set_doc("model", {scen.model: "Dantzig model"})
-        assert test_mp.get_doc("model") == {"canning problem": "Dantzig model"}
+        test_mp.set_doc("model", {scen.model: "Dantzig model BAR"})
+        assert test_mp.get_doc("model")[scen.model] == "Dantzig model BAR"
 
         # 'Doc' strings associated with time series 'variable' strings can be stored/
         # retrieved

@@ -597,6 +597,10 @@ class IXMP4Backend(CachingBackend):
         return self.index[ts].version
 
     def is_default(self, ts: TimeSeries) -> bool:
+        # Force refresh, for the case that another (model, scenario) but different
+        # version has been set as default since the Run instance in self.index was last
+        # refreshed
+        self.index[ts]._refresh()
         return self.index[ts].is_default
 
     def has_solution(self, s: Scenario) -> bool:

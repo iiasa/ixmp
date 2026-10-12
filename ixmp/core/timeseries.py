@@ -716,6 +716,9 @@ def _clone(ts: TS, platform_dest: Platform, model: str, scenario: str) -> TS:
         ts_dest.set_meta(ts.get_meta())
 
         # Clone time-series data
+        # NB For TimeSeries.timeseries(), the underlying JDBCBackend/Java method does
+        #    not include the 'meta' annotation for each value. This means it is not
+        #    possible to clone *only* the 'meta' time series data; all data are cloned.
         ts_dest.add_timeseries(ts.timeseries())
 
     return ts_dest

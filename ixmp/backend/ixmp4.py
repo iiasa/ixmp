@@ -44,7 +44,7 @@ from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list
 
 from .base import CachingBackend
-from .common import ItemType
+from .common import IAMC_IDX, ItemType
 from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
 
 if TYPE_CHECKING:
@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from ixmp4.core.optimization.variable import (
         VariableServiceFacade as OptVariableServiceFacade,
     )
+    from ixmp4.data.iamc.datapoint.filter import FacadeDataPointFilter
 
     from ixmp.types import (
         Filters,
@@ -1618,83 +1619,73 @@ class IXMP4Backend(CachingBackend):
                 container_data=kwargs["container_data"],
             )
         elif _path.suffix == ".csv" and item_type is ItemType.TS:
+            # Convert `filters` argument to keyword arguments for tabulate()
             default = filters.pop("default")
+
             # TODO (How) Should we include this?
             # export_all_runs = filters.pop("export_all_runs")
 
-            _kwargs = ixmp4.iamc.DataPoint.Filter(run={"default_only": default})
+            _kwargs: "FacadeDataPointFilter" = dict(run={"default_only": default})
 
-            filter_names: set[
-                Literal["model", "scenario", "variable", "unit", "region"]
-            ] = {
-                "model",
-                "scenario",
-                "variable",
-                "unit",
-                "region",
-            }
-
-            for filter_name in filter_names:
+            for filter_name in IAMC_IDX:
                 # NOTE this is what we get for not differentiating e.g. scenario vs
                 # scenarios in filters...
-                filter = (
-                    filters.pop(filter_name)
-                    if filter_name != "scenario"
-                    else set(cast(list[str], filters.pop(filter_name)))
-                )
+                value = filters.pop(filter_name)  # type: ignore
+                filter = value if filter_name != "scenario" else set(value)
 
                 # ixmp4's "name__in" with an empty list will exclude all data
                 if bool(filter):
-                    _kwargs[filter_name] = {"name__in": filter}
+                    _kwargs[filter_name] = {"name__in": filter}  # type: ignore
 
-            data = self._platform.iamc.tabulate(
-                join_runs=True, **_kwargs
-            ).rename(  # Adhere to ixmp_source expectations...
-                columns={"step_year": "YEAR"}
+            expected_columns = [
+                "MODEL",
+                "SCENARIO",
+                "VERSION",
+                "VARIABLE",
+                "UNIT",
+                "REGION",
+                "META",
+                "SUBANNUAL",
+                "YEAR",
+                "VALUE",
+            ]
+
+            # - Retrieve data, including id, time_series__id, and type columns.
+            # - Rename columns to upper case.
+            # - Populate a 'META' column with boolean values.
+            # - Rename 'STEP_YEAR' to the expected 'YEAR'
+            data = (
+                self._backend.iamc.datapoints.tabulate(
+                    join_parameters=True,
+                    join_runs=True,
+                    **_kwargs,  # type: ignore
+                )
+                .rename(columns=lambda c: c.upper())
+                .assign(META=lambda df: df.VARIABLE.str.startswith(META))
+                .rename(columns={"STEP_YEAR": "YEAR"})
             )
 
-            data = data.rename(columns={name: name.upper() for name in data.columns})
-            # data = data.rename(columns={"IS_INPUT": "META"})
-            # expected_columns = [
-            #     "MODEL",
-            #     "SCENARIO",
-            #     "VERSION",
-            #     "VARIABLE",
-            #     "UNIT",
-            #     "REGION",
-            #     "META",
-            #     "SUBANNUAL",
-            #     "YEAR",
-            #     "VALUE",
-            # ]
+            # Guard against entirely empty data selection
+            if data.empty:
+                data = pd.DataFrame(
+                    columns=["ID", "TIME_SERIES__ID", "TYPE"] + expected_columns
+                )
 
-            # # Guard against entirely empty data selection
-            # if data.empty:
-            #     columns = copy(expected_columns)
-            #     columns.extend(["ID", "TIME_SERIES__ID", "TYPE"])
-            #     data = pd.DataFrame(columns=columns)
+            # NOTE We don't handle step_datetime here
 
-            # data = data.drop(columns=["ID", "TIME_SERIES__ID"])
+            # Handle 'subannual' values
+            if "STEP_CATEGORY" not in data.columns:
+                data["STEP_CATEGORY"] = None
 
-            # # NOTE We don't handle step_datetime here
-
-            # # Handle 'subannual' values
-            # if "STEP_CATEGORY" not in data.columns:
-            #     data["STEP_CATEGORY"] = None
-
-            # data["SUBANNUAL"] = (
-            #     data["STEP_CATEGORY"]
-            #     .combine_first(data["TYPE"])
-            #     .replace({"ANNUAL": "Year"})
-            # )
-            # data = data.drop(columns={"STEP_CATEGORY", "TYPE"})
-
-            # # Sort columns according to ixmp_source expectations
-            # # NOTE Alternatively, check_like=True might work in test/assert_frame_equal
-            # data = data[expected_columns]
-
-            data.to_csv(path_or_buf=_path, index=False)
-
+            # - Populate the SUBANNUAL column using either STEP_CATEGORY or TYPE.
+            # - Select and sort columns to match behaviour of JDBCBackend.
+            #   Alternatively, check_like=True might work in test/assert_frame_equal.
+            # - Write to CSV.
+            data.assign(
+                SUBANNUAL=lambda df: df.STEP_CATEGORY.combine_first(df.TYPE).replace(
+                    {"ANNUAL": "Year"}
+                )
+            )[expected_columns].to_csv(path_or_buf=_path, index=False)
         else:
             raise NotImplementedError
 

@@ -462,7 +462,7 @@ def read_gdx_to_run(
     if var_list:
         variables = list(filter(lambda var: var.name in var_list, variables))
 
-    with run.transact("Read solution data from GDX"):
+    with maybe_transact(run, "Read solution data from GDX"):
         # Load requested Variables and read them to `run`
         _read_variables_to_run(container=container, run=run, variables=variables)
         # Load requested Equations and read them to `run`

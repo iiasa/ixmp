@@ -2,7 +2,6 @@ import builtins
 import logging
 import re
 from collections.abc import Generator, Iterable, MutableMapping, Sequence
-from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from itertools import chain
@@ -30,6 +29,7 @@ from ixmp4.core.optimization import (
 )
 from ixmp4.core.region import Region
 from ixmp4.data.backend import Backend as ixmp4_backend
+from ixmp4.data.meta.exceptions import InvalidRunMeta
 from ixmp4.transport import DirectTransport, HttpxTransport
 
 # TODO Import this from typing when dropping Python 3.11
@@ -47,7 +47,7 @@ from ixmp.util import as_str_list
 
 from .base import CachingBackend
 from .common import IAMC_IDX, ItemType
-from .ixmp4_io import read_gdx_to_run, write_run_to_gdx
+from .ixmp4_io import maybe_transact, read_gdx_to_run, write_run_to_gdx
 
 if TYPE_CHECKING:
     from ixmp4.conf.platforms import PlatformConnectionInfo
@@ -581,11 +581,7 @@ class IXMP4Backend(CachingBackend):
                 )
         run = self.index[s]
 
-        with (
-            nullcontext()
-            if run.owns_lock
-            else run.transact("Clear solution for ixmp.Scenario")
-        ):
+        with maybe_transact(run, "Clear solution for ixmp.Scenario"):
             run.optimization.remove_solution()
 
             # Identify non-'meta' time series data to remove
@@ -665,16 +661,19 @@ class IXMP4Backend(CachingBackend):
 
         new_meta = {**dict(run.meta), **meta}
 
-        try:
-            run.meta = new_meta
-        except KeyError as e:
-            if "<class" in str(e):
-                raise ValueError(
-                    "Cannot use values provided due to incompatible types! \n "
-                    f"Provided: {meta} \n Acceptable types: int, float, str, bool"
-                ) from e
-            else:
-                raise e
+        with maybe_transact(run, "Update meta"):
+            try:
+                run.meta = new_meta
+            except KeyError as e:
+                if "<class" in str(e):
+                    raise ValueError(
+                        "Cannot use values provided due to incompatible types! \n "
+                        f"Provided: {meta} \n Acceptable types: int, float, str, bool"
+                    ) from e
+                else:
+                    raise e
+            except InvalidRunMeta as e:
+                raise ValueError(*e.args)
 
     def get_meta(
         self,

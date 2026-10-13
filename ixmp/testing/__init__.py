@@ -36,7 +36,7 @@ import logging
 import os
 import platform
 import shutil
-from collections.abc import Callable, Iterable, Iterator, MutableMapping
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from itertools import chain
@@ -49,11 +49,12 @@ from click.testing import CliRunner, Result
 
 # TODO Import from typing when dropping support for Python 3.11
 from typing_extensions import override
+from xdist import get_xdist_worker_id
 
 from ixmp import Platform, Scenario, cli
 from ixmp import config as ixmp_config
-from ixmp.backend.ixmp4 import IXMP4Backend
-from ixmp.util.ixmp4 import has_ixmp4, is_ixmp4backend
+from ixmp.testing._platform import TempPlatformFactory
+from ixmp.util.ixmp4 import has_ixmp4
 
 from .data import (
     DATA,
@@ -68,6 +69,7 @@ from .data import (
     random_ts_data,
 )
 from .jupyter import get_cell_output, run_notebook
+from .postgres import TempDatabaseFactory
 from .resource import resource_limit
 
 if TYPE_CHECKING:
@@ -89,6 +91,8 @@ __all__ = [
     "DATA",
     "HIST_DF",
     "TS_DF",
+    "BackendDriver",
+    "TempPlatformFactory",
     "add_random_model_data",
     "add_test_data",
     "assert_logs",
@@ -130,12 +134,11 @@ BACKEND_DRIVER = [
 GHA = "GITHUB_ACTIONS" in os.environ
 
 #: :class:`pytest.Stash` key for a subset of :data:`BACKEND_DRIVER` that can be tested
-#: in the current session
+#: in the current session.
 KEY_BACKEND_DRIVER = pytest.StashKey[list[BackendDriver]]()
 
-#: :class:`pytest.Stash` key for a mapping from :class:`BackendDriver` instances to
-#: complete database URLs. If no database is available, empty :class:`str` is stored.
-KEY_POSTGRES_DB = pytest.StashKey[MutableMapping[BackendDriver, str]]()
+#: :class:`pytest.Stash` key for an instance of :class:`.TempDatabaseFactory`.
+KEY_POSTGRES_DB_FACTORY = pytest.StashKey[TempDatabaseFactory]()
 
 _uname = platform.uname()
 
@@ -249,16 +252,8 @@ def pytest_report_collectionfinish(
     config: pytest.Config, start_path: Path, items: Sequence[Any]
 ) -> list[str]:
     """Show messages if a database error means PostgreSQL tests cannot be run."""
-
-    messages = []
-    for bd, db_name in config.stash[KEY_POSTGRES_DB].items():
-        if db_name == "":
-            messages.append(
-                "No PostgreSQL database available → tests of "
-                f"({bd.backend}, {bd.driver}) will be skipped"
-            )
-
-    return messages
+    db_factory = config.stash[KEY_POSTGRES_DB_FACTORY]
+    return db_factory.messages
 
 
 def pytest_report_header(config: pytest.Config, start_path: Path) -> str:
@@ -270,9 +265,7 @@ def pytest_sessionfinish(
     session: pytest.Session, exitstatus: int | pytest.ExitCode
 ) -> None:
     """Drop PostgreSQL databases created for this session."""
-    from .postgres import databases_for_worker
-
-    databases_for_worker(session)
+    session.config.stash[KEY_POSTGRES_DB_FACTORY].drop_all()
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -295,32 +288,39 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     """
     from ixmp.backend import available, jdbc
 
-    from .postgres import databases_for_worker
-
     if not session.config.option.ixmp_user_config:
         ixmp_config.clear()
-        # Further clear an automatic reference to the user's home directory. See fixture
-        # tmp_env below.
+        # Further clear an automatic reference to the user's home directory.
+        # See fixture tmp_env below.
         ixmp_config.values["platform"]["local"].pop("path")
 
-    # Filter BACKEND_DRIVER according to available backends
+    # Create a TempDatabaseFactory for use below; store for tmp_postgres_db_factory()
+    db_factory = session.config.stash[KEY_POSTGRES_DB_FACTORY] = TempDatabaseFactory(
+        session
+    )
+    db_factory.drop_all()
+
+    # List of available backends, e.g. omitting IXMP4 if it is not installed or
+    # importable
     backend_available = available()
+
+    # Populate the stash at KEY_BACKEND_DRIVER
     session.config.stash[KEY_BACKEND_DRIVER] = list()
     for bd in BACKEND_DRIVER:
-        if bd.backend not in backend_available:
-            continue
+        if bd.backend not in backend_available:  # pragma: no cover
+            continue  # This backend is not available; do not test
+        elif bd.driver == "postgresql":
+            # Try to create a PostgreSQL database for this worker
+            # This is only used in the default_platform_name() fixture, below
+            if not db_factory.make_database(
+                f"{get_xdist_worker_id(session)}_{bd.backend}"
+            ):  # pragma: no cover
+                continue  # Failed; do not test this combination
+
         session.config.stash[KEY_BACKEND_DRIVER].append(bd)
 
     # Disable aggressive garbage collection
     jdbc._GC_AGGRESSIVE = False
-
-    # Create PostgreSQL database(s) for this worker
-    databases_for_worker(session, create=True)
-
-    # Remove from testable combinations if database setup did not succeed
-    for bd, db_name in session.config.stash[KEY_POSTGRES_DB].items():
-        if db_name == "":
-            session.config.stash[KEY_BACKEND_DRIVER].remove(bd)
 
 
 # Session-scoped fixtures
@@ -386,19 +386,28 @@ def default_platform_name(backend: str) -> str:
 @pytest.fixture(scope="module")
 def test_mp(
     request: pytest.FixtureRequest,
+    tmp_platform_factory: TempPlatformFactory,
     tmp_env: os._Environ[str],
-    test_data_path: Path,
     backend_driver: BackendDriver,
-    worker_id: str,
 ) -> Iterator[Platform]:
     """An empty :class:`.Platform` connected to a temporary, in-memory database.
 
     This fixture has **module** scope: the same Platform is reused for all tests in a
     module.
     """
-    yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend_driver, worker_id=worker_id
-    )
+    with tmp_platform_factory.make_platform(request, backend_driver) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="session")
+def tmp_postgres_db_factory(request: pytest.FixtureRequest) -> TempDatabaseFactory:
+    try:
+        # Existing instance created during Pytest start-up
+        return request.config.stash[KEY_POSTGRES_DB_FACTORY]
+    except KeyError:  # pragma: no cover
+        return request.config.stash.setdefault(
+            KEY_POSTGRES_DB_FACTORY, TempDatabaseFactory(request.session)
+        )
 
 
 @pytest.fixture(scope="session")
@@ -434,22 +443,6 @@ def tmp_env(
         localdb = base_temp.joinpath("localdb", "default")
         ixmp_config.values["platform"]["local"]["path"] = localdb
 
-        for bd, url in pytestconfig.stash[KEY_POSTGRES_DB].items():
-            # Use the DSN for the database created for this session in
-            # pytest_sessionstart
-            if url == "":
-                continue
-
-            platform_name = f"{bd.backend}-local"
-
-            if bd.backend == "ixmp4":
-                values = dict(dsn=url, ixmp4_name=url.rpartition("/")[2])
-            elif bd.backend == "jdbc":
-                values = dict(url=url)
-
-            existing = ixmp_config.values["platform"].setdefault(platform_name, {})
-            existing.update(values)
-
     # Save for other processes
     ixmp_config.save()
 
@@ -462,6 +455,13 @@ def tmp_env(
         os.environ["IXMP4_STORAGE_DIRECTORY"] = str(storage_directory)
 
     yield os.environ
+
+
+@pytest.fixture(scope="session")
+def tmp_platform_factory(
+    request: pytest.FixtureRequest, tmp_postgres_db_factory: TempDatabaseFactory
+) -> TempPlatformFactory:
+    return TempPlatformFactory(request.config.stash, tmp_postgres_db_factory)
 
 
 @pytest.fixture(scope="session")
@@ -529,10 +529,9 @@ def protect_rename_dims() -> Iterator[None]:
 @pytest.fixture(scope="function")
 def test_mp_f(
     request: pytest.FixtureRequest,
+    tmp_platform_factory: "TempPlatformFactory",
     tmp_env: os._Environ[str],
-    test_data_path: Path,
     backend_driver: BackendDriver,
-    worker_id: str,
 ) -> Iterator[Platform]:
     """An empty :class:`Platform` connected to a temporary, in-memory database.
 
@@ -543,9 +542,8 @@ def test_mp_f(
     --------
     test_mp
     """
-    yield from _platform_fixture(
-        request, tmp_env, test_data_path, backend_driver, worker_id=worker_id
-    )
+    with tmp_platform_factory.make_platform(request, backend_driver) as mp:
+        yield mp
 
 
 @pytest.fixture
@@ -700,98 +698,3 @@ def create_test_platform(
         props = props.format(db_path=str(tmp_path / name), **properties)
         props_file.write_text(props)
         return props_file
-
-
-# Private utilities
-
-
-def _platform_fixture(
-    request: pytest.FixtureRequest,
-    tmp_env: os._Environ[str],
-    test_data_path: Path,
-    backend_driver: BackendDriver,
-    worker_id: str,
-) -> Iterator[Platform]:
-    """Helper for :func:`test_mp` and other fixtures."""
-    # Long, unique name for the platform.
-    # - Use the pytest.Node ID.
-    # - Remove '/' so that the name can be used in URL tests.
-    # - Prepend the backend and driver.
-    platform_name = " ".join([*backend_driver, request.node.nodeid.replace("/", " ")])
-
-    stash = request.config.stash
-
-    # Construct positional and keyword arguments to Config.add_platform()
-    match backend_driver:
-        case ("jdbc", "hsqldb"):
-            args = ["hsqldb"]
-            kwargs: dict[str, Any] = dict(url=f"jdbc:hsqldb:mem:{platform_name}")
-        case ("jdbc", "postgresql"):
-            args = ["postgresql"]
-            kwargs = dict(url=stash[KEY_POSTGRES_DB][backend_driver])
-        case ("ixmp4", "postgresql"):
-            from ixmp4.conf.settings import Settings
-
-            args = []
-            # TODO Retrieve these from a common location, instead of recreating them
-            name = f"ixmp_test_{worker_id}_ixmp4"
-            kwargs = dict(
-                ixmp4_name=name,
-                dsn=stash[KEY_POSTGRES_DB][backend_driver],
-                jdbc_compat=True,
-                # Disable migration-version check for transient test databases.
-                ixmp4_settings=Settings(check_alembic_version=False),  # type: ignore[call-arg]
-            )
-            if request.scope == "function":
-                # NOTE Need this to recreate an empty DB in ixmp4 for test_mp_f
-                from ixmp4.transport import DirectTransport
-
-                from ixmp.backend.ixmp4 import IXMP4Backend
-
-                _backend = IXMP4Backend(**kwargs)
-                transport = _backend._backend.transport
-                if isinstance(transport, DirectTransport):
-                    transport.close()
-        case _:
-            raise NotImplementedError(backend_driver)
-
-    # Add platform to ixmp configuration
-    ixmp_config.add_platform(platform_name, backend_driver[0], *args, **kwargs)
-
-    # Launch Platform
-    mp = Platform(name=platform_name)
-
-    if is_ixmp4backend(mp._backend):
-        from ixmp4.db import get_alembic_controller
-        from ixmp4.transport import DirectTransport
-
-        transport = mp._backend._backend.transport
-        if (
-            isinstance(transport, DirectTransport)
-            and transport.session.bind is not None
-        ):
-            db_url = transport.session.bind.engine.url.render_as_string(
-                hide_password=False
-            )
-            get_alembic_controller(db_url).upgrade_database("head")
-
-    try:
-        yield mp
-    finally:
-        # Teardown: don't show log messages when destroying the platform, even if the
-        # test using the fixture modified the log level
-        mp._backend.set_log_level(logging.CRITICAL)
-
-        # NOTE Following the teardown in ixmp4's backend fixtures. Due to the setup
-        # above, mp._backend._backend is always of type PostgresTestBackend
-        if is_ixmp4backend(mp._backend):
-            from ixmp4.transport import DirectTransport
-
-            transport = mp._backend._backend.transport
-            if isinstance(transport, DirectTransport):
-                transport.close()
-
-        del mp
-
-        # Remove from configuration
-        ixmp_config.remove_platform(platform_name)

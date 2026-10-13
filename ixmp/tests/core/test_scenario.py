@@ -15,7 +15,7 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKEND_DRIVER,
-    _platform_fixture,
+    TempPlatformFactory,
     assert_logs,
     make_dantzig,
     models,
@@ -36,9 +36,6 @@ if TYPE_CHECKING:
 
     class PlatformFixtureArgs(TypedDict):
         request: pytest.FixtureRequest
-        tmp_env: os._Environ[str]
-        test_data_path: Path
-        worker_id: str
 
     Platforms = tuple[Platform, Platform]
 
@@ -49,9 +46,8 @@ if TYPE_CHECKING:
 @pytest.fixture
 def platforms(
     request: pytest.FixtureRequest,
+    tmp_platform_factory: TempPlatformFactory,
     tmp_env: os._Environ[str],
-    test_data_path: Path,
-    worker_id: str,
 ) -> Iterator["Platforms"]:
     """A :class:`tuple` of 2 temporary Platform instances.
 
@@ -64,18 +60,15 @@ def platforms(
     ):  # pragma: no cover
         pytest.skip("Cannot construct fixture `platforms` without IXMP4Backend")
 
-    args: "PlatformFixtureArgs" = dict(
-        request=request,
-        tmp_env=tmp_env,
-        test_data_path=test_data_path,
-        worker_id=worker_id,
-    )
-    jdbc_mp = _platform_fixture(backend_driver=BackendDriver("jdbc", "hsqldb"), **args)
-    ixmp4_mp = _platform_fixture(
-        backend_driver=BackendDriver("ixmp4", "postgresql"), **args
-    )
-
-    yield from zip(jdbc_mp, ixmp4_mp)
+    with (
+        tmp_platform_factory.make_platform(
+            request, BackendDriver("jdbc", "hsqldb")
+        ) as jdbc_mp,
+        tmp_platform_factory.make_platform(
+            request, BackendDriver("ixmp4", "postgresql")
+        ) as ixmp4_mp,
+    ):
+        yield (jdbc_mp, ixmp4_mp)
 
 
 @pytest.fixture

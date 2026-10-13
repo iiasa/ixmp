@@ -378,12 +378,6 @@ def backend_driver(request: pytest.FixtureRequest) -> BackendDriver:
 
 
 @pytest.fixture(scope="module")
-def default_platform_name(backend: str) -> str:
-    """Name of the default platform according to the `backend`."""
-    return {"ixmp4": "ixmp4-local", "jdbc": "local"}[backend]
-
-
-@pytest.fixture(scope="module")
 def test_mp(
     request: pytest.FixtureRequest,
     tmp_platform_factory: TempPlatformFactory,

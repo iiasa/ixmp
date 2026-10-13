@@ -164,7 +164,6 @@ markers = [
 minversion = "9.0"
 strict_config = true
 strict_markers = true
-tmp_path_retention_policy = "none"
 usefixtures = ["tmp_env"]
 
 [tool.ruff.lint]

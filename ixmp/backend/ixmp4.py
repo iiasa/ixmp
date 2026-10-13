@@ -849,8 +849,10 @@ class IXMP4Backend(CachingBackend):
             # elif isinstance(repo, BEScalarRepository):
             elif idx == 0 and type == "par":
                 # Scalar
-                # ixmp4 v0.10 requires that a value and unit be supplied on creation
-                repo.create(name=name, value=np.nan, unit="_NOTSET")  # type: ignore[call-arg]
+                # ixmp4 v0.10 required that a value and unit be supplied on creation
+                # ixmp4 v0.16 requires that the value not be NaN
+                repo.create(name=name, value=-np.inf, unit="_NOTSET")  # type: ignore[call-arg]
+
             else:
                 repo.create(
                     name=name,

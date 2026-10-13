@@ -42,7 +42,6 @@ from copy import deepcopy
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeAlias
-from unittest import mock
 
 import pint
 import pytest
@@ -426,8 +425,6 @@ def tmp_env(
     """
     base_temp = tmp_path_factory.getbasetemp()
     os.environ["IXMP_DATA"] = str(base_temp)
-    # Test backends create/drop databases dynamically; skip ixmp4's alembic guard.
-    os.environ["IXMP4_CHECK_ALEMBIC_VERSION"] = "false"
 
     if not pytestconfig.option.ixmp_user_config:
         # Clear user's config. This (harmlessly) duplicates pytest_sessionstart, above.
@@ -457,11 +454,12 @@ def tmp_env(
     ixmp_config.save()
 
     if has_ixmp4():
-        from ixmp4.conf.settings import Settings
+        # IXMP4Backend.__init__() applies database migrations; skip a check in ixmp4
+        os.environ["IXMP4_CHECK_ALEMBIC_VERSION"] = "false"
 
-        # omitting fields with defaults requires the pydantic mypy plugin
-        settings = Settings(storage_directory=base_temp.joinpath("ixmp4"))  # type: ignore[call-arg]
-        mock.patch("ixmp4.conf.settings.Settings", new=settings)
+        # Set the path for ixmp4 to read/write its config
+        storage_directory = base_temp.joinpath("ixmp4")
+        os.environ["IXMP4_STORAGE_DIRECTORY"] = str(storage_directory)
 
     yield os.environ
 

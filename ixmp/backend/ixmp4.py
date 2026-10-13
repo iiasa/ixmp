@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from itertools import chain
 from os import PathLike
 from pathlib import Path
+from time import sleep
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from urllib.parse import urlsplit
 
 import ixmp4
 import numpy as np
@@ -30,7 +32,9 @@ from ixmp4.core.optimization import (
 from ixmp4.core.region import Region
 from ixmp4.data.backend import Backend as ixmp4_backend
 from ixmp4.data.meta.exceptions import InvalidRunMeta
+from ixmp4.db import get_alembic_controller
 from ixmp4.transport import DirectTransport, HttpxTransport
+from platformdirs import user_state_path
 
 # TODO Import this from typing when dropping Python 3.11
 # TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
@@ -257,16 +261,14 @@ class IXMP4Backend(CachingBackend):
     ) -> None:
         super().__init__(cache_enabled=cache)
 
-        # Build settings at runtime so test/session env vars are respected.
-        if ixmp4_settings is None:
-            ixmp4_settings = Settings()  # type: ignore[call-arg]
-
-        # Handle arguments
+        # - Handle arguments.
+        # - If ixmp4_settings are not provided, create a new Settings() instance using
+        #   current environment variables.
         self._options = opts = Options(
             ixmp4_name=ixmp4_name,
             dsn=dsn,
             jdbc_compat=jdbc_compat,
-            ixmp4_settings=ixmp4_settings,
+            ixmp4_settings=ixmp4_settings or Settings(),  # type: ignore [call-arg]
         )
 
         try:
@@ -278,9 +280,6 @@ class IXMP4Backend(CachingBackend):
             self._backend = self.backend_index[opts.ixmp4_name] = ixmp4_backend(
                 transport
             )
-
-            # NOTE Not running alembic.upgrade_database() here since for new DBs (such
-            # as for tests), this happens automatically
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
         self._platform = ixmp4.Platform(
@@ -305,20 +304,39 @@ class IXMP4Backend(CachingBackend):
     def _get_transport(
         self, ci: "PlatformConnectionInfo", http_credentials: str = "default"
     ) -> HttpxTransport | DirectTransport:
-        if ci.dsn.startswith("http"):
-            cred_dict = self._options.ixmp4_settings.get_credentials().get(
-                http_credentials
-            )
+        """Return an ixmp4 Transport instance according to the connection info."""
+        settings = self._options.ixmp4_settings
+        if ci.dsn.startswith("http"):  # pragma: no cover
+            cred_dict = settings.get_credentials().get(http_credentials)
             return HttpxTransport.from_url(
                 ci.dsn,
-                settings=self._options.ixmp4_settings.client,
-                auth=self._options.ixmp4_settings.get_client_auth(cred_dict),
+                settings=settings.client,
+                auth=settings.get_client_auth(cred_dict),
             )
         else:
-            return DirectTransport.from_dsn(
-                ci.dsn,
-                check_alembic_version=self._options.ixmp4_settings.check_alembic_version,
+            transport = DirectTransport.from_dsn(
+                ci.dsn, check_alembic_version=settings.check_alembic_version
             )
+
+            # Ensure the ixmp4 database is in a consistent state
+            assert transport.session.bind is not None
+            db_url = transport.session.bind.engine.url.render_as_string(
+                hide_password=False
+            )
+
+            # Identify the path of a lockfile
+            lockfile_dir = user_state_path("ixmp").joinpath("ixmp4-migration-lock")
+            lockfile_dir.mkdir(parents=True, exist_ok=True)
+            lockfile = lockfile_dir.joinpath(urlsplit(db_url).path.rpartition("/")[2])
+
+            while lockfile.exists():
+                sleep(0.5)
+
+            lockfile.touch()
+            get_alembic_controller(db_url).upgrade_database("head")
+            lockfile.unlink()
+
+            return transport
 
     @property
     def _log_level(self) -> int:

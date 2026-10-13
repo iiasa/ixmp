@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 from urllib.parse import urlsplit
 
 import ixmp4
+import ixmp4.data.backend
 import numpy as np
 import pandas as pd
 from ixmp4.conf.settings import Settings
@@ -30,7 +31,6 @@ from ixmp4.core.optimization import (
     Variable,
 )
 from ixmp4.core.region import Region
-from ixmp4.data.backend import Backend as ixmp4_backend
 from ixmp4.data.meta.exceptions import InvalidRunMeta
 from ixmp4.db import get_alembic_controller
 from ixmp4.transport import DirectTransport, HttpxTransport
@@ -239,7 +239,9 @@ class IXMP4Backend(CachingBackend):
     """
 
     _platform: "ixmp4.Platform"
-    _backend: "ixmp4_backend"
+
+    #: An instance of a :mod:`ixmp4` Backend class.
+    _backend: "ixmp4.data.backend.Backend"
     _options: "Options"
 
     # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
@@ -248,7 +250,7 @@ class IXMP4Backend(CachingBackend):
 
     # Mapping from platform name to ixmp4 Backend; this enables repeated __init__()
     # calls for in-memory DBs
-    backend_index: dict[str, "ixmp4_backend"] = {}
+    backend_index: dict[str, "ixmp4.data.backend.Backend"] = {}
 
     def __init__(
         self,
@@ -271,14 +273,14 @@ class IXMP4Backend(CachingBackend):
             ixmp4_settings=ixmp4_settings or Settings(),  # type: ignore [call-arg]
         )
 
-        try:
-            # Get an existing ixmp4.Backend object
-            self._backend = self.backend_index[opts.ixmp4_name]
-        except KeyError:
+        # Get an existing ixmp4.Backend object
+        if backend := self.backend_index.get(opts.ixmp4_name, None):
+            self._backend = backend
+        else:
             # Object does not exist -> instantiate using PlatformInfo from `opts`
             transport = self._get_transport(opts.platform_info)
-            self._backend = self.backend_index[opts.ixmp4_name] = ixmp4_backend(
-                transport
+            self._backend = self.backend_index[opts.ixmp4_name] = (
+                ixmp4.data.backend.Backend(transport)
             )
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference

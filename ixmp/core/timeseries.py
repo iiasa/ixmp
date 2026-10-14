@@ -709,12 +709,10 @@ def _clone(ts: TS, platform_dest: Platform, model: str, scenario: str) -> TS:
     ts_dest = type(ts)(platform_dest, model, scenario, "new", ts.scheme)
     ts_dest.commit(f"clone from ixmp://{ts.platform.name}/{ts.url}")
 
-    with ts_dest.transact("Clone time series data"):
-        # Clone meta data
-        # NB IXMP4Backend requires that this is enclosed in a transaction;
-        #    JDBCBackend does not.
-        ts_dest.set_meta(ts.get_meta())
+    # Clone meta data
+    ts_dest.set_meta(ts.get_meta())
 
+    with ts_dest.transact("Clone time series data"):
         # Clone time-series data
         # NB For TimeSeries.timeseries(), the underlying JDBCBackend/Java method does
         #    not include the 'meta' annotation for each value. This means it is not

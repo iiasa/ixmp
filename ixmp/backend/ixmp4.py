@@ -244,8 +244,8 @@ class IXMP4Backend(CachingBackend):
     _backend: "ixmp4.data.backend.Backend"
     _options: "Options"
 
-    # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
-    # subclasses of either)
+    # Mapping from ixmp.TimeSeries object and/or run ID to the underlying ixmp4.Run
+    # object (or subclasses of either).
     index: dict[TimeSeries, "Run"] = {}
 
     # Mapping from platform name to ixmp4 Backend; this enables repeated __init__()
@@ -461,9 +461,6 @@ class IXMP4Backend(CachingBackend):
 
         Helper for `init()` and `get()`.
         """
-        # Add to index
-        self.index[ts] = run
-
         # Retrieve the version of the ixmp4.Run object
         v = run.version
         if ts.version is None:
@@ -473,8 +470,16 @@ class IXMP4Backend(CachingBackend):
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
 
+        # Add to index
+        self.index[ts] = run
+
         if isinstance(ts, Scenario):
             # Retrieve the `scheme` attribute from the Run.meta dict
+            run_scheme = str(run.meta.get("_ixmp_scheme", ""))
+            if ts.scheme is not None and ts.scheme != run_scheme:
+                raise RuntimeError(
+                    f"Load existing {ts.__class__} with scheme {ts.scheme}"
+                )
             ts.scheme = str(run.meta.get("_ixmp_scheme", "")) or ts.scheme
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
@@ -543,23 +548,44 @@ class IXMP4Backend(CachingBackend):
 
         return cloned_s
 
-    def _get_max_as_default(self, model: str, scenario: str) -> Run:
-        # NOTE: This could be done in the database if performance requires it
-        # -> add as a feature in ixmp4
-        all_runs = self._platform.runs.list(
-            model=model, scenario=scenario, default_only=False
-        )
-        return max(all_runs, key=lambda r: r.version)
+    def _get_run(
+        self, model: str | None, scenario: str | None, version: int | None
+    ) -> Run:
+        """Retrieve a Run from the ixmp4 Platform.
 
-    def get(self, ts: TimeSeries) -> None:
-        v = int(ts.version) if ts.version else None
+        This method:
+
+        - Ensures that `model` and `scenario` are not :any:`None`.
+        - If `version` is not found (for instance, is a value like -1), retrieve the
+          *highest* existing version for (model, scenario).
+        - Returns an existing Run instance from :attr:`index`, if it already exists.
+        - Adds the resulting Run to :attr:`index` by its :attr:`.Run.id`.
+        """
+        try:
+            assert model is not None and scenario is not None
+        except AssertionError:
+            raise ValueError(
+                "Invalid arguments. Valid combination: (model, scenario, version)"
+            )
+
         try:
             run = self._platform.runs.get(
-                model=ts.model, scenario=ts.scenario, version=v
+                model=model, scenario=scenario, version=version
             )
         except Run.NoDefaultVersion:
-            run = self._get_max_as_default(ts.model, ts.scenario)
+            # Retrieve that maximum version as a default version
+            # NOTE This could be done in the database; if performance requires it, add
+            #      as a feature in ixmp4
+            all_runs = self._platform.runs.list(
+                model=model, scenario=scenario, default_only=False
+            )
+            run = max(all_runs, key=lambda r: r.version)
 
+        return run
+
+    def get(self, ts: TimeSeries) -> None:
+        version = int(ts.version) if ts.version else None
+        run = self._get_run(ts.model, ts.scenario, version)
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
@@ -626,7 +652,7 @@ class IXMP4Backend(CachingBackend):
         return self.index[ts].owns_lock
 
     def is_default(self, ts: TimeSeries) -> bool:
-        # Force refresh, for the case that another (model, scenario) but different
+        # Force refresh, for/ the case that another (model, scenario) but different
         # version has been set as default since the Run instance in self.index was last
         # refreshed
         self.index[ts]._refresh()
@@ -640,20 +666,6 @@ class IXMP4Backend(CachingBackend):
         last_update = self.index[ts]._dto.updated_at or datetime.now(timezone.utc)
         return last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
 
-    def _validate_meta_args(
-        self,
-        model: str | None = None,
-        scenario: str | None = None,
-        version: int | None = None,
-    ) -> tuple[str, str, int]:
-        """Validate arguments for getting/setting/deleting meta"""
-        if model is not None and scenario is not None and version is not None:
-            return model, scenario, version
-        else:
-            raise ValueError(
-                "Invalid arguments. Valid combination: (model, scenario, version)"
-            )
-
     def set_meta(
         self,
         meta: dict[str, bool | float | int | str],
@@ -661,39 +673,21 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None = None,
         version: int | None = None,
     ) -> None:
-        # Retrieve a reference to an ixmp4.core.Run given (model, scenario, version)
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
+        run = self._get_run(model, scenario, version)
 
-        # If the same (model, scenario, version) is already in memory (self.index), use
-        # that instance instead of `run`, which may have an incorrect value for
-        # `Run.owns_lock`.
-        # FIXME This appears to be an issue upstream in ixmp4. Report, resolve, and then
-        #       remove this workaround.
-        for other in filter(lambda obj: type(obj) is type(run), self.index.values()):
-            if other.id == run.id:  # Same ID in the database
-                run = other
-                break
-
-        new_meta = {**dict(run.meta), **meta}
+        new_meta = dict(run.meta) | meta
 
         with maybe_transact(run, "Update meta"):
             try:
                 run.meta = new_meta
-            except KeyError as e:
+            except (KeyError, InvalidRunMeta) as e:
                 if "<class" in str(e):
                     raise ValueError(
                         "Cannot use values provided due to incompatible types! \n "
                         f"Provided: {meta} \n Acceptable types: int, float, str, bool"
-                    ) from e
+                    ) from None
                 else:
-                    raise e
-            except InvalidRunMeta as e:
-                raise ValueError(*e.args)
+                    raise
 
     def get_meta(
         self,
@@ -704,13 +698,7 @@ class IXMP4Backend(CachingBackend):
         # not have more than one "level" of docs
         strict: bool = False,
     ) -> dict[str, Any]:
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
-        return dict(run.meta)
+        return dict(self._get_run(model, scenario, version).meta)
 
     def remove_meta(
         self,
@@ -719,12 +707,7 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None,
         version: int | None,
     ) -> None:
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
+        run = self._get_run(model, scenario, version)
 
         # TODO: This could have a nicer api in ixmp4
         meta_df = pd.DataFrame({"key": names})

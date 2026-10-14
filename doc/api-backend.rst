@@ -6,7 +6,7 @@ Storage back ends (:mod:`ixmp.backend`)
 :mod:`ixmp` includes two storage back ends:
 
 - :class:`ixmp.backend.jdbc.JDBCBackend`,
-  which can store data in many types of relational database management systems (RDBMS)
+  which can store data in several types of relational database management systems (RDBMS)
   that have Java DataBase Connector (JDBC) interfaces—hence its name.
 - :class:`ixmp.backend.ixmp4.IXMP4Backend`,
   which uses the `ixmp4 <https://docs.ece.iiasa.ac.at/projects/ixmp4/>`_ package
@@ -26,7 +26,6 @@ Provided backends
 
 .. autodata:: ixmp.backend.BACKENDS
 
-
 .. currentmodule:: ixmp.backend.jdbc
 
 JDBCBackend
@@ -35,7 +34,10 @@ JDBCBackend
 .. autoclass:: ixmp.backend.jdbc.JDBCBackend
    :members: handle_config, read_file, write_file 
 
-   JDBCBackend supports three :class:`DRIVER` options:
+   JDBCBackend supports three :class:`DRIVER` options.
+   Each requires or allows different combinations of :class:`~.jdbc.Options`,
+   in particular :attr:`~.jdbc.Options.url`.
+   See the Options documentation for full details.
 
    :any:`DRIVER.oracle`
       Shared databases on remote (networked) servers using :attr:`~.jdbc.Options.url`,
@@ -44,7 +46,13 @@ JDBCBackend
    :any:`DRIVER.postgresql`
       Shared databases on local or remote (networked) PostgreSQL servers,
       using the same options as :any:`DRIVER.oracle`.
-      See :ref:`Using PostgreSQL <jdbc-postgresql>`, below.
+
+      - The database must already exist, but may be empty:
+        JDBCBackend creates (and, on connection, upgrades) the required tables.
+        The user must be able to create tables in the database,
+        for instance by owning it,
+        because PostgreSQL 15 and later do not allow ordinary users
+        to create tables in the "public" schema by default.
 
    :any:`DRIVER.hsqldb`
       - Databases in local files (HyperSQL) using :attr:`~.jdbc.Options.path`.
@@ -52,17 +60,8 @@ JDBCBackend
         For such databases,
         JDBCBackend automatically ensures a binary cache of the table data is stored on disk.
         See :attr:`.Options.full_url` and :data:`.HSQLDB_DEFAULT_PROPS` for details.
-     - Temporary, in-memory databases using :attr:`~.jdbc.Options.url`.
-       Give a URL in the form "jdbc:hsqldb:mem:[NAME]",
-       where "[NAME]" is any string:
-
-       .. code-block:: python
-
-          mp = ixmp.Platform(
-              backend="jdbc",
-              driver="hsqldb",
-              url="jdbc:hsqldb:mem:temporary platform",
-          )
+      - Temporary, in-memory databases using :attr:`~.jdbc.Options.url`.
+        See the documentation there.
 
    JDBCBackend is a subclass of :class:`.CachingBackend`.
    As such, it caches values in memory to improve performance
@@ -81,11 +80,15 @@ JDBCBackend
    JDBCBackend has the following **limitations**:
 
    - The `comment` argument to :meth:`.Platform.add_unit` is limited to 64 characters.
-   - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`) cannot be stored
-     using :meth:`.TimeSeries.add_timeseries` when using an Oracle database via ``driver='oracle'``.
-   - Geodata cannot yet be stored using :meth:`.TimeSeries.add_geodata` when using a PostgreSQL database of version 15 or later via ``driver='postgresql'``:
-     :meth:`.TimeSeries.commit` raises :class:`RuntimeError`.
-     This is due to an error in the Java code (iiasa/ixmp_source).
+   - When using :attr:`.Driver.oracle`:
+
+     - Infinite floating-point values (:data:`numpy.inf`, :data:`math.inf`)
+       cannot be stored using :meth:`.TimeSeries.add_timeseries`.
+
+   - When using :attr:`.DRIVER.postgresql`:
+
+     - Geodata cannot be stored using :meth:`.TimeSeries.add_geodata`.
+
    - :meth:`.JDBCBackend.s_clone` is only supported when `target_backend` is JDBCBackend.
 
    JDBCBackend's implementation allows the following kinds of file input and output:
@@ -95,55 +98,27 @@ JDBCBackend
       read_file
       write_file
 
-   .. _jdbc-postgresql:
+   In addition to :ref:`command-line configuration <configuration>`
+   and passing a full set of keyword arguments to :class:`Platform`,
+   a JDBCBackend may be created using a **properties file** that contains
+   connection details. For example:
 
-   **Using PostgreSQL.**
-   The database must already exist, but may be empty:
-   JDBCBackend creates (and, on connection, upgrades) the required tables.
-   The user must be able to create tables in the database, for instance by owning it,
-   because PostgreSQL 15 and later no longer allow ordinary users to create tables in the "public" schema by default.
-   The PostgreSQL JDBC driver is included with :mod:`ixmp`.
-   The :attr:`~.jdbc.Options.url` has the form "HOST:PORT/DATABASE";
-   see :attr:`.Options.full_url` for other accepted forms.
-   The user name and password are given using :attr:`~.jdbc.Options.user` and :attr:`~.jdbc.Options.password`, not in the URL.
-   The connection can be configured in any of the following ways:
+   .. code-block:: properties
+      :caption: example.properties
 
-   1. Using keyword arguments:
+      # Any string containg "postgresql" or "hsqldb" refers to those
+      # drivers. Any other string refers to the Oracle driver.
+      jdbc.driver = org.postgresql.Driver
 
-      .. code-block:: python
+      jdbc.url = jdbc:postgresql://database.server.example.com:5432/ixmp
+      jdbc.user = username
+      jdbc.pwd = password
 
-         mp = ixmp.Platform(
-             backend="jdbc",
-             driver="postgresql",
-             url="database.server.example.com:5432/ixmp",
-             user="username",
-             password="password",
-         )
+   Pass the file path as the :py:`dbprops=` keyword argument:
 
-   2. Using the :doc:`command-line interface <cli>` to store the connection information in the :ref:`configuration file <configuration>`;
-      then, refer to the platform by name:
+   .. code-block:: python
 
-      .. code-block:: shell
-
-         ixmp platform add p1 jdbc postgresql \
-             database.server.example.com:5432/ixmp username password
-
-      .. code-block:: python
-
-         mp = ixmp.Platform("p1")
-
-   3. Using a database properties file, in which the "jdbc.driver" line is required:
-
-      .. code-block:: properties
-
-         jdbc.driver = org.postgresql.Driver
-         jdbc.url = jdbc:postgresql://database.server.example.com:5432/ixmp
-         jdbc.user = username
-         jdbc.pwd = password
-
-      .. code-block:: python
-
-         mp = ixmp.Platform(backend="jdbc", dbprops="/path/to/postgresql.properties")
+      mp = ixmp.Platform(backend="jdbc", dbprops="/path/to/example.properties")
 
    .. note:: Much of the code of this backend is in Java,
       in the iiasa/ixmp_source GitHub repository.

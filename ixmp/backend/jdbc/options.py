@@ -94,20 +94,25 @@ class Options:
     path: os.PathLike[str] | None = None
 
     #: Partial or complete JDBC URL. Valid forms differ according to :attr:`driver` as
-    #: follows:
+    #: follows. Square brackets (``[...]``) indicate optional components.
     #:
     #: :any:`DRIVER.hsqldb`:
-    #:    - "[jdbc:hsqldb:]file:/path/to/file"
-    #:    - "[jdbc:hsqldb:]mem:name of in-memory database"
-    #:    - "[jdbc:hsqldb:]file:foo; property=property_value"
+    #:    - ``"[jdbc:hsqldb:]file:/path/to/file"``
+    #:    - ``"[jdbc:hsqldb:]mem:{name}"``, where ``{name}`` is any string.
+    #:    - ``"[jdbc:hsqldb:]file:foo; property=property_value"``
     #:
     #: :any:`DRIVER.oracle`:
-    #:    "[jdbc:oracle:thin://]database-server.example.com:PORT:SCHEMA"
+    #:    ``"[jdbc:oracle:thin:@]{hostname}:{port}/{schema}"``.
+    #:    For example, if `hostname` is "database.example.com", `port` is 1521, and
+    #:    `schema` is "MY_DATABASE", :attr:`url` may be
+    #:    "database.example.com:1521/MY_DATABASE" or
+    #:    "jdbc:oracle:thin:@database.example.com:1521/MY_DATABASE".
     #:
     #: :any:`DRIVER.postgresql`:
-    #:    `"[jdbc:postgresql://]user:password@{hostname}[:PORT]/db_name?param=value"`,
-    #:    in which `hostname` may be a host name ("database-server.example.com"), an
-    #:    IPv4 address or an IPv6 address.
+    #:    ``"[jdbc:postgresql://][user:password@]{hostname}[:{port}]/db_name[?param=value]"``
+    #:    in which `hostname` may be a host name ("database.example.com"), an IPv4
+    #:    address or an IPv6 address. If a username and password are supplied, they
+    #:    override other values given for :attr:`user` and :attr:`password`.
     #:
     #: See also :ref:`configuration`.
     url: str = ""
@@ -244,8 +249,7 @@ class Options:
         args
             Positional arguments. These override any `kw`, and may be in the form of:
 
-            1. :py:`("oracle", url, user, password, [jvmargs])`, or the same with
-               "postgresql".
+            1. :py:`("oracle" or "postgresql", url, user, password, [jvmargs])`.
             2. :py:`("hsqldb", path, [jvmargs])` for a file-backed HyperSQL database.
             3. :py:`("hsqldb",)`. with :attr:`url` supplied via `kwargs`, for instance
                "jdbc:hsqldb:mem://foo" for an in-memory database.
@@ -303,16 +307,16 @@ class Options:
         Options instance. The following keys are mapped to fields:
 
         - "jdbc.driver" → :attr:`driver`.
+
+          If the value contains "hsqldb", it is mapped to :any:`DRIVER.hsqldb`; if it
+          contains "postgresql", to :any:`DRIVER.postgresql`. Any other value, such as
+          "oracle.jdbc.driver.OracleDriver", is mapped to :any:`DRIVER.oracle`.
+
         - "jdbc.pwd" → :attr:`password`.
         - "jdbc.url" → :attr:`url`.
         - "jdbc.user" → :attr:`user`.
 
         All others are stored in :attr:`extra_properties`.
-
-        The "jdbc.driver" value is mapped to :attr:`driver`: if it contains "hsqldb",
-        to :any:`DRIVER.hsqldb`; if it contains "postgresql", to
-        :any:`DRIVER.postgresql`; otherwise, for instance
-        "oracle.jdbc.driver.OracleDriver", to :any:`DRIVER.oracle`.
 
         Raises
         ------
@@ -329,12 +333,12 @@ class Options:
             name, value = match.group(1), match.group(2)
             match name:
                 case "driver":
-                    # Other values, including "oracle.jdbc.driver.OracleDriver" → oracle
                     if "hsqldb" in value:
                         args[name] = DRIVER.hsqldb
                     elif "postgresql" in value:
                         args[name] = DRIVER.postgresql
                     else:
+                        # All other values
                         args[name] = DRIVER.oracle
                 case "pwd":
                     args["password"] = value  # Change name

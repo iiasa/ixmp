@@ -19,6 +19,28 @@ Platform
 .. autoclass:: Platform
    :members:
 
+   A previously :ref:`configured <configuration>` Platforms can be loaded using its name:
+
+   .. code-block:: python
+
+      # Connect to a platform named "p1" previously configured
+      mp = ixmp.Platform(name="p1")
+
+   A Platform can also be created by giving the backend name and other options directly,
+   without storing them in the configuration file.
+   For example:
+
+   .. code-block:: python
+
+      # Notice no name is assigned to this Platform
+      mp = ixmp.Platform(
+          backend="jdbc",
+          driver="postgresql",
+          url="database.server.example.com:5432/ixmp",
+          user="username",
+          password="password",
+      )
+
    Platforms have the following methods:
 
    .. autosummary::
@@ -156,7 +178,8 @@ When imported, :mod:`ixmp` reads configuration from the first file named
 
    Advanced users wishing to use a project-specific ``config.json`` can set ``IXMP_DATA`` to the path for any directory containing a file with this name.
 
-To manipulate the configuration file, use the ``platform`` command in the ixmp command-line interface::
+To manipulate the configuration file,
+use the ``platform`` command in the ixmp command-line interface::
 
   # Add a platform named 'p1' backed by a local HSQL database
   $ ixmp platform add p1 jdbc hsqldb /path/to/database/files

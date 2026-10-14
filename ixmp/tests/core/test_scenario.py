@@ -716,7 +716,6 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    @pytest.mark.ixmp4_not_yet
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -753,6 +752,7 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_bulk(
         self,
         request: pytest.FixtureRequest,
@@ -766,8 +766,9 @@ class TestScenario:
 
         # Meta can be retrieved in bulk
         obs = scen.get_meta()
+
         # Same items are retrieved
-        assert test_dict == {k: obs[k] for k in test_dict}
+        assert test_dict == {k: obs[k] for k in test_dict}, (obs, test_dict)
 
         # Meta can be updated/replaced
         scen.set_meta({"test_int": 1234567, "new_attr": "new_attr"})

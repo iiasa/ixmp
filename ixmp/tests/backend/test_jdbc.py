@@ -155,7 +155,26 @@ class TestJDBCBackend:
                     password="pass",
                 ),
             ),
-            (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
+            (
+                ("postgresql", "postgresql://u:p@h:5432/db"),
+                dict(),
+                dict(
+                    driver="postgresql",
+                    url="postgresql://u:p@h:5432/db",
+                    user="u",
+                    password="p",
+                ),
+            ),
+            (
+                ("hsqldb",),
+                dict(url="url"),
+                dict(driver="hsqldb", url="url"),
+            ),
+            (
+                ("hsqldb",),
+                dict(url="jdbc:hsqldb:mem:foo bar"),
+                dict(driver="hsqldb", url="jdbc:hsqldb:mem:foo bar"),
+            ),
             # Invalid
             pytest.param(tuple(), dict(), None, marks=VE),
             pytest.param(("not a driver",), dict(), None, marks=VE),
@@ -312,7 +331,7 @@ def test_connect_message(
     caplog: pytest.LogCaptureFixture,
     request: pytest.FixtureRequest,
 ) -> None:
-    url = f"jdbc:hsqldb:mem://{request.node.name}_"
+    url = f"jdbc:hsqldb:mem:{request.node.name}_"
 
     ixmp.Platform(backend="jdbc", driver="hsqldb", url=url + "0", log_level="INFO")
 
@@ -388,7 +407,7 @@ INIT_PARAMS: tuple[
     ([], dict(backend="jdbc", driver="postgresql"), ValueError, None),
     # …with driver='hsqldb' and no path
     ([], dict(backend="jdbc", driver="hsqldb"), ValueError, None),
-    # …with driver='hsqldb' and url
+    # …with driver='hsqldb' and invalid url
     (
         [],
         dict(backend="jdbc", driver="hsqldb", url="example.com:1234:SCHEMA"),

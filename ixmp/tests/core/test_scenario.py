@@ -15,6 +15,7 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.testing import (
     KEY_BACKEND_DRIVER,
+    BackendDriver,
     TempPlatformFactory,
     assert_logs,
     make_dantzig,
@@ -53,8 +54,6 @@ def platforms(
 
     The first uses :class:`JDBCBackend`, the second uses :class:`IXMP4Backend`.
     """
-    from ixmp.testing import BackendDriver
-
     if not any(
         bd.backend == "ixmp4" for bd in request.config.stash[KEY_BACKEND_DRIVER]
     ):  # pragma: no cover
@@ -597,6 +596,7 @@ class TestScenario:
     # I/O
     def test_excel_io(
         self,
+        tmp_platform_factory: TempPlatformFactory,
         scen_f: "Scenario",
         scen_empty: "Scenario",
         tmp_path: Path,
@@ -664,27 +664,23 @@ class TestScenario:
         with assert_logs(caplog, "Existing par 'd' has index names(s)"):
             scen_empty.read_excel(tmp_path, init_items=True)
 
-        # NOTE This is testing a hardcoded JDBC platform!
         # A new, empty Platform (different from the one under scen -> mp ->
         # test_mp) that lacks all units
-        mp = ixmp.Platform(
-            backend="jdbc",
-            driver="hsqldb",
-            url=f"jdbc:hsqldb:mem:excel_io_{request.node.nodeid.replace('/', '_')}",
-        )
-        # A Scenario without the 'dantzig' scheme -> no contents at all
-        s = ixmp.Scenario(
-            mp, model="foo", scenario="bar", scheme="empty", version="new"
-        )
+        bd = BackendDriver("jdbc", "hsqldb")
+        with tmp_platform_factory.make_platform(request, bd) as mp:
+            # A Scenario without the 'dantzig' scheme -> no contents at all
+            s = ixmp.Scenario(
+                mp, model="foo", scenario="bar", scheme="empty", version="new"
+            )
 
-        # Fails with add_units=False
-        with pytest.raises(
-            ValueError, match="The unit 'pounds' does not exist in the database!"
-        ):
-            s.read_excel(tmp_path, init_items=True)
+            # Fails with add_units=False
+            with pytest.raises(
+                ValueError, match="The unit 'pounds' does not exist in the database!"
+            ):
+                s.read_excel(tmp_path, init_items=True)
 
-        # Succeeds with add_units=True
-        s.read_excel(tmp_path, add_units=True, init_items=True)
+            # Succeeds with add_units=True
+            s.read_excel(tmp_path, add_units=True, init_items=True)
 
     def test_solve(self, tmp_path: Path, scen_f: "Scenario") -> None:
         # Copy the dantzig model file into the `tmp_path`

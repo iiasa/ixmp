@@ -431,10 +431,8 @@ class Config:
             info = backend_class.handle_config(_args, kwargs)
             info.setdefault("class", cls)
 
-        if name in self.values["platform"]:
-            log.warning(
-                "Overwriting existing config: " + repr(self.values["platform"][name])
-            )
+        if existing := self.values["platform"].get(name, {}):
+            log.warning(f"Overwriting existing config: {existing!r}")
 
         self.values["platform"][name] = info
 

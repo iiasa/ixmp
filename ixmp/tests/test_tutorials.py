@@ -1,6 +1,7 @@
 import os
 import platform
 import sys
+from collections.abc import Iterator
 from importlib.metadata import version
 from pathlib import Path
 from typing import TypedDict
@@ -9,6 +10,7 @@ import numpy as np
 import pytest
 from packaging.version import Version as V
 
+from ixmp import Platform
 from ixmp.testing import GHA, get_cell_output, run_notebook
 
 GROUP_BASE_NAME = platform.system() + platform.python_version()
@@ -38,14 +40,14 @@ class DefaultKwargs(TypedDict, total=False):
 
 
 @pytest.fixture
-def default_args(default_platform_name: str) -> DefaultKwargs:
-    """Default arguments for :func:`.run_notebook.
+def default_args(test_mp: Platform) -> Iterator[DefaultKwargs]:
+    """Default arguments for :func:`.run_notebook`.
 
-    - Set the "default" platform to be either the platform named "local" or
-      "ixmp4-local", according to the `backend` fixture.
+    - Set the "default" platform to be a temporary platform.
     - Use a longer timeout on GitHub Actions.
     """
-    return dict(default_platform=default_platform_name, timeout=60 if GHA else 0)
+
+    yield dict(default_platform=test_mp.name, timeout=60 if GHA else 0)
 
 
 @MARK[0]

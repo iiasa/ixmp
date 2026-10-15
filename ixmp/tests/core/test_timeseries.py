@@ -1,8 +1,8 @@
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone, tzinfo
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -104,7 +104,7 @@ class TestTimeSeries:
     @pytest.fixture(scope="function", params=[TimeSeries, Scenario])
     def ts(
         self, request: pytest.FixtureRequest, mp: "Platform"
-    ) -> Generator[TimeSeries | Scenario, Any, None]:
+    ) -> Iterator[TimeSeries | Scenario]:
         """An empty TimeSeries with a temporary name on the :func:`mp`."""
         # Use a hash of the pytest node ID to avoid exceeding the maximum
         # length for a scenario name
@@ -454,6 +454,7 @@ class TestTimeSeries:
     # Geodata
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     def test_add_geodata(self, ts: TimeSeries) -> None:
         # Empty TimeSeries includes no geodata
         assert_frame_equal(DATA["geo"].loc[[False, False, False]], ts.get_geodata())
@@ -467,6 +468,7 @@ class TestTimeSeries:
         assert_frame_equal(DATA["geo"], obs)
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     @pytest.mark.parametrize(
         "rows",
         [[1], [1, 2], [0, 1, 2]],
@@ -587,6 +589,7 @@ class TestTimeSeries:
         assert_geodata(empty, DATA["geo"].loc[[False, False, False]])
 
     @pytest.mark.ixmp4_never
+    @pytest.mark.jdbc_postgresql_never
     def test_remove_multiple_geodata(self, mp: "Platform") -> None:
         scen = TimeSeries(mp, **models["h2g2"], version="new", annotation="fo")
         scen.add_geodata(DATA["geo"])

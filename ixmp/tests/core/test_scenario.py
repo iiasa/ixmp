@@ -1,6 +1,6 @@
 import os
 import re
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from shutil import copyfile
 from subprocess import run
@@ -14,8 +14,9 @@ from pandas.testing import assert_frame_equal
 
 import ixmp
 from ixmp.testing import (
-    KEY_BACKENDS,
-    _platform_fixture,
+    KEY_BACKEND_DRIVER,
+    BackendDriver,
+    TempPlatformFactory,
     assert_logs,
     make_dantzig,
     models,
@@ -36,9 +37,6 @@ if TYPE_CHECKING:
 
     class PlatformFixtureArgs(TypedDict):
         request: pytest.FixtureRequest
-        tmp_env: os._Environ[str]
-        test_data_path: Path
-        worker_id: str
 
     Platforms = tuple[Platform, Platform]
 
@@ -49,27 +47,27 @@ if TYPE_CHECKING:
 @pytest.fixture
 def platforms(
     request: pytest.FixtureRequest,
+    tmp_platform_factory: TempPlatformFactory,
     tmp_env: os._Environ[str],
-    test_data_path: Path,
-    worker_id: str,
 ) -> Iterator["Platforms"]:
     """A :class:`tuple` of 2 temporary Platform instances.
 
     The first uses :class:`JDBCBackend`, the second uses :class:`IXMP4Backend`.
     """
-    if "ixmp4" not in request.config.stash[KEY_BACKENDS]:  # pragma: no cover
+    if not any(
+        bd.backend == "ixmp4" for bd in request.config.stash[KEY_BACKEND_DRIVER]
+    ):  # pragma: no cover
         pytest.skip("Cannot construct fixture `platforms` without IXMP4Backend")
 
-    args: "PlatformFixtureArgs" = dict(
-        request=request,
-        tmp_env=tmp_env,
-        test_data_path=test_data_path,
-        worker_id=worker_id,
-    )
-    jdbc_mp = _platform_fixture(backend="jdbc", **args)
-    ixmp4_mp = _platform_fixture(backend="ixmp4", **args)
-
-    yield from zip(jdbc_mp, ixmp4_mp)
+    with (
+        tmp_platform_factory.make_platform(
+            request, BackendDriver("jdbc", "hsqldb")
+        ) as jdbc_mp,
+        tmp_platform_factory.make_platform(
+            request, BackendDriver("ixmp4", "postgresql")
+        ) as ixmp4_mp,
+    ):
+        yield (jdbc_mp, ixmp4_mp)
 
 
 @pytest.fixture
@@ -80,13 +78,13 @@ def platforms_populated(platforms: "Platforms") -> Iterator["Platforms"]:
 
 
 @pytest.fixture(scope="class")
-def scen(mp: "Platform") -> Generator["Scenario", Any, None]:
+def scen(mp: "Platform") -> Iterator["Scenario"]:
     """The default version of the Dantzig on the mp."""
     yield ixmp.Scenario(mp, **models["dantzig"])
 
 
 @pytest.fixture(scope="function")
-def scen_f(mp: "Platform") -> Generator["Scenario", Any, None]:
+def scen_f(mp: "Platform") -> Iterator["Scenario"]:
     """The default version of the Dantzig Scenario on the mp, function scoped."""
     # TODO Can we validate that if with_data, scheme needs to be "dantzig"?
     # Or make GamsModel accept/ignore that silently?
@@ -98,7 +96,7 @@ def scen_f(mp: "Platform") -> Generator["Scenario", Any, None]:
 @pytest.fixture(scope="function")
 def scen_empty(
     request: pytest.FixtureRequest, test_mp: "Platform"
-) -> Generator["Scenario", Any, None]:
+) -> Iterator["Scenario"]:
     """An empty Scenario with a temporary name on the test_mp."""
     yield ixmp.Scenario(
         test_mp,
@@ -598,6 +596,7 @@ class TestScenario:
     # I/O
     def test_excel_io(
         self,
+        tmp_platform_factory: TempPlatformFactory,
         scen_f: "Scenario",
         scen_empty: "Scenario",
         tmp_path: Path,
@@ -665,27 +664,23 @@ class TestScenario:
         with assert_logs(caplog, "Existing par 'd' has index names(s)"):
             scen_empty.read_excel(tmp_path, init_items=True)
 
-        # NOTE This is testing a hardcoded JDBC platform!
         # A new, empty Platform (different from the one under scen -> mp ->
         # test_mp) that lacks all units
-        mp = ixmp.Platform(
-            backend="jdbc",
-            driver="hsqldb",
-            url=f"jdbc:hsqldb:mem:excel_io_{request.node.nodeid.replace('/', '_')}",
-        )
-        # A Scenario without the 'dantzig' scheme -> no contents at all
-        s = ixmp.Scenario(
-            mp, model="foo", scenario="bar", scheme="empty", version="new"
-        )
+        bd = BackendDriver("jdbc", "hsqldb")
+        with tmp_platform_factory.make_platform(request, bd) as mp:
+            # A Scenario without the 'dantzig' scheme -> no contents at all
+            s = ixmp.Scenario(
+                mp, model="foo", scenario="bar", scheme="empty", version="new"
+            )
 
-        # Fails with add_units=False
-        with pytest.raises(
-            ValueError, match="The unit 'pounds' does not exist in the database!"
-        ):
-            s.read_excel(tmp_path, init_items=True)
+            # Fails with add_units=False
+            with pytest.raises(
+                ValueError, match="The unit 'pounds' does not exist in the database!"
+            ):
+                s.read_excel(tmp_path, init_items=True)
 
-        # Succeeds with add_units=True
-        s.read_excel(tmp_path, add_units=True, init_items=True)
+            # Succeeds with add_units=True
+            s.read_excel(tmp_path, add_units=True, init_items=True)
 
     def test_solve(self, tmp_path: Path, scen_f: "Scenario") -> None:
         # Copy the dantzig model file into the `tmp_path`
@@ -721,7 +716,6 @@ class TestScenario:
             assert "'notapackage'.'(not installed)'" in result.stdout.decode()
 
     # Combined tests
-    @pytest.mark.ixmp4_not_yet
     def test_meta(
         self, mp: "Platform", test_dict: dict[str, bool | float | int | str]
     ) -> None:
@@ -758,6 +752,7 @@ class TestScenario:
             # NOTE Triggering the error on purpose
             scen.set_meta("test_string", complex(1, 1))  # type: ignore[arg-type]
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_bulk(
         self,
         request: pytest.FixtureRequest,
@@ -771,8 +766,9 @@ class TestScenario:
 
         # Meta can be retrieved in bulk
         obs = scen.get_meta()
+
         # Same items are retrieved
-        assert test_dict == {k: obs[k] for k in test_dict}
+        assert test_dict == {k: obs[k] for k in test_dict}, (obs, test_dict)
 
         # Meta can be updated/replaced
         scen.set_meta({"test_int": 1234567, "new_attr": "new_attr"})

@@ -360,8 +360,9 @@ def add(platform_name: str, args: str | Iterable[str]) -> None:
     For the 'jdbc' backend, the remaining ARGS must be one of:
 
     \b
-    - "oracle URL USERNAME PASSWORD", where URL is something like
-      "example.com:PORT:SCHEMA". This configures a connection to an Oracle database.
+    - "[oracle|postgresql] URL USERNAME PASSWORD" to configure a connection to an
+      Oracle or PostgreSQL database. The URL must resemble "example.com:PORT:SCHEMA"
+      (Oracle) or "example.com:PORT/DATABASE" (PostgreSQL).
     - "hsqldb PATH" where PATH is the path to the database files, including the
       directory but not the file extensions. If the files does not exist, it will be
       created.

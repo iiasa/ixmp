@@ -50,6 +50,7 @@ All changes
 
 - Improve :class:`.JDBCBackend` (:pull:`645`):
 
+  - Test and document support for PostgreSQL databases (:pull:`657`, :pull:`656`, :issue:`655`).
   - Use cached tables for HyperSQL local file databases by default to improve performance
     (:issue:`433`, :issue:`643`).
 

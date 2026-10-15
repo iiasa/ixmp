@@ -2,9 +2,9 @@ import gc
 import logging
 import os
 import platform
-from collections.abc import Generator
+from collections.abc import Iterator
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import jpype
 import numpy as np
@@ -119,19 +119,19 @@ VE = pytest.mark.xfail(raises=ValueError)
 
 class TestJDBCBackend:
     @pytest.fixture(scope="class")
-    def klass(self) -> Generator[type["JDBCBackend"], Any, None]:
+    def klass(self) -> Iterator[type["JDBCBackend"]]:
         """The JDBCBackend class."""
         yield ixmp.backend.jdbc.JDBCBackend
 
     @pytest.fixture(scope="function")
-    def mp(self) -> Generator["Platform", Any, None]:
+    def mp(self) -> Iterator["Platform"]:
         """A Platform connected to a JDBCBackend."""
         yield ixmp.Platform(
             backend="jdbc", driver="hsqldb", url="jdbc:hsqldb:mem://ixmptest"
         )
 
     @pytest.fixture()
-    def be(self, mp: "Platform") -> Generator["JDBCBackend", Any, None]:
+    def be(self, mp: "Platform") -> Iterator["JDBCBackend"]:
         """The Backend object itself."""
         assert isinstance(mp._backend, ixmp.backend.jdbc.JDBCBackend)
         yield mp._backend
@@ -145,7 +145,36 @@ class TestJDBCBackend:
                 dict(),
                 dict(driver="oracle", url="url", user="user", password="pass"),
             ),
-            (("hsqldb",), dict(url="url"), dict(driver="hsqldb", url="url")),
+            (
+                ("postgresql", "host:5432/db", "user", "pass"),
+                dict(),
+                dict(
+                    driver="postgresql",
+                    url="host:5432/db",
+                    user="user",
+                    password="pass",
+                ),
+            ),
+            (
+                ("postgresql", "postgresql://u:p@h:5432/db"),
+                dict(),
+                dict(
+                    driver="postgresql",
+                    url="postgresql://u:p@h:5432/db",
+                    user="u",
+                    password="p",
+                ),
+            ),
+            (
+                ("hsqldb",),
+                dict(url="url"),
+                dict(driver="hsqldb", url="url"),
+            ),
+            (
+                ("hsqldb",),
+                dict(url="jdbc:hsqldb:mem:foo bar"),
+                dict(driver="hsqldb", url="jdbc:hsqldb:mem:foo bar"),
+            ),
             # Invalid
             pytest.param(tuple(), dict(), None, marks=VE),
             pytest.param(("not a driver",), dict(), None, marks=VE),
@@ -159,6 +188,13 @@ class TestJDBCBackend:
                 ("hsqldb", "path", "-Xmx12G", "extra?!"), dict(), None, marks=VE
             ),
             pytest.param(("oracle", "url", "missing pass"), dict(), None, marks=VE),
+            pytest.param(
+                ("postgresql", "url", "u", "p", "-Xmx12G", "extra?!"),
+                dict(),
+                None,
+                marks=VE,
+            ),
+            pytest.param(("postgresql", "url", "missing pass"), dict(), None, marks=VE),
             pytest.param(("hsqldb",), dict(), None, marks=VE),
         ),
     )
@@ -295,7 +331,7 @@ def test_connect_message(
     caplog: pytest.LogCaptureFixture,
     request: pytest.FixtureRequest,
 ) -> None:
-    url = f"jdbc:hsqldb:mem://{request.node.name}_"
+    url = f"jdbc:hsqldb:mem:{request.node.name}_"
 
     ixmp.Platform(backend="jdbc", driver="hsqldb", url=url + "0", log_level="INFO")
 
@@ -360,9 +396,18 @@ INIT_PARAMS: tuple[
     ),
     # …with driver='oracle' and no url
     ([], dict(backend="jdbc", driver="oracle"), ValueError, None),
+    # Initialize with driver='postgresql' and path
+    (
+        [],
+        dict(backend="jdbc", driver="postgresql", path="foo/bar"),
+        ValueError,
+        None,
+    ),
+    # …with driver='postgresql' and no url
+    ([], dict(backend="jdbc", driver="postgresql"), ValueError, None),
     # …with driver='hsqldb' and no path
     ([], dict(backend="jdbc", driver="hsqldb"), ValueError, None),
-    # …with driver='hsqldb' and url
+    # …with driver='hsqldb' and invalid url
     (
         [],
         dict(backend="jdbc", driver="hsqldb", url="example.com:1234:SCHEMA"),
@@ -397,7 +442,7 @@ def test_gh_216(test_mp: "Platform", request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
-def exception_verbose_true() -> Generator[None, Any, None]:
+def exception_verbose_true() -> Iterator[None]:
     """A fixture which ensures JDBCBackend raises verbose exceptions.
 
     The set value is not disturbed for other tests/code.
@@ -539,7 +584,7 @@ def reload_cycle_scenario(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
     rc_data_size: int,
-) -> Generator["Scenario", Any, None]:  # pragma: no cover
+) -> Iterator["Scenario"]:  # pragma: no cover
     """Set up a Platform with *rc_data_size* of  random data."""
     # Command-line option for the JVM memory limit
     kwarg: "PlatformInitKwargs" = dict(driver="hsqldb")

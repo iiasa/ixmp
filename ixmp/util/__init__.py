@@ -1,7 +1,7 @@
 import logging
 import re
 import sys
-from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import lru_cache
 from importlib.abc import MetaPathFinder
@@ -205,7 +205,7 @@ def diff(
 
 
 @contextmanager
-def discard_on_error(ts: "TimeSeries") -> Generator[None, Any, None]:
+def discard_on_error(ts: "TimeSeries") -> Iterator[None]:
     """Context manager to discard changes to `ts` and close the DB on any exception.
 
     For :class:`.JDBCBackend`, this can avoid leaving `ts` in a "locked" state in the

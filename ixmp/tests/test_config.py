@@ -1,6 +1,5 @@
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -8,7 +7,7 @@ from ixmp._config import Config, _JSONEncoder, _locate
 
 
 @pytest.fixture(scope="function")
-def cfg() -> Generator[Config, Any, None]:
+def cfg() -> Iterator[Config]:
     """Return a :class:`ixmp._config.Config` object without reading a file."""
     yield Config(read=False)
 

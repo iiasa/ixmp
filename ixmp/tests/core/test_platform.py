@@ -2,10 +2,10 @@
 
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from sys import getrefcount
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 from weakref import getweakrefcount
 
 import pandas as pd
@@ -15,7 +15,7 @@ from pytest import raises
 
 import ixmp
 from ixmp.backend.common import FIELDS
-from ixmp.testing import DATA, MARK, assert_logs, make_dantzig, models
+from ixmp.testing import DATA, BackendDriver, assert_logs, make_dantzig, models
 from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
@@ -23,11 +23,13 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def log_level_mp(test_mp: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
+def log_level_mp(test_mp: ixmp.Platform) -> Iterator[ixmp.Platform]:
     """A fixture that preserves the log level of *test_mp*."""
     tmp = test_mp.get_log_level()
-    yield test_mp
-    test_mp.set_log_level(tmp)
+    try:
+        yield test_mp
+    finally:
+        test_mp.set_log_level(tmp)
 
 
 @pytest.mark.parametrize(
@@ -322,27 +324,28 @@ class TestPlatform:
         mp = ixmp.Platform()
         assert ("ixmp4-local" if is_ixmp4backend(mp._backend) else "local") == mp.name
 
-    # NOTE Can't use 'backend' due to duplicate parametrization
-    @pytest.mark.parametrize(
-        "_backend, backend_args",
-        (
-            ("jdbc", dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")),
-            pytest.param(
-                "ixmp4",
-                dict(ixmp4_name="ixmp4-test"),
+    def test_init1(
+        self, pytestconfig: pytest.Config, backend_driver: BackendDriver
+    ) -> None:
+        """Platform can be instantiated with the given `backend_driver`."""
+        # Determine additional keyword arguments
+        match backend_driver:
+            case ("ixmp4", "postgresql"):
+                backend_args: "PlatformInitKwargs" = dict(ixmp4_name="ixmp4-test")
+
                 # This triggers the creation of a new SQLite3 database but, as of #640 /
                 # ixmp4 v0.16.z, this database is not correctly initialized, leading to
                 # "no such table: unit"
-                marks=MARK["IXMP4Backend Not Yet"],
-                # marks=MARK["ixmp4-importable"],
-            ),
-        ),
-    )
-    def test_init1(
-        self, _backend: Literal["jdbc", "ixmp4"], backend_args: "PlatformInitKwargs"
-    ) -> None:
-        # Platform can be instantiated
-        ixmp.Platform(backend=_backend, **backend_args)
+                pytest.xfail(reason="Not currently supported on IXMP4Backend")
+            case ("jdbc", "hsqldb"):
+                backend_args = dict(driver="hsqldb", url="jdbc:hsqldb:mem:TestPlatform")
+            case ("jdbc", "postgresql"):
+                backend_args = dict(
+                    driver="postgresql", url=pytestconfig.option.ixmp_postgres
+                )
+                pytest.skip(reason="Stalls pytest")
+
+        ixmp.Platform(backend=backend_driver[0], **backend_args)
 
     def test_getattr(self, test_mp: ixmp.Platform) -> None:
         """Test __getattr__."""

@@ -3,7 +3,7 @@
 #      behaviour they actually test.
 
 import copy
-from typing import Any, Generator
+from typing import Iterator
 
 import pytest
 
@@ -26,7 +26,7 @@ DANTZIG = models["dantzig"]
 
 
 @pytest.fixture(scope="function")
-def mp(test_mp_f: ixmp.Platform) -> Generator[ixmp.Platform, Any, None]:
+def mp(test_mp_f: ixmp.Platform) -> Iterator[ixmp.Platform]:
     """A test Platform.
 
     The platform contains one time series with the "dantizg" model & scenario name from
@@ -153,10 +153,8 @@ class TestMeta:
         mp: ixmp.Platform,
         meta: dict[str, bool | int | str | list[bool | float | int | str]],
     ) -> None:
-        """
-        Set meta indicators on several model/scenario/version levels and test
-        the 'strict' parameter of get_meta().
-        """
+        """Test the `strict` parameter to :meth:`.TimeSeries.get_meta`."""
+        # Set meta inciators on several model/scenario/version levels
         # set meta on various levels
         model_meta: dict[str, bool | int | str] = {
             "model_int": 3,
@@ -365,19 +363,20 @@ class TestMeta:
         obs = scen.get_meta()
         assert obs == expected
 
+    @pytest.mark.ixmp4_not_yet
     def test_meta_arguments(self, mp: ixmp.Platform) -> None:
         """Set scenario meta with key-value arguments"""
-        meta = {"sample_int": 3}
+        key, value = "sample_int", 3
 
         scen = ixmp.Scenario(mp, **DANTZIG, version="new")
         # Set using a dict argument
-        scen.set_meta(meta)
+        scen.set_meta({key: value})
 
         # Add a second scenario and verify that setting Meta for it works
         scen2 = ixmp.Scenario(mp, **DANTZIG, version="new")
         scen2.commit("save dummy scenario")
         # Set using key, value arguments
-        scen2.set_meta(*meta.popitem())
+        scen2.set_meta(key, value)
 
         # Same value is stored
         assert scen.get_meta() == scen2.get_meta()

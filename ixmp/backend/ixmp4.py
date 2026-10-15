@@ -1,15 +1,18 @@
 import builtins
 import logging
 import re
-from collections.abc import Generator, Iterable, MutableMapping, Sequence
+from collections.abc import Iterable, Iterator, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from itertools import chain
 from os import PathLike
 from pathlib import Path
+from time import sleep
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from urllib.parse import urlsplit
 
 import ixmp4
+import ixmp4.data.backend
 import numpy as np
 import pandas as pd
 from ixmp4.conf.settings import Settings
@@ -28,9 +31,10 @@ from ixmp4.core.optimization import (
     Variable,
 )
 from ixmp4.core.region import Region
-from ixmp4.data.backend import Backend as ixmp4_backend
 from ixmp4.data.meta.exceptions import InvalidRunMeta
+from ixmp4.db import get_alembic_controller
 from ixmp4.transport import DirectTransport, HttpxTransport
+from platformdirs import user_state_path
 
 # TODO Import this from typing when dropping Python 3.11
 # TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
@@ -235,16 +239,18 @@ class IXMP4Backend(CachingBackend):
     """
 
     _platform: "ixmp4.Platform"
-    _backend: "ixmp4_backend"
+
+    #: An instance of a :mod:`ixmp4` Backend class.
+    _backend: "ixmp4.data.backend.Backend"
     _options: "Options"
 
-    # Mapping from ixmp.TimeSeries object to the underlying ixmp4.Run object (or
-    # subclasses of either)
+    # Mapping from ixmp.TimeSeries object and/or run ID to the underlying ixmp4.Run
+    # object (or subclasses of either).
     index: dict[TimeSeries, "Run"] = {}
 
     # Mapping from platform name to ixmp4 Backend; this enables repeated __init__()
     # calls for in-memory DBs
-    backend_index: dict[str, "ixmp4_backend"] = {}
+    backend_index: dict[str, "ixmp4.data.backend.Backend"] = {}
 
     def __init__(
         self,
@@ -257,30 +263,25 @@ class IXMP4Backend(CachingBackend):
     ) -> None:
         super().__init__(cache_enabled=cache)
 
-        # Build settings at runtime so test/session env vars are respected.
-        if ixmp4_settings is None:
-            ixmp4_settings = Settings()  # type: ignore[call-arg]
-
-        # Handle arguments
+        # - Handle arguments.
+        # - If ixmp4_settings are not provided, create a new Settings() instance using
+        #   current environment variables.
         self._options = opts = Options(
             ixmp4_name=ixmp4_name,
             dsn=dsn,
             jdbc_compat=jdbc_compat,
-            ixmp4_settings=ixmp4_settings,
+            ixmp4_settings=ixmp4_settings or Settings(),  # type: ignore [call-arg]
         )
 
-        try:
-            # Get an existing ixmp4.Backend object
-            self._backend = self.backend_index[opts.ixmp4_name]
-        except KeyError:
+        # Get an existing ixmp4.Backend object
+        if backend := self.backend_index.get(opts.ixmp4_name, None):
+            self._backend = backend
+        else:
             # Object does not exist -> instantiate using PlatformInfo from `opts`
             transport = self._get_transport(opts.platform_info)
-            self._backend = self.backend_index[opts.ixmp4_name] = ixmp4_backend(
-                transport
+            self._backend = self.backend_index[opts.ixmp4_name] = (
+                ixmp4.data.backend.Backend(transport)
             )
-
-            # NOTE Not running alembic.upgrade_database() here since for new DBs (such
-            # as for tests), this happens automatically
 
         # Instantiate an ixmp4.Platform using this ixmp4.Backend; store a reference
         self._platform = ixmp4.Platform(
@@ -305,20 +306,39 @@ class IXMP4Backend(CachingBackend):
     def _get_transport(
         self, ci: "PlatformConnectionInfo", http_credentials: str = "default"
     ) -> HttpxTransport | DirectTransport:
-        if ci.dsn.startswith("http"):
-            cred_dict = self._options.ixmp4_settings.get_credentials().get(
-                http_credentials
-            )
+        """Return an ixmp4 Transport instance according to the connection info."""
+        settings = self._options.ixmp4_settings
+        if ci.dsn.startswith("http"):  # pragma: no cover
+            cred_dict = settings.get_credentials().get(http_credentials)
             return HttpxTransport.from_url(
                 ci.dsn,
-                settings=self._options.ixmp4_settings.client,
-                auth=self._options.ixmp4_settings.get_client_auth(cred_dict),
+                settings=settings.client,
+                auth=settings.get_client_auth(cred_dict),
             )
         else:
-            return DirectTransport.from_dsn(
-                ci.dsn,
-                check_alembic_version=self._options.ixmp4_settings.check_alembic_version,
+            transport = DirectTransport.from_dsn(
+                ci.dsn, check_alembic_version=settings.check_alembic_version
             )
+
+            # Ensure the ixmp4 database is in a consistent state
+            assert transport.session.bind is not None
+            db_url = transport.session.bind.engine.url.render_as_string(
+                hide_password=False
+            )
+
+            # Identify the path of a lockfile
+            lockfile_dir = user_state_path("ixmp").joinpath("ixmp4-migration-lock")
+            lockfile_dir.mkdir(parents=True, exist_ok=True)
+            lockfile = lockfile_dir.joinpath(urlsplit(db_url).path.rpartition("/")[2])
+
+            while lockfile.exists():
+                sleep(0.5)
+
+            lockfile.touch()
+            get_alembic_controller(db_url).upgrade_database("head")
+            lockfile.unlink()
+
+            return transport
 
     @property
     def _log_level(self) -> int:
@@ -360,20 +380,20 @@ class IXMP4Backend(CachingBackend):
 
     # TODO clarify: ixmp4.Run doesn't have a name, but is the new ixmp.Scenario:
     # Should it have a name or are these scenario names okay?
-    def get_scenario_names(self) -> Generator[str, None, None]:
+    def get_scenario_names(self) -> Iterator[str]:
         for scenario in self._platform.scenarios.list():
             yield scenario.name
 
     def add_model_name(self, name: str) -> None:
         self._platform.models.create(name=name)
 
-    def get_model_names(self) -> Generator[str, None, None]:
+    def get_model_names(self) -> Iterator[str]:
         for model in self._platform.models.list():
             yield model.name
 
     def get_scenarios(
         self, default: bool, model: str | None, scenario: str | None
-    ) -> Generator[list[bool | int | str], Any, None]:
+    ) -> Iterator[list[bool | int | str]]:
         filter = ixmp4.Run.Filter(default_only=default)
         if model is not None:
             filter["model"] = {"name": model}
@@ -441,9 +461,6 @@ class IXMP4Backend(CachingBackend):
 
         Helper for `init()` and `get()`.
         """
-        # Add to index
-        self.index[ts] = run
-
         # Retrieve the version of the ixmp4.Run object
         v = run.version
         if ts.version is None:
@@ -453,8 +470,16 @@ class IXMP4Backend(CachingBackend):
             # Something went wrong on the ixmp4 side
             raise RuntimeError(f"got version {v} instead of {ts.version}")
 
+        # Add to index
+        self.index[ts] = run
+
         if isinstance(ts, Scenario):
             # Retrieve the `scheme` attribute from the Run.meta dict
+            run_scheme = str(run.meta.get("_ixmp_scheme", ""))
+            if ts.scheme is not None and ts.scheme != run_scheme:
+                raise RuntimeError(
+                    f"Load existing {ts.__class__} with scheme {ts.scheme}"
+                )
             ts.scheme = str(run.meta.get("_ixmp_scheme", "")) or ts.scheme
 
     def init(self, ts: TimeSeries, annotation: str) -> None:
@@ -523,23 +548,44 @@ class IXMP4Backend(CachingBackend):
 
         return cloned_s
 
-    def _get_max_as_default(self, model: str, scenario: str) -> Run:
-        # NOTE: This could be done in the database if performance requires it
-        # -> add as a feature in ixmp4
-        all_runs = self._platform.runs.list(
-            model=model, scenario=scenario, default_only=False
-        )
-        return max(all_runs, key=lambda r: r.version)
+    def _get_run(
+        self, model: str | None, scenario: str | None, version: int | None
+    ) -> Run:
+        """Retrieve a Run from the ixmp4 Platform.
 
-    def get(self, ts: TimeSeries) -> None:
-        v = int(ts.version) if ts.version else None
+        This method:
+
+        - Ensures that `model` and `scenario` are not :any:`None`.
+        - If `version` is not found (for instance, is a value like -1), retrieve the
+          *highest* existing version for (model, scenario).
+        - Returns an existing Run instance from :attr:`index`, if it already exists.
+        - Adds the resulting Run to :attr:`index` by its :attr:`.Run.id`.
+        """
+        try:
+            assert model is not None and scenario is not None
+        except AssertionError:
+            raise ValueError(
+                "Invalid arguments. Valid combination: (model, scenario, version)"
+            )
+
         try:
             run = self._platform.runs.get(
-                model=ts.model, scenario=ts.scenario, version=v
+                model=model, scenario=scenario, version=version
             )
         except Run.NoDefaultVersion:
-            run = self._get_max_as_default(ts.model, ts.scenario)
+            # Retrieve that maximum version as a default version
+            # NOTE This could be done in the database; if performance requires it, add
+            #      as a feature in ixmp4
+            all_runs = self._platform.runs.list(
+                model=model, scenario=scenario, default_only=False
+            )
+            run = max(all_runs, key=lambda r: r.version)
 
+        return run
+
+    def get(self, ts: TimeSeries) -> None:
+        version = int(ts.version) if ts.version else None
+        run = self._get_run(ts.model, ts.scenario, version)
         self._index_and_set_attrs(run, ts)
 
     def check_out(self, ts: TimeSeries, timeseries_only: bool) -> None:
@@ -606,7 +652,7 @@ class IXMP4Backend(CachingBackend):
         return self.index[ts].owns_lock
 
     def is_default(self, ts: TimeSeries) -> bool:
-        # Force refresh, for the case that another (model, scenario) but different
+        # Force refresh, for/ the case that another (model, scenario) but different
         # version has been set as default since the Run instance in self.index was last
         # refreshed
         self.index[ts]._refresh()
@@ -620,20 +666,6 @@ class IXMP4Backend(CachingBackend):
         last_update = self.index[ts]._dto.updated_at or datetime.now(timezone.utc)
         return last_update.strftime("%Y-%m-%d %H:%M:%S.%f")
 
-    def _validate_meta_args(
-        self,
-        model: str | None = None,
-        scenario: str | None = None,
-        version: int | None = None,
-    ) -> tuple[str, str, int]:
-        """Validate arguments for getting/setting/deleting meta"""
-        if model is not None and scenario is not None and version is not None:
-            return model, scenario, version
-        else:
-            raise ValueError(
-                "Invalid arguments. Valid combination: (model, scenario, version)"
-            )
-
     def set_meta(
         self,
         meta: dict[str, bool | float | int | str],
@@ -641,39 +673,21 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None = None,
         version: int | None = None,
     ) -> None:
-        # Retrieve a reference to an ixmp4.core.Run given (model, scenario, version)
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
+        run = self._get_run(model, scenario, version)
 
-        # If the same (model, scenario, version) is already in memory (self.index), use
-        # that instance instead of `run`, which may have an incorrect value for
-        # `Run.owns_lock`.
-        # FIXME This appears to be an issue upstream in ixmp4. Report, resolve, and then
-        #       remove this workaround.
-        for other in filter(lambda obj: type(obj) is type(run), self.index.values()):
-            if other.id == run.id:  # Same ID in the database
-                run = other
-                break
-
-        new_meta = {**dict(run.meta), **meta}
+        new_meta = dict(run.meta) | meta
 
         with maybe_transact(run, "Update meta"):
             try:
                 run.meta = new_meta
-            except KeyError as e:
+            except (KeyError, InvalidRunMeta) as e:
                 if "<class" in str(e):
                     raise ValueError(
                         "Cannot use values provided due to incompatible types! \n "
                         f"Provided: {meta} \n Acceptable types: int, float, str, bool"
-                    ) from e
+                    ) from None
                 else:
-                    raise e
-            except InvalidRunMeta as e:
-                raise ValueError(*e.args)
+                    raise
 
     def get_meta(
         self,
@@ -684,13 +698,7 @@ class IXMP4Backend(CachingBackend):
         # not have more than one "level" of docs
         strict: bool = False,
     ) -> dict[str, Any]:
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
-        return dict(run.meta)
+        return dict(self._get_run(model, scenario, version).meta)
 
     def remove_meta(
         self,
@@ -699,12 +707,7 @@ class IXMP4Backend(CachingBackend):
         scenario: str | None,
         version: int | None,
     ) -> None:
-        _model, _scenario, _version = self._validate_meta_args(
-            model=model, scenario=scenario, version=version
-        )
-        run = self._platform.runs.get(
-            model=_model, scenario=_scenario, version=_version
-        )
+        run = self._get_run(model, scenario, version)
 
         # TODO: This could have a nicer api in ixmp4
         meta_df = pd.DataFrame({"key": names})
@@ -829,8 +832,10 @@ class IXMP4Backend(CachingBackend):
             # elif isinstance(repo, BEScalarRepository):
             elif idx == 0 and type == "par":
                 # Scalar
-                # ixmp4 v0.10 requires that a value and unit be supplied on creation
-                repo.create(name=name, value=np.nan, unit="_NOTSET")  # type: ignore[call-arg]
+                # ixmp4 v0.10 required that a value and unit be supplied on creation
+                # ixmp4 v0.16 requires that the value not be NaN
+                repo.create(name=name, value=-np.inf, unit="_NOTSET")  # type: ignore[call-arg]
+
             else:
                 repo.create(
                     name=name,
@@ -1533,7 +1538,7 @@ class IXMP4Backend(CachingBackend):
         variable: Sequence[str],
         unit: Sequence[str],
         year: Sequence[int] | Sequence[str],
-    ) -> Generator[tuple[str, str, str, int, float], Any, None]:
+    ) -> Iterator[tuple[str, str, str, int, float]]:
         filter = ixmp4.iamc.DataPoint.Filter()
         if len(region):
             filter["region"] = {"name__in": list(region)}
@@ -1839,7 +1844,7 @@ class IXMP4Backend(CachingBackend):
         )
         pass
 
-    def get_timeslices(self) -> Generator[tuple[str, str, float], Any, None]:
+    def get_timeslices(self) -> Iterator[tuple[str, str, float]]:
         # NOTE meksor suggests running something like
         # # SELECT DISTINCT step_category FROM datapoints WHERE step_category != NULL
         # in ixmp4 to retrieve the data wanted here. This only returns the 'name',

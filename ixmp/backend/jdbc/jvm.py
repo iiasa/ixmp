@@ -4,7 +4,7 @@ import logging
 import os
 import platform
 import re
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast, overload
@@ -41,7 +41,7 @@ java = JClassProxy()
 
 
 @contextmanager
-def handle_jexception() -> Generator[None, Any, None]:
+def handle_jexception() -> Iterator[None]:
     """Context manager form of :func:`_raise_jexception`."""
     try:
         yield

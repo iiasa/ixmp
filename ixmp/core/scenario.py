@@ -10,7 +10,7 @@ from functools import partialmethod
 from itertools import zip_longest
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, overload
 from warnings import warn
 
 import pandas as pd
@@ -974,7 +974,7 @@ class Scenario(TimeSeries):
     def solve(
         self,
         model: str | None = None,
-        callback: Callable[["Scenario"], bool] | None = None,
+        callback: Callable[[Self], bool] | None = None,
         cb_kwargs: dict[str, Any] = {},
         **model_options: Any,
     ) -> None:

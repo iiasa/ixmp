@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from ixmp.util.ixmp4 import HAS_IXMP4, configure_logging_and_warnings
+
 from .common import ItemType
 
 if TYPE_CHECKING:
@@ -25,9 +27,7 @@ def get_class(name: str) -> type["IXMP4Backend"] | type["JDBCBackend"]:
     Note that unlike :func:`.model.get_class`, this function does not create a new
     instance.
     """
-    if name == "ixmp4":
-        from ixmp.util.ixmp4 import configure_logging_and_warnings
-
+    if name == "ixmp4" and HAS_IXMP4:
         configure_logging_and_warnings()
 
         from . import ixmp4

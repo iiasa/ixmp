@@ -27,11 +27,11 @@ jobs:
         - ubuntu-latest
         - windows-latest
         python-version:
-        - "3.10"  # Earliest version supported by ixmp
-        - "3.11"
+        - "3.11"  # Earliest version supported by ixmp
         - "3.12"
         - "3.13"
-        - "3.14"  # Latest supported by ixmp
+        - "3.14"  
+        - "3.15"  # Latest supported by ixmp
         gams-version:
         - "48.7.0" # Oldest version of gamsapi allowed by pyproject.toml
         extra-id:
@@ -43,10 +43,19 @@ jobs:
         # notwithstanding other dependencies that bound pandas <2.4.
         include:
         - os: ubuntu-latest
-          python-version: "3.14"
+          python-version: "3.15"
           gams-version: "48.7.0"
           extra-id: "-pandas-3"
           install-extra: uv pip install "pandas >=3"
+
+        # Temporary; see https://github.com/iiasa/ixmp/pull/660.
+        # Pre-built versions of JPype1 v1.7.1 are not available on Windows.
+        exclude:
+        - os: windows-latest
+          python-version: "3.15"
+          gams-version: "48.7.0"
+          extra-id: ""
+          install-extra: ""
 
       fail-fast: false
 
@@ -106,13 +115,8 @@ jobs:
 
     - name: Install the package and dependencies
       # Install [docs] → [tests] → [ixmp4,report,tutorial]
-      #
-      # Temporary
-      # - Use branch for https://github.com/iiasa/ixmp6/pull/268
       run: |
-        uv pip install \
-          "ixmp4 @ git+https://github.com/iiasa/ixmp4@issue/267" \
-          .[docs]
+        uv pip install .[docs]
         ${{ matrix.install-extra }}
       shell: bash
 
@@ -156,7 +160,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - uses: astral-sh/setup-uv@v7
-      with: { enable-cache: true, python-version: "3.14" }
+      with: { enable-cache: true, python-version: "3.15" }
     - name: Clear and re-create the pre-commit environments
       run: uvx pre-commit clean
       if: github.event_name == 'schedule'  # Comment this line to force clear

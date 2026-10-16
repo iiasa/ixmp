@@ -1,5 +1,6 @@
 """Testing Juypter notebooks."""
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -8,6 +9,8 @@ from warnings import warn
 
 import pytest
 from nbformat import NotebookNode
+
+log = logging.getLogger(__name__)
 
 nbformat = pytest.importorskip("nbformat")
 
@@ -112,9 +115,14 @@ def run_notebook(
     ]
 
     if default_platform:
-        # Restore the default platform name
-        config.add_platform("default", default_platform_pre)
-        config.save()
+        try:
+            # Restore the default platform name
+            config.add_platform("default", default_platform_pre)
+            config.save()
+        except ValueError as e:
+            # Failed, e.g. because `default_platform_pre` no longer exists/is defined.
+            # Show `e`, but do not allow this to fail the test.
+            log.info(f"On teardown: {e!r}")
 
     return nb, errors
 

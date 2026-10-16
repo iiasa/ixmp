@@ -35,11 +35,18 @@ All changes
 
 - :mod:`ixmp` is tested and compatible with…
 
-  - `Python 3.14 <https://www.python.org/downloads/release/python-3140/>`__ (:pull:`602`).
-    Support for Python 3.9 is dropped (:pull:`602`), as it has reached end-of-life.
+  - `Python 3.15 <https://www.python.org/downloads/release/python-3150/>`__ (:pull:`660`),
+    released 2026-10-09, and
+    `Python 3.14 <https://www.python.org/downloads/release/python-3140/>`__ (:pull:`602`),
+    released 2025-10-07.
+  - Support is dropped for Python 3.10 (:pull:`660`)
+    and Python 3.9 (:pull:`602`),
+    as both have reached end-of-life.
   - `Pandas 3.0.0 <https://pandas.pydata.org/pandas-docs/stable/whatsnew/v3.0.0.html>`_,
     released 2026-01-21 (:pull:`627`, :issue:`626`).
-  - :mod:`ixmp4` version 0.16.3 or greater (:pull:`613`, :pull:`640`).
+  - :mod:`ixmp4` version 0.16.12 or greater (:pull:`613`, :pull:`640`).
+    At the time of release,
+    :mod:`ixmp4` and thus :class:`.IXMP4Backend` is not supported or tested with Python 3.15.
 
 - Improve :class:`.IXMP4Backend` (:pull:`581`, :pull:`640`):
 

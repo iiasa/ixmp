@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  python-version: "3.14"
+  python-version: "3.15"
   # Uncomment for testing
   # UV_PUBLISH_URL: https://test.pypi.org/legacy/
 

@@ -1,5 +1,10 @@
+"""Utilities for working with :mod:`ixmp4`."""
+
+import logging
+import sys
 from dataclasses import dataclass
 from importlib import import_module
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
@@ -8,6 +13,8 @@ from .pandas import SettingWithCopyWarning
 
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,6 +32,21 @@ class ContainerData:
     )
     domain: list[str] | None = None
     docs: str | None = None
+
+
+#: :class:`bool` indicating whether :mod:`ixmp4` is available. If either the package is
+#: not installed, or it is installed but raises some exception on import, this will be
+#: :any:`False`.
+HAS_IXMP4: bool = False
+
+if find_spec("ixmp4") and sys.version_info < (3, 15):
+    try:
+        import_module("ixmp4")
+    except Exception as e:  # pragma: no cover
+        # Handle ixmp4 is installed but cannot be imported
+        log.warning(f"{__name__} unavailable due to {e}")
+    else:
+        HAS_IXMP4 = True
 
 
 def configure_logging_and_warnings() -> None:

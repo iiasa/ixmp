@@ -78,12 +78,7 @@ if TYPE_CHECKING:
 
     from ixmp.backend.ixmp4 import IXMP4Backend
 
-    try:
-        # Pint 0.25.1 or later
-        UReg: TypeAlias = pint.UnitRegistry[float]
-    except TypeError:
-        # Python 3.10 / earlier pint version without parametrized generic
-        UReg: TypeAlias = pint.UnitRegistry  # type: ignore[no-redef,misc]
+    UReg: TypeAlias = pint.UnitRegistry[float]
 
 log = logging.getLogger(__name__)
 

@@ -48,6 +48,15 @@ jobs:
           extra-id: "-pandas-3"
           install-extra: uv pip install "pandas >=3"
 
+        # Temporary; see https://github.com/iiasa/ixmp/pull/660.
+        # Pre-built versions of JPype1 v1.7.1 are not available on Windows.
+        exclude:
+        - os: windows-latest
+          python-version: "3.15"
+          gams-version: "48.7.0"
+          extra-id: ""
+          install-extra: ""
+
       fail-fast: false
 
     runs-on: ${{ matrix.os }}

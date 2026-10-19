@@ -581,6 +581,12 @@ class JDBCBackend(CachingBackend):
         with handle_jexception():
             jobj = method(ts.model, ts.scenario, *args)
 
+        # Store the assumed value of Java MsgScenario.state == ScenarioState.NEW. This
+        # is a special state only present on new objects that have not been committed;
+        # see ixmp_source/java/at/ac/iiasa/ixmp/objects/ScenarioState.java at L7 for
+        # full details. The property is 'protected', so not available via `jobj`.
+        setattr(ts, "_jdbcbackend_new", True)
+
         self._index_and_set_attrs(jobj, ts)
 
     def get(self, ts: TimeSeries) -> None:
@@ -627,7 +633,13 @@ class JDBCBackend(CachingBackend):
                 raise RuntimeError(arg)
             else:  # pragma: no cover
                 raise_jexception(e)
-        if ts.version == 0:
+
+        if getattr(ts, "_jdbcbackend_new", False):
+            # This TimeSeries was in the 'NEW' state. Remove, as this is no longer
+            # relevant.
+            delattr(ts, "_jdbcbackend_new")
+
+            # Update version attribute to match the database
             ts.version = self.jindex[ts].getVersion()
 
     def discard_changes(self, ts: TimeSeries) -> None:
@@ -637,7 +649,12 @@ class JDBCBackend(CachingBackend):
         self.jindex[ts].setAsDefaultVersion()
 
     def is_checked_out(self, ts: TimeSeries) -> bool:
-        return bool(self.jindex[ts].isCheckedOut())
+        # For Java TimeSeries objects in the 'NEW' state (see above), isCheckedOut()
+        # returns false, but the object behaves as if checked-out. Return a value
+        # consistent with the behaviour.
+        return getattr(ts, "_jdbcbackend_new", False) or bool(
+            self.jindex[ts].isCheckedOut()
+        )
 
     def is_default(self, ts: TimeSeries) -> bool:
         return bool(self.jindex[ts].isDefault())

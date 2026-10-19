@@ -1360,9 +1360,14 @@ class IXMP4Backend(CachingBackend):
             - The Backend **must** remove any existing member of `cat`, so that it has
               only one element.
         """
-        column_name: str | None = None
+        # Convert for convenience
+        if isinstance(keys, str):
+            keys = [keys]
 
         run = self.index[ms]
+
+        # Name of the column corresponding to `indexset`
+        column_name: str | None = None
 
         # Categories can be based on IndexSets directly or on 1-d Tables
         try:
@@ -1378,48 +1383,46 @@ class IXMP4Backend(CachingBackend):
             indexset_name = table.indexset_names[0]
             column_name = table.name
 
-        # Special treatment for 'technology' for historical reasons:
+        # Special handling for certain values of `name`, to align with JDBCBackend
         if name == "technology":
+            # Use 'tec', 'type_tec', 'cat_tec', etc.
             name = "tec"
-        # NOTE Of the default items, all categories except 'cat_addon' are based on
-        # IndexSets. 'cat_addon' is based on the 1-d Table 'addon', which is why it also
-        # doesn't follow the naming convention. Usually, the column names are
-        # 'type_<name>' and '<name>', but for 'cat_addon', it's 'type_addon' and
-        # 'technology_addon'.
         elif name == "addon":
+            # In MESSAGE-scheme scenarios 'cat_addon' is indexed by the 1D set 'addon',
+            # which is in turn indexed by 'technology' (other 'cat_*' are indexed
+            # directly by indexsets). Usually, the column names are 'type_<name>' and
+            # '<name>', but for 'cat_addon', it's 'type_addon' and 'technology_addon'.
             column_name = "technology_addon"
 
-        # Get or create the 'type_name' indexset and 'cat_name' table
-        # NOTE _backend functions allow avoiding the run.lock requirement, but return a
-        # slightly different model type, but the differences are irrelevant here
+        # Get or create the 'type_name' indexset
+        type_name = f"type_{name}"
         category_indexset: IndexSet
         try:
-            category_indexset = run.optimization.indexsets.get_by_name(
-                name=f"type_{name}"
-            )
+            category_indexset = run.optimization.indexsets.get_by_name(name=type_name)
         except IndexSet.NotFound:
-            category_indexset = run.optimization.indexsets.create(name=f"type_{name}")
+            category_indexset = run.optimization.indexsets.create(name=type_name)
 
+        # Get or create the 'cat_name' table
+        cat_name = f"cat_{name}"
         category_table: Table
         try:
-            category_table = run.optimization.tables.get_by_name(name=f"cat_{name}")
+            category_table = run.optimization.tables.get_by_name(name=cat_name)
         except Table.NotFound:
             category_table = run.optimization.tables.create(
-                name=f"cat_{name}",
+                name=cat_name,
                 constrained_to_indexsets=[indexset_name, category_indexset.name],
                 column_names=[column_name, category_indexset.name]
                 if column_name
                 else None,
             )
 
-        # Convert for convenience
-        if isinstance(keys, str):
-            keys = [keys]
-
         # Ensure proper treatment when is_unique is True
         if is_unique:
             if len(keys) > 1:
-                raise ValueError("One can only add one element to a unique category!")
+                raise ValueError(
+                    f"Can only add one element to {type_name}={cat!s} with "
+                    f"is_unique=True; got {keys}"
+                )
             # Ensure data contains no data except that which we're going to add
             # NOTE if category_table contains data linked to elements existing now, this
             # will lead to DataValidationErrors when adding data to the table. Also,
@@ -1427,23 +1430,24 @@ class IXMP4Backend(CachingBackend):
             if category_indexset.data:
                 # Remove all existing data so that only the single provided element will
                 # be stored in the indexset
-                self._backend.optimization.indexsets.remove_data(
-                    id=category_indexset.id, data=category_indexset.data
-                )
+                category_indexset.remove_data(category_indexset.data)
 
-        # Add data to both objects
-        if cat not in category_indexset.data:
-            self._backend.optimization.indexsets.add_data(
-                id=category_indexset.id, data=cat
-            )
-        data = {column_name: keys} if column_name else {indexset_name: keys}
-        data[category_indexset.name] = [cat] * len(keys)
+        # Add both the category and "all" to the category index set
+        # NB We can narrow type because the `category_indexset` may only contain str
+        if to_add := {"all", cat} - set(cast(list[str], category_indexset.data)):
+            category_indexset.add_data(list(to_add))
 
-        self._backend.optimization.tables.add_data(id=category_table.id, data=data)
+        # Convert to dict of the form expected by ixmp4; add data
+        category_table.add_data(
+            {
+                column_name or indexset_name: keys,
+                category_indexset.name: [cat] * len(keys),
+            }
+        )
 
-        self.cache_invalidate(ts=ms, ix_type="set", name=name)
-        self.cache_invalidate(ts=ms, ix_type="set", name=f"type_{name}")
-        self.cache_invalidate(ts=ms, ix_type="set", name=f"cat_{name}")
+        # Invalidate caches
+        for name_ in name, type_name, cat_name:
+            self.cache_invalidate(ts=ms, ix_type="set", name=name_)
 
     # TODO In cat_set_elements, we change e.g. cat_technology to cat_tec. Do we need the
     # same here or do we expect user code to call this with name == "tec" if they're

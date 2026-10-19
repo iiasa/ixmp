@@ -1225,7 +1225,17 @@ class JDBCBackend(CachingBackend):
         keys: str | Sequence[str],
         is_unique: bool,
     ) -> None:
-        self.jindex[ms].addCatEle(name, cat, to_jlist(keys), is_unique)
+        try:
+            self.jindex[ms].addCatEle(name, cat, to_jlist(keys), is_unique)
+        except java.lang.Exception as e:
+            arg = e.args[0]
+            if isinstance(arg, str) and "only add one element to a unique" in arg:
+                raise ValueError(
+                    f"Can only add one element to type_{name}={cat!s} with "
+                    f"is_unique=True; got {keys}"
+                )
+            else:  # pragma: no cover
+                raise_jexception(e)
 
     # Helpers; not part of the Backend interface
 

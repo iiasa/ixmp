@@ -75,6 +75,8 @@ class Model(ABC):
         - **may** accept any number of keyword arguments to control behaviour.
         - **must not** modify existing parameter data in *scenario*, either by deleting
           or overwriting values; for that, use :meth:`enforce`.
+        - **must** leave `scenario` in the same state (checked out, or not) as before
+          the call.
 
         Parameters
         ----------

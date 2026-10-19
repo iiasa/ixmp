@@ -23,7 +23,6 @@ from ixmp.core.item import Equation, Parameter, Set, Variable
 from ixmp.core.platform import Platform
 from ixmp.core.timeseries import TimeSeries
 from ixmp.util import as_str_list, check_year
-from ixmp.util.ixmp4 import is_ixmp4backend
 
 if TYPE_CHECKING:
     from ixmp.types import (
@@ -39,6 +38,9 @@ if TYPE_CHECKING:
     )
 
 log = logging.getLogger(__name__)
+
+#: Testing flag to bypass certain checks.
+_TESTING: bool = False
 
 
 class Scenario(TimeSeries):
@@ -99,7 +101,7 @@ class Scenario(TimeSeries):
             annotation=annotation,
         )
 
-        if self.scheme == "MESSAGE" and self.__class__ is Scenario:
+        if self.scheme == "MESSAGE" and self.__class__ is Scenario and not _TESTING:
             # Loaded scenario has an improper scheme
             raise RuntimeError(
                 f"{model}/{scenario} is a MESSAGE-scheme scenario; use "
@@ -113,13 +115,6 @@ class Scenario(TimeSeries):
         # TODO How to convince type checker that if 'cache' is in model_init_args, it
         # is removed above?
         model_class.initialize(self, **model_init_args)  # type: ignore[misc]
-
-        if is_ixmp4backend(self.platform._backend) and version == "new":
-            run = self.platform._backend.index[self]
-
-            # NOTE initialize() may call commit() or so which unlocks the underlying Run
-            if not run.owns_lock:
-                run._lock()
 
     def check_out(self, timeseries_only: bool = False) -> None:
         """Check out the Scenario.

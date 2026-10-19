@@ -25,6 +25,8 @@ from ixmp.util.ixmp4 import is_ixmp4backend
 from ixmp.util.pandas import STRING_DTYPE
 
 if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
+
     from ixmp.types import VersionType
 
 log = logging.getLogger(__name__)
@@ -270,22 +272,39 @@ class TimeSeries:
         >>>    ts.add_set("x", "bar")
         >>> # Changes to `ts` have been committed
         """
-        if is_ixmp4backend(self.platform._backend):
-            with self.platform._backend.index[self].transact(message=message):
-                yield
-        else:
-            # TODO implement __enter__ and __exit__ to allow simpler "with ts: …"
-            from ixmp.util import discard_on_error as discard_on_error_cm
+        # TODO implement __enter__ and __exit__ to allow simpler "with ts: …"
+        from ixmp.util import discard_on_error as discard_on_error_cm
 
-            if condition:
-                maybe_check_out(self)
-            try:
-                # Use the discard_on_error context manager (cm) if the parameter of the
-                # same name is True
-                with discard_on_error_cm(self) if discard_on_error else nullcontext():
-                    yield
-            finally:
-                maybe_commit(self, condition, message)
+        # Context manager to handle the transaction
+        context: "AbstractContextManager[None]" = nullcontext()
+
+        # In some cases, replace `context` with a different contest manager
+        if (
+            condition
+            and is_ixmp4backend(self.platform._backend)
+            and not self.is_checked_out()
+        ):
+            # Use the ixmp4.Run.transact() context manager
+            context = self.platform._backend.index[self].transact(message=message)
+            # Don't do anything for maybe_check_out() or maybe_commit()
+            condition = False
+            if discard_on_error is False:
+                log.debug(
+                    f"{type(self).__name__}.transact(…, discard_on_error=False) ignored"
+                    " with IXMP4Backend"
+                )
+        elif discard_on_error:
+            # Use the discard_on_error context manager (cm) if the parameter of the same
+            # name is True
+            context = discard_on_error_cm(self)
+
+        if condition:
+            maybe_check_out(self)
+        try:
+            with context:
+                yield
+        finally:
+            maybe_commit(self, condition, message)
 
     def set_as_default(self) -> None:
         """Set the current :attr:`version` as the default."""

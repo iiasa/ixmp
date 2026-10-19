@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import click
 
 import ixmp
+from ixmp.util import maybe_check_out
 
 if TYPE_CHECKING:
     from ixmp.types import PlatformInitKwargs
@@ -312,14 +313,11 @@ def import_scenario(
         scenario.remove_solution()
 
     try:
-        scenario.check_out()
+        maybe_check_out(scenario)
     except ValueError as e:
         raise click.ClickException(e.args[0])  # Show exception message to user
-    except RuntimeError as e:
-        if "not yet saved" in e.args[0]:
-            pass  # --version=new; no need to check out
-        else:  # pragma: no cover
-            raise
+    except RuntimeError:  # pragma: no cover
+        pass  # --version=new
 
     scenario.read_excel(
         Path(file),

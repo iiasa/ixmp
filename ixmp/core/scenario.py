@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+#: Testing flag to bypass certain checks.
+_TESTING: bool = False
+
 
 class Scenario(TimeSeries):
     """Collection of model-related data.
@@ -98,7 +101,7 @@ class Scenario(TimeSeries):
             annotation=annotation,
         )
 
-        if self.scheme == "MESSAGE" and self.__class__ is Scenario:
+        if self.scheme == "MESSAGE" and self.__class__ is Scenario and not _TESTING:
             # Loaded scenario has an improper scheme
             raise RuntimeError(
                 f"{model}/{scenario} is a MESSAGE-scheme scenario; use "

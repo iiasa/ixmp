@@ -1241,17 +1241,23 @@ class IXMP4Backend(CachingBackend):
                 return data
 
             # Columns/dict keys expected in result
-            columns = item.column_names or item.indexset_names or []
+            columns = (item.column_names or item.indexset_names or []) + (
+                ["value", "unit"] if Parameter in types else ["lvl", "mrg"]
+            )
             # Number of dimensions; 0 if scalar
-            N_dim = len(columns)
+            N_dim = len(columns) - 2
 
-            data = pd.DataFrame(item.data).rename(columns=RENAME_COLS)
+            # - Convert the ixmp4 item's data from dict to pd.DataFrame.
+            # - Rename value columns from ixmp4 to ixmp names.
+            # - Reorder columns according to the dimension order.
+            data = (
+                pd.DataFrame(item.data)
+                .rename(columns=RENAME_COLS)
+                .reindex(columns=columns)
+            )
             if data.empty:
                 # Ensure expected columns even if no data is present
-                data = pd.DataFrame(
-                    columns=columns
-                    + (["value", "unit"] if Parameter in types else ["lvl", "mrg"])
-                )
+                data = pd.DataFrame(columns=columns)
 
             # For scalar items, return dict for compatibility with JDBC
             if N_dim == 0 and set(types) & {Equation, Variable}:

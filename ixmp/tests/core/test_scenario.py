@@ -465,14 +465,12 @@ class TestScenario:
         assert scen.idx_names("d") == ["i", "j"]
 
     def test_par(self, scen: "Scenario") -> None:
-        """Parameter data can be retrieved with filters."""
+        """Parameter data can be retrieved, with filters."""
         df = scen.par("d", filters={"i": ["seattle"]})
-        # We seem to rely on this
         assert isinstance(df, pd.DataFrame)
 
-        # Data frame has the expected columns
-        # NOTE On ixmp4/postgres, the order of "value" and "unit" is swapped
-        assert set(["i", "j", "value", "unit"]) == set(list(df.columns))
+        # Data frame has the expected columns, in the expected order
+        assert ["i", "j", "value", "unit"] == list(df.columns)
 
         # The expected number of values are retrieved
         assert 3 == len(df)

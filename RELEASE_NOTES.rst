@@ -61,6 +61,7 @@ All changes
   - Use cached tables for HyperSQL local file databases by default to improve performance
     (:issue:`433`, :issue:`643`).
 
+- New method :meth:`.TimeSeries.is_checked_out` (:pull:`661`).
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.
 - Improve type hinting (:pull:`581`, :pull:`587`).

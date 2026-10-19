@@ -139,6 +139,21 @@ class TestTimeSeries:
         """:meth:`.TimeSeries.has_solution` is always :obj:`False`."""
         assert False is ts.has_solution()
 
+    def test_is_checked_out(self, ts: TimeSeries) -> None:
+        """Newly-created TimeSeries object is in a checked-out state.
+
+        This failed prior to #661 with JDBCBackend.
+        """
+        assert ts.is_checked_out()
+
+    def test_check_out_raises(self, ts: TimeSeries) -> None:
+        """:meth:`.TimeSeries.check_out` when already checked out raises RuntimeError.
+
+        This failed prior to #661 with IXMP4Backend.
+        """
+        with pytest.raises(RuntimeError):
+            ts.check_out()
+
     def test_default(self, mp: "Platform", ts: TimeSeries) -> None:
         # NB this is required before the is_default method can be used
         # FIXME should return False regardless

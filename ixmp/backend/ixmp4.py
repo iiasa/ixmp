@@ -595,8 +595,7 @@ class IXMP4Backend(CachingBackend):
         try:
             self.index[ts]._lock()
         except Run.IsLocked:
-            log.debug("Run is already locked!")
-            pass
+            raise RuntimeError("Already checked out")
 
     def discard_changes(self, ts: TimeSeries) -> None:
         # TODO: public API in ixmp4

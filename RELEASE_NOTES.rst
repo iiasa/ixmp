@@ -44,7 +44,7 @@ All changes
     as both have reached end-of-life.
   - `Pandas 3.0.0 <https://pandas.pydata.org/pandas-docs/stable/whatsnew/v3.0.0.html>`_,
     released 2026-01-21 (:pull:`627`, :issue:`626`).
-  - :mod:`ixmp4` version 0.16.12 or greater (:pull:`613`, :pull:`640`).
+  - :mod:`ixmp4` version 0.16.12 up to 0.17.z (:pull:`613`, :pull:`640`, :pull:`664`).
     At the time of release,
     :mod:`ixmp4` and thus :class:`.IXMP4Backend` is not supported or tested with Python 3.15.
 

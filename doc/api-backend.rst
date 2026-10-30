@@ -145,20 +145,23 @@ IXMP4Backend
 .. note::
    See :ref:`jdbc-vs-ixmp4`, below.
 
-   As of :mod:`ixmp` version 3.11,
-   IXMP4Backend uses :mod:`ixmp4` version 0.14.
-   This is a development release;
-   a 'stable' version 1.0 or later has not yet been released.
+   As of :mod:`ixmp` version 3.12,
+   IXMP4Backend depends on :mod:`ixmp4` versions 0.16 or 0.17.
+   A compatible version can be installed by choosing the ``ixmp[ixmp4]``
+   :ref:`optional dependencies <install-extras>`.
+   These are development releases;
+   a 'stable' version (1.0 or later) has not yet been released.
    For this reason:
 
-   - The ixmp4 API is not yet finalized and may change at any time.
+   - The ixmp4 API is not yet stable/finalized and may change at any time.
    - Complete documentation of the ixmp4 API itself is not yet available.
 
-   The same holds for IXMP4Backend.
+   The same applies for IXMP4Backend.
    Consequently you **may** but probably **should not** use it for 'production' scientific scenario work.
 
-   As of version 0.14.0, :mod:`ixmp4` is not compatible with Pandas 3.0.0.
-   If you want to use IXMP4Backend, please install a version of `pandas < 3`.
+   :mod:`ixmp4` may have upper limits on compatible dependencies,
+   including Python itself, pandas, or other packages.
+   Package managers will enforce these when installing ``ixmp[ixmp4]``.
 
 .. automodule:: ixmp.backend.ixmp4
    :members:
@@ -177,7 +180,8 @@ Differences between JDBCBackend and IXMP4Backend
 
 The long-term goal is that :mod:`ixmp` used with IXMP4Backend
 has **feature and performance parity** with JDBCBackend.
-As of ixmp version 3.12, IXMP4Backend has support for *most* features.
+As of ixmp version 3.12,
+IXMP4Backend supports *most* of the behaviour of IXMP4Backend.
 This section lists known differences in behaviour when using IXMP4Backend,
 compared to JDBCBackend.
 This includes cases where:
@@ -185,28 +189,27 @@ This includes cases where:
 1. Behaviour is the same, but performance is known to differ.
 2. IXMP4Backend currently has different behaviour,
    but work is planned to address the difference.
-3. IXMP4Backend has different behaviour, and this difference is permanent.
+3. IXMP4Backend has different behaviour,
+   and this difference is permanent.
 
    This occurs where :mod:`ixmp4` intentionally omits certain functionality
    or implements different behaviour,
    IXMP4Backend does not cover the difference,
    and no work is planned to change this.
-   In some cases, this is because inspection of publicly-visible :mod:`ixmp` user code
+   In some cases,
+   this is because inspection of publicly-visible :mod:`ixmp` user code
    shows no usage of certain features.
    The text “Not in visible use” is used.
 
 For (1) and (2),
 code that works with JDBCBackend will work or should work with IXMP4Backend.
-For (3), code may need to be tested and adapted.
+For (3), code may need to be adapted and tested.
 
 The differences are listed according to components of the :doc:`ixmp Python API <api>`,
 with individual items and class attributes and methods in alphabetical order.
 Behaviours that are identical are not mentioned.
 For planned future work see the `support roadmap for ixmp4 <https://github.com/iiasa/message_ix/discussions/939>`_
 and `issues labeled 'backend.ixmp4' <https://github.com/iiasa/ixmp/labels/backend.ixmp4>`_.
-
-.. NOTE What do we do about major difference such as Run being the new Scenario, IndexSet and Table vs Set, etc?
-.. Functionally, all things are equivalent, but these *are* changes we'd like people to adjust to eventually.
 
 .. contents::
    :backlinks: none

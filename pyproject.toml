@@ -54,7 +54,7 @@ docs = [
   "genno >= 1.26",        # For sphinx extensions; see doc/conf.py
   "GitPython",
   "numpydoc",
-  "sphinx >= 3.0",
+  "sphinx >= 9",
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]

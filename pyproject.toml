@@ -36,7 +36,7 @@ dependencies = [
   "JPype1 >= 1.2.1",
   "JPype1 <= 1.4.0; python_version < '3.11'",
   "openpyxl",
-  "pandas >= 1.2",
+  "pandas >= 2.3",
   "pint",
   "PyYAML",
   "xarray",

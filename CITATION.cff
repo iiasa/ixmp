@@ -1,0 +1,98 @@
+# The following should be update before each release
+version: 3.12.0
+date-released: "2026-11-06"
+
+authors:
+- name: |
+    International Institute for Applied Systems Analysis (IIASA),
+    Energy, Climate, and Environment (ECE) Program
+  city: Laxenburg
+  country: AT
+  website: https://iiasa.ac.at/programs/ece
+
+# The following should be updated to include new contributors.
+# In alphabetical order by 'family-names':
+- given-names: Miguel Poblete
+  family-names: Cazenave
+  orcid: "https://orcid.org/0000-0001-8280-910X"
+- given-names: Oliver
+  family-names: Fricko
+  orcid: "https://orcid.org/0000-0002-6835-9883"
+- given-names: Matthew J.
+  family-names: Gidden
+  orcid: "https://orcid.org/0000-0003-0687-414X"
+- given-names: Fridolin
+  family-names: Glatter
+  orcid: "https://orcid.org/0009-0007-9452-2473"
+- given-names: Daniel
+  family-names: Huppmann
+  orcid: "https://orcid.org/0000-0002-7729-7389"
+- given-names: Paul Natsuo
+  family-names: Kishimoto
+  orcid: "https://orcid.org/0000-0002-8578-753X"
+- given-names: Peter
+  family-names: Kolp
+  orcid: "https://orcid.org/0000-0003-0122-2839"
+- given-names: Volker
+  family-names: Krey
+  orcid: "https://orcid.org/0000-0003-0307-3515"
+- given-names: Nikolay
+  family-names: Kushin
+  website: https://github.com/zikolach
+- given-names: Francesco
+  family-names: Lovat
+  orcid: "https://orcid.org/0000-0002-4331-980X"
+- given-names: Jihoon
+  family-names: Min
+  orcid: "https://orcid.org/0000-0002-0020-1174"
+- given-names: Clara
+  family-names: Orthofer
+  orcid: "https://orcid.org/0000-0002-7049-7791"
+- given-names: Michael
+  family-names: Pimmer
+  website: https://github.com/fonfon
+- given-names: Vignesh
+  family-names: Raghunathan
+  orcid: ""
+- given-names: Gamze
+  family-names: Ünlü
+  orcid: "https://orcid.org/0000-0003-0080-7122"
+- given-names: Adriano
+  family-names: Vinca
+  orcid: "https://orcid.org/0000-0002-3051-178X"
+- given-names: Laura
+  family-names: Wienpahl
+  orcid: "https://orcid.org/0000-0003-2049-8531"
+- given-names: Maximilian
+  family-names: Wolschlager
+  orcid: ""
+- given-names: Behnam
+  family-names: Zakeri
+  orcid: "https://orcid.org/0000-0001-9647-2878"
+
+# The following should not need regular updates.
+# In alphabetical order:
+cff-version: 1.2.0
+doi: 10.5281/zenodo.4005665
+
+identifiers:
+- type: url
+  value: "https://github.com/iiasa/ixmp"
+  description: "Git repository"
+- type: doi
+  value: 10.5281/zenodo.4005665
+  description: "Zenodo record"
+
+keywords:
+- "integrated assessment"
+- "energy systems"
+- modelling
+- python
+- "scenario analysis"
+
+license: Apache-2.0
+repository-code: "https://github.com/iiasa/ixmp"
+title: MESSAGEix
+type: software
+url: "https://docs.messageix.org/projects/ixmp/en/stable/"
+

@@ -8,6 +8,7 @@ from importlib.abc import MetaPathFinder
 from importlib.machinery import ModuleSpec, SourceFileLoader
 from importlib.util import find_spec
 from itertools import chain, repeat
+from os import pathsep
 from pathlib import Path
 from types import ModuleType
 from typing import IO, TYPE_CHECKING, Any, Literal, TypeGuard
@@ -595,7 +596,7 @@ def format_scenario_list(
 
 
 def show_versions(
-    file: IO[str] = sys.stdout, *, packages: Iterable[str] | None = None
+    file: IO[str] | None = None, *, packages: Iterable[str] | None = None
 ) -> None:
     """Print information about ixmp and its dependencies to `file`.
 
@@ -614,17 +615,33 @@ def show_versions(
     # Retrieve the mapping from package (e.g. 'yaml') to distribution ('PyYAML') names
     package_to_dist = packages_distributions()
 
-    git_log_cmd = ["git", "log", "--oneline", "--no-color", "--decorate", "-n 1"]
+    # Ceiling directories: prevent Git from chdir'ing up into any of these
+    env = {"GIT_CEILING_DIRECTORIES": ""}
 
     def git_log(spec: "ModuleSpec") -> str:
         """Retrieve Git log information about the module at `spec`."""
         try:
+            # Directory where the module is located
             assert spec.origin is not None
-            cwd = Path(spec.origin).parent
-            info = check_output(git_log_cmd, cwd=cwd, encoding="utf-8", stderr=DEVNULL)
-        except Exception:  # pragma: no cover
-            return ""  # Occurs if "git log" fails; or if spec.origin is None (#338)
+            origin_dir = str(Path(spec.origin).parents[1].as_posix())
+
+            # Invoke `git log` in this directory, omitting any ceiling directories
+            args = [
+                "git",
+                "-C",
+                origin_dir,
+                "log",
+                "--oneline",
+                "--no-color",
+                "--decorate",
+                "-n 1",
+            ]
+            info = check_output(args, encoding="utf-8", stderr=DEVNULL, env=env)
+        except Exception:
+            return ""  # spec.origin is None (#338) or `git log` failed
         else:
+            # Add `origin_dir` to prevent it being reused in any subsequent call
+            env["GIT_CEILING_DIRECTORIES"] += pathsep + origin_dir
             return f"\n{'git:':>18} {info.rstrip()}"
 
     def module_version(spec: "ModuleSpec") -> str:
@@ -670,6 +687,7 @@ def show_versions(
     info.extend(get_sys_info()[1:])  # type: ignore[no-untyped-call]
 
     # Format and write to `file`
+    file = sys.stdout if file is None else file
     for k, stat in info:
         print("" if (k == stat == "") else f"{k + ':':18} {stat}", file=file)
 

@@ -10,7 +10,7 @@ from pandas.testing import assert_frame_equal
 import ixmp
 from ixmp.backend import available
 from ixmp.cli import VersionType
-from ixmp.testing import Runner, models, populate_test_platform
+from ixmp.testing import GHA, Runner, models, populate_test_platform
 
 if TYPE_CHECKING:
     from click.testing import Result
@@ -401,7 +401,13 @@ def test_report(ixmp_cli: Runner) -> None:
 @pytest.mark.usefixtures("protect_pint_app_registry", "protect_rename_dims")
 def test_show_versions(ixmp_cli: Runner) -> None:
     result = ixmp_cli.invoke(["show-versions"])
+
+    # Command runs without error
     assert result.exit_code == 0, result.output
+
+    if GHA:
+        # At most one "git: " appears in the output
+        assert 1 == len(result.output.split("git: ")) - 1
 
 
 # FIXME This is again the parameter error for IXMP4Backend and the DantzigModel:

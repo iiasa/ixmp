@@ -46,9 +46,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, TypeAlias
 import pint
 import pytest
 from click.testing import CliRunner, Result
-
-# TODO Import from typing when dropping support for Python 3.11
-from typing_extensions import override
 from xdist import get_xdist_worker_id
 
 from ixmp import Platform, Scenario, cli
@@ -322,9 +319,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
 
 class Runner(CliRunner):
-    @override
-    # Why does mypy ignore the decorator?
-    def invoke(self, args: Sequence[str]) -> Result:  # type: ignore[override]
+    def invoke(self, args: Sequence[str]) -> Result:  # type: ignore
         return super().invoke(cli.main, args=args, env=self.tmp_env)
 
     def __init__(self, env: os._Environ[str]) -> None:

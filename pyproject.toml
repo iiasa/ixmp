@@ -8,7 +8,6 @@ description = "The ix modeling platform"
 authors = [{ name = "IIASA Energy, Climate, and Environment (ECE) program" }]
 maintainers = [
   { name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name" },
-  { name = "Fridolin Glatter", email = "glatter@iiasa.ac.at" },
 ]
 license = "Apache-2.0"
 readme = "README.md"

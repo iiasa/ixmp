@@ -1,5 +1,10 @@
-Next release
-============
+.. Next release
+.. ============
+
+.. _v3-12-0:
+
+v3.12.0 (2026-11-06)
+====================
 
 Migration notes
 ---------------
@@ -44,6 +49,7 @@ All changes
     as both have reached end-of-life.
   - `Pandas 3.0.0 <https://pandas.pydata.org/pandas-docs/stable/whatsnew/v3.0.0.html>`_,
     released 2026-01-21 (:pull:`627`, :issue:`626`).
+  - Support is dropped for Pandas 2.2.z and earlier (:pull:`667`).
   - :mod:`ixmp4` version 0.16.12 up to 0.17.z (:pull:`613`, :pull:`640`, :pull:`664`).
     At the time of release,
     :mod:`ixmp4` and thus :class:`.IXMP4Backend` is not supported or tested with Python 3.15.
@@ -52,8 +58,8 @@ All changes
 
   - Support creation and modification of 0-dimensional parameters (:class:`ixmp4.Scalar`).
   - Streamline and fix various functions to expand coverage of the :mod:`ixmp` API (:pull:`601`, :pull:`611`).
-    All remaining differences between :class:`.JDBCBackend` and :class:`.IXMP4Backend` are documented.
-  - :class:`.Scenario.clone` can clone a Scenario *from* JDBCBackend *to* IXMP4Backend (:pull:`610`).
+    All remaining differences between :class:`.JDBCBackend` and :class:`.IXMP4Backend` are documented (:issue:`574`).
+  - :meth:`.Scenario.clone` can clone a Scenario *from* JDBCBackend *to* IXMP4Backend (:issue:`588`, :pull:`610`).
 
 - Improve :class:`.JDBCBackend` (:pull:`645`):
 
@@ -64,6 +70,8 @@ All changes
 - New method :meth:`.TimeSeries.is_checked_out` (:pull:`661`).
 - New method :meth:`.Scenario.iter_par_data` (:pull:`581`).
   :meth:`.Scenario.items` no longer supports iterating over item *contents*.
+- Fix imprecise :func:`.show_versions` Git version information in some situations
+  (:issue:`583`, :pull:`667`).
 - Improve type hinting (:pull:`581`, :pull:`587`).
   This supports more precise and complete type checking of downstream code that uses :mod:`ixmp`.
 

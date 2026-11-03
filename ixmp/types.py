@@ -6,7 +6,7 @@ Imports from this module **should** only occur within a :py:`if TYPE_CHECKING:` 
 import os
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypeAlias, TypedDict
 
 import pandas
 from ixmp4.core.iamc.variable import VariableServiceFacade as IamcVariableServiceFacade
@@ -22,11 +22,6 @@ from ixmp4.core.optimization.variable import (
 )
 from ixmp4.core.region import RegionServiceFacade
 from ixmp4.core.scenario import ScenarioServiceFacade
-
-# Compatibility with Python 3.11 and earlier
-# TODO When dropping support for Python 3.11, import this from typing or use
-#      "type x = ..." syntax instead.
-from typing_extensions import TypeAlias
 
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario
@@ -63,6 +58,8 @@ IXMP4ModelDataType = (
     | type[Table]
     | type[Variable]
 )
+
+# TODO When dropping support for Python 3.11, use "type Filters = ..." instead
 #: Filters arguments to many functions. Generally non-str elements are converted to
 #: str(). Since object.__str__() exists, any Python class has a string representation.
 Filters: TypeAlias = Mapping[str, Any | Sequence[Any]] | Mapping[str, Any] | None

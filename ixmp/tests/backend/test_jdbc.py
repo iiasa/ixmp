@@ -117,7 +117,8 @@ VE = pytest.mark.xfail(raises=ValueError)
 
 class TestJDBCBackend:
     @pytest.fixture(scope="class")
-    def klass(self) -> Iterator[type["JDBCBackend"]]:
+    @classmethod
+    def klass(cls) -> Iterator[type["JDBCBackend"]]:
         """The JDBCBackend class."""
         yield ixmp.backend.jdbc.JDBCBackend
 
@@ -139,9 +140,9 @@ class TestJDBCBackend:
         (
             # Advertised forms
             (
-                ("oracle", "url", "user", "pass"),
+                ("oracle", "url/db", "user", "pass"),
                 dict(),
-                dict(driver="oracle", url="url", user="user", password="pass"),
+                dict(driver="oracle", url="url/db", user="user", password="pass"),
             ),
             (
                 ("postgresql", "host:5432/db", "user", "pass"),

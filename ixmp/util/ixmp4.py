@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 import pandas as pd
 
-from .pandas import SettingWithCopyWarning
-
 if TYPE_CHECKING:
     from ixmp.backend.ixmp4 import IXMP4Backend
 
@@ -50,19 +48,15 @@ if find_spec("ixmp4") and sys.version_info < (3, 15):
 
 
 def configure_logging_and_warnings() -> None:
-    """Quiet verbose log and warning messages from :mod:`ixmp4`.
+    """Quiet verbose log and warning messages from :mod:`ixmp4` and its dependencies.
 
     These include:
 
     1. Log messages with level WARNING on logger ixmp4.data.db.base: “Dispatching a
        versioned insert statement on an 'sqlite' backend. This might be very slow!”
-    2. :py:`PydanticDeprecatedSince211` (a subclass of :class:`DeprecationWarning`) in
-       :py:`ixmp4.db.filters`: “Accessing the 'model_fields' attribute on the instance
-       is deprecated.”
-    3. :class:`pandas.errors.SettingWithCopyWarning` in :py:`ixmp4.data.db.base` at
-       L589, L590, L621.
-    4. :class:`FutureWarning` for top-level imports from :py:`pandera`.
-    5. :class:`DeprecationWarning` for calling :meth:`datetime.datetime.now`.
+    2. :py:`SADeprecationWarning` (a subclass of :class:`DeprecationWarning`) in
+       :py:`ixmp4.db.migrations.versions` *and* :py:`toolkit.db.types`: “This parameter
+       is supported only by Oracle Database, use ``oracle_on_null` instead.”
     """
     import logging
     import warnings
@@ -71,24 +65,9 @@ def configure_logging_and_warnings() -> None:
 
     warnings.filterwarnings(
         "ignore",
-        ".*Accessing the 'model_fields' attribute on the instance.*",
-        DeprecationWarning,  # Actually pydantic.PydanticDeprecatedSince211
-        "ixmp4.db.filters",
-    )
-    warnings.filterwarnings(
-        "ignore",
-        ".*A value is trying to be set on a copy of a slice from a DataFrame.*",
-        SettingWithCopyWarning,
-        "ixmp4.data.db.base",
-    )
-    warnings.filterwarnings(
-        "ignore",
-        r"Importing pandas-specific classes .* from the\s+top-level pandera module",
-        FutureWarning,
-        "pandera",
-    )
-    warnings.filterwarnings(
-        "ignore", "datetime.datetime.now", DeprecationWarning, "sqlalchemy.sql.schema"
+        "This parameter is supported only by Oracle Database.*",
+        DeprecationWarning,  # Actually sqlalchemy.exc.SADeprecationWarning
+        "(ixmp4.db.migrations.versions|toolkit.db.types).*",
     )
 
 

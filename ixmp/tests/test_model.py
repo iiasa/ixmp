@@ -2,13 +2,10 @@ import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import pandas as pd
 import pytest
-
-# TODO Use "from typing import Unpack" when dropping support for Python 3.11
-from typing_extensions import Unpack
 
 from ixmp import Scenario
 from ixmp.model.base import Model, ModelError
@@ -143,8 +140,9 @@ class TestGAMSInfo:
 
 class TestGAMSModel:
     @pytest.fixture(scope="class")
+    @classmethod
     def dantzig(
-        self, test_mp: "Platform", request: pytest.FixtureRequest
+        cls, request: pytest.FixtureRequest, test_mp: "Platform"
     ) -> Iterator[Scenario]:
         yield make_dantzig(test_mp, request=request)
 

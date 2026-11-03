@@ -8,7 +8,6 @@ description = "The ix modeling platform"
 authors = [{ name = "IIASA Energy, Climate, and Environment (ECE) program" }]
 maintainers = [
   { name = "Paul Natsuo Kishimoto", email = "mail@paul.kishimoto.name" },
-  { name = "Fridolin Glatter", email = "glatter@iiasa.ac.at" },
 ]
 license = "Apache-2.0"
 readme = "README.md"
@@ -36,7 +35,7 @@ dependencies = [
   "JPype1 >= 1.2.1",
   "JPype1 <= 1.4.0; python_version < '3.11'",
   "openpyxl",
-  "pandas >= 1.2",
+  "pandas >= 2.3",
   "pint",
   "PyYAML",
   "xarray",
@@ -54,7 +53,7 @@ docs = [
   "genno >= 1.26",        # For sphinx extensions; see doc/conf.py
   "GitPython",
   "numpydoc",
-  "sphinx >= 3.0",
+  "sphinx >= 9",
   "sphinx_rtd_theme",
   "sphinxcontrib-bibtex",
 ]

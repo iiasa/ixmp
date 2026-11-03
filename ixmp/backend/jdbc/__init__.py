@@ -15,15 +15,15 @@ from copy import copy
 from functools import lru_cache
 from itertools import islice
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Unpack, cast, overload
 from weakref import WeakKeyDictionary
 
 import jpype
 import numpy as np
 import pandas as pd
 
-# TODO Import from typing when dropping support for Python 3.11
-from typing_extensions import Unpack, override
+# TODO When dropping support for Python 3.11, import from typing instead
+from typing_extensions import override
 
 from ixmp.backend.base import CachingBackend
 from ixmp.backend.common import FIELDS, CrossPlatformClone, ItemType

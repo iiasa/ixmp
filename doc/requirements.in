@@ -1,25 +1,29 @@
 # Specific/minimum versions of documentation build dependencies
 #
-# Unless otherwise noted, these are set in response to dependabot
-# security alerts; view the line blame for details.
+# Versions are set according to, in order of preference:
+# 1. Set according to a dependabot security alert.
+# 2. The minimum version pyproject.toml, if any.
+# 3. A recent version.
+#
+# View the line blame for details.
+#
+# After updating this file, run:
+#   uv pip compile requirements.in -o requirements.txt
 
-# Last updated per https://github.com/iiasa/ixmp/pull/648
-gitpython>=3.1.62
-idna>=3.15
-numpydoc==1.8.0
-pandas==2.2.3
+# Direct dependencies
+#
+# This is the same list as [doc] in pyproject.toml.
 
-# Per CVE-2026-4539; see
-# https://github.com/pygments/pygments/issues/3058
-pygments>=2.20.0
+GitPython >= 3.2.1
+genno >= 1.26
+numpydoc
+sphinx-rtd-theme >= 3.1.0
+sphinx >= 9.2
+sphinxcontrib-bibtex >= 2.6.5
 
-# Per CVE-2026-25645; see
-# https://requests.rtfd.io/en/latest/community/updates/
-requests>=2.33.0
+# Indirect dependencies, per security alerts
 
-sphinx==8.2.3
-sphinx-rtd-theme==3.0.2
-sphinxcontrib-bibtex==2.6.5
-
-# Last updated per https://github.com/iiasa/ixmp/pull/637
-urllib3>=2.8.0
+idna >= 3.15
+pygments >= 2.20.0
+requests >= 2.33.0
+urllib3 >= 2.8.0

@@ -143,8 +143,9 @@ class TestGAMSInfo:
 
 class TestGAMSModel:
     @pytest.fixture(scope="class")
+    @classmethod
     def dantzig(
-        self, test_mp: "Platform", request: pytest.FixtureRequest
+        cls, request: pytest.FixtureRequest, test_mp: "Platform"
     ) -> Iterator[Scenario]:
         yield make_dantzig(test_mp, request=request)
 

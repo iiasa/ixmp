@@ -117,7 +117,8 @@ VE = pytest.mark.xfail(raises=ValueError)
 
 class TestJDBCBackend:
     @pytest.fixture(scope="class")
-    def klass(self) -> Iterator[type["JDBCBackend"]]:
+    @classmethod
+    def klass(cls) -> Iterator[type["JDBCBackend"]]:
         """The JDBCBackend class."""
         yield ixmp.backend.jdbc.JDBCBackend
 

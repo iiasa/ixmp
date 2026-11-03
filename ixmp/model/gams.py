@@ -8,10 +8,7 @@ from copy import copy
 from pathlib import Path
 from subprocess import CalledProcessError, check_output, run
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any
-
-# TODO Import from typing when dropping support for Python 3.11
-from typing_extensions import Unpack
+from typing import TYPE_CHECKING, Any, Unpack
 
 from ixmp.backend.common import ItemType
 from ixmp.core.scenario import Scenario

@@ -14,12 +14,9 @@ from collections.abc import (
 )
 from copy import copy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, Unpack, overload
 
-# Compatibility with Python 3.11
-# TODO Use "from typing import Unpack" when dropping support for Python 3.11
 import pandas as pd
-from typing_extensions import Unpack
 
 from ixmp.core.item import Equation, Parameter, Set, Variable
 from ixmp.core.platform import Platform

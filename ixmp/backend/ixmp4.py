@@ -8,7 +8,7 @@ from itertools import chain
 from os import PathLike
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Unpack, cast, overload
 from urllib.parse import urlsplit
 
 import ixmp4
@@ -35,10 +35,6 @@ from ixmp4.data.meta.exceptions import InvalidRunMeta
 from ixmp4.db import get_alembic_controller
 from ixmp4.transport import DirectTransport, HttpxTransport
 from platformdirs import user_state_path
-
-# TODO Import this from typing when dropping Python 3.11
-# TODO Use type x = ... instead of TypeAlias when dropping support for Python 3.11
-from typing_extensions import Unpack
 
 from ixmp.core.item import Equation as IXMPEquation
 from ixmp.core.item import Item, Set

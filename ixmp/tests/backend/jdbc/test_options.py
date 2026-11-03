@@ -71,13 +71,16 @@ class TestOptions:
             "postgresql+psycopg://h/db",  # SQLAlchemy-style scheme
             "jdbc:postgresql:db",  # No host
             "h1:5432,h2:5432/db",  # 2 or more hosts
-            "host:5432",  # No database
+            "host:5432",  # No database name
+            "u:p@host.example.com",  # User and password but no database name
             "jdbc://h/db",  # Incomplete scheme
         ),
     )
     def test_postgresql_full_url_invalid(self, url: str) -> None:
         """Malformed PostgreSQL URLs are rejected, not passed to Java."""
-        with pytest.raises(ValueError, match="Cannot construct a JDBC URL"):
+        with pytest.raises(
+            ValueError, match="(Cannot construct a JDBC URL|Missing database name in)"
+        ):
             Options(DRIVER.postgresql, url=url)
 
     @pytest.mark.parametrize(

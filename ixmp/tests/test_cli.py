@@ -138,7 +138,7 @@ def test_platform(ixmp_cli: Runner, tmp_path: Path) -> None:
     assert re.match("^default: (ixmp4-)?local$", r.output, re.MULTILINE)
 
     # JBDC Oracle platform can be added
-    r = call("add", "p1", "jdbc", "oracle", "HOSTNAME", "USER", "PASSWORD")
+    r = call("add", "p1", "jdbc", "oracle", "HOSTNAME/DB", "USER", "PASSWORD")
 
     # JDBC PostgreSQL platform can be added
     r = call("add", "p1-pg", "jdbc", "postgresql", "HOST:5432/DB", "USER", "PASSWORD")
@@ -201,7 +201,7 @@ def test_platform_copy(
         f"p1-{test_specific_name}",
         "jdbc",
         "oracle",
-        "HOSTNAME",
+        "HOSTNAME/DB",
         "USER",
         "PASSWORD",
     )

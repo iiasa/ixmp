@@ -104,7 +104,7 @@ class TestConfig:
         assert cfg.values["platform"]["default"] == "local"
 
         # Set another platform as the default
-        cfg.add_platform("dummy", "jdbc", "oracle", "url", "user", "password")
+        cfg.add_platform("dummy", "jdbc", "oracle", "hostname/db", "user", "password")
         cfg.add_platform("default", "dummy")
 
         # Now the default platform is 'dummy'

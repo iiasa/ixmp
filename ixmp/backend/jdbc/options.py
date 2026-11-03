@@ -129,8 +129,7 @@ class Options:
     #: Java Virtual Machine arguments. See :func:`.start_jvm`.
     jvmargs: str | list[str] = ""
 
-    # FIXME Reduce complexity from 15 → ≤13
-    def __post_init__(self) -> None:  # noqa: C901
+    def __post_init__(self) -> None:
         # Maybe convert a str to a DRIVER member
         self.driver = DRIVER.from_str(self.driver)
 
@@ -153,47 +152,20 @@ class Options:
                 raise ValueError(
                     "Cannot construct a JDBC URL without username and/or password"
                 )
-        elif self.driver is DRIVER.hsqldb and not self.path and not self.url:
-            raise ValueError(
-                "use JDBCBackend(driver='hsqldb', path=…) or "
-                "JDBCBackend(driver='hsqldb', url=…)"
-            )
+            elif not parts.get("db_name"):
+                raise ValueError(f"Missing database name in {self.url!r}")
 
-        # Prepare the full URL
+        # Prepare parts of the full URL
         match self.driver:
             case DRIVER.hsqldb:
-                netloc = "hsqldb:"
-                parts.pop("scheme")
-
-                if parts.get("db_name"):
-                    raise ValueError(self.url)
-
-                if self.path:
-                    proto = "file"
-                    # Convert Windows paths to use forward slashes
-                    netloc += "file:" + str(
-                        PurePosixPath(Path(self.path).resolve())
-                    ).replace("\\", "")
-                    props = HSQLDB_DEFAULT_PROPS.copy()
-                else:
-                    # Handle URL parts
-                    proto = parts["proto"]  # May be "file" or "mem"
-                    netloc += f"{proto}:{parts.pop('hostname')}"
-                    props = (parts["props"] or "").split(";")
-
-                # Use cached tables by default for non-memory databases
-                if proto == "file" and not any(
-                    HSQLDB_DEFAULT_PROPS[0].partition("=")[0] in p for p in props
-                ):
-                    props.append(HSQLDB_DEFAULT_PROPS[0])
-
-                parts.update(netloc=netloc, props=";".join(filter(None, props)))
+                self._hsqldb_url_parts(parts)
             case DRIVER.oracle:
                 # Prefix "thin" (for the 'thin' client), and "@" before the host name
                 parts.update(netloc=f"oracle:thin:@{parts['netloc']}")
             case DRIVER.postgresql:
                 parts.update(scheme=self.driver.name, netloc=None)
 
+        # Format the full URL
         self._full_url = format_url(parts)
 
         # Remaining arguments are for the JVM
@@ -201,6 +173,40 @@ class Options:
             self.jvmargs, *extra = self.jvmargs or [""]
             if extra:
                 raise ValueError(f"Extra arguments for JDBCBackend: {extra!r}")
+
+    def _hsqldb_url_parts(self, parts: dict[str, str]) -> None:
+        """Helper for :meth:`__post_init__`."""
+        if not self.path and not self.url:
+            raise ValueError(
+                "use JDBCBackend(driver='hsqldb', path=…) or "
+                "JDBCBackend(driver='hsqldb', url=…)"
+            )
+        elif parts.get("db_name"):
+            raise ValueError(self.url)
+
+        netloc = "hsqldb:"
+        parts.pop("scheme")
+
+        if self.path:
+            proto = "file"
+            # Convert Windows paths to use forward slashes
+            netloc += "file:" + str(PurePosixPath(Path(self.path).resolve())).replace(
+                "\\", ""
+            )
+            props = HSQLDB_DEFAULT_PROPS.copy()
+        else:
+            # Handle URL parts
+            proto = parts["proto"]  # May be "file" or "mem"
+            netloc += f"{proto}:{parts.pop('hostname')}"
+            props = (parts["props"] or "").split(";")
+
+        # Use cached tables by default for non-memory databases
+        if proto == "file" and not any(
+            HSQLDB_DEFAULT_PROPS[0].partition("=")[0] in p for p in props
+        ):
+            props.append(HSQLDB_DEFAULT_PROPS[0])
+
+        parts.update(netloc=netloc, props=";".join(filter(None, props)))
 
     @property
     def full_url(self) -> str:
@@ -231,7 +237,8 @@ class Options:
                 "jdbc.user": self.user or "ixmp",
                 "jdbc.pwd": self.password or "ixmp",
                 # commented: This has no effect, apparently because ixmp_source Platform
-                # class fails to pass the property on to HyperSQL
+                # class fails to pass the property on to HyperSQL. The value is passed
+                # instead via "jdbc.url", above.
                 # "hsqldb.default_table_type": "cached",
             }
             | self.extra_properties

@@ -145,7 +145,7 @@ IXMP4Backend
 .. note::
    See :ref:`jdbc-vs-ixmp4`, below.
 
-   As of :mod:`ixmp` version 3.12,
+   As of :mod:`ixmp` version 3.12.0,
    IXMP4Backend depends on :mod:`ixmp4` versions 0.16 or 0.17.
    A compatible version can be installed by choosing the ``ixmp[ixmp4]``
    :ref:`optional dependencies <install-extras>`.
@@ -219,18 +219,15 @@ General behaviour
 -----------------
 
 Command-line interface (CLI)
-   Some CLI tests do not pass yet with IXMP4Backend, but all should.
-   In the meantime, use care with CLI commands including
-   :program:`ixmp platform list` and :program:`ixmp solve`.
+   The CLI command :program:`ixmp solve` may not work with IXMP4Backend.
 
-Default contents
-   JDBCBackend pre-populates Platform and Scenario instances with certain contents.
-   On IXMP4Backend, the configuration option :attr:`.ixmp4.Options.jdbc_compat`
-   controls whether these default contents are created (:any:`True`) or not.
-   See the sections below for further details.
+Performance
+   Different metrics of performance, including memory use,
+   disk storage use, and
+   CPU use/runtime,
+   may differ with IXMP4Backend.
 
-   As of :mod:`ixmp` v3.12, these default contents only include items necessary
-   for the test suite and tutorials.
+   See `ixmp4#277 <https://github.com/iiasa/ixmp4/issues/277>`_ and related issues for details and discussion.
 
 Exceptions
    JDBCBackend raises exceptions from the Python standard exception hierarchy
@@ -265,8 +262,12 @@ Platform class
 --------------
 
 Default contents
-   If :attr:`.ixmp4.Options.jdbc_compat` is :any:`True`,
-   regions and units are populated.
+   JDBCBackend pre-populates Platform and Scenario instances with certain contents.
+   
+   On IXMP4Backend, the configuration option :attr:`.ixmp4.Options.jdbc_compat`
+   controls whether these default contents are created (:any:`True`) or not.
+   As of :mod:`ixmp` v3.12, these default contents only include items necessary
+   for the test suite and tutorials.
    See :issue:`608` for details.
 
 :meth:`.Platform.add_doc`
@@ -330,7 +331,7 @@ Default contents
     and the underlying Java code.
     On IXMP4Backend, only the log level of the logger named :py:`"ixmp.backend.ixmp4"` is changed,
     and not the log level of any underlying code.
-    User code **may** use standard :mod:`logger` methods to access and
+    User code **may** use standard :mod:`logging` methods to access and
     change the level of loggers within :mod:`ixmp4` or its dependencies:
 
     .. code-block:: python
@@ -357,9 +358,8 @@ TimeSeries class
    On JDBCBackend, the value is -1.
 
 :meth:`.TimeSeries.add_geodata`, :meth:`.get_geodata`, and :meth:`.remove_geodata`
-   Not in visible use.
    ixmp4 does not support storing and retrieving geodata,
-   so these methods are and will not be supported on IXMP4Backend.
+   so these methods will never be implemented for IXMP4Backend.
 
 :meth:`.TimeSeries.add_timeseries`
    On IXMP4Backend, ‘variable’ column entries may be up to 255 characters long
@@ -383,10 +383,6 @@ Default contents
    If :attr:`.ixmp4.Options.jdbc_compat` is :any:`True`,
    the sets ``technology`` and ``year`` are created,
    matching the behaviour of JDBCBackend.
-
-:attr:`Scenario.version <.TimeSeries.version>`
-   On IXMP4Backend, a new, empty Scenario has :py:`version = 1`.
-   On JDBCBackend, the value is 0.
 
 :meth:`.Scenario.par`
    On IXMP4Backend, data returned as :class:`pandas.DataFrame`
